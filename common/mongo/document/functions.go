@@ -99,6 +99,11 @@ func GetDocumentsBySelectorAndSortWithFieldsOffsetAndLimit(result interface{}, c
 	return err
 }
 
+// GetDocumentsBySelectorAndSortWithOffsetAndLimit : returns the documents from a collection
+func GetDocumentsBySelectorAndSortWithOffsetAndLimit(result interface{}, collection string, selector interface{}, sort []string, offset, limit int, db *mgo.Database) error {
+	return GetDocumentsBySelectorAndSortWithFieldsOffsetAndLimit(result, collection, selector, bson.M{}, sort, offset, limit, db)
+}
+
 // GetDocumentsBySelectorAndSort : returns the documents from a collection
 func GetDocumentsBySelectorAndSort(result interface{}, collection string, selector interface{}, sort []string, db *mgo.Database) error {
 	return GetDocumentsBySelectorAndSortWithFieldsOffsetAndLimit(result, collection, selector, bson.M{}, sort, -1, -1, db)
