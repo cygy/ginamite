@@ -73,9 +73,13 @@ func GetDocumentByID(document Document, collection string, id string, db *mgo.Da
 	return err
 }
 
-// GetDocumentsBySelectorAndSortWithOffsetAndLimit : returns the documents from a collection
-func GetDocumentsBySelectorAndSortWithOffsetAndLimit(result interface{}, collection string, selector interface{}, sort []string, offset, limit int, db *mgo.Database) error {
+// GetDocumentsBySelectorAndSortWithFieldsOffsetAndLimit : returns the documents from a collection
+func GetDocumentsBySelectorAndSortWithFieldsOffsetAndLimit(result interface{}, collection string, selector interface{}, fields bson.M, sort []string, offset, limit int, db *mgo.Database) error {
 	query := db.C(collection).Find(selector)
+
+	if len(fields) > 0 {
+		query = query.Select(fields)
+	}
 
 	if len(sort) > 0 {
 		query = query.Sort(sort...)
@@ -97,37 +101,42 @@ func GetDocumentsBySelectorAndSortWithOffsetAndLimit(result interface{}, collect
 
 // GetDocumentsBySelectorAndSort : returns the documents from a collection
 func GetDocumentsBySelectorAndSort(result interface{}, collection string, selector interface{}, sort []string, db *mgo.Database) error {
-	return GetDocumentsBySelectorAndSortWithOffsetAndLimit(result, collection, selector, sort, -1, -1, db)
+	return GetDocumentsBySelectorAndSortWithFieldsOffsetAndLimit(result, collection, selector, bson.M{}, sort, -1, -1, db)
 }
 
 // GetDocumentsBySelector : returns the documents from a collection
 func GetDocumentsBySelector(result interface{}, collection string, selector interface{}, db *mgo.Database) error {
-	return GetDocumentsBySelectorAndSortWithOffsetAndLimit(result, collection, selector, []string{}, -1, -1, db)
+	return GetDocumentsBySelectorAndSortWithFieldsOffsetAndLimit(result, collection, selector, bson.M{}, []string{}, -1, -1, db)
+}
+
+// GetDocumentsBySelectorWithFields : returns the documents from a collection
+func GetDocumentsBySelectorWithFields(result interface{}, collection string, selector interface{}, fields bson.M, db *mgo.Database) error {
+	return GetDocumentsBySelectorAndSortWithFieldsOffsetAndLimit(result, collection, selector, fields, []string{}, -1, -1, db)
 }
 
 // GetDocumentsBySelectorWithOffsetAndLimit : returns the documents from a collection
 func GetDocumentsBySelectorWithOffsetAndLimit(result interface{}, collection string, selector interface{}, offset, limit int, db *mgo.Database) error {
-	return GetDocumentsBySelectorAndSortWithOffsetAndLimit(result, collection, selector, []string{}, offset, limit, db)
+	return GetDocumentsBySelectorAndSortWithFieldsOffsetAndLimit(result, collection, selector, bson.M{}, []string{}, offset, limit, db)
 }
 
 // GetDocumentsBySort : returns the documents from a collection
 func GetDocumentsBySort(result interface{}, collection string, sort []string, db *mgo.Database) error {
-	return GetDocumentsBySelectorAndSortWithOffsetAndLimit(result, collection, nil, sort, -1, -1, db)
+	return GetDocumentsBySelectorAndSortWithFieldsOffsetAndLimit(result, collection, nil, bson.M{}, sort, -1, -1, db)
 }
 
 // GetDocumentsBySortWithOffsetAndLimit : returns the documents from a collection
 func GetDocumentsBySortWithOffsetAndLimit(result interface{}, collection string, sort []string, offset, limit int, db *mgo.Database) error {
-	return GetDocumentsBySelectorAndSortWithOffsetAndLimit(result, collection, nil, sort, offset, limit, db)
+	return GetDocumentsBySelectorAndSortWithFieldsOffsetAndLimit(result, collection, nil, bson.M{}, sort, offset, limit, db)
 }
 
 // GetDocuments : returns the documents from a collection
 func GetDocuments(result interface{}, collection string, db *mgo.Database) error {
-	return GetDocumentsBySelectorAndSortWithOffsetAndLimit(result, collection, nil, []string{}, -1, -1, db)
+	return GetDocumentsBySelectorAndSortWithFieldsOffsetAndLimit(result, collection, nil, bson.M{}, []string{}, -1, -1, db)
 }
 
 // GetDocumentsWithOffsetAndLimit : returns the documents from a collection
 func GetDocumentsWithOffsetAndLimit(result interface{}, collection string, offset, limit int, db *mgo.Database) error {
-	return GetDocumentsBySelectorAndSortWithOffsetAndLimit(result, collection, nil, []string{}, offset, limit, db)
+	return GetDocumentsBySelectorAndSortWithFieldsOffsetAndLimit(result, collection, nil, bson.M{}, []string{}, offset, limit, db)
 }
 
 // GetDocumentBySelectorAndSort : returns a document from a collection
