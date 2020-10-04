@@ -24,3 +24,13 @@ func EnableUser(payload TaskEnableUser) {
 func UpdateUserSocialNetworks(payload TaskUpdateUserSocialNetworks) {
 	CreateTask(MessageTaskUpdateUserSocialNetworks, payload)
 }
+
+// RegistrationDone : informs that a new user is registered.
+func RegistrationDone(payload TaskRegistrationDone) {
+	CreateTask(MessageTaskRegistrationDone, payload)
+}
+
+// RegistrationValidated : informs that a new user is validated.
+func RegistrationValidated(payload TaskRegistrationValidated) {
+	CreateTask(MessageTaskRegistrationValidated, payload)
+}

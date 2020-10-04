@@ -25,3 +25,13 @@ type TaskEnableUser struct {
 type TaskUpdateUserSocialNetworks struct {
 	UserID string `json:"user_id"`
 }
+
+// TaskRegistrationDone : content of a payload
+type TaskRegistrationDone struct {
+	UserID string `json:"user_id"`
+}
+
+// TaskRegistrationValidated : content of a payload
+type TaskRegistrationValidated struct {
+	UserID string `json:"user_id"`
+}

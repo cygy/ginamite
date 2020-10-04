@@ -21,6 +21,8 @@ type Handlers struct {
 	DisableUserByID                       func(userID string) map[string]time.Time
 	EnableUserByID                        func(userID string)
 	UpdateUserSocialNetworksByID          func(userID string)
+	RegistrationDone                      func(userID string)
+	RegistrationValidated                 func(userID string)
 	GetNotificationTargetsByUserAndType   notifications.GetNotificationTargetsByUserAndTypeFunc
 	SaveIPAddressDetails                  func(IPAddress, tokenID string, getIPAddressDetailsFunc func(IPAddress string) *location.IPAddressDetails)
 	StartUpTasks                          func(environment, version string)

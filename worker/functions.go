@@ -57,6 +57,12 @@ func (s *Server) CreateKafkaConsumers() []kafka.MessageConsumer {
 			case queue.MessageTaskUpdateUserSocialNetworks:
 				user.UpdateSocialNetworksByID(payload, s.Functions.UpdateUserSocialNetworksByID)
 				break
+			case queue.MessageTaskRegistrationDone:
+				user.RegistrationDone(payload, s.Functions.RegistrationDone)
+				break
+			case queue.MessageTaskRegistrationValidated:
+				user.RegistrationDone(payload, s.Functions.RegistrationValidated)
+				break
 			default:
 				if s.Functions.HandleTask == nil || !s.Functions.HandleTask(msgType, payload) {
 					log.WithFields(logrus.Fields{

@@ -66,3 +66,29 @@ func UpdateSocialNetworksByID(payload []byte, updateUserSocialNetworksByIDFunc f
 	// Here is the function to update the documents referencing the social networks of a user.
 	updateUserSocialNetworksByIDFunc(p.UserID)
 }
+
+// RegistrationDone : informs that a user is registered.
+func RegistrationDone(payload []byte, registrationDoneFunc func(userID string)) {
+	if registrationDoneFunc == nil {
+		return
+	}
+
+	p := queue.TaskRegistrationDone{}
+	queue.UnmarshalPayload(payload, &p)
+
+	// Here is the function to inform that a user is registered.
+	registrationDoneFunc(p.UserID)
+}
+
+// RegistrationValidated : informs that a user is validated.
+func RegistrationValidated(payload []byte, registrationValidatedFunc func(userID string)) {
+	if registrationValidatedFunc == nil {
+		return
+	}
+
+	p := queue.TaskRegistrationValidated{}
+	queue.UnmarshalPayload(payload, &p)
+
+	// Here is the function to inform that a user is registered.
+	registrationValidatedFunc(p.UserID)
+}

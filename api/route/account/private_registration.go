@@ -307,6 +307,10 @@ func register(c *gin.Context, method string) {
 		r["status"] = t("status.registration.email_sent")
 	}
 
+	queue.RegistrationDone(queue.TaskRegistrationDone{
+		UserID: user.ID,
+	})
+
 	response.Created(c, r)
 }
 
@@ -391,6 +395,10 @@ func validateOrCancelRegistration(c *gin.Context, validate bool) {
 			EmailAddress: user.EmailAddress,
 			Username:     user.Username,
 			Locale:       user.Locale,
+		})
+
+		queue.RegistrationValidated(queue.TaskRegistrationValidated{
+			UserID: user.ID,
 		})
 
 		IPAddress := req.GetRealIPAddress(c)

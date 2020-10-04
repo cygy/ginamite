@@ -15,4 +15,10 @@ const (
 
 	// MessageTaskUpdateUserSocialNetworks : updates the social networks of a user.
 	MessageTaskUpdateUserSocialNetworks = "update_user_social_networks"
+
+	// MessageTaskRegistrationDone : informs that a new user is registered.
+	MessageTaskRegistrationDone = "registration_done"
+
+	// MessageTaskRegistrationValidated : informs that a new user is validated.
+	MessageTaskRegistrationValidated = "registration_validated"
 )
