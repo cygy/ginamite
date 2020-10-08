@@ -11,8 +11,8 @@ import (
 )
 
 // RegisterByEmailAddress : register a new user with an email address.
-func (user *User) RegisterByEmailAddress(username, encryptedPassword, emailAddress, locale, termsVersion, registrationCode, privateKey, source string, device authentication.Device, db *mgo.Database) error {
-	user.initializeFromRegistration(username, emailAddress, termsVersion, locale, registrationCode, privateKey, authentication.MethodPassword, source, device)
+func (user *User) RegisterByEmailAddress(username, encryptedPassword, emailAddress, locale, termsVersion, registrationCode, privateKey, source, ip string, device authentication.Device, db *mgo.Database) error {
+	user.initializeFromRegistration(username, emailAddress, termsVersion, locale, registrationCode, privateKey, authentication.MethodPassword, source, ip, device)
 	user.IdentificationMethods.Password = encryptedPassword
 
 	_, err := user.Save(db)
@@ -46,8 +46,8 @@ func (user *User) CancelRegistrationByEmailAddress(code string, db *mgo.Database
 }
 
 // RegisterByThirdPartyToken : register a new user with a third-party identification token.
-func (user *User) RegisterByThirdPartyToken(username string, tokenInfos validator.TokenInfos, tokenSource, locale, termsVersion, registrationCode, privateKey, source string, device authentication.Device, db *mgo.Database) error {
-	user.initializeFromRegistration(username, tokenInfos.Email, termsVersion, locale, registrationCode, privateKey, tokenSource, source, device)
+func (user *User) RegisterByThirdPartyToken(username string, tokenInfos validator.TokenInfos, tokenSource, locale, termsVersion, registrationCode, privateKey, source, ip string, device authentication.Device, db *mgo.Database) error {
+	user.initializeFromRegistration(username, tokenInfos.Email, termsVersion, locale, registrationCode, privateKey, tokenSource, source, ip, device)
 
 	userOAuthInfos := UserOAuthInfos{}
 	userOAuthInfos.FromSocialNetworkOAuthInfos(tokenInfos)

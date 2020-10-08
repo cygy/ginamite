@@ -60,6 +60,7 @@ type UserRegistrationInfos struct {
 	Source       string    `json:"source" bson:"source"`
 	Method       string    `json:"method" bson:"method"`
 	Device       Device    `json:"device" bson:"device"`
+	IPAddress    string    `json:"ip_address" bson:"ip"`
 	Code         string    `json:"-" bson:"code"`
 	CodeAttempts uint      `json:"-" bson:"codeAttempts"`
 }

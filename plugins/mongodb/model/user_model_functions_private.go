@@ -42,7 +42,7 @@ func (user *User) saveThirdPartyInfos(source, token, userID, firstName, lastName
 	return user.Update(bson.M{"$set": updatedFields}, db)
 }
 
-func (user *User) initializeFromRegistration(username, emailAddress, termsVersion, locale, registrationCode, privateKey, method, source string, device authentication.Device) {
+func (user *User) initializeFromRegistration(username, emailAddress, termsVersion, locale, registrationCode, privateKey, method, source, ip string, device authentication.Device) {
 	parts := strings.SplitN(locale, "-", 2)
 	if len(parts) > 1 {
 		country := parts[1]
@@ -68,6 +68,7 @@ func (user *User) initializeFromRegistration(username, emailAddress, termsVersio
 	user.RegistrationInfos.Source = source
 	user.RegistrationInfos.Device = userDevice
 	user.RegistrationInfos.Method = method
+	user.RegistrationInfos.IPAddress = ip
 	user.Settings.Locale = locale
 	user.Verified = false
 	user.VersionOfTermsAccepted = termsVersion

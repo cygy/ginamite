@@ -195,6 +195,7 @@ func register(c *gin.Context, method string) {
 	registrationCode := random.String(authentication.RegisterCodeLength)
 	privateKey := random.String(authentication.PrivateKeyLength)
 	mustBeLoggedin := !config.Main.Account.EmailAddressMustBeConfirmed
+	IPAddress := req.GetRealIPAddress(c)
 
 	// Register with a third party service
 	if isThirdPartyTokenMethod {
@@ -238,7 +239,7 @@ func register(c *gin.Context, method string) {
 		}
 
 		// Create an account with this third-party token.
-		if err := RegisterByThirdPartyToken(c, username, tokenInfos, tokenValidator.SourceName(), accountLocale, termsVersion, registrationCode, privateKey, source, device); err != nil {
+		if err := RegisterByThirdPartyToken(c, username, tokenInfos, tokenValidator.SourceName(), accountLocale, termsVersion, registrationCode, privateKey, source, IPAddress, device); err != nil {
 			response.InternalServerError(c)
 			return
 		}
@@ -257,7 +258,7 @@ func register(c *gin.Context, method string) {
 		}
 
 		// Create an account with this email address.
-		if err := RegisterByEmailAddress(c, username, encryptedPassword, emailAddress, accountLocale, termsVersion, registrationCode, privateKey, source, device); err != nil {
+		if err := RegisterByEmailAddress(c, username, encryptedPassword, emailAddress, accountLocale, termsVersion, registrationCode, privateKey, source, IPAddress, device); err != nil {
 			response.InternalServerError(c)
 			return
 		}
@@ -274,7 +275,6 @@ func register(c *gin.Context, method string) {
 
 	// Create an authentication token if the email address must not be verified.
 	if mustBeLoggedin {
-		IPAddress := req.GetRealIPAddress(c)
 		authToken, _ := createAuthenticationToken(c, user, IPAddress, source, device, method, false, true)
 		r["auth_token"] = authToken
 	}

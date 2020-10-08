@@ -88,10 +88,10 @@ type DoesAccountWithUsernameExistFunc func(c *gin.Context, username string) bool
 type DoesAccountWithEmailAddressExistFunc func(c *gin.Context, emailAddress string) bool
 
 // RegisterByEmailAddressFunc : saves a newly registered user.
-type RegisterByEmailAddressFunc func(c *gin.Context, username, encryptedPassword, emailAddress, locale, termsVersion, registrationCode, privateKey, source string, device authentication.Device) error
+type RegisterByEmailAddressFunc func(c *gin.Context, username, encryptedPassword, emailAddress, locale, termsVersion, registrationCode, privateKey, source, ip string, device authentication.Device) error
 
 // RegisterByThirdPartyTokenFunc : saves a newly registered user.
-type RegisterByThirdPartyTokenFunc func(c *gin.Context, username string, tokenInfos validator.TokenInfos, tokenSource, locale, termsVersion, registrationCode, privateKey, source string, device authentication.Device) error
+type RegisterByThirdPartyTokenFunc func(c *gin.Context, username string, tokenInfos validator.TokenInfos, tokenSource, locale, termsVersion, registrationCode, privateKey, source, ip string, device authentication.Device) error
 
 // DoesUserWithSocialNetworkUserIDExistFunc : function to know if a user with a social network user id is registered already.
 type DoesUserWithSocialNetworkUserIDExistFunc func(c *gin.Context, userID string) bool

@@ -15,17 +15,17 @@ import (
 )
 
 // RegisterByEmailAddress : saves the registration details of an user.
-func RegisterByEmailAddress(c *gin.Context, username, encryptedPassword, emailAddress, locale, termsVersion, registrationCode, privateKey, source string, device authentication.Device) error {
+func RegisterByEmailAddress(c *gin.Context, username, encryptedPassword, emailAddress, locale, termsVersion, registrationCode, privateKey, source, ip string, device authentication.Device) error {
 	mongoSession := session.Get(c)
 	user := model.NewUser()
-	return user.RegisterByEmailAddress(username, encryptedPassword, emailAddress, locale, termsVersion, registrationCode, privateKey, source, device, mongoSession)
+	return user.RegisterByEmailAddress(username, encryptedPassword, emailAddress, locale, termsVersion, registrationCode, privateKey, source, ip, device, mongoSession)
 }
 
 // RegisterByThirdPartyToken : saves the registration details of an user.
-func RegisterByThirdPartyToken(c *gin.Context, username string, tokenInfos validator.TokenInfos, tokenSource, locale, termsVersion, registrationCode, privateKey, source string, device authentication.Device) error {
+func RegisterByThirdPartyToken(c *gin.Context, username string, tokenInfos validator.TokenInfos, tokenSource, locale, termsVersion, registrationCode, privateKey, source, ip string, device authentication.Device) error {
 	mongoSession := session.Get(c)
 	user := model.NewUser()
-	return user.RegisterByThirdPartyToken(username, tokenInfos, tokenSource, locale, termsVersion, registrationCode, privateKey, source, device, mongoSession)
+	return user.RegisterByThirdPartyToken(username, tokenInfos, tokenSource, locale, termsVersion, registrationCode, privateKey, source, ip, device, mongoSession)
 }
 
 // ValidateUserRegistration : validate the registration of an user.
