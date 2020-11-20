@@ -47,12 +47,14 @@ type Page struct {
 	Key           string            // The key defining the route in the 'routes' file.
 	BetaVersion   bool
 	Production    bool
+	Vars          map[string]interface{} // Common variables to all the pages.
 }
 
 // NewPage : returns a new struct *Page
 func NewPage() *Page {
 	page := &Page{}
 	page.Content.Vars = map[string]interface{}{}
+	page.Vars = map[string]interface{}{}
 	page.Partial = false
 
 	return page
@@ -77,6 +79,11 @@ func (page *Page) Copy() (copied *Page) {
 	copied.Paths = make(map[string]string, len(page.Paths))
 	for key, value := range page.Paths {
 		copied.Paths[key] = value
+	}
+
+	copied.Vars = make(map[string]interface{}, len(page.Vars))
+	for key, value := range page.Vars {
+		copied.Vars[key] = value
 	}
 
 	copied.ScriptFiles = make([]Script, len(page.ScriptFiles))
@@ -113,6 +120,15 @@ func (page *Page) Merge(toMerge Page) {
 		}
 		for key, value := range toMerge.Paths {
 			page.Paths[key] = value
+		}
+	}
+
+	if len(toMerge.Vars) > 0 {
+		if page.Vars == nil {
+			page.Vars = make(map[string]interface{}, len(toMerge.Vars))
+		}
+		for key, value := range toMerge.Vars {
+			page.Vars[key] = value
 		}
 	}
 
@@ -235,6 +251,10 @@ func (page *Page) InitializeData(c *gin.Context) {
 	// Sets up the userID and the username.
 	page.Content = PageContent{}
 	page.Content.Title = page.Title
+
+	for key, value := range page.Vars {
+		page.SetVar(key, value)
+	}
 
 	if tokenString, err := c.Cookie(jwtCookieName); err == nil {
 		if token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
