@@ -54,8 +54,10 @@ func (request *Request) Do() {
 	defer httpResponse.Body.Close()
 	responseContent, _ := ioutil.ReadAll(httpResponse.Body)
 
+	logPrefix := fmt.Sprintf("[%s %s]", request.Method, request.Endpoint)
+
 	if httpResponse.StatusCode != request.ExpectedResponse.Code {
-		request.T.Errorf("Code %d expected, but get %d (%s).", request.ExpectedResponse.Code, httpResponse.StatusCode, string(responseContent))
+		request.T.Errorf("%s code %d expected, but get %d (%s).", logPrefix, request.ExpectedResponse.Code, httpResponse.StatusCode, string(responseContent))
 	}
 
 	if httpResponse.StatusCode >= 200 && httpResponse.StatusCode < 300 && request.Response != nil {
@@ -67,14 +69,14 @@ func (request *Request) Do() {
 		json.Unmarshal(responseContent, &response)
 
 		if len(request.ExpectedResponse.Status) > 0 && request.ExpectedResponse.Status != response.Status {
-			request.T.Errorf("Status %s expected, but get %s.", request.ExpectedResponse.Status, response.Status)
+			request.T.Errorf("%s status %s expected, but get %s.", logPrefix, request.ExpectedResponse.Status, response.Status)
 		}
 
 		if !request.ExpectedResponse.Error.IsNil() {
 			if response.Error == nil {
-				request.T.Errorf("Error (%s: %d) expected, but get no error.", request.ExpectedResponse.Error.Domain, request.ExpectedResponse.Error.Code)
+				request.T.Errorf("%s error (%s: %d) expected, but get no error.", logPrefix, request.ExpectedResponse.Error.Domain, request.ExpectedResponse.Error.Code)
 			} else if response.Error.Code != request.ExpectedResponse.Error.Code || response.Error.Domain != request.ExpectedResponse.Error.Domain {
-				request.T.Errorf("Error (%s: %d) expected, but get (%s: %d).", request.ExpectedResponse.Error.Domain, request.ExpectedResponse.Error.Code, response.Error.Domain, response.Error.Code)
+				request.T.Errorf("%s error (%s: %d) expected, but get (%s: %d).", logPrefix, request.ExpectedResponse.Error.Domain, request.ExpectedResponse.Error.Code, response.Error.Domain, response.Error.Code)
 			}
 		}
 
@@ -83,11 +85,11 @@ func (request *Request) Do() {
 			request.RenewedAuthToken = renewedAuthToken
 
 			if !request.ExpectedResponse.RenewedAuthToken {
-				request.T.Error("Unexpected renewed auth token, but get one.")
+				request.T.Errorf("%s unexpected renewed auth token, but get one.", logPrefix)
 			}
 		}
 		if len(renewedAuthToken) == 0 && request.ExpectedResponse.RenewedAuthToken {
-			request.T.Error("Expected renewed auth token, but get none.")
+			request.T.Errorf("%s expected renewed auth token, but get none.", logPrefix)
 		}
 	}
 }
