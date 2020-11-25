@@ -177,14 +177,7 @@ func GetAuthToken(c *gin.Context) {
 		return
 	}
 
-	locale := context.GetLocale(c)
-
-	// ID is mandatory.
 	tokenID := c.Param("id")
-	if len(tokenID) == 0 {
-		response.InvalidRequestParameter(c, locale)
-		return
-	}
 
 	token, tokenOwnerID, err := GetOwnedTokenByID(c, tokenID)
 	if err != nil {
@@ -220,12 +213,7 @@ func UpdateAuthToken(c *gin.Context) {
 	locale := context.GetLocale(c)
 	t := localization.Translate(locale)
 
-	// ID is mandatory.
 	tokenID := c.Param("id")
-	if len(tokenID) == 0 {
-		response.InvalidRequestParameter(c, locale)
-		return
-	}
 
 	var jsonBody struct {
 		Name               string   `json:"name"`

@@ -50,12 +50,13 @@ func deleteAuthenticationToken(c *gin.Context, checkKey bool) {
 	}
 
 	// ID and key are mandatory.
-	tokenID := c.Param("id")
 	tokenKey := c.Param("key")
-	if len(tokenID) == 0 || (len(tokenKey) == 0 && checkKey) {
+	if len(tokenKey) == 0 && checkKey {
 		sendError()
 		return
 	}
+
+	tokenID := c.Param("id")
 
 	// Get the requested token.
 	token, err := GetTokenDetailsByID(c, tokenID)

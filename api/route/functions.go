@@ -224,6 +224,42 @@ func (r *Router) LoadDefaultRoutes() {
 
 	verifyLimitAndOffset := middleware.VerifyLimitAndOffset(0, 20, 100)
 
+	mustBeValidAuthToken := func(messageKey string) gin.HandlerFunc {
+		return middleware.VerifyURLParameter(middleware.Config{
+			Name:                       "id",
+			StoreKey:                   "tokenID",
+			MessageKey:                 messageKey,
+			NotFoundReasonKey:          "error.admin.token.id.not_found.reason",
+			NotFoundRecoveryKey:        "error.admin.token.id.not_found.recovery",
+			InvalidObjectIDReasonKey:   "error.admin.token.id.invalid.reason",
+			InvalidObjectIDRecoveryKey: "error.admin.token.id.invalid.recovery",
+		})
+	}
+
+	mustBeValidUserID := func(messageKey string) gin.HandlerFunc {
+		return middleware.VerifyURLParameter(middleware.Config{
+			Name:                       "id",
+			StoreKey:                   "userID",
+			MessageKey:                 messageKey,
+			NotFoundReasonKey:          "error.admin.user.id.not_found.reason",
+			NotFoundRecoveryKey:        "error.admin.user.id.not_found.recovery",
+			InvalidObjectIDReasonKey:   "error.admin.user.id.invalid.reason",
+			InvalidObjectIDRecoveryKey: "error.admin.user.id.invalid.recovery",
+		})
+	}
+
+	mustBeValidContactID := func(messageKey string) gin.HandlerFunc {
+		return middleware.VerifyURLParameter(middleware.Config{
+			Name:                       "id",
+			StoreKey:                   "contactID",
+			MessageKey:                 messageKey,
+			NotFoundReasonKey:          "error.admin.contact.id.not_found.reason",
+			NotFoundRecoveryKey:        "error.admin.contact.id.not_found.recovery",
+			InvalidObjectIDReasonKey:   "error.admin.contact.id.invalid.reason",
+			InvalidObjectIDRecoveryKey: "error.admin.contact.id.invalid.recovery",
+		})
+	}
+
 	// Set up the default routes.
 	v := r.Group
 
@@ -326,19 +362,19 @@ func (r *Router) LoadDefaultRoutes() {
 			v.GET(r.DefaultRoutes.Authentication.Paths.GetTokens.Path, mustBeAuthenticated, account.GetAuthTokens)
 		}
 		if r.DefaultRoutes.Authentication.Paths.GetToken.Enabled {
-			v.GET(r.DefaultRoutes.Authentication.Paths.GetToken.Path, mustBeAuthenticated, account.GetAuthToken)
+			v.GET(r.DefaultRoutes.Authentication.Paths.GetToken.Path, mustBeAuthenticated, mustBeValidAuthToken("error.auth_token.get.unable.message"), account.GetAuthToken)
 		}
 		if r.DefaultRoutes.Authentication.Paths.UpdateToken.Enabled {
-			v.PUT(r.DefaultRoutes.Authentication.Paths.UpdateToken.Path, mustBeAuthenticated, mustAuthenticationBeValid, account.UpdateAuthToken)
+			v.PUT(r.DefaultRoutes.Authentication.Paths.UpdateToken.Path, mustBeAuthenticated, mustAuthenticationBeValid, mustBeValidAuthToken("error.auth_token.update.unable.message"), account.UpdateAuthToken)
 		}
 		if r.DefaultRoutes.Authentication.Paths.RefreshToken.Enabled {
 			v.POST(r.DefaultRoutes.Authentication.Paths.RefreshToken.Path, mustBeAuthenticated, account.RefreshAuthToken)
 		}
 		if r.DefaultRoutes.Authentication.Paths.DeleteToken.Enabled {
-			v.DELETE(r.DefaultRoutes.Authentication.Paths.DeleteToken.Path, mustBeAuthenticated, mustAuthenticationBeValid, account.DeleteAuthToken)
+			v.DELETE(r.DefaultRoutes.Authentication.Paths.DeleteToken.Path, mustBeAuthenticated, mustAuthenticationBeValid, mustBeValidAuthToken("error.auth_token.delete.unable.message"), account.DeleteAuthToken)
 		}
 		if r.DefaultRoutes.Authentication.Paths.DeleteTokenWithKey.Enabled {
-			v.DELETE(r.DefaultRoutes.Authentication.Paths.DeleteTokenWithKey.Path, account.DeleteAuthTokenWithKey)
+			v.DELETE(r.DefaultRoutes.Authentication.Paths.DeleteTokenWithKey.Path, mustBeValidAuthToken("error.auth_token.delete.message"), account.DeleteAuthTokenWithKey)
 		}
 	}
 
@@ -456,46 +492,46 @@ func (r *Router) LoadDefaultRoutes() {
 			v.GET(r.DefaultRoutes.Admin.Paths.GetDisabledUsers.Path, mustBeAuthenticated, ableToManageUsers, user.GetAdminDisabledUsers)
 		}
 		if r.DefaultRoutes.Admin.Paths.UpdateUserPassword.Enabled {
-			v.PUT(r.DefaultRoutes.Admin.Paths.UpdateUserPassword.Path, mustBeAuthenticated, mustAuthenticationBeValid, ableToManageUsers, user.AdminUpdatePassword)
+			v.PUT(r.DefaultRoutes.Admin.Paths.UpdateUserPassword.Path, mustBeAuthenticated, mustAuthenticationBeValid, mustBeValidUserID("error.admin.user.password.update.message"), ableToManageUsers, user.AdminUpdatePassword)
 		}
 		if r.DefaultRoutes.Admin.Paths.UpdateUserInformations.Enabled {
-			v.PUT(r.DefaultRoutes.Admin.Paths.UpdateUserInformations.Path, mustBeAuthenticated, mustAuthenticationBeValid, ableToManageUsers, user.AdminUpdateInformations)
+			v.PUT(r.DefaultRoutes.Admin.Paths.UpdateUserInformations.Path, mustBeAuthenticated, mustAuthenticationBeValid, mustBeValidUserID("error.admin.user.informations.update.message"), ableToManageUsers, user.AdminUpdateInformations)
 		}
 		if r.DefaultRoutes.Admin.Paths.UpdateUserDescription.Enabled {
-			v.PUT(r.DefaultRoutes.Admin.Paths.UpdateUserDescription.Path, mustBeAuthenticated, mustAuthenticationBeValid, ableToManageUsers, user.AdminUpdateDescription)
+			v.PUT(r.DefaultRoutes.Admin.Paths.UpdateUserDescription.Path, mustBeAuthenticated, mustAuthenticationBeValid, mustBeValidUserID("error.admin.user.description.update.message"), ableToManageUsers, user.AdminUpdateDescription)
 		}
 		if r.DefaultRoutes.Admin.Paths.UpdateUserSocial.Enabled {
-			v.PUT(r.DefaultRoutes.Admin.Paths.UpdateUserSocial.Path, mustBeAuthenticated, mustAuthenticationBeValid, ableToManageUsers, user.AdminUpdateSocial)
+			v.PUT(r.DefaultRoutes.Admin.Paths.UpdateUserSocial.Path, mustBeAuthenticated, mustAuthenticationBeValid, mustBeValidUserID("error.admin.user.social.update.message"), ableToManageUsers, user.AdminUpdateSocial)
 		}
 		if r.DefaultRoutes.Admin.Paths.UpdateUserSettings.Enabled {
-			v.PUT(r.DefaultRoutes.Admin.Paths.UpdateUserSettings.Path, mustBeAuthenticated, mustAuthenticationBeValid, ableToManageUsers, user.AdminUpdateSettings)
+			v.PUT(r.DefaultRoutes.Admin.Paths.UpdateUserSettings.Path, mustBeAuthenticated, mustAuthenticationBeValid, mustBeValidUserID("error.admin.user.settings.update.message"), ableToManageUsers, user.AdminUpdateSettings)
 		}
 		if r.DefaultRoutes.Admin.Paths.UpdateUserNotifications.Enabled {
-			v.PUT(r.DefaultRoutes.Admin.Paths.UpdateUserNotifications.Path, mustBeAuthenticated, mustAuthenticationBeValid, ableToManageUsers, user.AdminUpdateNotifications)
+			v.PUT(r.DefaultRoutes.Admin.Paths.UpdateUserNotifications.Path, mustBeAuthenticated, mustAuthenticationBeValid, mustBeValidUserID("error.admin.user.notifications.update.message"), ableToManageUsers, user.AdminUpdateNotifications)
 		}
 		if r.DefaultRoutes.Admin.Paths.GetUserTokens.Enabled {
-			v.GET(r.DefaultRoutes.Admin.Paths.GetUserTokens.Path, mustBeAuthenticated, ableToManageUsers, user.GetAdminUserTokens)
+			v.GET(r.DefaultRoutes.Admin.Paths.GetUserTokens.Path, mustBeAuthenticated, mustBeValidUserID("error.admin.user.tokens.get.message"), ableToManageUsers, user.GetAdminUserTokens)
 		}
 		if r.DefaultRoutes.Admin.Paths.DeleteUserToken.Enabled {
-			v.DELETE(r.DefaultRoutes.Admin.Paths.DeleteUserToken.Path, mustBeAuthenticated, mustAuthenticationBeValid, ableToManageUsers, user.AdminDeleteUserToken)
+			v.DELETE(r.DefaultRoutes.Admin.Paths.DeleteUserToken.Path, mustBeAuthenticated, mustAuthenticationBeValid, mustBeValidAuthToken("error.admin.user.token.delete.message"), ableToManageUsers, user.AdminDeleteUserToken)
 		}
 		if r.DefaultRoutes.Admin.Paths.SetAbilitiesToUser.Enabled {
-			v.PUT(r.DefaultRoutes.Admin.Paths.SetAbilitiesToUser.Path, mustBeAuthenticated, mustAuthenticationBeValid, mustBeAdmin, user.SetAbilities)
+			v.PUT(r.DefaultRoutes.Admin.Paths.SetAbilitiesToUser.Path, mustBeAuthenticated, mustAuthenticationBeValid, mustBeValidUserID("error.admin.user.abilities.update.message"), mustBeAdmin, user.SetAbilities)
 		}
 		if r.DefaultRoutes.Admin.Paths.AddAbilitiesToUser.Enabled {
-			v.PUT(r.DefaultRoutes.Admin.Paths.AddAbilitiesToUser.Path, mustBeAuthenticated, mustAuthenticationBeValid, mustBeAdmin, user.AddAbilities)
+			v.PUT(r.DefaultRoutes.Admin.Paths.AddAbilitiesToUser.Path, mustBeAuthenticated, mustAuthenticationBeValid, mustBeValidUserID("error.admin.user.abilities.update.message"), mustBeAdmin, user.AddAbilities)
 		}
 		if r.DefaultRoutes.Admin.Paths.RemoveAbilitiesFromUser.Enabled {
-			v.PUT(r.DefaultRoutes.Admin.Paths.RemoveAbilitiesFromUser.Path, mustBeAuthenticated, mustAuthenticationBeValid, mustBeAdmin, user.RemoveAbilities)
+			v.PUT(r.DefaultRoutes.Admin.Paths.RemoveAbilitiesFromUser.Path, mustBeAuthenticated, mustAuthenticationBeValid, mustBeValidUserID("error.admin.user.abilities.update.message"), mustBeAdmin, user.RemoveAbilities)
 		}
 		if r.DefaultRoutes.Admin.Paths.DeleteUser.Enabled {
-			v.DELETE(r.DefaultRoutes.Admin.Paths.DeleteUser.Path, mustBeAuthenticated, mustAuthenticationBeValid, ableToManageUsers, user.AdminDelete)
+			v.DELETE(r.DefaultRoutes.Admin.Paths.DeleteUser.Path, mustBeAuthenticated, mustAuthenticationBeValid, mustBeValidUserID("error.admin.user.delete.message"), ableToManageUsers, user.AdminDelete)
 		}
 		if r.DefaultRoutes.Admin.Paths.DisableUser.Enabled {
-			v.PUT(r.DefaultRoutes.Admin.Paths.DisableUser.Path, mustBeAuthenticated, mustAuthenticationBeValid, ableToManageUsers, user.AdminDisable)
+			v.PUT(r.DefaultRoutes.Admin.Paths.DisableUser.Path, mustBeAuthenticated, mustAuthenticationBeValid, mustBeValidUserID("error.admin.user.disable.message"), ableToManageUsers, user.AdminDisable)
 		}
 		if r.DefaultRoutes.Admin.Paths.EnableUser.Enabled {
-			v.PUT(r.DefaultRoutes.Admin.Paths.EnableUser.Path, mustBeAuthenticated, mustAuthenticationBeValid, ableToManageUsers, user.AdminEnable)
+			v.PUT(r.DefaultRoutes.Admin.Paths.EnableUser.Path, mustBeAuthenticated, mustAuthenticationBeValid, mustBeValidUserID("error.admin.user.enable.message"), ableToManageUsers, user.AdminEnable)
 		}
 
 		// ----- Contact
@@ -503,10 +539,10 @@ func (r *Router) LoadDefaultRoutes() {
 			v.GET(r.DefaultRoutes.Admin.Paths.GetContacts.Path, mustBeAuthenticated, ableToManageContacts, verifyLimitAndOffset, contact.GetAdminContacts)
 		}
 		if r.DefaultRoutes.Admin.Paths.GetContact.Enabled {
-			v.GET(r.DefaultRoutes.Admin.Paths.GetContact.Path, mustBeAuthenticated, ableToManageContacts, contact.GetAdminContact)
+			v.GET(r.DefaultRoutes.Admin.Paths.GetContact.Path, mustBeAuthenticated, mustBeValidContactID("error.admin.contact.get.message"), ableToManageContacts, contact.GetAdminContact)
 		}
 		if r.DefaultRoutes.Admin.Paths.UpdateContact.Enabled {
-			v.PUT(r.DefaultRoutes.Admin.Paths.UpdateContact.Path, mustBeAuthenticated, ableToManageContacts, contact.Update)
+			v.PUT(r.DefaultRoutes.Admin.Paths.UpdateContact.Path, mustBeAuthenticated, mustBeValidContactID("error.admin.contact.update.message"), ableToManageContacts, contact.Update)
 		}
 	}
 

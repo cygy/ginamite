@@ -9,64 +9,20 @@ import (
 	"github.com/cygy/ginamite/common/localization"
 
 	"github.com/gin-gonic/gin"
-	"github.com/globalsign/mgo/bson"
 )
 
-func checkUserID(c *gin.Context, messageKey string) (string, bool) {
-	locale := context.GetLocale(c)
-	t := localization.Translate(locale)
-
-	userID := c.Param("id")
-	if len(userID) == 0 {
-		response.InvalidRequestParameterWithDetails(c,
-			t(messageKey),
-			t("error.admin.user.id.not_found.reason"),
-			t("error.admin.user.id.not_found.recovery"))
-		return "", false
-	}
-
-	if !bson.IsObjectIdHex(userID) {
-		response.InvalidRequestParameterWithDetails(c,
-			t(messageKey),
-			t("error.admin.user.id.invalid.reason"),
-			t("error.admin.user.id.invalid.recovery"))
-		return "", false
-	}
-
-	return userID, true
+func getUserID(c *gin.Context) string {
+	return c.Param("id")
 }
 
-func checkTokenID(c *gin.Context, messageKey string) (string, bool) {
-	locale := context.GetLocale(c)
-	t := localization.Translate(locale)
-
-	tokenID := c.Param("id")
-	if len(tokenID) == 0 {
-		response.InvalidRequestParameterWithDetails(c,
-			t(messageKey),
-			t("error.admin.token.id.not_found.reason"),
-			t("error.admin.token.id.not_found.recovery"))
-		return "", false
-	}
-
-	if !bson.IsObjectIdHex(tokenID) {
-		response.InvalidRequestParameterWithDetails(c,
-			t(messageKey),
-			t("error.admin.token.id.invalid.reason"),
-			t("error.admin.token.id.invalid.recovery"))
-		return "", false
-	}
-
-	return tokenID, true
+func getTokenID(c *gin.Context) string {
+	return c.Param("id")
 }
 
 func updateAbilities(c *gin.Context, action string) {
 	errorMessageKey := "error.admin.user.abilities.update.message"
 
-	userID, ok := checkUserID(c, errorMessageKey)
-	if !ok {
-		return
-	}
+	userID := getUserID(c)
 
 	var jsonBody struct {
 		Abilities []string `json:"abilities"`

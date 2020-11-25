@@ -61,11 +61,6 @@ func GetAdminDisabledUsers(c *gin.Context) {
 func AdminUpdatePassword(c *gin.Context) {
 	errorMessageKey := "error.admin.user.password.update.message"
 
-	userID, ok := checkUserID(c, errorMessageKey)
-	if !ok {
-		return
-	}
-
 	var jsonBody struct {
 		Password string `json:"password"`
 	}
@@ -88,6 +83,7 @@ func AdminUpdatePassword(c *gin.Context) {
 	if UpdatePasswordByAdmin == nil {
 		err = c.Error(errors.New("undefined function 'UpdatePasswordByAdmin'"))
 	} else {
+		userID := getUserID(c)
 		err = UpdatePasswordByAdmin(c, userID, jsonBody.Password)
 	}
 
@@ -102,11 +98,6 @@ func AdminUpdatePassword(c *gin.Context) {
 // AdminUpdateInformations : updates the informations of a user.
 func AdminUpdateInformations(c *gin.Context) {
 	errorMessageKey := "error.admin.user.informations.update.message"
-
-	userID, ok := checkUserID(c, errorMessageKey)
-	if !ok {
-		return
-	}
 
 	var jsonBody struct {
 		FirstName         string `json:"first_name"`
@@ -143,6 +134,7 @@ func AdminUpdateInformations(c *gin.Context) {
 	if UpdateInformationsByAdmin == nil {
 		err = c.Error(errors.New("undefined function 'UpdateInformationsByAdmin'"))
 	} else {
+		userID := getUserID(c)
 		err = UpdateInformationsByAdmin(c, userID, jsonBody.FirstName, jsonBody.LastName, newEmailAddress, jsonBody.ValidEmailAddress)
 	}
 
@@ -157,11 +149,6 @@ func AdminUpdateInformations(c *gin.Context) {
 // AdminUpdateDescription : updates the description of a user.
 func AdminUpdateDescription(c *gin.Context) {
 	errorMessageKey := "error.admin.user.description.update.message"
-
-	userID, ok := checkUserID(c, errorMessageKey)
-	if !ok {
-		return
-	}
 
 	var jsonBody struct {
 		Description string `json:"description"`
@@ -192,6 +179,7 @@ func AdminUpdateDescription(c *gin.Context) {
 	if UpdateDescriptionByAdmin == nil {
 		err = c.Error(errors.New("undefined function 'UpdateDescriptionByAdmin'"))
 	} else {
+		userID := getUserID(c)
 		err = UpdateDescriptionByAdmin(c, userID, newLocale, jsonBody.Description)
 	}
 
@@ -206,11 +194,6 @@ func AdminUpdateDescription(c *gin.Context) {
 // AdminUpdateSocial : updates the social networks of a user.
 func AdminUpdateSocial(c *gin.Context) {
 	errorMessageKey := "error.admin.user.social.update.message"
-
-	userID, ok := checkUserID(c, errorMessageKey)
-	if !ok {
-		return
-	}
 
 	var jsonBody struct {
 		Facebook  string `json:"facebook"`
@@ -255,6 +238,8 @@ func AdminUpdateSocial(c *gin.Context) {
 		return
 	}
 
+	userID := getUserID(c)
+
 	var err error
 	if UpdateSocialByAdmin == nil {
 		err = c.Error(errors.New("undefined function 'UpdateSocialByAdmin'"))
@@ -277,11 +262,6 @@ func AdminUpdateSocial(c *gin.Context) {
 // AdminUpdateSettings : updates the settings of a user.
 func AdminUpdateSettings(c *gin.Context) {
 	errorMessageKey := "error.admin.user.settings.update.message"
-
-	userID, ok := checkUserID(c, errorMessageKey)
-	if !ok {
-		return
-	}
 
 	var jsonBody struct {
 		Locale   string `json:"locale"`
@@ -332,6 +312,7 @@ func AdminUpdateSettings(c *gin.Context) {
 	if UpdateSettingsByAdmin == nil {
 		err = c.Error(errors.New("undefined function 'UpdateSettingsByAdmin'"))
 	} else {
+		userID := getUserID(c)
 		err = UpdateSettingsByAdmin(c, userID, newLocale, newTimezone)
 	}
 
@@ -346,11 +327,6 @@ func AdminUpdateSettings(c *gin.Context) {
 // AdminUpdateNotifications : updates the notifications of a user.
 func AdminUpdateNotifications(c *gin.Context) {
 	errorMessageKey := "error.admin.user.notifications.update.message"
-
-	userID, ok := checkUserID(c, errorMessageKey)
-	if !ok {
-		return
-	}
 
 	var jsonBody struct {
 		Notifications []string `json:"notifications"`
@@ -375,6 +351,7 @@ func AdminUpdateNotifications(c *gin.Context) {
 	if UpdateNotificationsByAdmin == nil {
 		err = c.Error(errors.New("undefined function 'UpdateNotificationsByAdmin'"))
 	} else {
+		userID := getUserID(c)
 		err = UpdateNotificationsByAdmin(c, userID, notificationsToSave)
 	}
 
@@ -394,10 +371,7 @@ func GetAdminUserTokens(c *gin.Context) {
 		return
 	}
 
-	userID, ok := checkUserID(c, "error.admin.user.tokens.get.message")
-	if !ok {
-		return
-	}
+	userID := getUserID(c)
 
 	tokens, err := GetTokensForAdmin(c, userID)
 	if err != nil {
@@ -424,10 +398,7 @@ func AdminDeleteUserToken(c *gin.Context) {
 		return
 	}
 
-	tokenID, ok := checkTokenID(c, "error.admin.user.token.delete.message")
-	if !ok {
-		return
-	}
+	tokenID := getTokenID(c)
 
 	token, err := account.GetTokenDetailsByID(c, tokenID)
 	if err != nil && !commonErrors.IsNotFound(err) {
@@ -466,13 +437,8 @@ func RemoveAbilities(c *gin.Context) {
 
 // AdminDelete : deletes a user.
 func AdminDelete(c *gin.Context) {
-	errorMessageKey := "error.admin.user.delete.message"
-
 	// Get the userID from the request.
-	userID, ok := checkUserID(c, errorMessageKey)
-	if !ok {
-		return
-	}
+	userID := getUserID(c)
 
 	// Get the user to delete.
 	user, err := account.GetUserDetailsByID(c, userID)
@@ -506,13 +472,8 @@ func AdminDelete(c *gin.Context) {
 
 // AdminDisable : disables a user.
 func AdminDisable(c *gin.Context) {
-	errorMessageKey := "error.admin.user.disable.message"
-
 	// Get the userID from the request.
-	userID, ok := checkUserID(c, errorMessageKey)
-	if !ok {
-		return
-	}
+	userID := getUserID(c)
 
 	// Disable the user.
 	user, err := account.DisableUserByID(c, userID)
@@ -540,13 +501,8 @@ func AdminDisable(c *gin.Context) {
 
 // AdminEnable : enables a user.
 func AdminEnable(c *gin.Context) {
-	errorMessageKey := "error.admin.user.enable.message"
-
 	// Get the userID from the request.
-	disabledUserID, ok := checkUserID(c, errorMessageKey)
-	if !ok {
-		return
-	}
+	disabledUserID := getUserID(c)
 
 	// Enable the user.
 	user, err := account.EnableUserByID(c, disabledUserID)

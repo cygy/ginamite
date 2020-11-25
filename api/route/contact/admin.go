@@ -41,12 +41,7 @@ func GetAdminContact(c *gin.Context) {
 		return
 	}
 
-	errorMessageKey := "error.admin.contact.get.message"
-
-	contactID, ok := checkContactID(c, errorMessageKey)
-	if !ok {
-		return
-	}
+	contactID := getContactID(c)
 
 	contact, err := GetContact(c, contactID)
 	if err != nil {
@@ -61,10 +56,9 @@ func GetAdminContact(c *gin.Context) {
 
 // Update : updates a contact document.
 func Update(c *gin.Context) {
-	errorMessageKey := "error.admin.contact.update.message"
-
-	contactID, ok := checkContactID(c, errorMessageKey)
-	if !ok {
+	if UpdateContact == nil {
+		c.Error(errors.New("undefined function 'UpdateContact'"))
+		response.InternalServerError(c)
 		return
 	}
 
@@ -73,20 +67,16 @@ func Update(c *gin.Context) {
 	}
 	request.DecodeBody(c, &jsonBody)
 
-	locale := context.GetLocale(c)
-	t := localization.Translate(locale)
+	contactID := getContactID(c)
 
-	var err error
-	if UpdateContact == nil {
-		err = c.Error(errors.New("undefined function 'UpdateContact'"))
-	} else {
-		err = UpdateContact(c, contactID, jsonBody.Done)
-	}
-
+	err := UpdateContact(c, contactID, jsonBody.Done)
 	if err != nil {
 		response.InternalServerError(c)
 		return
 	}
+
+	locale := context.GetLocale(c)
+	t := localization.Translate(locale)
 
 	response.OkWithStatus(c, t("status.admin.contact.updated"))
 }
