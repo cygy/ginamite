@@ -260,6 +260,18 @@ func (r *Router) LoadDefaultRoutes() {
 		})
 	}
 
+	mustBeValidForgotPasswordID := func(messageKey string) gin.HandlerFunc {
+		return middleware.VerifyURLParameter(middleware.Config{
+			Name:                       "id",
+			StoreKey:                   "fpID",
+			MessageKey:                 messageKey,
+			NotFoundReasonKey:          "error.forgot_password.validate_or_cancel.reason",
+			NotFoundRecoveryKey:        "error.forgot_password.validate_or_cancel.recovery",
+			InvalidObjectIDReasonKey:   "error.forgot_password.validate_or_cancel.reason",
+			InvalidObjectIDRecoveryKey: "error.forgot_password.validate_or_cancel.recovery",
+		})
+	}
+
 	// Set up the default routes.
 	v := r.Group
 
@@ -337,10 +349,10 @@ func (r *Router) LoadDefaultRoutes() {
 			v.POST(r.DefaultRoutes.ForgotPassword.Paths.ForgotPassword.Path, account.ForgotPassword)
 		}
 		if r.DefaultRoutes.ForgotPassword.Paths.Validate.Enabled {
-			v.PUT(r.DefaultRoutes.ForgotPassword.Paths.Validate.Path, account.ValidateForgotPassword)
+			v.PUT(r.DefaultRoutes.ForgotPassword.Paths.Validate.Path, mustBeValidForgotPasswordID("error.forgot_password.validate.message"), account.ValidateForgotPassword)
 		}
 		if r.DefaultRoutes.ForgotPassword.Paths.Cancel.Enabled {
-			v.DELETE(r.DefaultRoutes.ForgotPassword.Paths.Cancel.Path, account.CancelForgotPassword)
+			v.DELETE(r.DefaultRoutes.ForgotPassword.Paths.Cancel.Path, mustBeValidForgotPasswordID("error.forgot_password.cancel.message"), account.CancelForgotPassword)
 		}
 	}
 
