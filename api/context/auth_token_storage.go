@@ -3,8 +3,8 @@ package context
 import (
 	"github.com/cygy/ginamite/common/authentication"
 
-	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
+	jwt "github.com/golang-jwt/jwt"
 )
 
 // GetSignedToken : returns the signed token.

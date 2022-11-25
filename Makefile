@@ -10,15 +10,15 @@ bump_patch: version_patch archive
 archive: dep git_push
 
 version_major:
-	$(eval VERSION=$(shell cat VERSION | awk -F. '{$$1+=1; $$2=0; $$3=0; OFS="."; print $0}'))
+	$(eval VERSION=$(shell cat VERSION | awk -F. '{OFS="."; $$1+=1; $$2=0; $$3=0; print $0}'))
 	echo $(VERSION) > VERSION
 
 version_minor:
-	$(eval VERSION=$(shell cat VERSION | awk -F. '{$$2+=1; $$3=0; OFS="."; print $0}'))
+	$(eval VERSION=$(shell cat VERSION | awk -F. '{OFS="."; $$2+=1; $$3=0; print $0}'))
 	echo $(VERSION) > VERSION
 
 version_patch:
-	$(eval VERSION=$(shell cat VERSION | awk -F. '{$$3+=1; OFS="."; print $0}'))
+	$(eval VERSION=$(shell cat VERSION | awk -F. '{OFS="."; $$3+=1; print $0}'))
 	echo $(VERSION) > VERSION
 
 dep:

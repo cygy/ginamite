@@ -5,9 +5,9 @@ import (
 	"github.com/cygy/ginamite/plugins/mongodb/api/context"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
 
-	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	"github.com/globalsign/mgo/bson"
+	jwt "github.com/golang-jwt/jwt"
 )
 
 // IsValidAuthToken : returns trus if the auth token is valid.

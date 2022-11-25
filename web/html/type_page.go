@@ -11,8 +11,8 @@ import (
 	"github.com/cygy/ginamite/common/response"
 	"github.com/cygy/ginamite/common/template/html"
 
-	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
+	jwt "github.com/golang-jwt/jwt"
 	"github.com/sirupsen/logrus"
 )
 

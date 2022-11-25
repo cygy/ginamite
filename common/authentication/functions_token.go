@@ -7,7 +7,7 @@ import (
 
 	"github.com/cygy/ginamite/common/log"
 
-	jwt "github.com/dgrijalva/jwt-go"
+	jwt "github.com/golang-jwt/jwt"
 	"github.com/sirupsen/logrus"
 )
 

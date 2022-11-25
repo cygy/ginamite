@@ -6,9 +6,9 @@ import (
 	"github.com/cygy/ginamite/common/authentication"
 	"github.com/cygy/ginamite/common/log"
 
-	jwt "github.com/dgrijalva/jwt-go"
-	"github.com/dgrijalva/jwt-go/request"
 	"github.com/gin-gonic/gin"
+	jwt "github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/request"
 	"github.com/sirupsen/logrus"
 )
 

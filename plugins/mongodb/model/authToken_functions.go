@@ -5,9 +5,9 @@ import (
 
 	"github.com/cygy/ginamite/common/mongo/document"
 
-	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
+	jwt "github.com/golang-jwt/jwt"
 )
 
 // GetAuthTokens : returns all the auth tokens of a user.
