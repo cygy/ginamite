@@ -49,7 +49,8 @@ func InjectRequestLogger(logResponseBody bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Get the request details
 		if len(c.Request.Header.Get(RequestIDHeaderName)) == 0 {
-			c.Request.Header.Set(RequestIDHeaderName, uuid.NewString())
+			uuid := uuid.New()
+			c.Request.Header.Set(RequestIDHeaderName, uuid.String())
 		}
 
 		requestIP := request.GetRealIPAddress(c)
