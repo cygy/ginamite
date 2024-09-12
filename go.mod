@@ -18,7 +18,7 @@ require (
 	github.com/mssola/user_agent v0.5.2
 	github.com/nicksnyder/go-i18n v1.10.1
 	github.com/sirupsen/logrus v1.6.0
-	github.com/tredoe/osutil v1.0.5
+	github.com/tredoe/osutil v1.5.0
 	gopkg.in/resty.v1 v1.12.0
 	gopkg.in/yaml.v2 v2.2.8
 )
