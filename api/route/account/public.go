@@ -45,5 +45,14 @@ func CheckUsernameParameter(c *gin.Context, username, parameterName string) bool
 		return false
 	}
 
+	// Username must not contain invalid strings.
+	for _, invalidString := range authentication.InvalidStringsSetForUsername {
+		if strings.Contains(strings.ToLower(username), strings.ToLower(invalidString)) {
+			// Spoof the error, if it happens it's because of a spam bot.
+			response.InternalServerError(c)
+			return false
+		}
+	}
+
 	return true
 }

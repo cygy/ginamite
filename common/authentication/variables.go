@@ -9,4 +9,10 @@ var (
 
 	// ExtendTokenExpirationDateFromID : extends the expiration date of a auth token from its ID.
 	ExtendTokenExpirationDateFromID ExtendTokenExpirationDateFunc
+
+	// InvalidStringsSetForUsername : forbidden strings in an username.
+	InvalidStringsSetForUsername = []string{
+		"http",
+		"://",
+	}
 )
