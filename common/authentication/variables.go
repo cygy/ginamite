@@ -14,5 +14,6 @@ var (
 	InvalidStringsSetForUsername = []string{
 		"http",
 		"://",
+		"blogspot",
 	}
 )
