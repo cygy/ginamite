@@ -6,6 +6,7 @@ import (
 	"github.com/cygy/ginamite/api/context"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common/authentication"
+	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/localization"
 
 	"github.com/gin-gonic/gin"
@@ -46,7 +47,7 @@ func CheckUsernameParameter(c *gin.Context, username, parameterName string) bool
 	}
 
 	// Username must not contain invalid strings.
-	for _, invalidString := range authentication.InvalidStringsSetForUsername {
+	for _, invalidString := range config.Main.Account.InvalidStringsForUsername {
 		if strings.Contains(strings.ToLower(username), strings.ToLower(invalidString)) {
 			// Spoof the error, if it happens it's because of a spam bot.
 			response.InternalServerError(c)

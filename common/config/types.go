@@ -143,9 +143,10 @@ type UserNotificationsConfiguration struct {
 
 // AccountConfiguration : configuration of the users' account.
 type AccountConfiguration struct {
-	EmailAddressMustBeConfirmed bool `yaml:"email_address_must_be_confirmed"`
-	DeleteNeverUsedAfter        uint `yaml:"delete_never_used_after"` // in days
-	DeleteInactiveAfter         uint `yaml:"delete_inactive_after"`   // in months
+	EmailAddressMustBeConfirmed bool     `yaml:"email_address_must_be_confirmed"`
+	DeleteNeverUsedAfter        uint     `yaml:"delete_never_used_after"` // in days
+	DeleteInactiveAfter         uint     `yaml:"delete_inactive_after"`   // in months
+	InvalidStringsForUsername   []string `yaml:"invalid_strings_for_username"`
 }
 
 // SitemapConfiguration : management of the sitemap files generation.
@@ -223,6 +224,7 @@ func NewConfiguration() (config *Configuration) {
 	config.Account.EmailAddressMustBeConfirmed = true
 	config.Account.DeleteNeverUsedAfter = 10
 	config.Account.DeleteInactiveAfter = 48
+	config.Account.InvalidStringsForUsername = []string{}
 	config.RecurringTasks = []recurring.ScheduledTask{}
 	config.RunStartUpTasks = false
 
