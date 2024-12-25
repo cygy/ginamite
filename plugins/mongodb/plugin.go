@@ -38,6 +38,8 @@ type Plugin struct {
 	RemoveDefaultDocuments func(string, string, *mgo.Database)
 	UpdateDefaultDocuments func(string, string, *mgo.Database)
 	StartUpTasks           func()
+
+	IsUserEmpty func(string, *mgo.Database) bool
 }
 
 // NewPlugin : returns a new struct 'Plugin'.
@@ -73,6 +75,7 @@ func (p *Plugin) Configure(server *ginamite.Server) {
 	server.Worker.Functions.DeleteExpiredTokens = workerFunctions.DeleteExpiredTokens
 	server.Worker.Functions.GetNeverUsedAccounts = workerFunctions.GetNeverUsedAccounts
 	server.Worker.Functions.GetInactiveAccounts = workerFunctions.GetInactiveAccounts
+	server.Worker.Functions.IsUserEmpty = workerFunctions.IsEmptyUser(p.IsUserEmpty)
 	server.Worker.Functions.DeleteUserByID = workerFunctions.DeleteUserByID(p.UpdateDocumentsReferencingToDeletedUser)
 	server.Worker.Functions.DisableUserByID = workerFunctions.DisableUserByID(p.UpdateDocumentsReferencingToDisabledUser)
 	server.Worker.Functions.EnableUserByID = workerFunctions.EnableUserByID(p.UpdateDocumentsReferencingToEnabledUser)

@@ -137,3 +137,17 @@ func GetInactiveAccounts(intervalInMonths uint) []string {
 	userIDs, _ := model.GetInactiveUserIDs(30*24*time.Hour*time.Duration(intervalInMonths), db)
 	return userIDs
 }
+
+// IsEmptyUser : returns true if the user has never done at least one action.
+func IsEmptyUser(isEmptyUser func(userId string, mongoSession *mgo.Database) bool) func(userID string) bool {
+	return func(userID string) bool {
+		if isEmptyUser == nil {
+			return true
+		}
+
+		session, db := session.Copy()
+		defer session.Close()
+
+		return isEmptyUser(userID, db)
+	}
+}

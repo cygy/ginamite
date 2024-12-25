@@ -279,11 +279,11 @@ func (s *Server) Start() {
 			break
 		// Delete the never used accounts.
 		case recurring.DeleteNeverUsedAccounts:
-			if !config.Main.Account.EmailAddressMustBeConfirmed || s.Functions.GetNeverUsedAccounts == nil || s.Functions.DeleteUserByID == nil {
+			if !config.Main.Account.EmailAddressMustBeConfirmed || s.Functions.GetNeverUsedAccounts == nil || s.Functions.IsUserEmpty == nil || s.Functions.DeleteUserByID == nil {
 				break
 			}
 			recurring.SetFunc(task.Name, func(taskName string) {
-				account.DeleteNeverUsed(taskName, config.Main.Account.DeleteNeverUsedAfter, s.Functions.GetNeverUsedAccounts, s.Functions.DeleteUserByID)
+				account.DeleteNeverUsed(taskName, config.Main.Account.DeleteNeverUsedAfter, s.Functions.GetNeverUsedAccounts, s.Functions.IsUserEmpty, s.Functions.DeleteUserByID)
 			})
 			break
 		// Delete the inactive accounts.

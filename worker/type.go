@@ -35,4 +35,5 @@ type Handlers struct {
 	GetLocalizedRouteVariables            func(routeKey string, offset, limit int) map[string][]map[string]string // indexed by locale, then indexed by variable name.
 	GetNeverUsedAccounts                  func(intervalInDays uint) []string
 	GetInactiveAccounts                   func(intervalInMonths uint) []string
+	IsUserEmpty                           func(userID string) bool
 }

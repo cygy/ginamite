@@ -9,20 +9,24 @@ import (
 )
 
 // DeleteNeverUsed : deletes the never used accounts (never logged in).
-func DeleteNeverUsed(taskName string, intervalInDays uint, getNeverUsedAccounts func(uint) []string, deleteUser func(userID string) map[string]time.Time) {
+func DeleteNeverUsed(taskName string, intervalInDays uint, getNeverUsedAccounts func(uint) []string, isUserEmpty func(string) bool, deleteUser func(userID string) map[string]time.Time) {
 	userIDs := getNeverUsedAccounts(intervalInDays)
+	countOfDeletedUsers := 0
 
 	// Delete the user.
 	for _, userID := range userIDs {
-		deleteUser(userID)
+		if isUserEmpty(userID) {
+			deleteUser(userID)
+			countOfDeletedUsers++
 
-		queue.DeleteUser(queue.TaskDeleteUser{
-			UserID: userID,
-		})
+			queue.DeleteUser(queue.TaskDeleteUser{
+				UserID: userID,
+			})
+		}
 	}
 
 	tasks.LogDone(taskName, &logrus.Fields{
-		"count": len(userIDs),
+		"count": countOfDeletedUsers,
 	})
 }
 

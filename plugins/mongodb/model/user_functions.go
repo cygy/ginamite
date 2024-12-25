@@ -60,10 +60,16 @@ func GetAnonymousUser(db *mgo.Database) (*User, error) {
 	return user, err
 }
 
-// GetNeverUsedUserIDs : deletes the never used accounts from interval.
+// GetNeverUsedUserIDs : returns the user that has never been used.
 func GetNeverUsedUserIDs(interval time.Duration, db *mgo.Database) ([]string, error) {
 	users := []User{}
-	err := document.GetDocumentsBySelector(&users, UserCollection, bson.D{{Name: "registrationInfos.date", Value: bson.M{"$lt": time.Now().Add(interval * -1)}}, {Name: "lastLogin", Value: bson.M{"$exists": false}}}, db)
+	err := document.GetDocumentsBySelector(&users, UserCollection,
+		bson.D{
+			{Name: "registrationInfos.date", Value: bson.M{"$lt": time.Now().Add(interval * -1)}},
+			{Name: "lastLogin", Value: bson.M{"$exists": false}},
+			{Name: "isAdmin", Value: false},
+		},
+		db)
 
 	userIDs := make([]string, len(users))
 	for i, user := range users {
