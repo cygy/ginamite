@@ -61,7 +61,7 @@ func CheckUsernameParameter(c *gin.Context, username, parameterName string) bool
 	}
 
 	// Do not accept thius pattern because of spam.
-	re := regexp.MustCompile(`^([a-z]+[A-Z]+|[A-Z]+[a-z]+){2,}([a-z]*|[A-Z]*)?$`)
+	re := regexp.MustCompile(`^([a-z]+[A-Z]+|[A-Z]+[a-z]+){3,}([a-z]*|[A-Z]*)?$`)
 	if re.MatchString(username) {
 		vowels := len(regexp.MustCompile(`[aeiouy]`).FindAllString(loweredUsername, -1))
 		if usernameLength >= 8 && vowels <= usernameLength/3 {
