@@ -1,6 +1,7 @@
 package account
 
 import (
+	"regexp"
 	"strings"
 
 	"github.com/cygy/ginamite/api/context"
@@ -16,8 +17,10 @@ import (
 func CheckUsernameParameter(c *gin.Context, username, parameterName string) bool {
 	locale := context.GetLocale(c)
 
+	usernameLength := len(username)
+
 	// Username is mandatory.
-	if len(username) == 0 {
+	if usernameLength == 0 {
 		message := localization.Translate(locale)("error.username.not_found.message")
 		reason := localization.Translate(locale)("error.username.not_found.reason")
 		recovery := localization.Translate(locale)("error.username.not_found.recovery")
@@ -27,7 +30,7 @@ func CheckUsernameParameter(c *gin.Context, username, parameterName string) bool
 	}
 
 	// Username must contain at least X characters.
-	if len(username) < authentication.MinimumCharactersForUsername {
+	if usernameLength < authentication.MinimumCharactersForUsername {
 		message := localization.Translate(locale)("error.username.invalid.message")
 		reason := localization.Translate(locale)("error.username.minimum_characters.reason", localization.H{"Count": authentication.MinimumCharactersForUsername})
 		recovery := localization.Translate(locale)("error.username.minimum_characters.recovery", localization.H{"Count": authentication.MinimumCharactersForUsername})
@@ -46,9 +49,22 @@ func CheckUsernameParameter(c *gin.Context, username, parameterName string) bool
 		return false
 	}
 
+	loweredUsername := strings.ToLower(username)
+
 	// Username must not contain invalid strings.
 	for _, invalidString := range config.Main.Account.InvalidStringsForUsername {
-		if strings.Contains(strings.ToLower(username), strings.ToLower(invalidString)) {
+		if strings.Contains(loweredUsername, strings.ToLower(invalidString)) {
+			// Spoof the error, if it happens it's because of a spam bot.
+			response.InternalServerError(c)
+			return false
+		}
+	}
+
+	// Do not accept thius pattern because of spam.
+	re := regexp.MustCompile(`^([a-z]+[A-Z]+|[A-Z]+[a-z]+){2,}([a-z]*|[A-Z]*)?$`)
+	if re.MatchString(username) {
+		vowels := len(regexp.MustCompile(`[aeiouy]`).FindAllString(loweredUsername, -1))
+		if usernameLength >= 8 && vowels <= usernameLength/3 {
 			// Spoof the error, if it happens it's because of a spam bot.
 			response.InternalServerError(c)
 			return false
