@@ -49,27 +49,161 @@ func CheckUsernameParameter(c *gin.Context, username, parameterName string) bool
 		return false
 	}
 
-	loweredUsername := strings.ToLower(username)
-
 	// Username must not contain invalid strings.
-	for _, invalidString := range config.Main.Account.InvalidStringsForUsername {
-		if strings.Contains(loweredUsername, strings.ToLower(invalidString)) {
-			// Spoof the error, if it happens it's because of a spam bot.
-			response.InternalServerError(c)
-			return false
-		}
-	}
-
-	// Do not accept thius pattern because of spam.
-	re := regexp.MustCompile(`^([a-z]+[A-Z]+|[A-Z]+[a-z]+){3,}([a-z]*|[A-Z]*)?$`)
-	if re.MatchString(username) {
-		vowels := len(regexp.MustCompile(`[aeiouy]`).FindAllString(loweredUsername, -1))
-		if usernameLength >= 8 && vowels <= usernameLength/3 {
-			// Spoof the error, if it happens it's because of a spam bot.
-			response.InternalServerError(c)
-			return false
-		}
+	// Do not accept some patterns because of spam.
+	if doesUsernameContainForbiddenStrings(username) || !isUsernamePatternAccepted(username) {
+		// Spoof the error, if it happens it's because of a spam bot.
+		response.InternalServerError(c)
+		return false
 	}
 
 	return true
 }
+
+func doesUsernameContainForbiddenStrings(username string) bool {
+	loweredUsername := strings.ToLower(username)
+	for _, invalidString := range config.Main.Account.InvalidStringsForUsername {
+		if strings.Contains(loweredUsername, strings.ToLower(invalidString)) {
+			return true
+		}
+	}
+	return false
+}
+
+func isUsernamePatternAccepted(username string) bool {
+	usernameLength := len(username)
+	if usernameLength < 8 {
+		return true
+	}
+
+	rejectedRe := regexp.MustCompile(`^([a-z]+[A-Z]+|[A-Z]+[a-z]+){1,}([a-z]*|[A-Z]*)?$`)
+	if rejectedRe.MatchString(username) {
+		acceptedRe1 := regexp.MustCompile(`^([A-Z][a-z]+){1,2}([a-z]*|[A-Z]*)?$`)
+		acceptedRe2 := regexp.MustCompile(`^[a-z]+([A-Z][a-z]+)*$`)
+		if acceptedRe1.MatchString(username) || acceptedRe2.MatchString(username) {
+			loweredUsername := strings.ToLower(username)
+			vowels := len(regexp.MustCompile(`[aeiouy]`).FindAllString(loweredUsername, -1))
+			return vowels > usernameLength/6
+		}
+		return false
+	}
+
+	return true
+}
+
+/*
+package main
+
+import (
+	"fmt"
+	"regexp"
+	"strings"
+)
+
+// IsAccepted checks if a string matches the "accepted" pattern.
+func IsAccepted(input string) bool {
+	usernameLength := len(input)
+	if usernameLength < 8 {
+		return true
+	}
+
+	rejectedRe := regexp.MustCompile(`^([a-z]+[A-Z]+|[A-Z]+[a-z]+){1,}([a-z]*|[A-Z]*)?$`)
+	if rejectedRe.MatchString(input) {
+		acceptedRe1 := regexp.MustCompile(`^([A-Z][a-z]+){1,2}([a-z]*|[A-Z]*)?$`)
+		acceptedRe2 := regexp.MustCompile(`^[a-z]+([A-Z][a-z]+)*$`)
+		if acceptedRe1.MatchString(input) || acceptedRe2.MatchString(input) {
+			loweredUsername := strings.ToLower(input)
+			vowels := len(regexp.MustCompile(`[aeiouy]`).FindAllString(loweredUsername, -1))
+			if vowels <= usernameLength/6 {
+				return false
+			}
+			return true
+		}
+		return false
+	}
+
+	return true
+}
+
+func main() {
+	accepted := []string{
+		"AvianAnalyst",
+		"MartinEdush",
+		"JacquesVettE",
+		"lllolllo",
+		"Sasakura",
+		"byakkun",
+		"theoLord",
+		"ScottLat",
+		"JesterJunk",
+		"cloudcolors",
+		"Adelicya",
+		"Cyril",
+		"FredLand",
+		"Kikine",
+		"keitaro",
+	}
+
+	rejected := []string{
+		"tytHRBCWGz",
+		"CbIVUrts",
+		"bTrAPIQFaIyQv",
+		"aceXlhyYuhB",
+		"zhZmjyKf",
+		"rNophjAAYb",
+		"SArFyugvbqr",
+		"XnTfybBSz",
+		"jIvomLJgupPz",
+		"XbJGmVzrThVXHb",
+		"siJpvkKLglGS",
+		"jcmEFaOJEhe",
+		"YHXhzwBi",
+		"PtZKbPNxNemWG",
+		"wCOdjEca",
+		"PBlLTMRdUbyB",
+		"uCQsKZmariK",
+		"YHXhzwBi",
+		"CzNifldgDoAVfr",
+		"yoWhCoGRrvN",
+		"yvJtLwhuCbjTCF",
+		"VfPtBKFGDbsnn",
+		"VtRrVKSRJAqzBW",
+		"iOTQAbUvI",
+		"OMelGMbXbIVG",
+		"gBwdmOQsKMt",
+		"nTdJaEfM",
+		"VTBVrxtWkNyN",
+		"oVBcmYYhDu",
+		"XwJwFJEghxaIqG",
+		"XYgIhkUrEK",
+		"jDiZxjGJotF",
+		"qgEycFijJWyhr",
+		"wgDMraTOiDhr",
+		"iijoyUJaUYe",
+		"zTIPaOuazVAWAq",
+		"AWJLtbLPixl",
+		"eCUeyEtIe",
+		"qnRlmccBb",
+		"GaLyQvHhIrYbnKk",
+		"FhWbPCRwNYC",
+	}
+
+	fmt.Println("Accepted strings (validation):")
+	for _, str := range accepted {
+		if IsAccepted(str) {
+			fmt.Println(str, "=> Accepted")
+		} else {
+			fmt.Println(str, "=> Rejected (should be accepted)")
+		}
+	}
+
+	fmt.Println("\nRejected strings (validation):")
+	for _, str := range rejected {
+		if !IsAccepted(str) {
+			fmt.Println(str, "=> Rejected")
+		} else {
+			fmt.Println(str, "=> Accepted (should be rejected)")
+		}
+	}
+}
+*/
