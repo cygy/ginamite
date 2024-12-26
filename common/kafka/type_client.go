@@ -3,7 +3,7 @@ package kafka
 import (
 	"os"
 
-	"github.com/Shopify/sarama"
+	"github.com/IBM/sarama"
 )
 
 // Client : a kafka client. Could be a message producer.

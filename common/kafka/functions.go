@@ -9,7 +9,7 @@ import (
 
 	"github.com/cygy/ginamite/common/log"
 
-	"github.com/Shopify/sarama"
+	"github.com/IBM/sarama"
 	"github.com/sirupsen/logrus"
 )
 
