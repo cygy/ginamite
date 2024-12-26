@@ -23,7 +23,6 @@ func (client *Client) Initialize(host string, port int, prefix string, hasProduc
 
 	// Create the kafka configuration.
 	config := sarama.NewConfig()
-	config.Version = sarama.V0_11_0_0
 	config.Producer.Return.Successes = true
 	config.Producer.Return.Errors = true
 	config.Consumer.Return.Errors = true
@@ -60,7 +59,13 @@ func (client *Client) Initialize(host string, port int, prefix string, hasProduc
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			for range client.Producer.Successes() {
+			for message := range client.Producer.Successes() {
+				log.WithFields(logrus.Fields{
+					"type":      "producer",
+					"value":     message.Value,
+					"topic":     message.Topic,
+					"partition": message.Partition,
+				}).Error("kafka send message success")
 			}
 		}()
 
@@ -71,7 +76,7 @@ func (client *Client) Initialize(host string, port int, prefix string, hasProduc
 				log.WithFields(logrus.Fields{
 					"type":  "producer",
 					"error": err.Error(),
-				}).Error("kafka error")
+				}).Error("kafka send message error")
 			}
 		}()
 
@@ -113,7 +118,7 @@ func (client *Client) Initialize(host string, port int, prefix string, hasProduc
 						log.WithFields(logrus.Fields{
 							"type":  "consumer",
 							"error": err.Error(),
-						}).Error("kafka partition error")
+						}).Error("kafka consume partition error")
 						time.Sleep(1 * time.Second)
 					} else {
 						consumer = c
