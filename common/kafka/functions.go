@@ -23,6 +23,7 @@ func (client *Client) Initialize(host string, port int, prefix string, hasProduc
 
 	// Create the kafka configuration.
 	config := sarama.NewConfig()
+	config.Version = sarama.V0_11_0_0
 	config.Producer.Return.Successes = true
 	config.Producer.Return.Errors = true
 	config.Consumer.Return.Errors = true
