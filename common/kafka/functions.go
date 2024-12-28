@@ -110,7 +110,7 @@ func (client *Client) Initialize(host string, port int, prefix string, hasProduc
 					"host":  host,
 					"port":  port,
 					"type":  "consumer",
-					"topic": client.TopicsPrefix,
+					"topic": fullTopicName,
 				}).Info("connected to kafka")
 
 				for partitionConsumer == nil {
