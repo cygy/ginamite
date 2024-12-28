@@ -65,7 +65,7 @@ func (client *Client) Initialize(host string, port int, prefix string, hasProduc
 					"value":     message.Value,
 					"topic":     message.Topic,
 					"partition": message.Partition,
-				}).Error("kafka send message success")
+				}).Info("kafka send message success")
 			}
 		}()
 
