@@ -9,14 +9,14 @@ import (
 	"github.com/globalsign/mgo"
 )
 
-// CleanDeletedAccounts : maintenance function to update/delete the data from a deleted user.
-func CleanDeletedAccounts(updateDocumentsReferencingToDeletedUsers func(mongoSession *mgo.Database) uint) func() uint {
+// SanitizeAccounts : maintenance function to update/delete the data from a deleted user.
+func SanitizeAccounts(SanitizeAccounts func(mongoSession *mgo.Database) uint) func() uint {
 	return func() uint {
-		if updateDocumentsReferencingToDeletedUsers != nil {
+		if SanitizeAccounts != nil {
 			session, db := session.Copy()
 			defer session.Close()
 
-			return updateDocumentsReferencingToDeletedUsers(db)
+			return SanitizeAccounts(db)
 		}
 
 		return 0

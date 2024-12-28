@@ -17,7 +17,7 @@ type Server struct {
 // Handlers : list of the functions of a worker
 type Handlers struct {
 	DeleteExpiredTokens                   func() uint
-	CleanDeletedAccounts                  func() uint
+	SanitizeAccounts                      func() uint
 	DeleteUserByID                        func(userID string) map[string]time.Time
 	DisableUserByID                       func(userID string) map[string]time.Time
 	EnableUserByID                        func(userID string)

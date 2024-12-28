@@ -278,12 +278,12 @@ func (s *Server) Start() {
 			})
 			break
 		// Delete/update the data associated to deleted accounts.
-		case recurring.CleanDeletedAccounts:
-			if s.Functions.CleanDeletedAccounts == nil {
+		case recurring.SanitizeAccounts:
+			if s.Functions.SanitizeAccounts == nil {
 				break
 			}
 			recurring.SetFunc(task.Name, func(taskName string) {
-				account.CleanDeleted(taskName, s.Functions.CleanDeletedAccounts)
+				account.Sanitize(taskName, s.Functions.SanitizeAccounts)
 			})
 			break
 		// Delete the never used accounts.
