@@ -16,4 +16,7 @@ const (
 
 	// GenerateSitemaps : generate the sitemaps.
 	GenerateSitemaps = "generate_sitemaps"
+
+	// CleanDeletedAccounts : clean the dleted accounts and the associated data.
+	CleanDeletedAccounts = "clean_deleted_accounts"
 )

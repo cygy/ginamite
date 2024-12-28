@@ -29,6 +29,7 @@ type Plugin struct {
 	UpdateDocumentsReferencingToDisabledUser              func(userID string, mongoSession *mgo.Database)
 	UpdateDocumentsReferencingToEnabledUser               func(userID string, mongoSession *mgo.Database)
 	UpdateDocumentsReferencingToUpdatedUserSocialNetworks func(userID string, mongoSession *mgo.Database)
+	UpdateDocumentsReferencingToDeletedUsers              func(mongoSession *mgo.Database) uint
 
 	CollectionsToRemove    func() []string
 	CollectionsToCreate    func() []workerFunctions.CollectionToCreate
@@ -76,6 +77,7 @@ func (p *Plugin) Configure(server *ginamite.Server) {
 	server.Worker.Functions.GetNeverUsedAccounts = workerFunctions.GetNeverUsedAccounts
 	server.Worker.Functions.GetInactiveAccounts = workerFunctions.GetInactiveAccounts
 	server.Worker.Functions.IsUserEmpty = workerFunctions.IsEmptyUser(p.IsUserEmpty)
+	server.Worker.Functions.CleanDeletedAccounts = workerFunctions.CleanDeletedAccounts(p.UpdateDocumentsReferencingToDeletedUsers)
 	server.Worker.Functions.DeleteUserByID = workerFunctions.DeleteUserByID(p.UpdateDocumentsReferencingToDeletedUser)
 	server.Worker.Functions.DisableUserByID = workerFunctions.DisableUserByID(p.UpdateDocumentsReferencingToDisabledUser)
 	server.Worker.Functions.EnableUserByID = workerFunctions.EnableUserByID(p.UpdateDocumentsReferencingToEnabledUser)

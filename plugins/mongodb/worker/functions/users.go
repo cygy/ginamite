@@ -9,6 +9,20 @@ import (
 	"github.com/globalsign/mgo"
 )
 
+// CleanDeletedAccounts : maintenance function to update/delete the data from a deleted user.
+func CleanDeletedAccounts(updateDocumentsReferencingToDeletedUsers func(mongoSession *mgo.Database) uint) func() uint {
+	return func() uint {
+		if updateDocumentsReferencingToDeletedUsers != nil {
+			session, db := session.Copy()
+			defer session.Close()
+
+			return updateDocumentsReferencingToDeletedUsers(db)
+		}
+
+		return 0
+	}
+}
+
 // DeleteUserByID : deletes an user and all its bound documents.
 func DeleteUserByID(updateDocumentsReferencingToDeletedUser func(userID string, mongoSession *mgo.Database)) func(userID string) map[string]time.Time {
 	return func(userID string) map[string]time.Time {

@@ -47,3 +47,12 @@ func DeleteInactive(taskName string, intervalInMonths uint, getInactiveAccounts 
 		"count": len(userIDs),
 	})
 }
+
+// CleanDeleted : deletes/updates the data associated to deleted accounts.
+func CleanDeleted(taskName string, cleanDeletedAccounts func() uint) {
+	count := cleanDeletedAccounts()
+
+	tasks.LogDone(taskName, &logrus.Fields{
+		"count": count,
+	})
+}

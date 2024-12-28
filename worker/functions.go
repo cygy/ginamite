@@ -277,6 +277,15 @@ func (s *Server) Start() {
 				authtokens.DeleteExpired(taskName, s.Functions.DeleteExpiredTokens)
 			})
 			break
+		// Delete/update the data associated to deleted accounts.
+		case recurring.CleanDeletedAccounts:
+			if s.Functions.CleanDeletedAccounts == nil {
+				break
+			}
+			recurring.SetFunc(task.Name, func(taskName string) {
+				account.CleanDeleted(taskName, s.Functions.CleanDeletedAccounts)
+			})
+			break
 		// Delete the never used accounts.
 		case recurring.DeleteNeverUsedAccounts:
 			if !config.Main.Account.EmailAddressMustBeConfirmed || s.Functions.GetNeverUsedAccounts == nil || s.Functions.IsUserEmpty == nil || s.Functions.DeleteUserByID == nil {
