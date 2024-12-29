@@ -2,6 +2,7 @@ package html
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 )
 
@@ -68,8 +69,7 @@ func (openGraph *OpenGraph) Equals(toCompare *OpenGraph) bool {
 	if openGraph.Locale != toCompare.Locale {
 		return false
 	}
-
-	if len(openGraph.AlternateLocales) != len(toCompare.AlternateLocales) {
+	if !reflect.DeepEqual(openGraph.AlternateLocales, toCompare.AlternateLocales) {
 		return false
 	}
 

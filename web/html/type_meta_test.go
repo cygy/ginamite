@@ -187,7 +187,7 @@ func TestMetaCopy(t *testing.T) {
 	if reflect.DeepEqual(original.Stylesheets, copy.Stylesheets) {
 		t.Error("Modifying the Stylesheets property of a meta struct must not modify the Stylesheets property of the copied struct.")
 	}
-	if !original.OpenGraph.Equals(&copy.OpenGraph) {
+	if original.OpenGraph.Equals(&copy.OpenGraph) {
 		t.Error("Modifying the OpenGraph property of a meta struct must not modify the OpenGraph property of the copied struct.")
 	}
 	if original.Twitter == copy.Twitter {
@@ -419,7 +419,7 @@ func TestMetaMerge(t *testing.T) {
 	if original.ViewPort == copy.ViewPort {
 		t.Error("Modifying the ViewPort property of a meta struct must not modify the ViewPort property of another struct.")
 	}
-	if !original.OpenGraph.Equals(&copy.OpenGraph) {
+	if original.OpenGraph.Equals(&copy.OpenGraph) {
 		t.Error("Modifying the OpenGraph property of a meta struct must not modify the OpenGraph property of another struct.")
 	}
 	if original.Twitter == copy.Twitter {
@@ -516,7 +516,7 @@ func TestMetaMerge(t *testing.T) {
 	if original.ViewPort == copy.ViewPort {
 		t.Error("Modifying the ViewPort property of a meta struct must not modify the ViewPort property of another struct.")
 	}
-	if !original.OpenGraph.Equals(&copy.OpenGraph) {
+	if original.OpenGraph.Equals(&copy.OpenGraph) {
 		t.Error("Modifying the OpenGraph property of a meta struct must not modify the OpenGraph property of another struct.")
 	}
 	if original.Twitter == copy.Twitter {

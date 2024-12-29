@@ -257,7 +257,7 @@ func TestPageMergeEmptyFields(t *testing.T) {
 		t.Error("To merge a Page struct must not modified the property 'Sitemap' if it is not provided.")
 	}
 
-	if page.Key != originalKey {
+	if page.Key == originalKey {
 		t.Error("To merge a Page struct must modified the property 'Key'.")
 	}
 }
