@@ -10,7 +10,7 @@ import (
 	"github.com/cygy/ginamite/common/log"
 
 	"github.com/sirupsen/logrus"
-	yaml "gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v3"
 )
 
 // Initialize : initialize a configuration from a yaml file.

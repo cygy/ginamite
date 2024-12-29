@@ -9,7 +9,7 @@ import (
 	"github.com/cygy/ginamite/web/html"
 
 	"github.com/sirupsen/logrus"
-	yaml "gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v3"
 )
 
 // GetURL : returns the full URL of a web route.

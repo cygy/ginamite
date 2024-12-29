@@ -6,7 +6,7 @@ import (
 
 	"github.com/cygy/ginamite/common/authentication"
 
-	resty "gopkg.in/resty.v1"
+	resty "github.com/go-resty/resty/v2"
 )
 
 // FacebookTokenValidator to validate the facebook OAuth tokens

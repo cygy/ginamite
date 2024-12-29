@@ -3,7 +3,7 @@ module github.com/cygy/ginamite
 go 1.23
 
 require (
-	github.com/IBM/sarama v1.43.3
+	github.com/IBM/sarama v1.44.0
 	github.com/disintegration/imaging v1.6.2
 	github.com/domodwyer/mailyak v3.1.1+incompatible
 	github.com/dustin/go-humanize v1.0.1
@@ -11,6 +11,7 @@ require (
 	github.com/gin-contrib/gzip v1.1.0
 	github.com/gin-gonic/gin v1.10.0
 	github.com/globalsign/mgo v0.0.0-20181015135952-eeefdecb41b8
+	github.com/go-resty/resty/v2 v2.16.2
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/google/uuid v1.6.0
 	github.com/gosimple/slug v1.15.0
@@ -18,8 +19,7 @@ require (
 	github.com/nicksnyder/go-i18n v1.10.3
 	github.com/sirupsen/logrus v1.9.3
 	github.com/tredoe/osutil v1.5.0
-	gopkg.in/resty.v1 v1.12.0
-	gopkg.in/yaml.v2 v2.4.0
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -69,5 +69,5 @@ require (
 	golang.org/x/sys v0.28.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
 	google.golang.org/protobuf v1.36.1 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
+	gopkg.in/yaml.v2 v2.2.2 // indirect
 )

@@ -7,7 +7,7 @@ import (
 	"github.com/cygy/ginamite/common/response"
 
 	"github.com/gin-gonic/gin"
-	resty "gopkg.in/resty.v1"
+	resty "github.com/go-resty/resty/v2"
 )
 
 // ResponseHandlerFunc : handler for the API responses.

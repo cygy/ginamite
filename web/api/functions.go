@@ -8,7 +8,7 @@ import (
 	"github.com/cygy/ginamite/web/cookie"
 
 	"github.com/gin-gonic/gin"
-	resty "gopkg.in/resty.v1"
+	resty "github.com/go-resty/resty/v2"
 )
 
 // AddResponseHandlers : adds some response handlers to the current response handlers.

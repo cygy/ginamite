@@ -9,8 +9,8 @@ import (
 
 	"github.com/cygy/ginamite/common/log"
 
+	resty "github.com/go-resty/resty/v2"
 	"github.com/sirupsen/logrus"
-	resty "gopkg.in/resty.v1"
 )
 
 // TokenInfos struct about the informations of a token
