@@ -20,7 +20,7 @@ func GetUserNotificationTargetsByType(userID, notificationType string, db *mgo.D
 
 	// Get the devices allowed to receive the notification.
 	query := []bson.M{
-		bson.M{"$match": bson.D{{
+		{"$match": bson.D{{
 			Name:  "userId",
 			Value: bson.ObjectIdHex(userID),
 		}, {
@@ -30,8 +30,8 @@ func GetUserNotificationTargetsByType(userID, notificationType string, db *mgo.D
 			Name:  "device.notificationSettings.notifications",
 			Value: bson.M{"$in": []string{notificationType}},
 		}}},
-		bson.M{"$replaceRoot": bson.M{"newRoot": "$device"}},
-		bson.M{"$unwind": "$notificationSettings"},
+		{"$replaceRoot": bson.M{"newRoot": "$device"}},
+		{"$unwind": "$notificationSettings"},
 	}
 
 	pipe := db.C(AuthTokenCollection).Pipe(query)

@@ -1,7 +1,7 @@
 package config
 
 import (
-	"io/ioutil"
+	"os"
 	"strings"
 
 	"github.com/cygy/ginamite/common/config/database"
@@ -26,7 +26,7 @@ func (config *Configuration) Initialize(file, environment, version string) error
 	}()
 
 	var source []byte
-	source, err = ioutil.ReadFile(file)
+	source, err = os.ReadFile(file)
 	if err != nil {
 		return err
 	}

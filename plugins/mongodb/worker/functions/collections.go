@@ -61,27 +61,27 @@ func CreateAllCollections() {
 	}
 
 	collections := []CollectionToCreate{
-		CollectionToCreate{
+		{
 			Name: model.AuthTokenCollection,
 		},
-		CollectionToCreate{
+		{
 			Name: model.DeletedUserCollection,
 			Info: collectionInfo,
 		},
-		CollectionToCreate{
+		{
 			Name: model.DisabledUserCollection,
 			Info: collectionInfo,
 		},
-		CollectionToCreate{
+		{
 			Name: model.ForgotPasswordProcessCollection,
 		},
-		CollectionToCreate{
+		{
 			Name: model.IPLocationCollection,
 		},
-		CollectionToCreate{
+		{
 			Name: model.UpdatePropertyProcessCollection,
 		},
-		CollectionToCreate{
+		{
 			Name: model.UserCollection,
 			Info: collectionInfo,
 		},

@@ -2,7 +2,7 @@ package route
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 
@@ -119,7 +119,7 @@ func (r *Router) LoadDefaultRoutes() {
 							fullEndpoint = fmt.Sprintf("%s?%s", fullEndpoint, endpointParts[1])
 						}
 
-						body, _ := ioutil.ReadAll(c.Request.Body)
+						body, _ := io.ReadAll(c.Request.Body)
 						var res interface{}
 
 						request := api.NewRequest()

@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	authErrors "github.com/cygy/ginamite/common/errors/auth"
@@ -52,7 +52,7 @@ func (request *Request) Do() {
 	}
 
 	defer httpResponse.Body.Close()
-	responseContent, _ := ioutil.ReadAll(httpResponse.Body)
+	responseContent, _ := io.ReadAll(httpResponse.Body)
 
 	logPrefix := fmt.Sprintf("[%s %s]", request.Method, request.Endpoint)
 

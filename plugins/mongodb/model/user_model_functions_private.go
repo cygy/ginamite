@@ -35,7 +35,7 @@ func (user *User) saveThirdPartyInfos(source, token, userID, firstName, lastName
 	}
 
 	// If the email address is validated by a third party, valid it here too.
-	if !user.PrivateInfos.IsEmailValid && (len(email) > 0) && (strings.ToLower(email) == strings.ToLower(user.PrivateInfos.Email)) {
+	if !user.PrivateInfos.IsEmailValid && (len(email) > 0) && strings.EqualFold(email, user.PrivateInfos.Email) {
 		updatedFields["privateInfos.isEmailValid"] = true
 	}
 

@@ -1,7 +1,7 @@
 package html
 
 import (
-	"io/ioutil"
+	"os"
 
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/web/context"
@@ -32,7 +32,7 @@ var (
 // Initialize : initialize the configuration of the routes.
 func Initialize(file, webHost, staticHost, apiHost, applicationTimezone string, applicationLocales []string, fallbackLocales map[string]string, JWTCookieName, JWTSecret string, facebookConfiguration FacebookConfiguration, googleConfiguration GoogleConfiguration, socialNetworksConfiguration SocialNetworksConfiguration, betaVersion, isProduction bool) {
 	// Read the configuration file.
-	source, err := ioutil.ReadFile(file)
+	source, err := os.ReadFile(file)
 	if err != nil {
 		log.WithFields(logrus.Fields{
 			"path":  file,
@@ -121,7 +121,7 @@ func (conf *Configuration) IsPartial(key, locale string) bool {
 
 // URL : returns the URL of a page with its locale and some vars.
 func (conf *Configuration) URL(key, locale string) string {
-	url, _ := conf.urls[key][locale]
+	url := conf.urls[key][locale]
 	return url
 }
 

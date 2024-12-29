@@ -12,7 +12,7 @@ func TestMetaCopy(t *testing.T) {
 		Description:  "original_description",
 		Keywords:     []string{"keyword1", "keyword2"},
 		CanonicalURL: "original_canonical_url",
-		Icons: []Icon{Icon{
+		Icons: []Icon{{
 			Rel:    "original_rel",
 			Href:   "original_href",
 			Type:   "original_type",
@@ -23,16 +23,16 @@ func TestMetaCopy(t *testing.T) {
 		ImageSource: "original_image_source",
 		Robots:      "original_robots",
 		ViewPort:    "original_viewport",
-		HrefLang: []HrefLang{HrefLang{
+		HrefLang: []HrefLang{{
 			Href:   "original_href",
 			Locale: "original_locale",
 		}},
-		Alternates: []Alternate{Alternate{
+		Alternates: []Alternate{{
 			Href:  "original_href",
 			Type:  "original_type",
 			Title: "original_title",
 		}},
-		Stylesheets: []Stylesheet{Stylesheet{
+		Stylesheets: []Stylesheet{{
 			Href:  "original_href",
 			Media: "original_media",
 		}},
@@ -202,7 +202,7 @@ func TestMetaMerge(t *testing.T) {
 		Description:  "original_description",
 		Keywords:     []string{"keyword1", "keyword2"},
 		CanonicalURL: "original_canonical_url",
-		Icons: []Icon{Icon{
+		Icons: []Icon{{
 			Rel:    "original_rel",
 			Href:   "original_href",
 			Type:   "original_type",
@@ -213,16 +213,16 @@ func TestMetaMerge(t *testing.T) {
 		ImageSource: "original_image_source",
 		Robots:      "original_robots",
 		ViewPort:    "original_viewport",
-		HrefLang: []HrefLang{HrefLang{
+		HrefLang: []HrefLang{{
 			Href:   "original_href",
 			Locale: "original_locale",
 		}},
-		Alternates: []Alternate{Alternate{
+		Alternates: []Alternate{{
 			Href:  "original_href",
 			Type:  "original_type",
 			Title: "original_title",
 		}},
-		Stylesheets: []Stylesheet{Stylesheet{
+		Stylesheets: []Stylesheet{{
 			Href:  "original_href",
 			Media: "original_media",
 		}},
@@ -248,7 +248,7 @@ func TestMetaMerge(t *testing.T) {
 		Description:  "copy_description",
 		Keywords:     []string{"keyword3", "keyword4"},
 		CanonicalURL: "copy_canonical_url",
-		Icons: []Icon{Icon{
+		Icons: []Icon{{
 			Rel:    "copy_rel",
 			Href:   "copy_href",
 			Type:   "copy_type",
@@ -259,16 +259,16 @@ func TestMetaMerge(t *testing.T) {
 		ImageSource: "copy_image_source",
 		Robots:      "copy_robots",
 		ViewPort:    "copy_viewport",
-		HrefLang: []HrefLang{HrefLang{
+		HrefLang: []HrefLang{{
 			Href:   "copy_href",
 			Locale: "copy_locale",
 		}},
-		Alternates: []Alternate{Alternate{
+		Alternates: []Alternate{{
 			Href:  "copy_href",
 			Type:  "copy_type",
 			Title: "copy_title",
 		}},
-		Stylesheets: []Stylesheet{Stylesheet{
+		Stylesheets: []Stylesheet{{
 			Href:  "copy_href",
 			Media: "copy_media",
 		}},

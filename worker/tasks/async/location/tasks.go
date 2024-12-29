@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	"github.com/cygy/ginamite/common/config"
@@ -36,7 +36,7 @@ func GetIPAddressDetails(IPAddress string) *IPAddressDetails {
 	}
 
 	defer httpResponse.Body.Close()
-	responseContent, err := ioutil.ReadAll(httpResponse.Body)
+	responseContent, err := io.ReadAll(httpResponse.Body)
 	if err != nil {
 		logError(IPAddress, err)
 		return nil

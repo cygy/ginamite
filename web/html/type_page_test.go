@@ -92,7 +92,7 @@ func TestPageMerge(t *testing.T) {
 		Description:  "description_2",
 		Keywords:     []string{"keyword_3", "keyword_4"},
 		CanonicalURL: "http://canonicalurl_2",
-		Icons: []Icon{Icon{
+		Icons: []Icon{{
 			Rel:    "shorcut icon",
 			Href:   "http://icon2",
 			Type:   "image/jpeg",
@@ -104,33 +104,33 @@ func TestPageMerge(t *testing.T) {
 		Robots:      "noindex,nofollow",
 		ViewPort:    "viewport_2",
 		HrefLang: []HrefLang{
-			HrefLang{
+			{
 				Href:   "hreflang_href_3",
 				Locale: "hreflang_locale_4",
 			},
-			HrefLang{
+			{
 				Href:   "hreflang_href_3",
 				Locale: "hreflang_locale_4",
 			},
 		},
 		Alternates: []Alternate{
-			Alternate{
+			{
 				Href:  "alternate_href_3",
 				Type:  "alternate_type_3",
 				Title: "alternate_title_3",
 			},
-			Alternate{
+			{
 				Href:  "alternate_href_4",
 				Type:  "alternate_type_4",
 				Title: "alternate_title_4",
 			},
 		},
 		Stylesheets: []Stylesheet{
-			Stylesheet{
+			{
 				Href:  "stylesheet_href_3",
 				Media: "stylesheet_media_3",
 			},
-			Stylesheet{
+			{
 				Href:  "stylesheet_href_4",
 				Media: "stylesheet_media_4",
 			},
@@ -290,7 +290,7 @@ func generatePage() *Page {
 		Description:  "description",
 		Keywords:     []string{"keyword_1", "keyword_2"},
 		CanonicalURL: "http://canonicalurl",
-		Icons: []Icon{Icon{
+		Icons: []Icon{{
 			Rel:    "icon",
 			Href:   "http://icon",
 			Type:   "image/png",
@@ -302,33 +302,33 @@ func generatePage() *Page {
 		Robots:      "index,follow",
 		ViewPort:    "viewport",
 		HrefLang: []HrefLang{
-			HrefLang{
+			{
 				Href:   "hreflang_href_1",
 				Locale: "hreflang_locale_1",
 			},
-			HrefLang{
+			{
 				Href:   "hreflang_href_2",
 				Locale: "hreflang_locale_2",
 			},
 		},
 		Alternates: []Alternate{
-			Alternate{
+			{
 				Href:  "alternate_href_1",
 				Type:  "alternate_type_1",
 				Title: "alternate_title_1",
 			},
-			Alternate{
+			{
 				Href:  "alternate_href_2",
 				Type:  "alternate_type_2",
 				Title: "alternate_title_2",
 			},
 		},
 		Stylesheets: []Stylesheet{
-			Stylesheet{
+			{
 				Href:  "stylesheet_href_1",
 				Media: "stylesheet_media_1",
 			},
-			Stylesheet{
+			{
 				Href:  "stylesheet_href_2",
 				Media: "stylesheet_media_2",
 			},

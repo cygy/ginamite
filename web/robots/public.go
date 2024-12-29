@@ -1,7 +1,7 @@
 package robots
 
 import (
-	"io/ioutil"
+	"os"
 
 	"github.com/cygy/ginamite/common/log"
 
@@ -10,7 +10,7 @@ import (
 
 // Initialize : initialize the robots file.
 func Initialize(filepath string) error {
-	bytes, err := ioutil.ReadFile(filepath)
+	bytes, err := os.ReadFile(filepath)
 	if err != nil {
 		log.WithFields(logrus.Fields{
 			"path":  filepath,

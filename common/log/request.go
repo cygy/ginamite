@@ -5,7 +5,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"regexp"
 	"strings"
 	"time"
@@ -66,13 +66,13 @@ func InjectRequestLogger(logResponseBody bool) gin.HandlerFunc {
 		if strings.HasPrefix(c.Request.Header.Get("Content-Type"), "multipart/form-data") {
 			requestBody = "not logged"
 		} else if c.Request.Body != nil {
-			if body, _ := ioutil.ReadAll(c.Request.Body); body != nil {
+			if body, _ := io.ReadAll(c.Request.Body); body != nil {
 				obfuscatedBody := sensitiveObfuscatorRegExp.ReplaceAll(body, sensitiveObfuscatorReplacingString)
 				obfuscatedBody = emailObfuscatorRegExp.ReplaceAll(obfuscatedBody, emailObfuscatorReplacingString)
 				requestBody = string(obfuscatedBody[:])
 
 				// Restore the io.ReadCloser to its original state
-				c.Request.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+				c.Request.Body = io.NopCloser(bytes.NewBuffer(body))
 			}
 		}
 
@@ -130,7 +130,7 @@ func InjectRequestLogger(logResponseBody bool) gin.HandlerFunc {
 				gzipReader, err := gzip.NewReader(bytes.NewBuffer(obfuscatedResponseBody))
 				if err == nil {
 					var data []byte
-					if data, err = ioutil.ReadAll(gzipReader); err == nil {
+					if data, err = io.ReadAll(gzipReader); err == nil {
 						obfuscatedResponseBody = data
 					}
 				}

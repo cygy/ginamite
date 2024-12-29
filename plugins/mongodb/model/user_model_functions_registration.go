@@ -55,10 +55,8 @@ func (user *User) RegisterByThirdPartyToken(username string, tokenInfos validato
 	switch tokenSource {
 	case authentication.MethodFacebook:
 		user.IdentificationMethods.Facebook = userOAuthInfos
-		break
 	case authentication.MethodGoogle:
 		user.IdentificationMethods.Google = userOAuthInfos
-		break
 	default:
 		break
 	}

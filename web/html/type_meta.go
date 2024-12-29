@@ -37,24 +37,16 @@ func (meta *Meta) Copy() (copied *Meta) {
 	copy(copied.Keywords, meta.Keywords)
 
 	copied.Icons = make([]Icon, len(meta.Icons))
-	for i, icon := range meta.Icons {
-		copied.Icons[i] = icon
-	}
+	copy(copied.Icons, meta.Icons)
 
 	copied.HrefLang = make([]HrefLang, len(meta.HrefLang))
-	for i, hrefLang := range meta.HrefLang {
-		copied.HrefLang[i] = hrefLang
-	}
+	copy(copied.HrefLang, meta.HrefLang)
 
 	copied.Alternates = make([]Alternate, len(meta.Alternates))
-	for i, alternate := range meta.Alternates {
-		copied.Alternates[i] = alternate
-	}
+	copy(copied.Alternates, meta.Alternates)
 
 	copied.Stylesheets = make([]Stylesheet, len(meta.Stylesheets))
-	for i, stylesheet := range meta.Stylesheets {
-		copied.Stylesheets[i] = stylesheet
-	}
+	copy(copied.Stylesheets, meta.Stylesheets)
 
 	return
 }

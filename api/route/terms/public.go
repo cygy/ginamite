@@ -2,6 +2,7 @@ package terms
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/cygy/ginamite/api/context"
 	"github.com/cygy/ginamite/api/request"
@@ -10,8 +11,6 @@ import (
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/log"
 	r "github.com/cygy/ginamite/common/response"
-
-	"io/ioutil"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
@@ -26,7 +25,7 @@ func GetTerms(c *gin.Context) {
 	terms, ok := termsContents[filename]
 	if !ok {
 		filePath := fmt.Sprintf("%s/%s.txt", config.Main.Terms.Path, filename)
-		bytes, err := ioutil.ReadFile(filePath)
+		bytes, err := os.ReadFile(filePath)
 		if err != nil {
 			log.WithFields(logrus.Fields{
 				"version": version,

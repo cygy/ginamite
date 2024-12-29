@@ -2,7 +2,7 @@ package weburl
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"strings"
 
 	"github.com/cygy/ginamite/common/log"
@@ -28,7 +28,7 @@ func (conf *Configuration) GetURL(key, locale string) string {
 // Initialize : initializes the configuration of the routes.
 func (conf *Configuration) Initialize(file, webHost string) bool {
 	// Read the configuration file.
-	source, err := ioutil.ReadFile(file)
+	source, err := os.ReadFile(file)
 	if err != nil {
 		log.WithFields(logrus.Fields{
 			"path":  file,
