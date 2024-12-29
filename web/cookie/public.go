@@ -22,6 +22,7 @@ func CreateAndRedirect(c *gin.Context, value, redirect string) {
 	if len(redirect) > 0 {
 		locale := context.GetLocale(c)
 		c.Redirect(http.StatusFound, html.Main.URL(redirect, locale))
+		c.Writer.WriteHeaderNow()
 	}
 }
 
