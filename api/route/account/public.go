@@ -8,8 +8,10 @@ import (
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common/authentication"
 	"github.com/cygy/ginamite/common/config"
+	registrationError "github.com/cygy/ginamite/common/errors/registration"
 	"github.com/cygy/ginamite/common/localization"
 
+	res "github.com/cygy/ginamite/common/response"
 	"github.com/gin-gonic/gin"
 )
 
@@ -53,7 +55,14 @@ func CheckUsernameParameter(c *gin.Context, username, parameterName string) bool
 	// Do not accept some patterns because of spam.
 	if doesUsernameContainForbiddenStrings(username) || !isUsernamePatternAccepted(username) {
 		// Spoof the error, if it happens it's because of a spam bot.
-		response.InternalServerError(c)
+		t := localization.Translate(locale)
+		response.PreconditionFailedWithError(c, res.Error{
+			Domain:   registrationError.Domain,
+			Code:     registrationError.AccountAlreadyExists,
+			Message:  t("error.registration.message"),
+			Reason:   t("error.registration.account.already_exists.reason"),
+			Recovery: t("error.registration.account.already_exists.recovery"),
+		})
 		return false
 	}
 

@@ -20,7 +20,7 @@ const (
 	MethodGoogle = "google"
 
 	// InvalidCharactersSetForUsername : forbidden characters in an username.
-	InvalidCharactersSetForUsername = "'‘{}"
+	InvalidCharactersSetForUsername = "'‘{}/"
 
 	// MinimumCharactersForPassword : minimum number of characters in a password.
 	MinimumCharactersForPassword = 10
