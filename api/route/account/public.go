@@ -85,7 +85,14 @@ func isUsernamePatternAccepted(username string) bool {
 		return true
 	}
 
-	rejectedRe := regexp.MustCompile(`^([a-z]+[A-Z]+|[A-Z]+[a-z]+){1,}([a-z]*|[A-Z]*)?$`)
+	// sequence of 4 or more consonants
+	rejectedRe := regexp.MustCompile(`[bcdfghjklmnpqrstvwxzBCDFGHJKLMNPQRSTVWXYZ]{4,}`)
+	if rejectedRe.MatchString(username) {
+		return false
+	}
+
+	// sequencee of uppeer and lower case characters with not enough vowels
+	rejectedRe = regexp.MustCompile(`^([a-z]+[A-Z]+|[A-Z]+[a-z]+){1,}([a-z]*|[A-Z]*)?$`)
 	if rejectedRe.MatchString(username) {
 		acceptedRe1 := regexp.MustCompile(`^([A-Z][a-z]+){1,2}([a-z]*|[A-Z]*)?$`)
 		acceptedRe2 := regexp.MustCompile(`^[a-z]+([A-Z][a-z]+)*$`)
@@ -108,31 +115,6 @@ import (
 	"regexp"
 	"strings"
 )
-
-// IsAccepted checks if a string matches the "accepted" pattern.
-func IsAccepted(input string) bool {
-	usernameLength := len(input)
-	if usernameLength < 8 {
-		return true
-	}
-
-	rejectedRe := regexp.MustCompile(`^([a-z]+[A-Z]+|[A-Z]+[a-z]+){1,}([a-z]*|[A-Z]*)?$`)
-	if rejectedRe.MatchString(input) {
-		acceptedRe1 := regexp.MustCompile(`^([A-Z][a-z]+){1,2}([a-z]*|[A-Z]*)?$`)
-		acceptedRe2 := regexp.MustCompile(`^[a-z]+([A-Z][a-z]+)*$`)
-		if acceptedRe1.MatchString(input) || acceptedRe2.MatchString(input) {
-			loweredUsername := strings.ToLower(input)
-			vowels := len(regexp.MustCompile(`[aeiouy]`).FindAllString(loweredUsername, -1))
-			if vowels <= usernameLength/6 {
-				return false
-			}
-			return true
-		}
-		return false
-	}
-
-	return true
-}
 
 func main() {
 	accepted := []string{
