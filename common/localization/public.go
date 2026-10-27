@@ -1,7 +1,5 @@
 package localization
 
-import "github.com/nicksnyder/go-i18n/i18n/bundle"
-
 // Initialize : initalizes the translation engine.
 func Initialize(path string, locales []string) {
 	Main = NewEngine()
@@ -9,7 +7,7 @@ func Initialize(path string, locales []string) {
 }
 
 // Translate : returns the right translate function.
-func Translate(locale string) bundle.TranslateFunc {
+func Translate(locale string) TranslateFunc {
 	return Main.Translate(locale)
 }
 
