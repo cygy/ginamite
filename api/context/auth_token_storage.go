@@ -4,7 +4,7 @@ import (
 	"github.com/cygy/ginamite/common/authentication"
 
 	"github.com/gin-gonic/gin"
-	jwt "github.com/golang-jwt/jwt"
+	jwt "github.com/golang-jwt/jwt/v5"
 )
 
 // GetSignedToken : returns the signed token.

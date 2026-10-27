@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/smtp"
 
-	"github.com/domodwyer/mailyak"
+	"github.com/domodwyer/mailyak/v3"
 	"github.com/sirupsen/logrus"
 
 	"github.com/cygy/ginamite/common/config"

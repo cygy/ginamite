@@ -12,7 +12,7 @@ import (
 	"github.com/cygy/ginamite/common/template/html"
 
 	"github.com/gin-gonic/gin"
-	jwt "github.com/golang-jwt/jwt"
+	jwt "github.com/golang-jwt/jwt/v5"
 	"github.com/sirupsen/logrus"
 )
 

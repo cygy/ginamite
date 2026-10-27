@@ -2,7 +2,7 @@ package context
 
 import (
 	"github.com/gin-gonic/gin"
-	jwt "github.com/golang-jwt/jwt"
+	jwt "github.com/golang-jwt/jwt/v5"
 )
 
 // Annex functions.

@@ -1,6 +1,6 @@
 package authentication
 
-import "github.com/mssola/user_agent"
+import "github.com/mssola/useragent"
 
 // Device : struct of a device.
 type Device struct {
@@ -24,7 +24,7 @@ func (device *Device) SetUpNameAndDetails() {
 	device.RawName = device.Name
 
 	if device.Type == TypeWeb {
-		ua := user_agent.New(device.Name)
+		ua := useragent.New(device.Name)
 
 		name, _ := ua.Browser()
 		device.Name = name
