@@ -1,6 +1,7 @@
 package mail
 
 import (
+	"context"
 	"fmt"
 	"html/template"
 
@@ -10,11 +11,11 @@ import (
 )
 
 // UpdateEmailAddressConfirmation : sends a mail to confirm the email address update.
-func UpdateEmailAddressConfirmation(payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
+func UpdateEmailAddressConfirmation(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
 	p := queue.MailUpdateEmailAddressConfirmation{}
 	queue.UnmarshalPayload(payload, &p)
 
-	if !isEmailAddressValid(p.EmailAddress) {
+	if !isEmailAddressValid.check(ctx, p.EmailAddress) {
 		return
 	}
 
@@ -55,11 +56,11 @@ func UpdateEmailAddressConfirmation(payload []byte, isEmailAddressValid IsEmailA
 }
 
 // UpdateEmailAddressConfirmed : sends a mail to notify the email address update is confirmed.
-func UpdateEmailAddressConfirmed(payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
+func UpdateEmailAddressConfirmed(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
 	p := queue.MailUpdateEmailAddressConfirmed{}
 	queue.UnmarshalPayload(payload, &p)
 
-	if !isEmailAddressValid(p.EmailAddress) {
+	if !isEmailAddressValid.check(ctx, p.EmailAddress) {
 		return
 	}
 
@@ -89,11 +90,11 @@ func UpdateEmailAddressConfirmed(payload []byte, isEmailAddressValid IsEmailAddr
 }
 
 // UpdateEmailAddressCancelled : sends a mail to notify the email address update is cancelled.
-func UpdateEmailAddressCancelled(payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
+func UpdateEmailAddressCancelled(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
 	p := queue.MailUpdateEmailAddressCancelled{}
 	queue.UnmarshalPayload(payload, &p)
 
-	if !isEmailAddressValid(p.EmailAddress) {
+	if !isEmailAddressValid.check(ctx, p.EmailAddress) {
 		return
 	}
 
@@ -123,11 +124,11 @@ func UpdateEmailAddressCancelled(payload []byte, isEmailAddressValid IsEmailAddr
 }
 
 // ValidateNewEmailAddress : sends a mail to validate the new email address.
-func ValidateNewEmailAddress(payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
+func ValidateNewEmailAddress(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
 	p := queue.MailValidateNewEmailAddress{}
 	queue.UnmarshalPayload(payload, &p)
 
-	if !isEmailAddressValid(p.EmailAddress) {
+	if !isEmailAddressValid.check(ctx, p.EmailAddress) {
 		return
 	}
 

@@ -1,12 +1,14 @@
 package notification
 
 import (
+	"context"
+
 	"github.com/cygy/ginamite/common/notifications"
 	"github.com/cygy/ginamite/common/queue"
 )
 
 // NewLogin : notifies a user that a login occurs on its account.
-func NewLogin(payload []byte, getNotificationTargetsByUserAndTypeFunc notifications.GetNotificationTargetsByUserAndTypeFunc) {
+func NewLogin(ctx context.Context, payload []byte, getNotificationTargetsByUserAndTypeFunc notifications.GetNotificationTargetsByUserAndTypeFunc) {
 	p := queue.UserNotificationNewLogin{}
 	queue.UnmarshalPayload(payload, &p)
 
@@ -19,5 +21,5 @@ func NewLogin(payload []byte, getNotificationTargetsByUserAndTypeFunc notificati
 			return queue.MessageMailNewLogin, p
 		},
 	}
-	event.Dispatch()
+	event.Dispatch(ctx)
 }

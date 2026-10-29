@@ -1,6 +1,7 @@
 package ginamite
 
 import (
+	"context"
 	"time"
 
 	"github.com/cygy/ginamite/api"
@@ -53,17 +54,17 @@ func NewServer() *Server {
 	server.API.Functions.NewMessageFromQueueCache = func(message string) bool {
 		return true
 	}
-	server.API.Functions.BuildTokenFromID = func(tokenID string) (*authentication.Token, error) {
+	server.API.Functions.BuildTokenFromID = func(ctx context.Context, tokenID string) (*authentication.Token, error) {
 		return &authentication.Token{}, nil
 	}
 	server.API.Functions.ExtraPropertiesForTokenWithID = func(tokenID string) (map[string]string, error) {
 		return map[string]string{}, nil
 	}
-	server.API.Functions.ExtendTokenExpirationDateFromID = func(tokenID string, ttl time.Duration) error {
+	server.API.Functions.ExtendTokenExpirationDateFromID = func(ctx context.Context, tokenID string, ttl time.Duration) error {
 		return nil
 	}
-	server.API.Functions.MiddlewareIsValidAuthToken = func(c *gin.Context, tokenID string) bool {
-		return false
+	server.API.Functions.MiddlewareIsValidAuthToken = func(c *gin.Context, tokenID string) (bool, error) {
+		return false, nil
 	}
 	server.API.Functions.MiddlewareGetUserAbilities = func(c *gin.Context, userID string) (bool, []string) {
 		return false, []string{}

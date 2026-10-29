@@ -1,6 +1,7 @@
 package mail
 
 import (
+	"context"
 	"fmt"
 	"html/template"
 
@@ -10,11 +11,11 @@ import (
 )
 
 // NewLogin : sends a mail to notify a user that a login occurs on its account.
-func NewLogin(payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
+func NewLogin(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
 	p := queue.MailNewLogin{}
 	queue.UnmarshalPayload(payload, &p)
 
-	if !isEmailAddressValid(p.EmailAddress) {
+	if !isEmailAddressValid.check(ctx, p.EmailAddress) {
 		return
 	}
 

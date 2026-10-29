@@ -64,7 +64,7 @@ func (s *Server) CreateKafkaConsumers() []kafka.MessageConsumer {
 				user.RegistrationDone(payload, s.Functions.RegistrationValidated)
 				break
 			default:
-				if s.Functions.HandleTask == nil || !s.Functions.HandleTask(msgType, payload) {
+				if s.Functions.HandleTask == nil || !s.Functions.HandleTask(nil, msgType, payload) {
 					log.WithFields(logrus.Fields{
 						"topic": queue.TopicTasks,
 						"type":  msgType,
@@ -89,7 +89,7 @@ func (s *Server) CreateKafkaConsumers() []kafka.MessageConsumer {
 				return
 			}
 
-			if s.Functions.HandleNotificationForUsersWithAbility == nil || !s.Functions.HandleNotificationForUsersWithAbility(ability, msgType, payload) {
+			if s.Functions.HandleNotificationForUsersWithAbility == nil || !s.Functions.HandleNotificationForUsersWithAbility(nil, ability, msgType, payload) {
 				log.WithFields(logrus.Fields{
 					"topic": queue.TopicGroupNotification,
 					"type":  msgType,
@@ -110,10 +110,10 @@ func (s *Server) CreateKafkaConsumers() []kafka.MessageConsumer {
 
 			switch msgType {
 			case notifications.TypeNewLogin:
-				notification.NewLogin(payload, s.Functions.GetNotificationTargetsByUserAndType)
+				notification.NewLogin(nil, payload, s.Functions.GetNotificationTargetsByUserAndType)
 				break
 			default:
-				if s.Functions.HandleUserNotification == nil || !s.Functions.HandleUserNotification(msgType, payload, s.Functions.GetNotificationTargetsByUserAndType) {
+				if s.Functions.HandleUserNotification == nil || !s.Functions.HandleUserNotification(nil, msgType, payload, s.Functions.GetNotificationTargetsByUserAndType) {
 					log.WithFields(logrus.Fields{
 						"topic": queue.TopicUserNotification,
 						"type":  msgType,
@@ -149,61 +149,61 @@ func (s *Server) CreateKafkaConsumers() []kafka.MessageConsumer {
 				mail.RegistrationWelcome(payload)
 				break
 			case queue.MessageMailForgotPasswordConfirmation:
-				mail.ForgotPasswordConfirmation(payload, isEmailAddressValid)
+				mail.ForgotPasswordConfirmation(nil, payload, isEmailAddressValid)
 				break
 			case queue.MessageMailForgotPasswordConfirmed:
-				mail.ForgotPasswordConfirmed(payload, isEmailAddressValid)
+				mail.ForgotPasswordConfirmed(nil, payload, isEmailAddressValid)
 				break
 			case queue.MessageMailForgotPasswordCancelled:
-				mail.ForgotPasswordCancelled(payload, isEmailAddressValid)
+				mail.ForgotPasswordCancelled(nil, payload, isEmailAddressValid)
 				break
 			case queue.MessageMailUpdateEmailAddressConfirmation:
-				mail.UpdateEmailAddressConfirmation(payload, isEmailAddressValid)
+				mail.UpdateEmailAddressConfirmation(nil, payload, isEmailAddressValid)
 				break
 			case queue.MessageMailUpdateEmailAddressConfirmed:
-				mail.UpdateEmailAddressConfirmed(payload, isEmailAddressValid)
+				mail.UpdateEmailAddressConfirmed(nil, payload, isEmailAddressValid)
 				break
 			case queue.MessageMailUpdateEmailAddressCancelled:
-				mail.UpdateEmailAddressCancelled(payload, isEmailAddressValid)
+				mail.UpdateEmailAddressCancelled(nil, payload, isEmailAddressValid)
 				break
 			case queue.MessageMailUpdatePasswordConfirmation:
-				mail.UpdatePasswordConfirmation(payload, isEmailAddressValid)
+				mail.UpdatePasswordConfirmation(nil, payload, isEmailAddressValid)
 				break
 			case queue.MessageMailUpdatePasswordConfirmed:
-				mail.UpdatePasswordConfirmed(payload, isEmailAddressValid)
+				mail.UpdatePasswordConfirmed(nil, payload, isEmailAddressValid)
 				break
 			case queue.MessageMailUpdatePasswordCancelled:
-				mail.UpdatePasswordCancelled(payload, isEmailAddressValid)
+				mail.UpdatePasswordCancelled(nil, payload, isEmailAddressValid)
 				break
 			case queue.MessageMailValidateNewEmailAddress:
-				mail.ValidateNewEmailAddress(payload, isEmailAddressValid)
+				mail.ValidateNewEmailAddress(nil, payload, isEmailAddressValid)
 				break
 			case queue.MessageMailDeleteAccountConfirmation:
-				mail.DeleteAccountConfirmation(payload, isEmailAddressValid)
+				mail.DeleteAccountConfirmation(nil, payload, isEmailAddressValid)
 				break
 			case queue.MessageMailDeleteAccountConfirmed:
-				mail.DeleteAccountConfirmed(payload, isEmailAddressValid)
+				mail.DeleteAccountConfirmed(nil, payload, isEmailAddressValid)
 				break
 			case queue.MessageMailDeleteAccountCancelled:
-				mail.DeleteAccountCancelled(payload, isEmailAddressValid)
+				mail.DeleteAccountCancelled(nil, payload, isEmailAddressValid)
 				break
 			case queue.MessageMailDisableAccountConfirmation:
-				mail.DisableAccountConfirmation(payload, isEmailAddressValid)
+				mail.DisableAccountConfirmation(nil, payload, isEmailAddressValid)
 				break
 			case queue.MessageMailDisableAccountConfirmed:
-				mail.DisableAccountConfirmed(payload, isEmailAddressValid)
+				mail.DisableAccountConfirmed(nil, payload, isEmailAddressValid)
 				break
 			case queue.MessageMailDisableAccountCancelled:
-				mail.DisableAccountCancelled(payload, isEmailAddressValid)
+				mail.DisableAccountCancelled(nil, payload, isEmailAddressValid)
 				break
 			case queue.MessageMailEnableAccountConfirmed:
-				mail.EnableAccountConfirmed(payload, isEmailAddressValid)
+				mail.EnableAccountConfirmed(nil, payload, isEmailAddressValid)
 				break
 			case queue.MessageMailNewLogin:
-				mail.NewLogin(payload, isEmailAddressValid)
+				mail.NewLogin(nil, payload, isEmailAddressValid)
 				break
 			default:
-				if s.Functions.HandleMail == nil || !s.Functions.HandleMail(msgType, payload, isEmailAddressValid) {
+				if s.Functions.HandleMail == nil || !s.Functions.HandleMail(nil, msgType, payload, isEmailAddressValid) {
 					log.WithFields(logrus.Fields{
 						"topic": queue.TopicMail,
 						"type":  msgType,
@@ -260,7 +260,7 @@ func (s *Server) Start() {
 	// Run the check up tasks.
 	if s.Functions.StartUpTasks != nil && config.Main.RunStartUpTasks {
 		log.Info("check up started")
-		s.Functions.StartUpTasks(config.Main.Environment, config.Main.Version)
+		s.Functions.StartUpTasks(nil, config.Main.Environment, config.Main.Version)
 		log.Info("check up done")
 	}
 
@@ -274,7 +274,7 @@ func (s *Server) Start() {
 				break
 			}
 			recurring.SetFunc(task.Name, func(taskName string) {
-				authtokens.DeleteExpired(taskName, s.Functions.DeleteExpiredTokens)
+				authtokens.DeleteExpired(nil, taskName, s.Functions.DeleteExpiredTokens)
 			})
 			break
 		// Delete/update the data associated to deleted accounts.
@@ -292,7 +292,7 @@ func (s *Server) Start() {
 				break
 			}
 			recurring.SetFunc(task.Name, func(taskName string) {
-				account.DeleteNeverUsed(taskName, config.Main.Account.DeleteNeverUsedAfter, s.Functions.GetNeverUsedAccounts, s.Functions.IsUserEmpty, s.Functions.DeleteUserByID)
+				account.DeleteNeverUsed(nil, taskName, config.Main.Account.DeleteNeverUsedAfter, s.Functions.GetNeverUsedAccounts, s.Functions.IsUserEmpty, s.Functions.DeleteUserByID)
 			})
 			break
 		// Delete the inactive accounts.
@@ -301,7 +301,7 @@ func (s *Server) Start() {
 				break
 			}
 			recurring.SetFunc(task.Name, func(taskName string) {
-				account.DeleteInactive(taskName, config.Main.Account.DeleteInactiveAfter, s.Functions.GetInactiveAccounts, s.Functions.DeleteUserByID)
+				account.DeleteInactive(nil, taskName, config.Main.Account.DeleteInactiveAfter, s.Functions.GetInactiveAccounts, s.Functions.DeleteUserByID)
 			})
 			break
 		// Send again the registration emails.

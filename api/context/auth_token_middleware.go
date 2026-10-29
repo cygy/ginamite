@@ -13,10 +13,10 @@ import (
 )
 
 // GetUserAndLocaleFromAuthTokenFunc : returns a struct represnting the user and its loale from an auth token.
-type GetUserAndLocaleFromAuthTokenFunc func(token *jwt.Token) (interface{}, string)
+type GetUserAndLocaleFromAuthTokenFunc func(token *jwt.Token) (any, string, error)
 
 // IsAuthTokenValidFunc : returns trus if the auth token is still valid and not expired or revoked.
-type IsAuthTokenValidFunc func(c *gin.Context, tokenID string) bool
+type IsAuthTokenValidFunc func(c *gin.Context, tokenID string) (bool, error)
 
 // ParseAuthToken : parses and saves the authenticated user to the context.
 func ParseAuthToken(secret string, buildUser GetUserAndLocaleFromAuthTokenFunc, authTokenMustBePresent bool) gin.HandlerFunc {
@@ -72,8 +72,8 @@ func ParseAuthToken(secret string, buildUser GetUserAndLocaleFromAuthTokenFunc, 
 
 			// Build the user from the token.
 			if buildUser != nil {
-				var user interface{}
-				user, definedLocale = buildUser(token)
+				var user any
+				user, definedLocale, _ = buildUser(token)
 				c.Set(userContextKey, user)
 			}
 		}
@@ -93,9 +93,12 @@ func ParseAuthToken(secret string, buildUser GetUserAndLocaleFromAuthTokenFunc, 
 func VerifyAuthToken(verifyToken IsAuthTokenValidFunc) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		tokenID := GetAuthTokenID(c)
-		if verifyToken != nil && !verifyToken(c, tokenID) {
-			requestLocale := GetRequestLocale(c)
-			response.UnauthorizedWithRevokedAuthorizationToken(c, requestLocale)
+		if verifyToken != nil {
+			verify, _ := verifyToken(c, tokenID)
+			if !verify {
+				requestLocale := GetRequestLocale(c)
+				response.UnauthorizedWithRevokedAuthorizationToken(c, requestLocale)
+			}
 		}
 	}
 }

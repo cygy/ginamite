@@ -1,31 +1,42 @@
 package model
 
 import (
+	"context"
 	"time"
 
+	"github.com/cygy/ginamite/common/errors"
 	"github.com/cygy/ginamite/common/mongo/document"
 
-	"github.com/globalsign/mgo"
-	"github.com/globalsign/mgo/bson"
 	jwt "github.com/golang-jwt/jwt/v5"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 // GetAuthTokens : returns all the auth tokens of a user.
-func GetAuthTokens(userID string, db *mgo.Database) ([]AuthToken, error) {
+func GetAuthTokens(ctx context.Context, userID string, db *mongo.Database) ([]AuthToken, error) {
 	tokens := []AuthToken{}
-	err := document.GetDocumentsBySelectorAndSort(&tokens, AuthTokenCollection, bson.M{"userId": bson.ObjectIdHex(userID)}, []string{"userId", "-createdAt"}, db)
 
+	objectID, err := bson.ObjectIDFromHex(userID)
+	if err != nil {
+		return tokens, errors.WrongObjectID()
+	}
+
+	err = document.GetDocumentsBySelectorAndSort(ctx, &tokens, AuthTokenCollection, bson.M{"userId": objectID}, []string{"userId", "-createdAt"}, db)
 	return tokens, err
 }
 
 // UserFromAuthToken : returns a user with the values of a auth token.
-func UserFromAuthToken(token *jwt.Token) User {
+func UserFromAuthToken(token *jwt.Token) (*User, error) {
 	claims := token.Claims.(jwt.MapClaims)
 
-	var userID bson.ObjectId
+	var userID bson.ObjectID
 	var nickname, locale, timezone string
 	if value, ok := claims["sub"]; ok {
-		userID = bson.ObjectIdHex(value.(string))
+		objectID, err := bson.ObjectIDFromHex(value.(string))
+		if err != nil {
+			return nil, errors.WrongObjectID()
+		}
+		userID = objectID
 	}
 	if value, ok := claims["nickname"]; ok {
 		nickname = value.(string)
@@ -37,33 +48,48 @@ func UserFromAuthToken(token *jwt.Token) User {
 		timezone = value.(string)
 	}
 
-	return User{
+	return &User{
 		ID:       userID,
 		Username: nickname,
 		Settings: UserSettings{
 			Locale:   locale,
 			Timezone: timezone,
 		},
-	}
+	}, nil
 }
 
 // DeleteAuthTokenByID : deletes the document with the ID.
-func DeleteAuthTokenByID(tokenID string, db *mgo.Database) error {
-	return document.DeleteDocument(bson.ObjectIdHex(tokenID), AuthTokenCollection, db)
+func DeleteAuthTokenByID(ctx context.Context, tokenID string, db *mongo.Database) error {
+	objectID, err := bson.ObjectIDFromHex(tokenID)
+	if err != nil {
+		return errors.WrongObjectID()
+	}
+	return document.DeleteDocument(ctx, objectID, AuthTokenCollection, db)
 }
 
 // DeleteAuthTokensByUser : deletes the documents from the user.
-func DeleteAuthTokensByUser(userID string, db *mgo.Database) (int, error) {
-	return document.DeleteDocumentsBySelector(AuthTokenCollection, bson.M{"userId": bson.ObjectIdHex(userID)}, db)
+func DeleteAuthTokensByUser(ctx context.Context, userID string, db *mongo.Database) (int64, error) {
+	objectID, err := bson.ObjectIDFromHex(userID)
+	if err != nil {
+		return 0, errors.WrongObjectID()
+	}
+	return document.DeleteDocumentsBySelector(ctx, AuthTokenCollection, bson.M{"userId": objectID}, db)
 }
 
 // DeleteExpiredAuthTokens : deletes the expired auth tokens.
-func DeleteExpiredAuthTokens(db *mgo.Database) (int, error) {
-	return document.DeleteDocumentsBySelector(AuthTokenCollection, bson.M{"expiresAt": bson.M{"$lt": time.Now()}}, db)
+func DeleteExpiredAuthTokens(ctx context.Context, db *mongo.Database) (int64, error) {
+	return document.DeleteDocumentsBySelector(ctx, AuthTokenCollection, bson.M{"expiresAt": bson.M{"$lt": time.Now()}}, db)
 }
 
 // IsValidAuthToken : checks that the auth token is valid (non-expired and non-revoked).
-func IsValidAuthToken(tokenID string, db *mgo.Database) bool {
-	count, _ := document.CountBySelector(AuthTokenCollection, bson.D{{Name: "_id", Value: bson.ObjectIdHex(tokenID)}, {Name: "expiresAt", Value: bson.M{"$gt": time.Now()}}}, db)
-	return count == 1
+func IsValidAuthToken(ctx context.Context, tokenID string, db *mongo.Database) (bool, error) {
+	objectID, err := bson.ObjectIDFromHex(tokenID)
+	if err != nil {
+		return false, errors.WrongObjectID()
+	}
+	count, err := document.CountBySelector(ctx, AuthTokenCollection, bson.D{
+		{Key: "_id", Value: objectID},
+		{Key: "expiresAt", Value: bson.M{"$gt": time.Now()}},
+	}, db)
+	return count == 1, err
 }

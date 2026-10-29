@@ -5,25 +5,26 @@ import (
 
 	apiContext "github.com/cygy/ginamite/api/context"
 	"github.com/cygy/ginamite/common/config"
+	commonErrors "github.com/cygy/ginamite/common/errors"
 	"github.com/cygy/ginamite/common/mongo/session"
 	"github.com/cygy/ginamite/common/notifications"
 	"github.com/cygy/ginamite/plugins/mongodb/api/context"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
 
 	"github.com/gin-gonic/gin"
-	"github.com/globalsign/mgo/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // NotificationsReceivedByUser : returns the latest notifications received by the user.
 func NotificationsReceivedByUser(c *gin.Context, userID string) (interface{}, error) {
 	// Check the userID.
-	if !bson.IsObjectIdHex(userID) {
-		return nil, errors.New("wrong object ID")
+	if _, err := bson.ObjectIDFromHex(userID); err != nil {
+		return nil, commonErrors.WrongObjectID()
 	}
 
 	mongoSession := session.Get(c)
 
-	notifications, err := model.GetUserNotifications(userID, mongoSession)
+	notifications, err := model.GetUserNotifications(c, userID, mongoSession)
 	if err != nil {
 		return nil, err
 	}
@@ -63,13 +64,17 @@ func UpdateUserNotificationRead(c *gin.Context, userID, notificationID string) e
 
 	mongoSession := session.Get(c)
 
-	if err := notification.UpdateRead(mongoSession); err != nil {
+	if err := notification.UpdateRead(c, mongoSession); err != nil {
 		return err
 	}
 
+	objectID, err := bson.ObjectIDFromHex(userID)
+	if err != nil {
+		return commonErrors.WrongObjectID()
+	}
 	user := model.User{}
-	user.ID = bson.ObjectIdHex(userID)
-	user.DecrementCountOfUnreadNotifications(mongoSession)
+	user.ID = objectID
+	user.DecrementCountOfUnreadNotifications(c, mongoSession)
 
 	return nil
 }
@@ -87,7 +92,7 @@ func UpdateUserNotificationNotified(c *gin.Context, userID, notificationID strin
 
 	mongoSession := session.Get(c)
 
-	return notification.UpdateNotified(mongoSession)
+	return notification.UpdateNotified(c, mongoSession)
 }
 
 // DeleteUserNotification : deletes a notification received by the user.
@@ -99,24 +104,28 @@ func DeleteUserNotification(c *gin.Context, userID, notificationID string) error
 
 	mongoSession := session.Get(c)
 
-	if err := notification.Delete(mongoSession); err != nil {
+	if err := notification.Delete(c, mongoSession); err != nil {
 		return err
+	}
+
+	objectID, err := bson.ObjectIDFromHex(userID)
+	if err != nil {
+		return commonErrors.WrongObjectID()
 	}
 
 	// Update the count of user notifications, total and unread.
-	countOfNotifications, err := model.GetCountOfUserNotifications(userID, mongoSession)
+	countOfNotifications, err := model.GetCountOfUserNotifications(c, userID, mongoSession)
 	if err != nil {
 		return err
 	}
-
-	countOfUnreadNotifications, err := model.GetCountOfUserUnreadNotifications(userID, mongoSession)
+	countOfUnreadNotifications, err := model.GetCountOfUserUnreadNotifications(c, userID, mongoSession)
 	if err != nil {
 		return err
 	}
 
 	user := model.User{}
-	user.ID = bson.ObjectIdHex(userID)
-	user.UpdateCountOfNotifications(countOfNotifications, countOfUnreadNotifications, mongoSession)
+	user.ID = objectID
+	user.UpdateCountOfNotifications(c, countOfNotifications, countOfUnreadNotifications, mongoSession)
 
 	return nil
 }
@@ -125,20 +134,20 @@ func DeleteUserNotification(c *gin.Context, userID, notificationID string) error
 func SubscribeNotificationsToUser(c *gin.Context, userID string, notifications []string) error {
 	mongoSession := session.Get(c)
 	user := context.GetUser(c)
-	return user.UpdateNotifications(notifications, mongoSession)
+	return user.UpdateNotifications(c, notifications, mongoSession)
 }
 
 // UnsubscribeNotificationFromUser : the user has unsubscribed from a notification.
 func UnsubscribeNotificationFromUser(c *gin.Context, userID, notification, unsubscribeKey string) error {
 	// Check the userID.
-	if !bson.IsObjectIdHex(userID) {
-		return errors.New("wrong object ID")
+	if _, err := bson.ObjectIDFromHex(userID); err != nil {
+		return commonErrors.WrongObjectID()
 	}
 
 	// Check the encoded key.
 	mongoSession := session.Get(c)
 	user := &model.User{}
-	if err := user.GetByID(userID, mongoSession); err != nil {
+	if err := user.GetByID(c, userID, mongoSession); err != nil {
 		return err
 	}
 
@@ -148,7 +157,7 @@ func UnsubscribeNotificationFromUser(c *gin.Context, userID, notification, unsub
 		return errors.New("wrong unsubscribe key")
 	}
 
-	if err := user.UnsubscribeNotification(notification, mongoSession); err != nil {
+	if err := user.UnsubscribeNotification(c, notification, mongoSession); err != nil {
 		return err
 	}
 

@@ -1,25 +1,26 @@
 package functions
 
 import (
+	"context"
+
 	"github.com/cygy/ginamite/common/mongo/session"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
 	"github.com/cygy/ginamite/worker/tasks/async/location"
 )
 
 // SaveIPAddressDetails : save the IP address details.
-func SaveIPAddressDetails(IPAddress, tokenID string, getIPAddressDetailsFunc func(IPAddress string) *location.IPAddressDetails) {
-	session, db := session.Copy()
-	defer session.Close()
+func SaveIPAddressDetails(ctx context.Context, IPAddress, tokenID string, getIPAddressDetailsFunc func(IPAddress string) *location.IPAddressDetails) {
+	db := session.Database()
 
 	// Verify that the token is still existing.
 	token := &model.AuthToken{}
-	if err := token.GetByID(tokenID, db); err != nil {
+	if err := token.GetByID(ctx, tokenID, db); err != nil {
 		return
 	}
 
 	// Verify the location of the IP address is in cache.
 	IPLocation := &model.IPLocation{}
-	IPLocation.GetByIPAddress(IPAddress, db)
+	IPLocation.GetByIPAddress(ctx, IPAddress, db)
 	if !IPLocation.IsSaved() {
 		details := getIPAddressDetailsFunc(IPAddress)
 		if details == nil {
@@ -33,8 +34,8 @@ func SaveIPAddressDetails(IPAddress, tokenID string, getIPAddressDetailsFunc fun
 		IPLocation.Country.Code = details.CountryCode
 		IPLocation.Country.Name = details.CountryName
 
-		IPLocation.Save(db)
+		IPLocation.Save(ctx, db)
 	}
 
-	token.UpdateLocation(*IPLocation, db)
+	token.UpdateLocation(ctx, *IPLocation, db)
 }

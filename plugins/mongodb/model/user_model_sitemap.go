@@ -1,8 +1,6 @@
 package model
 
-import (
-	"github.com/globalsign/mgo/bson"
-)
+import "go.mongodb.org/mongo-driver/v2/bson"
 
 /**
 This struct is used only for creating the XML sitemap files.
@@ -10,7 +8,7 @@ This struct is used only for creating the XML sitemap files.
 
 // SitemapUser : sitemap version of the User struct
 type SitemapUser struct {
-	ID   bson.ObjectId `json:"id" bson:"_id,omitempty"`
+	ID   bson.ObjectID `json:"id" bson:"_id,omitempty"`
 	Slug string        `json:"slug" bson:"slug"`
 }
 

@@ -1,6 +1,7 @@
 package mail
 
 import (
+	"context"
 	"fmt"
 	"html/template"
 
@@ -10,11 +11,11 @@ import (
 )
 
 // DisableAccountConfirmation : sends a mail to confirm the account disable.
-func DisableAccountConfirmation(payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
+func DisableAccountConfirmation(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
 	p := queue.MailDisableAccountConfirmation{}
 	queue.UnmarshalPayload(payload, &p)
 
-	if !isEmailAddressValid(p.EmailAddress) {
+	if !isEmailAddressValid.check(ctx, p.EmailAddress) {
 		return
 	}
 
@@ -53,11 +54,11 @@ func DisableAccountConfirmation(payload []byte, isEmailAddressValid IsEmailAddre
 }
 
 // DisableAccountConfirmed : sends a mail to notify the account disable is confirmed.
-func DisableAccountConfirmed(payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
+func DisableAccountConfirmed(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
 	p := queue.MailDisableAccountConfirmed{}
 	queue.UnmarshalPayload(payload, &p)
 
-	if !isEmailAddressValid(p.EmailAddress) {
+	if !isEmailAddressValid.check(ctx, p.EmailAddress) {
 		return
 	}
 
@@ -87,11 +88,11 @@ func DisableAccountConfirmed(payload []byte, isEmailAddressValid IsEmailAddressV
 }
 
 // DisableAccountCancelled : sends a mail to notify the account disable is cancelled.
-func DisableAccountCancelled(payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
+func DisableAccountCancelled(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
 	p := queue.MailDisableAccountCancelled{}
 	queue.UnmarshalPayload(payload, &p)
 
-	if !isEmailAddressValid(p.EmailAddress) {
+	if !isEmailAddressValid.check(ctx, p.EmailAddress) {
 		return
 	}
 
@@ -121,11 +122,11 @@ func DisableAccountCancelled(payload []byte, isEmailAddressValid IsEmailAddressV
 }
 
 // EnableAccountConfirmed : sends a mail to notify the account enable is confirmed.
-func EnableAccountConfirmed(payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
+func EnableAccountConfirmed(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
 	p := queue.MailEnableAccountConfirmed{}
 	queue.UnmarshalPayload(payload, &p)
 
-	if !isEmailAddressValid(p.EmailAddress) {
+	if !isEmailAddressValid.check(ctx, p.EmailAddress) {
 		return
 	}
 

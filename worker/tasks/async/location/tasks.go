@@ -1,6 +1,7 @@
 package location
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,7 +13,7 @@ import (
 )
 
 // GetIPInfo : retrieve the location about an IP address.
-func GetIPInfo(payload []byte, saveIPAddressDetailsFunc func(IPAddress, tokenID string, getIPAddressDetailsFunc func(IPAddress string) *IPAddressDetails)) {
+func GetIPInfo(payload []byte, saveIPAddressDetailsFunc func(ctx context.Context, IPAddress, tokenID string, getIPAddressDetailsFunc func(IPAddress string) *IPAddressDetails)) {
 	if saveIPAddressDetailsFunc == nil {
 		return
 	}
@@ -20,7 +21,7 @@ func GetIPInfo(payload []byte, saveIPAddressDetailsFunc func(IPAddress, tokenID 
 	p := queue.TaskIPLocation{}
 	queue.UnmarshalPayload(payload, &p)
 
-	saveIPAddressDetailsFunc(p.IPAddress, p.TokenID, GetIPAddressDetails)
+	saveIPAddressDetailsFunc(nil, p.IPAddress, p.TokenID, GetIPAddressDetails)
 }
 
 // GetIPAddressDetails : returns the feo details of an IP address

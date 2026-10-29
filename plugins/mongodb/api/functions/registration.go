@@ -3,6 +3,7 @@ package functions
 import (
 	"errors"
 
+	commonErrors "github.com/cygy/ginamite/common/errors"
 	"github.com/cygy/ginamite/common/queue"
 
 	"github.com/cygy/ginamite/api/validator"
@@ -11,35 +12,35 @@ import (
 	"github.com/cygy/ginamite/plugins/mongodb/model"
 
 	"github.com/gin-gonic/gin"
-	"github.com/globalsign/mgo/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // RegisterByEmailAddress : saves the registration details of an user.
 func RegisterByEmailAddress(c *gin.Context, username, encryptedPassword, emailAddress, locale, termsVersion, registrationCode, privateKey, source, ip string, device authentication.Device) error {
 	mongoSession := session.Get(c)
 	user := model.NewUser()
-	return user.RegisterByEmailAddress(username, encryptedPassword, emailAddress, locale, termsVersion, registrationCode, privateKey, source, ip, device, mongoSession)
+	return user.RegisterByEmailAddress(c, username, encryptedPassword, emailAddress, locale, termsVersion, registrationCode, privateKey, source, ip, device, mongoSession)
 }
 
 // RegisterByThirdPartyToken : saves the registration details of an user.
 func RegisterByThirdPartyToken(c *gin.Context, username string, tokenInfos validator.TokenInfos, tokenSource, locale, termsVersion, registrationCode, privateKey, source, ip string, device authentication.Device) error {
 	mongoSession := session.Get(c)
 	user := model.NewUser()
-	return user.RegisterByThirdPartyToken(username, tokenInfos, tokenSource, locale, termsVersion, registrationCode, privateKey, source, ip, device, mongoSession)
+	return user.RegisterByThirdPartyToken(c, username, tokenInfos, tokenSource, locale, termsVersion, registrationCode, privateKey, source, ip, device, mongoSession)
 }
 
 // ValidateUserRegistration : validate the registration of an user.
 func ValidateUserRegistration(c *gin.Context, userID, registrationKey string) error {
 	// Check the userID.
-	if !bson.IsObjectIdHex(userID) {
-		return errors.New("wrong object ID")
+	if _, err := bson.ObjectIDFromHex(userID); err != nil {
+		return commonErrors.WrongObjectID()
 	}
 
 	mongoSession := session.Get(c)
 
 	// Do not validate or cancel if the account is verified already.
 	user := &model.User{}
-	if err := user.GetByID(userID, mongoSession); err != nil {
+	if err := user.GetByID(c, userID, mongoSession); err != nil {
 		return err
 	}
 
@@ -47,7 +48,7 @@ func ValidateUserRegistration(c *gin.Context, userID, registrationKey string) er
 		return errors.New("user is already verified")
 	}
 
-	if err := user.ValidateRegistrationByEmailAddress(registrationKey, mongoSession); err != nil {
+	if err := user.ValidateRegistrationByEmailAddress(c, registrationKey, mongoSession); err != nil {
 		return err
 	}
 
@@ -57,15 +58,15 @@ func ValidateUserRegistration(c *gin.Context, userID, registrationKey string) er
 // CancelUserRegistration : cancel the registration of an user.
 func CancelUserRegistration(c *gin.Context, userID, registrationKey string) error {
 	// Check the userID.
-	if !bson.IsObjectIdHex(userID) {
-		return errors.New("wrong object ID")
+	if _, err := bson.ObjectIDFromHex(userID); err != nil {
+		return commonErrors.WrongObjectID()
 	}
 
 	mongoSession := session.Get(c)
 
 	// Do not validate or cancel if the account is verified already.
 	user := &model.User{}
-	if err := user.GetByID(userID, mongoSession); err != nil {
+	if err := user.GetByID(c, userID, mongoSession); err != nil {
 		return err
 	}
 
@@ -73,7 +74,7 @@ func CancelUserRegistration(c *gin.Context, userID, registrationKey string) erro
 		return errors.New("user is already verified")
 	}
 
-	if err := user.CancelRegistrationByEmailAddress(registrationKey, mongoSession); err != nil {
+	if err := user.CancelRegistrationByEmailAddress(c, registrationKey, mongoSession); err != nil {
 		return err
 	}
 
@@ -87,15 +88,15 @@ func CancelUserRegistration(c *gin.Context, userID, registrationKey string) erro
 // GetRegistrationDetails : returns the details of the registration of an user.
 func GetRegistrationDetails(c *gin.Context, userID string) (*authentication.Details, error) {
 	// Check the userID.
-	if !bson.IsObjectIdHex(userID) {
-		return nil, errors.New("wrong object ID")
+	if _, err := bson.ObjectIDFromHex(userID); err != nil {
+		return nil, commonErrors.WrongObjectID()
 	}
 
 	mongoSession := session.Get(c)
 
 	// Do not validate or cancel if the account is enabled already.
 	user := &model.User{}
-	if err := user.GetByID(userID, mongoSession); err != nil {
+	if err := user.GetByID(c, userID, mongoSession); err != nil {
 		return nil, err
 	}
 

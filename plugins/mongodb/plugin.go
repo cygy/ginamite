@@ -1,6 +1,8 @@
 package mongodb
 
 import (
+	"context"
+
 	"github.com/cygy/ginamite"
 	"github.com/cygy/ginamite/api/route"
 	apiFunctions "github.com/cygy/ginamite/plugins/mongodb/api/functions"
@@ -8,7 +10,7 @@ import (
 	workerFunctions "github.com/cygy/ginamite/plugins/mongodb/worker/functions"
 
 	"github.com/gin-gonic/gin"
-	"github.com/globalsign/mgo"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 // Plugin : structure of the plugin.
@@ -25,22 +27,22 @@ type Plugin struct {
 	UserImageSmallVersion              bool
 	UserImageThumbVersion              bool
 
-	UpdateDocumentsReferencingToDeletedUser               func(userID string, mongoSession *mgo.Database)
-	UpdateDocumentsReferencingToDisabledUser              func(userID string, mongoSession *mgo.Database)
-	UpdateDocumentsReferencingToEnabledUser               func(userID string, mongoSession *mgo.Database)
-	UpdateDocumentsReferencingToUpdatedUserSocialNetworks func(userID string, mongoSession *mgo.Database)
-	SanitizeAccounts                                      func(mongoSession *mgo.Database) uint
+	UpdateDocumentsReferencingToDeletedUser               func(ctx context.Context, userID string, mongoSession *mongo.Database)
+	UpdateDocumentsReferencingToDisabledUser              func(ctx context.Context, userID string, mongoSession *mongo.Database)
+	UpdateDocumentsReferencingToEnabledUser               func(ctx context.Context, userID string, mongoSession *mongo.Database)
+	UpdateDocumentsReferencingToUpdatedUserSocialNetworks func(ctx context.Context, userID string, mongoSession *mongo.Database)
+	SanitizeAccounts                                      func(mongoSession *mongo.Database) uint
 
 	CollectionsToRemove    func() []string
 	CollectionsToCreate    func() []workerFunctions.CollectionToCreate
 	IndexesToRemove        func() []workerFunctions.IndexToDelete
 	IndexesToCreate        func() []workerFunctions.IndexToCreate
-	CreateDefaultDocuments func(string, string, *mgo.Database)
-	RemoveDefaultDocuments func(string, string, *mgo.Database)
-	UpdateDefaultDocuments func(string, string, *mgo.Database)
+	CreateDefaultDocuments func(string, string, *mongo.Database)
+	RemoveDefaultDocuments func(string, string, *mongo.Database)
+	UpdateDefaultDocuments func(string, string, *mongo.Database)
 	StartUpTasks           func()
 
-	IsUserEmpty func(string, *mgo.Database) bool
+	IsUserEmpty func(context.Context, string, *mongo.Database) bool
 }
 
 // NewPlugin : returns a new struct 'Plugin'.
@@ -85,29 +87,29 @@ func (p *Plugin) Configure(server *ginamite.Server) {
 	server.Worker.Functions.SaveIPAddressDetails = workerFunctions.SaveIPAddressDetails
 	server.Worker.Functions.GetNotificationTargetsByUserAndType = workerFunctions.GetNotificationTargetsByUserAndType
 	server.Worker.Functions.IsEmailAddressValid = workerFunctions.IsEmailAddressValid
-	server.Worker.Functions.StartUpTasks = func(environment, version string) {
-		workerFunctions.RemoveUnusedCollections()
+	server.Worker.Functions.StartUpTasks = func(ctx context.Context, environment, version string) {
+		workerFunctions.RemoveUnusedCollections(ctx)
 		if p.CollectionsToRemove != nil {
 			collections := p.CollectionsToRemove()
-			workerFunctions.RemoveCollections(collections)
+			workerFunctions.RemoveCollections(ctx, collections)
 		}
 
-		workerFunctions.CreateAllCollections()
+		workerFunctions.CreateAllCollections(ctx)
 		if p.CollectionsToCreate != nil {
 			collections := p.CollectionsToCreate()
-			workerFunctions.CreateCollections(collections)
+			workerFunctions.CreateCollections(ctx, collections)
 		}
 
-		workerFunctions.RemoveUnusedIndexes()
+		workerFunctions.RemoveUnusedIndexes(ctx)
 		if p.IndexesToRemove != nil {
 			indexes := p.IndexesToRemove()
-			workerFunctions.RemoveIndexes(indexes)
+			workerFunctions.RemoveIndexes(ctx, indexes)
 		}
 
-		workerFunctions.CreateAllIndexes()
+		workerFunctions.CreateAllIndexes(ctx)
 		if p.IndexesToCreate != nil {
 			indexes := p.IndexesToCreate()
-			workerFunctions.CreateIndexes(indexes)
+			workerFunctions.CreateIndexes(ctx, indexes)
 		}
 
 		workerFunctions.RemoveUnusedDefaultDocuments(environment, version)

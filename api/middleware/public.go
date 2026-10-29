@@ -6,7 +6,7 @@ import (
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/gin-gonic/gin"
-	"github.com/globalsign/mgo/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // VerifyURLParameter : verify that a URL parameter is present and its format.
@@ -25,7 +25,8 @@ func VerifyURLParameter(cfg Config) gin.HandlerFunc {
 			return
 		}
 
-		if !cfg.SkipVerifyingInvalidObjectID && !bson.IsObjectIdHex(value) {
+		_, err := bson.ObjectIDFromHex(value)
+		if !cfg.SkipVerifyingInvalidObjectID && err != nil {
 			response.InvalidRequestParameterWithDetails(c,
 				t(cfg.MessageKey),
 				t(cfg.InvalidObjectIDReasonKey),

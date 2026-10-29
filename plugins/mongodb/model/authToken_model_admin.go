@@ -3,12 +3,12 @@ package model
 import (
 	"time"
 
-	"github.com/globalsign/mgo/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // AdminAuthToken : admin version of the AuthToken struct
 type AdminAuthToken struct {
-	ID        bson.ObjectId    `json:"id"`
+	ID        bson.ObjectID    `json:"id"`
 	Source    string           `json:"source"`
 	Method    string           `json:"method"`
 	Device    AdminDevice      `json:"device"`

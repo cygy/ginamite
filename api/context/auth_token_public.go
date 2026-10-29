@@ -14,7 +14,7 @@ import (
 func RefreshAuthToken(c *gin.Context) {
 	tokenID := GetAuthTokenID(c)
 
-	signedToken, err := authentication.RefreshAuthToken(config.Main.JWT.Secret, config.Main.JWT.SigningMethod, tokenID, time.Duration(config.Main.JWT.TTL))
+	signedToken, err := authentication.RefreshAuthToken(c, config.Main.JWT.Secret, config.Main.JWT.SigningMethod, tokenID, time.Duration(config.Main.JWT.TTL))
 	if err == nil {
 		response.AddRenewedAuthToken(c, signedToken)
 	}

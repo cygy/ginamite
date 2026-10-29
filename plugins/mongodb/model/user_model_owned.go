@@ -1,10 +1,10 @@
 package model
 
-import "github.com/globalsign/mgo/bson"
+import "go.mongodb.org/mongo-driver/v2/bson"
 
 // OwnUser : public version of the User struct
 type OwnUser struct {
-	ID                     bson.ObjectId       `json:"id"`
+	ID                     bson.ObjectID       `json:"id"`
 	Username               string              `json:"username"`
 	PublicInfos            OwnUserPublicInfos  `json:"public_infos"`
 	PrivateInfos           OwnUserPrivateInfos `json:"private_infos"`

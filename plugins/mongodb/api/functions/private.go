@@ -1,30 +1,31 @@
 package functions
 
 import (
-	"errors"
-
-	commonErrors "github.com/cygy/ginamite/common/errors"
+	"github.com/cygy/ginamite/common/errors"
 	"github.com/cygy/ginamite/common/mongo/session"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
 	"github.com/gin-gonic/gin"
-	"github.com/globalsign/mgo/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 func checkUserIDAndNotificationID(c *gin.Context, userID, notificationID string) (*model.Notification, error) {
 	// Check the userID and the notificationID.
-	if !bson.IsObjectIdHex(userID) || !bson.IsObjectIdHex(notificationID) {
-		return nil, errors.New("wrong object ID")
+	if _, err := bson.ObjectIDFromHex(userID); err != nil {
+		return nil, errors.WrongObjectID()
+	}
+	if _, err := bson.ObjectIDFromHex(notificationID); err != nil {
+		return nil, errors.WrongObjectID()
 	}
 
 	mongoSession := session.Get(c)
 
 	notification := &model.Notification{}
-	if err := notification.GetByID(notificationID, mongoSession); err != nil {
+	if err := notification.GetByID(c, notificationID, mongoSession); err != nil {
 		return nil, err
 	}
 
 	if notification.UserID.Hex() != userID {
-		return nil, commonErrors.NotFound()
+		return nil, errors.NotFound()
 	}
 
 	return notification, nil

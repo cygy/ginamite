@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/globalsign/mgo"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 // Initialize : initializes the main mongodb session.
@@ -18,21 +18,21 @@ func Close() {
 	Main.Close()
 }
 
-// Copy : copies the main session.
-func Copy() (*mgo.Session, *mgo.Database) {
-	return Main.Copy()
+// Database : returns the database of the main session.
+func Database() *mongo.Database {
+	return Main.Database()
 }
 
-// Inject : saves a mongodb session to the context.
+// Inject : saves the mongodb database to the context.
 func Inject() gin.HandlerFunc {
 	return Main.Inject()
 }
 
-// Get : returns the mongodb session saved into a request.
-func Get(c *gin.Context) *mgo.Database {
+// Get : returns the mongodb database saved into a request.
+func Get(c *gin.Context) *mongo.Database {
 	value, ok := c.Get(contextKey)
 	if ok {
-		return value.(*mgo.Database)
+		return value.(*mongo.Database)
 	}
 
 	return nil

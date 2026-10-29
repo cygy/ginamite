@@ -1,11 +1,13 @@
 package model
 
 import (
+	"context"
+
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/notifications"
 
-	"github.com/globalsign/mgo"
-	"github.com/globalsign/mgo/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 // UserNotificationTarget target of a notification to send a user.
@@ -15,32 +17,47 @@ type UserNotificationTarget struct {
 }
 
 // GetUserNotificationTargetsByType : returns the targets of a given notification type of a user.
-func GetUserNotificationTargetsByType(userID, notificationType string, db *mgo.Database) []UserNotificationTarget {
+func GetUserNotificationTargetsByType(ctx context.Context, userID, notificationType string, db *mongo.Database) ([]UserNotificationTarget, error) {
 	targets := []UserNotificationTarget{}
 
+	var objectID bson.ObjectID
+	var err error
+	if objectID, err = bson.ObjectIDFromHex(userID); err != nil {
+		return targets, err
+	}
+
 	// Get the devices allowed to receive the notification.
-	query := []bson.M{
+	pipeline := []bson.M{
 		{"$match": bson.D{{
-			Name:  "userId",
-			Value: bson.ObjectIdHex(userID),
+			Key:   "userId",
+			Value: objectID,
 		}, {
-			Name:  "device.notificationSettings.enabled",
+			Key:   "device.notificationSettings.enabled",
 			Value: true,
 		}, {
-			Name:  "device.notificationSettings.notifications",
+			Key:   "device.notificationSettings.notifications",
 			Value: bson.M{"$in": []string{notificationType}},
 		}}},
 		{"$replaceRoot": bson.M{"newRoot": "$device"}},
 		{"$unwind": "$notificationSettings"},
 	}
 
-	pipe := db.C(AuthTokenCollection).Pipe(query)
-	err := pipe.All(&targets)
-	log.DatabaseError(err, UserCollection)
+	cursor, err := db.Collection(AuthTokenCollection).Aggregate(ctx, pipeline)
+	if err != nil {
+		log.DatabaseError(err, UserCollection)
+		return targets, err
+	}
+	defer cursor.Close(ctx)
+
+	err = cursor.All(ctx, &targets)
+	if err != nil {
+		log.DatabaseError(err, UserCollection)
+		return targets, err
+	}
 
 	// Get the email address if the user wants to receive this notification by email.
 	user := &User{}
-	user.GetByIDAndNotification(userID, notificationType, db)
+	user.GetByIDAndNotification(ctx, userID, notificationType, db)
 	if user.IsSaved() && user.PrivateInfos.IsEmailValid {
 		targets = append(targets, UserNotificationTarget{
 			Type:  notifications.TargetEmail,
@@ -48,5 +65,5 @@ func GetUserNotificationTargetsByType(userID, notificationType string, db *mgo.D
 		})
 	}
 
-	return targets
+	return targets, nil
 }

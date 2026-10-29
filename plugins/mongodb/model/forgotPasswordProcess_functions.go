@@ -1,14 +1,21 @@
 package model
 
 import (
+	"context"
+
+	"github.com/cygy/ginamite/common/errors"
 	"github.com/cygy/ginamite/common/mongo/document"
 
-	"github.com/globalsign/mgo"
-	"github.com/globalsign/mgo/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 // DeleteForgotPasswordProcessByUserID : deletes all the documents linked to a user.
-func DeleteForgotPasswordProcessByUserID(userID string, db *mgo.Database) error {
-	_, err := document.DeleteDocumentsBySelector(ForgotPasswordProcessCollection, bson.M{"userId": bson.ObjectIdHex(userID)}, db)
+func DeleteForgotPasswordProcessByUserID(ctx context.Context, userID string, db *mongo.Database) error {
+	objectID, err := bson.ObjectIDFromHex(userID)
+	if err != nil {
+		return errors.WrongObjectID()
+	}
+	_, err = document.DeleteDocumentsBySelector(ctx, ForgotPasswordProcessCollection, bson.M{"userId": objectID}, db)
 	return err
 }

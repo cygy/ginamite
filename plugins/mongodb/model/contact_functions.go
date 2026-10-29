@@ -1,14 +1,16 @@
 package model
 
 import (
+	"context"
+
 	"github.com/cygy/ginamite/common/mongo/document"
-	"github.com/globalsign/mgo"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 // GetContactsForAdmin : returns all the contacts.
-func GetContactsForAdmin(offset, limit int, db *mgo.Database) ([]AdminSummarizedContact, error) {
+func GetContactsForAdmin(ctx context.Context, offset, limit int64, db *mongo.Database) ([]AdminSummarizedContact, error) {
 	contacts := []Contact{}
-	err := document.GetDocumentsBySortWithOffsetAndLimit(&contacts, ContactCollection, []string{"-createdAt"}, offset, limit, db)
+	err := document.GetDocumentsBySortWithOffsetAndLimit(ctx, &contacts, ContactCollection, []string{"-createdAt"}, offset, limit, db)
 
 	adminContacts := make([]AdminSummarizedContact, len(contacts))
 	for i, contact := range contacts {

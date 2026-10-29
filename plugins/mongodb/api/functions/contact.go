@@ -7,9 +7,9 @@ import (
 )
 
 // GetContactsForAdmin : returns the contacts for the admin panel.
-func GetContactsForAdmin(c *gin.Context, offset, limit int) (interface{}, error) {
+func GetContactsForAdmin(c *gin.Context, offset, limit int64) (interface{}, error) {
 	mongoSession := session.Get(c)
-	contacts, err := model.GetContactsForAdmin(offset, limit, mongoSession)
+	contacts, err := model.GetContactsForAdmin(c, offset, limit, mongoSession)
 
 	return contacts, err
 }
@@ -19,7 +19,7 @@ func GetContactForAdmin(c *gin.Context, contactID string) (interface{}, error) {
 	mongoSession := session.Get(c)
 
 	contact := &model.Contact{}
-	if err := contact.GetByID(contactID, mongoSession); err != nil {
+	if err := contact.GetByID(c, contactID, mongoSession); err != nil {
 		return nil, err
 	}
 
@@ -31,11 +31,11 @@ func UpdateContact(c *gin.Context, contactID string, done bool) error {
 	mongoSession := session.Get(c)
 
 	contact := &model.Contact{}
-	if err := contact.GetByID(contactID, mongoSession); err != nil {
+	if err := contact.GetByID(c, contactID, mongoSession); err != nil {
 		return err
 	}
 
-	return contact.UpdateDone(done, mongoSession)
+	return contact.UpdateDone(c, done, mongoSession)
 }
 
 // CreateContact : creates a contact.
@@ -47,6 +47,6 @@ func CreateContact(c *gin.Context, emailAddress, subject, text string) error {
 	contact.Subject = subject
 	contact.Text = text
 
-	_, err := contact.Save(mongoSession)
+	_, err := contact.Save(c, mongoSession)
 	return err
 }

@@ -1,6 +1,7 @@
 package authentication
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
@@ -12,7 +13,7 @@ import (
 )
 
 // GetSignedToken : returns a JWT token with some details of an user and an auth token.
-func GetSignedToken(signingMethod, secret, tokenID string) (string, error) {
+func GetSignedToken(ctx context.Context, signingMethod, secret, tokenID string) (string, error) {
 	if BuildTokenFromID == nil {
 		return "", errors.New("undefined function 'BuildTokenFromID'")
 	}
@@ -35,7 +36,7 @@ func GetSignedToken(signingMethod, secret, tokenID string) (string, error) {
 		}
 		extraProperties = map[string]string{}
 	} else {
-		token, err = BuildTokenFromID(tokenID)
+		token, err = BuildTokenFromID(ctx, tokenID)
 		if err != nil {
 			log.WithFields(logrus.Fields{
 				"token id":         tokenID,
@@ -115,18 +116,18 @@ func ParseToken(signedToken, secret string) (*jwt.Token, error) {
 }
 
 // RefreshAuthToken : refreshes and returns an authentication token.
-func RefreshAuthToken(secret, signingMethod, tokenID string, ttl time.Duration) (string, error) {
+func RefreshAuthToken(ctx context.Context, secret, signingMethod, tokenID string, ttl time.Duration) (string, error) {
 	if ExtendTokenExpirationDateFromID == nil {
 		return "", errors.New("undefined function 'ExtendTokenExpirationDateFromID'")
 	}
 
 	// Extends the validity of the token.
-	if err := ExtendTokenExpirationDateFromID(tokenID, ttl); err != nil {
+	if err := ExtendTokenExpirationDateFromID(ctx, tokenID, ttl); err != nil {
 		return "", err
 	}
 
 	// Sign and get the complete encoded token as a string.
-	signedToken, err := GetSignedToken(signingMethod, secret, tokenID)
+	signedToken, err := GetSignedToken(ctx, signingMethod, secret, tokenID)
 	if err != nil {
 		return "", err
 	}

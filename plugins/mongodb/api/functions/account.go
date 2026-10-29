@@ -38,14 +38,14 @@ func GetOwnedAccountDetails(c *gin.Context, userID string) interface{} {
 func UpdatedAccountInfos(c *gin.Context, userID, firstName, lastName string) error {
 	mongoSession := session.Get(c)
 	user := context.GetUser(c)
-	return user.UpdateInfos(firstName, lastName, mongoSession)
+	return user.UpdateInfos(c, firstName, lastName, mongoSession)
 }
 
 // UpdatedAccountSettings : updates the settings of an user's account.
 func UpdatedAccountSettings(c *gin.Context, userID, locale, timezone string) error {
 	mongoSession := session.Get(c)
 	user := context.GetUser(c)
-	return user.UpdateSettings(locale, timezone, mongoSession)
+	return user.UpdateSettings(c, locale, timezone, mongoSession)
 }
 
 // UpdateAccountPublicProfile : updates the public profile of an account.
@@ -82,7 +82,7 @@ func UpdateAccountPublicProfile(c *gin.Context) {
 	user := context.GetUser(c)
 	mongoSession := session.Get(c)
 
-	if err := user.UpdatePublicProfile(usedLocale, description, mongoSession); err != nil {
+	if err := user.UpdatePublicProfile(c, usedLocale, description, mongoSession); err != nil {
 		response.InternalServerError(c)
 		return
 	}
@@ -160,7 +160,7 @@ func UpdateAccountPublicImage(c *gin.Context) {
 
 	mongoSession := session.Get(c)
 
-	if err := user.UpdateImage(mongoSession); err != nil {
+	if err := user.UpdateImage(c, mongoSession); err != nil {
 		image.Delete([]string{
 			versions.Full.Size1x.RelativePath,
 			versions.Full.Size2x.RelativePath,
@@ -207,7 +207,7 @@ func DeleteAccountPublicImage(c *gin.Context) {
 
 	// Remove the images.
 	user.PublicInfos.Image = model.Image{}
-	if err := user.UpdateImage(mongoSession); err != nil {
+	if err := user.UpdateImage(c, mongoSession); err != nil {
 		response.UnableToUpdateDatabase(c, locale, "error.account.public.image.delete.message")
 		return
 	}

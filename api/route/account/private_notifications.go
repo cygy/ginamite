@@ -5,7 +5,7 @@ import (
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/gin-gonic/gin"
-	"github.com/globalsign/mgo/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 func checkNotificationID(c *gin.Context, messageKey string) (string, bool) {
@@ -21,7 +21,7 @@ func checkNotificationID(c *gin.Context, messageKey string) (string, bool) {
 		return "", false
 	}
 
-	if !bson.IsObjectIdHex(notificationID) {
+	if _, err := bson.ObjectIDFromHex(notificationID); err != nil {
 		response.InvalidRequestParameterWithDetails(c,
 			t(messageKey),
 			t("error.account.notification.id.invalid.reason"),

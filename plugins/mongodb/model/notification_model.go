@@ -1,17 +1,19 @@
 package model
 
 import (
+	"context"
 	"time"
 
+	"github.com/cygy/ginamite/common/errors"
 	"github.com/cygy/ginamite/common/mongo/document"
-	"github.com/globalsign/mgo"
-	"github.com/globalsign/mgo/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 // Notification : notification properties.
 type Notification struct {
-	ID        bson.ObjectId                 `json:"id,omitempty" bson:"_id,omitempty"`
-	UserID    bson.ObjectId                 `json:"user_id" bson:"userId"`
+	ID        bson.ObjectID                 `json:"id,omitempty" bson:"_id,omitempty"`
+	UserID    bson.ObjectID                 `json:"user_id" bson:"userId"`
 	Type      string                        `json:"type" bson:"type"`
 	Data      string                        `json:"data" bson:"data"`
 	Image     PublicImage                   `json:"image,omitempty" bson:"image,omitempty"`
@@ -39,27 +41,27 @@ func NewNotification() *Notification {
 
 // IsSaved : returns true if the 'Notification' document if saved in the collection.
 func (notification *Notification) IsSaved() bool {
-	return notification.ID.Valid()
+	return !notification.ID.IsZero()
 }
 
 // Save : inserts the 'Notification' document in the collection, returns an error if needed.
-func (notification *Notification) Save(db *mgo.Database) (string, error) {
-	return document.SaveDocument(notification, NotificationCollection, db)
+func (notification *Notification) Save(ctx context.Context, db *mongo.Database) (string, error) {
+	return document.SaveDocument(ctx, notification, NotificationCollection, db)
 }
 
 // Update : updates the 'Notification' document, returns an error if needed.
-func (notification *Notification) Update(update interface{}, db *mgo.Database) error {
-	return document.UpdateDocument(notification.ID, NotificationCollection, update, db)
+func (notification *Notification) Update(ctx context.Context, update any, db *mongo.Database) error {
+	return document.UpdateDocument(ctx, notification.ID, NotificationCollection, update, db)
 }
 
 // Delete : deletes the 'Notification' document from the collection, returns an error if needed.
-func (notification *Notification) Delete(db *mgo.Database) error {
-	return document.DeleteDocument(notification.ID, NotificationCollection, db)
+func (notification *Notification) Delete(ctx context.Context, db *mongo.Database) error {
+	return document.DeleteDocument(ctx, notification.ID, NotificationCollection, db)
 }
 
 // GetByID : initializes the 'Notification' struct from the 'Notification' document with the ID.
-func (notification *Notification) GetByID(id string, db *mgo.Database) error {
-	return document.GetDocumentByID(notification, NotificationCollection, id, db)
+func (notification *Notification) GetByID(ctx context.Context, id string, db *mongo.Database) error {
+	return document.GetDocumentByID(ctx, notification, NotificationCollection, id, db)
 }
 
 // GetID : returns the 'Notification' ID.
@@ -68,6 +70,12 @@ func (notification *Notification) GetID() string {
 }
 
 // SetID : initializes the 'Notification' ID.
-func (notification *Notification) SetID(id string) {
-	notification.ID = bson.ObjectIdHex(id)
+func (notification *Notification) SetID(id string) error {
+	objectID, err := bson.ObjectIDFromHex(id)
+	if err != nil {
+		return errors.WrongObjectID()
+	}
+
+	notification.ID = objectID
+	return nil
 }

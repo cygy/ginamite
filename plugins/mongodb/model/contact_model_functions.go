@@ -1,11 +1,13 @@
 package model
 
 import (
-	"github.com/globalsign/mgo"
-	"github.com/globalsign/mgo/bson"
+	"context"
+
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 // UpdateDone : updates the 'done' properties of a contact.
-func (contact *Contact) UpdateDone(done bool, db *mgo.Database) error {
-	return contact.Update(bson.M{"$set": bson.M{"done": done}}, db)
+func (contact *Contact) UpdateDone(ctx context.Context, done bool, db *mongo.Database) error {
+	return contact.Update(ctx, bson.M{"$set": bson.M{"done": done}}, db)
 }

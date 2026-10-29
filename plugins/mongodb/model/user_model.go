@@ -1,18 +1,20 @@
 package model
 
 import (
+	"context"
 	"time"
 
 	"github.com/cygy/ginamite/common/config"
+	"github.com/cygy/ginamite/common/errors"
 	"github.com/cygy/ginamite/common/mongo/document"
 
-	"github.com/globalsign/mgo"
-	"github.com/globalsign/mgo/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 // User : properties of a user.
 type User struct {
-	ID                     bson.ObjectId             `json:"id" bson:"_id,omitempty"`
+	ID                     bson.ObjectID             `json:"id" bson:"_id,omitempty"`
 	Username               string                    `json:"username" bson:"username"`
 	Slug                   string                    `json:"slug" bson:"slug"`
 	Abilities              []string                  `json:"abilities,omitempty" bson:"abilities,omitempty"`
@@ -99,11 +101,16 @@ func NewUser() *User {
 }
 
 // UserWithID : returns a struct 'user' with a ID.
-func UserWithID(userID string) *User {
+func UserWithID(id string) (*User, error) {
 	user := NewUser()
-	user.ID = bson.ObjectIdHex(userID)
 
-	return user
+	objectID, err := bson.ObjectIDFromHex(id)
+	if err != nil {
+		return nil, errors.WrongObjectID()
+	}
+
+	user.ID = objectID
+	return user, nil
 }
 
 // NewUserFromDisabledUser : returns a new 'User' struct.
@@ -130,28 +137,28 @@ func NewUserFromDisabledUser(user *DisabledUser) *User {
 
 // IsSaved : returns true if the 'user' document if saved in the collection.
 func (user *User) IsSaved() bool {
-	return user.ID.Valid()
+	return !user.ID.IsZero()
 }
 
 // Save : inserts the 'user' document in the collection, returns an error if needed.
-func (user *User) Save(db *mgo.Database) (string, error) {
-	return document.SaveDocument(user, UserCollection, db)
+func (user *User) Save(ctx context.Context, db *mongo.Database) (string, error) {
+	return document.SaveDocument(ctx, user, UserCollection, db)
 }
 
 // Update : updates the 'user' document, returns an error if needed.
-func (user *User) Update(update interface{}, db *mgo.Database) error {
-	return document.UpdateDocument(user.ID, UserCollection, update, db)
+func (user *User) Update(ctx context.Context, update any, db *mongo.Database) error {
+	return document.UpdateDocument(ctx, user.ID, UserCollection, update, db)
 }
 
 // Delete : deletes the 'user' document from the collection, returns an error if needed.
-func (user *User) Delete(db *mgo.Database) error {
-	return document.DeleteDocument(user.ID, UserCollection, db)
+func (user *User) Delete(ctx context.Context, db *mongo.Database) error {
+	return document.DeleteDocument(ctx, user.ID, UserCollection, db)
 	// TODO: tasks to delete all the documents linked to the user.
 }
 
 // GetByID : initializes the 'User' struct from the 'user' document with the ID.
-func (user *User) GetByID(id string, db *mgo.Database) error {
-	return document.GetDocumentByID(user, UserCollection, id, db)
+func (user *User) GetByID(ctx context.Context, id string, db *mongo.Database) error {
+	return document.GetDocumentByID(ctx, user, UserCollection, id, db)
 }
 
 // GetID : returns the 'User' ID.
@@ -160,14 +167,20 @@ func (user *User) GetID() string {
 }
 
 // SetID : initializes the 'User' ID.
-func (user *User) SetID(id string) {
-	user.ID = bson.ObjectIdHex(id)
+func (user *User) SetID(id string) error {
+	objectID, err := bson.ObjectIDFromHex(id)
+	if err != nil {
+		return errors.WrongObjectID()
+	}
+
+	user.ID = objectID
+	return nil
 }
 
 // SetAdmin : !Only for testing
-func (user *User) SetAdmin(admin bool, db *mgo.Database) error {
+func (user *User) SetAdmin(ctx context.Context, admin bool, db *mongo.Database) error {
 	if config.Main == nil || config.Main.IsTestEnvironment() {
-		return user.Update(bson.M{"$set": bson.M{"isAdmin": admin}}, db)
+		return user.Update(ctx, bson.M{"$set": bson.M{"isAdmin": admin}}, db)
 	}
 
 	return nil

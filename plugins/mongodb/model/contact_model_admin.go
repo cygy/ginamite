@@ -3,7 +3,7 @@ package model
 import (
 	"time"
 
-	"github.com/globalsign/mgo/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // AdminContact : admin version of the Contact struct
@@ -23,7 +23,7 @@ func NewAdminContact(contact *Contact) *AdminContact {
 
 // AdminSummarizedContact : short version of a contact document.
 type AdminSummarizedContact struct {
-	ID           bson.ObjectId `json:"id,omitempty" bson:"_id,omitempty"`
+	ID           bson.ObjectID `json:"id,omitempty" bson:"_id,omitempty"`
 	EmailAddress string        `json:"email_address" bson:"emailAddress"`
 	Subject      string        `json:"subject" bson:"subject"`
 	Done         bool          `json:"done" bson:"done"`

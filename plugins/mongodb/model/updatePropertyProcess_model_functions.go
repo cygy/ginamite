@@ -1,44 +1,54 @@
 package model
 
 import (
+	"context"
+
 	"github.com/cygy/ginamite/common/authentication"
+	"github.com/cygy/ginamite/common/errors"
 	"github.com/cygy/ginamite/common/mongo/document"
 
-	"github.com/globalsign/mgo"
-	"github.com/globalsign/mgo/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 // GetByUserIDAndType : returns a UpdatePropertyProcess struct with a user.
-func (process *UpdatePropertyProcess) GetByUserIDAndType(userID, t string, db *mgo.Database) error {
-	return document.GetDocumentBySelector(process, UpdatePropertyProcessCollection, bson.D{{Name: "userId", Value: bson.ObjectIdHex(userID)}, {Name: "type", Value: t}}, db)
+func (process *UpdatePropertyProcess) GetByUserIDAndType(ctx context.Context, userID, t string, db *mongo.Database) error {
+	objectID, err := bson.ObjectIDFromHex(userID)
+	if err != nil {
+		return errors.WrongObjectID()
+	}
+	return document.GetDocumentBySelector(ctx, process, UpdatePropertyProcessCollection, bson.D{
+		{Key: "userId", Value: objectID},
+		{Key: "type", Value: t},
+	}, db)
 }
 
 // GetUpdatePasswordProcessByUserID : returns a UpdatePropertyProcess struct with a user.
-func (process *UpdatePropertyProcess) GetUpdatePasswordProcessByUserID(userID string, db *mgo.Database) error {
-	return process.GetByUserIDAndType(userID, authentication.ProcessUpdatePassword, db)
+func (process *UpdatePropertyProcess) GetUpdatePasswordProcessByUserID(ctx context.Context, userID string, db *mongo.Database) error {
+	return process.GetByUserIDAndType(ctx, userID, authentication.ProcessUpdatePassword, db)
 }
 
 // GetUpdateEmailAddressProcessByUserID : returns a UpdatePropertyProcess struct with a user.
-func (process *UpdatePropertyProcess) GetUpdateEmailAddressProcessByUserID(userID string, db *mgo.Database) error {
-	return process.GetByUserIDAndType(userID, authentication.ProcessUpdateEmailAddress, db)
+func (process *UpdatePropertyProcess) GetUpdateEmailAddressProcessByUserID(ctx context.Context, userID string, db *mongo.Database) error {
+	return process.GetByUserIDAndType(ctx, userID, authentication.ProcessUpdateEmailAddress, db)
 }
 
 // GetUpdateValidEmailAddressProcessByUserID : returns a UpdatePropertyProcess struct with a user.
-func (process *UpdatePropertyProcess) GetUpdateValidEmailAddressProcessByUserID(userID string, db *mgo.Database) error {
-	return process.GetByUserIDAndType(userID, authentication.ProcessVerifyEmailAddress, db)
+func (process *UpdatePropertyProcess) GetUpdateValidEmailAddressProcessByUserID(ctx context.Context, userID string, db *mongo.Database) error {
+	return process.GetByUserIDAndType(ctx, userID, authentication.ProcessVerifyEmailAddress, db)
 }
 
 // GetDeleteAccountProcessByUserID : returns a UpdatePropertyProcess struct with a user.
-func (process *UpdatePropertyProcess) GetDeleteAccountProcessByUserID(userID string, db *mgo.Database) error {
-	return process.GetByUserIDAndType(userID, authentication.ProcessDeleteAccount, db)
+func (process *UpdatePropertyProcess) GetDeleteAccountProcessByUserID(ctx context.Context, userID string, db *mongo.Database) error {
+	return process.GetByUserIDAndType(ctx, userID, authentication.ProcessDeleteAccount, db)
 }
 
 // GetDisableAccountProcessByUserID : returns a UpdatePropertyProcess struct with a user.
-func (process *UpdatePropertyProcess) GetDisableAccountProcessByUserID(userID string, db *mgo.Database) error {
-	return process.GetByUserIDAndType(userID, authentication.ProcessDisableAccount, db)
+func (process *UpdatePropertyProcess) GetDisableAccountProcessByUserID(ctx context.Context, userID string, db *mongo.Database) error {
+	return process.GetByUserIDAndType(ctx, userID, authentication.ProcessDisableAccount, db)
 }
 
 // Increment : increments the tries of a UpdatePropertyProcess document.
-func (process *UpdatePropertyProcess) Increment(db *mgo.Database) error {
-	return process.Update(bson.M{"$inc": bson.M{"tries": 1}}, db)
+func (process *UpdatePropertyProcess) Increment(ctx context.Context, db *mongo.Database) error {
+	return process.Update(ctx, bson.M{"$inc": bson.M{"tries": 1}}, db)
 }

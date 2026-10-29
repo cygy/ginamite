@@ -1,10 +1,11 @@
 package session
 
-import "github.com/globalsign/mgo"
+import "go.mongodb.org/mongo-driver/v2/mongo"
 
 // Session : session of a mongo database.
+// The client is safe for concurrent use and manages its own connection pool.
 type Session struct {
-	Session      *mgo.Session
+	Client       *mongo.Client
 	DatabaseName string
 }
 

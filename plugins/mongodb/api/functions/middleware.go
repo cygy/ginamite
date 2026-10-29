@@ -6,29 +6,23 @@ import (
 	"github.com/cygy/ginamite/plugins/mongodb/model"
 
 	"github.com/gin-gonic/gin"
-	"github.com/globalsign/mgo/bson"
 	jwt "github.com/golang-jwt/jwt/v5"
 )
 
 // IsValidAuthToken : returns trus if the auth token is valid.
-func IsValidAuthToken(c *gin.Context, tokenID string) bool {
-	if !bson.IsObjectIdHex(tokenID) {
-		return false
-	}
-
+func IsValidAuthToken(c *gin.Context, tokenID string) (bool, error) {
 	// Checks if the auth token is valid and not expired/revoked.
 	mongoSession := session.Get(c)
-	if !model.IsValidAuthToken(tokenID, mongoSession) {
-		return false
-	}
-
-	return true
+	return model.IsValidAuthToken(c, tokenID, mongoSession)
 }
 
 // GetUserAndLocaleFromAuthToken : returns the user struct and the user's locale.
-func GetUserAndLocaleFromAuthToken(token *jwt.Token) (interface{}, string) {
-	user := model.UserFromAuthToken(token)
-	return user, user.Settings.Locale
+func GetUserAndLocaleFromAuthToken(token *jwt.Token) (any, string, error) {
+	user, err := model.UserFromAuthToken(token)
+	if err != nil {
+		return nil, "", err
+	}
+	return user, user.Settings.Locale, nil
 }
 
 // GetUserAbilities ; returns the abilities of an user.

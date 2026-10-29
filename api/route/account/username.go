@@ -25,15 +25,18 @@ func GetAvailability(c *gin.Context) {
 	locale := context.GetLocale(c)
 	t := localization.Translate(locale)
 
-	if DoesAccountWithUsernameExist != nil && DoesAccountWithUsernameExist(c, username) {
-		response.Ok(c, Availability{
-			Available: false,
-			Message:   t("status.username.unavailable"),
-		})
-	} else {
-		response.Ok(c, Availability{
-			Available: true,
-			Message:   t("status.username.available"),
-		})
+	if DoesAccountWithUsernameExist != nil {
+		exists, err := DoesAccountWithUsernameExist(c, username)
+		if !exists || err != nil {
+			response.Ok(c, Availability{
+				Available: false,
+				Message:   t("status.username.unavailable"),
+			})
+		}
 	}
+
+	response.Ok(c, Availability{
+		Available: true,
+		Message:   t("status.username.available"),
+	})
 }

@@ -1,12 +1,12 @@
 package model
 
 import (
-	"github.com/globalsign/mgo/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // AdminDisabledUser : properties of a disabled user for the admin.
 type AdminDisabledUser struct {
-	ID           bson.ObjectId    `json:"id" bson:"_id,omitempty"`
+	ID           bson.ObjectID    `json:"id" bson:"_id,omitempty"`
 	Username     string           `json:"username" bson:"username"`
 	Slug         string           `json:"slug" bson:"slug"`
 	PrivateInfos UserPrivateInfos `json:"private_infos" bson:"privateInfos,omitempty"`

@@ -1,13 +1,14 @@
 package user
 
 import (
+	"context"
 	"time"
 
 	"github.com/cygy/ginamite/common/queue"
 )
 
 // DeleteByID : deletes a user with a ID.
-func DeleteByID(payload []byte, deleteUserByIDFunc func(userID string) map[string]time.Time) {
+func DeleteByID(payload []byte, deleteUserByIDFunc func(ctx context.Context, userID string) map[string]time.Time) {
 	if deleteUserByIDFunc == nil {
 		return
 	}
@@ -17,7 +18,7 @@ func DeleteByID(payload []byte, deleteUserByIDFunc func(userID string) map[strin
 
 	// Here is the function to delete the user and which return the auth tokens revoked.
 	// Each token is defined with its unique ID and its expiration date.
-	revokedAuthTokens := deleteUserByIDFunc(p.UserID)
+	revokedAuthTokens := deleteUserByIDFunc(nil, p.UserID)
 
 	if revokedAuthTokens != nil && len(revokedAuthTokens) > 0 {
 		queue.InvalidAuthTokens(revokedAuthTokens)
@@ -25,7 +26,7 @@ func DeleteByID(payload []byte, deleteUserByIDFunc func(userID string) map[strin
 }
 
 // DisableByID : disables a user with a ID.
-func DisableByID(payload []byte, disableUserByIDFunc func(userID string) map[string]time.Time) {
+func DisableByID(payload []byte, disableUserByIDFunc func(ctx context.Context, userID string) map[string]time.Time) {
 	if disableUserByIDFunc == nil {
 		return
 	}
@@ -35,7 +36,7 @@ func DisableByID(payload []byte, disableUserByIDFunc func(userID string) map[str
 
 	// Here is the function to disable the user and which return the auth tokens revoked.
 	// Each token is defined with its unique ID and its expiration date.
-	revokedAuthTokens := disableUserByIDFunc(p.UserID)
+	revokedAuthTokens := disableUserByIDFunc(nil, p.UserID)
 
 	if revokedAuthTokens != nil && len(revokedAuthTokens) > 0 {
 		queue.InvalidAuthTokens(revokedAuthTokens)
@@ -43,7 +44,7 @@ func DisableByID(payload []byte, disableUserByIDFunc func(userID string) map[str
 }
 
 // EnableByID : enables a user with a ID.
-func EnableByID(payload []byte, enableUserByIDFunc func(userID string)) {
+func EnableByID(payload []byte, enableUserByIDFunc func(ctx context.Context, userID string)) {
 	if enableUserByIDFunc == nil {
 		return
 	}
@@ -51,11 +52,11 @@ func EnableByID(payload []byte, enableUserByIDFunc func(userID string)) {
 	p := queue.TaskDisableUser{}
 	queue.UnmarshalPayload(payload, &p)
 
-	enableUserByIDFunc(p.UserID)
+	enableUserByIDFunc(nil, p.UserID)
 }
 
 // UpdateSocialNetworksByID : updates the documents referencing the social networks of a user.
-func UpdateSocialNetworksByID(payload []byte, updateUserSocialNetworksByIDFunc func(userID string)) {
+func UpdateSocialNetworksByID(payload []byte, updateUserSocialNetworksByIDFunc func(ctx context.Context, userID string)) {
 	if updateUserSocialNetworksByIDFunc == nil {
 		return
 	}
@@ -64,11 +65,11 @@ func UpdateSocialNetworksByID(payload []byte, updateUserSocialNetworksByIDFunc f
 	queue.UnmarshalPayload(payload, &p)
 
 	// Here is the function to update the documents referencing the social networks of a user.
-	updateUserSocialNetworksByIDFunc(p.UserID)
+	updateUserSocialNetworksByIDFunc(nil, p.UserID)
 }
 
 // RegistrationDone : informs that a user is registered.
-func RegistrationDone(payload []byte, registrationDoneFunc func(userID string)) {
+func RegistrationDone(payload []byte, registrationDoneFunc func(ctx context.Context, userID string)) {
 	if registrationDoneFunc == nil {
 		return
 	}
@@ -77,11 +78,11 @@ func RegistrationDone(payload []byte, registrationDoneFunc func(userID string)) 
 	queue.UnmarshalPayload(payload, &p)
 
 	// Here is the function to inform that a user is registered.
-	registrationDoneFunc(p.UserID)
+	registrationDoneFunc(nil, p.UserID)
 }
 
 // RegistrationValidated : informs that a user is validated.
-func RegistrationValidated(payload []byte, registrationValidatedFunc func(userID string)) {
+func RegistrationValidated(payload []byte, registrationValidatedFunc func(ctx context.Context, userID string)) {
 	if registrationValidatedFunc == nil {
 		return
 	}
@@ -90,5 +91,5 @@ func RegistrationValidated(payload []byte, registrationValidatedFunc func(userID
 	queue.UnmarshalPayload(payload, &p)
 
 	// Here is the function to inform that a user is registered.
-	registrationValidatedFunc(p.UserID)
+	registrationValidatedFunc(nil, p.UserID)
 }

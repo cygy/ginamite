@@ -10,7 +10,7 @@ import (
 
 // GetExpiredToken : returns an expired token.
 func GetExpiredToken(c *gin.Context) {
-	signedToken, err := authentication.GetSignedToken(config.Main.JWT.SigningMethod, config.Main.JWT.Secret, "fakeexpiredtoken")
+	signedToken, err := authentication.GetSignedToken(c, config.Main.JWT.SigningMethod, config.Main.JWT.Secret, "fakeexpiredtoken")
 	if err != nil {
 		response.InternalServerError(c)
 		return

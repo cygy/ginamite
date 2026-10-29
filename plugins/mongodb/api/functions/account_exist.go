@@ -8,49 +8,61 @@ import (
 )
 
 // DoesAccountWithUsernameExist : returns true if an account with this username exists.
-func DoesAccountWithUsernameExist(c *gin.Context, username string) bool {
+func DoesAccountWithUsernameExist(c *gin.Context, username string) (bool, error) {
 	mongoSession := session.Get(c)
-	ok := model.IsUserWithUsernameExisting(username, mongoSession)
-
-	if !ok {
-		ok = model.IsDisabledUserWithUsernameExisting(username, mongoSession)
+	ok, err := model.IsUserWithUsernameExisting(c, username, mongoSession)
+	if err != nil {
+		return false, err
 	}
 
-	return ok
+	if !ok {
+		ok, err = model.IsDisabledUserWithUsernameExisting(c, username, mongoSession)
+	}
+
+	return ok, err
 }
 
 // DoesAccountWithEmailAddressExist : returns true if an account with this email address exists.
-func DoesAccountWithEmailAddressExist(c *gin.Context, emailAddress string) bool {
+func DoesAccountWithEmailAddressExist(c *gin.Context, emailAddress string) (bool, error) {
 	mongoSession := session.Get(c)
-	ok := model.IsUserWithEmailAddressExisting(emailAddress, mongoSession)
-
-	if !ok {
-		ok = model.IsDisabledUserWithEmailAddressExisting(emailAddress, mongoSession)
+	ok, err := model.IsUserWithEmailAddressExisting(c, emailAddress, mongoSession)
+	if err != nil {
+		return false, err
 	}
 
-	return ok
+	if !ok {
+		ok, err = model.IsDisabledUserWithEmailAddressExisting(c, emailAddress, mongoSession)
+	}
+
+	return ok, err
 }
 
 // DoesUserWithFacebookUserIDExist : returns true if an account with this facebook id exists.
-func DoesUserWithFacebookUserIDExist(c *gin.Context, userID string) bool {
+func DoesUserWithFacebookUserIDExist(c *gin.Context, userID string) (bool, error) {
 	mongoSession := session.Get(c)
-	ok := model.IsUserWithFacebookUserIDExisting(userID, mongoSession)
-
-	if !ok {
-		ok = model.IsDisabledUserWithFacebookUserIDExisting(userID, mongoSession)
+	ok, err := model.IsUserWithFacebookUserIDExisting(c, userID, mongoSession)
+	if err != nil {
+		return false, err
 	}
 
-	return ok
+	if !ok {
+		ok, err = model.IsDisabledUserWithFacebookUserIDExisting(c, userID, mongoSession)
+	}
+
+	return ok, err
 }
 
 // DoesUserWithGoogleUserIDExist : returns true if an account with this google id exists.
-func DoesUserWithGoogleUserIDExist(c *gin.Context, userID string) bool {
+func DoesUserWithGoogleUserIDExist(c *gin.Context, userID string) (bool, error) {
 	mongoSession := session.Get(c)
-	ok := model.IsUserWithGoogleUserIDExisting(userID, mongoSession)
-
-	if !ok {
-		ok = model.IsDisabledUserWithGoogleUserIDExisting(userID, mongoSession)
+	ok, err := model.IsUserWithGoogleUserIDExisting(c, userID, mongoSession)
+	if err != nil {
+		return false, err
 	}
 
-	return ok
+	if !ok {
+		ok, err = model.IsDisabledUserWithGoogleUserIDExisting(c, userID, mongoSession)
+	}
+
+	return ok, err
 }

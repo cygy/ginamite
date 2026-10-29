@@ -1,11 +1,14 @@
 package functions
 
-import "github.com/globalsign/mgo"
+import (
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
+)
 
 // IndexToCreate : struct representing the index of a collection.
 type IndexToCreate struct {
 	Collection string
-	Index      mgo.Index
+	Index      mongo.IndexModel
 }
 
 // IndexToDelete : struct representing the index of a collection.
@@ -16,6 +19,6 @@ type IndexToDelete struct {
 
 // CollectionToCreate : struct representing a collection.
 type CollectionToCreate struct {
-	Name string
-	Info mgo.CollectionInfo
+	Name    string
+	Options *options.CreateCollectionOptionsBuilder
 }

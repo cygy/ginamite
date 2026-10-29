@@ -1,6 +1,7 @@
 package account
 
 import (
+	"context"
 	"time"
 
 	"github.com/cygy/ginamite/common/queue"
@@ -9,14 +10,14 @@ import (
 )
 
 // DeleteNeverUsed : deletes the never used accounts (never logged in).
-func DeleteNeverUsed(taskName string, intervalInDays uint, getNeverUsedAccounts func(uint) []string, isUserEmpty func(string) bool, deleteUser func(userID string) map[string]time.Time) {
-	userIDs := getNeverUsedAccounts(intervalInDays)
+func DeleteNeverUsed(ctx context.Context, taskName string, intervalInDays uint, getNeverUsedAccounts func(context.Context, uint) []string, isUserEmpty func(context.Context, string) bool, deleteUser func(context.Context, string) map[string]time.Time) {
+	userIDs := getNeverUsedAccounts(ctx, intervalInDays)
 	countOfDeletedUsers := 0
 
 	// Delete the user.
 	for _, userID := range userIDs {
-		if isUserEmpty(userID) {
-			deleteUser(userID)
+		if isUserEmpty(ctx, userID) {
+			deleteUser(ctx, userID)
 			countOfDeletedUsers++
 
 			queue.DeleteUser(queue.TaskDeleteUser{
@@ -31,12 +32,12 @@ func DeleteNeverUsed(taskName string, intervalInDays uint, getNeverUsedAccounts 
 }
 
 // DeleteInactive : deletes the inactive accounts.
-func DeleteInactive(taskName string, intervalInMonths uint, getInactiveAccounts func(uint) []string, deleteUser func(userID string) map[string]time.Time) {
-	userIDs := getInactiveAccounts(intervalInMonths)
+func DeleteInactive(ctx context.Context, taskName string, intervalInMonths uint, getInactiveAccounts func(context.Context, uint) []string, deleteUser func(context.Context, string) map[string]time.Time) {
+	userIDs := getInactiveAccounts(ctx, intervalInMonths)
 
 	// Delete the user.
 	for _, userID := range userIDs {
-		deleteUser(userID)
+		deleteUser(ctx, userID)
 
 		queue.DeleteUser(queue.TaskDeleteUser{
 			UserID: userID,

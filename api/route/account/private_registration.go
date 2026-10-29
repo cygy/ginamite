@@ -186,7 +186,8 @@ func register(c *gin.Context, method string) {
 		})
 	}
 
-	if DoesAccountWithUsernameExist(c, username) {
+	exists, err := DoesAccountWithUsernameExist(c, username)
+	if exists || err != nil {
 		sendAccountAlreadyExistsError()
 		return
 	}
@@ -227,13 +228,16 @@ func register(c *gin.Context, method string) {
 		} else if isGoogleMethod {
 			DoesUserWithSocialNetworkUserIDExist = DoesUserWithGoogleUserIDExist
 		}
-		if DoesUserWithSocialNetworkUserIDExist != nil && DoesUserWithSocialNetworkUserIDExist(c, tokenInfos.UserID) {
-			sendAccountAlreadyExistsError()
-			return
+		if DoesUserWithSocialNetworkUserIDExist != nil {
+			exists, err := DoesUserWithSocialNetworkUserIDExist(c, tokenInfos.UserID)
+			if exists || err != nil {
+				return
+			}
 		}
 
 		// Finally verify that an account with this email address does not exist.
-		if DoesAccountWithEmailAddressExist(c, tokenInfos.Email) {
+		exists, err := DoesAccountWithEmailAddressExist(c, tokenInfos.Email)
+		if exists || err != nil {
 			sendAccountAlreadyExistsError()
 			return
 		}
@@ -252,7 +256,8 @@ func register(c *gin.Context, method string) {
 	// Register with a email/password
 	if isPasswordMethod {
 		// Verify that an account with this email address does not exist.
-		if DoesAccountWithEmailAddressExist(c, emailAddress) {
+		exists, err := DoesAccountWithEmailAddressExist(c, emailAddress)
+		if exists || err != nil {
 			sendAccountAlreadyExistsError()
 			return
 		}

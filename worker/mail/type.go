@@ -1,5 +1,7 @@
 package mail
 
+import "context"
+
 // Message : struct representing the details of a mail message.
 type Message struct {
 	Subject   string
@@ -11,4 +13,9 @@ type Message struct {
 }
 
 // IsEmailAddressValidFunc : function to know if an e-mail can be sent to an email address.
-type IsEmailAddressValidFunc func(emailAddress string) bool
+type IsEmailAddressValidFunc func(ctx context.Context, emailAddress string) (bool, error)
+
+func (f IsEmailAddressValidFunc) check(ctx context.Context, emailAddress string) bool {
+	isValid, _ := f(ctx, emailAddress)
+	return isValid
+}

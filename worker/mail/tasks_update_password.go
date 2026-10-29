@@ -1,6 +1,7 @@
 package mail
 
 import (
+	"context"
 	"fmt"
 	"html/template"
 
@@ -10,11 +11,11 @@ import (
 )
 
 // UpdatePasswordConfirmation : sends a mail to confirm the password update.
-func UpdatePasswordConfirmation(payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
+func UpdatePasswordConfirmation(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
 	p := queue.MailUpdatePasswordConfirmation{}
 	queue.UnmarshalPayload(payload, &p)
 
-	if !isEmailAddressValid(p.EmailAddress) {
+	if !isEmailAddressValid.check(ctx, p.EmailAddress) {
 		return
 	}
 
@@ -53,11 +54,11 @@ func UpdatePasswordConfirmation(payload []byte, isEmailAddressValid IsEmailAddre
 }
 
 // UpdatePasswordConfirmed : sends a mail to notify the password update is confirmed.
-func UpdatePasswordConfirmed(payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
+func UpdatePasswordConfirmed(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
 	p := queue.MailUpdatePasswordConfirmed{}
 	queue.UnmarshalPayload(payload, &p)
 
-	if !isEmailAddressValid(p.EmailAddress) {
+	if !isEmailAddressValid.check(ctx, p.EmailAddress) {
 		return
 	}
 
@@ -87,11 +88,11 @@ func UpdatePasswordConfirmed(payload []byte, isEmailAddressValid IsEmailAddressV
 }
 
 // UpdatePasswordCancelled : sends a mail to notify the password update is cancelled.
-func UpdatePasswordCancelled(payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
+func UpdatePasswordCancelled(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
 	p := queue.MailUpdatePasswordCancelled{}
 	queue.UnmarshalPayload(payload, &p)
 
-	if !isEmailAddressValid(p.EmailAddress) {
+	if !isEmailAddressValid.check(ctx, p.EmailAddress) {
 		return
 	}
 

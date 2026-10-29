@@ -1,22 +1,22 @@
 package functions
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/mongo/session"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
-	"github.com/globalsign/mgo"
 	"github.com/sirupsen/logrus"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 // CreateCollections : creates the collections.
-func CreateCollections(collections []CollectionToCreate) {
-	session, db := session.Copy()
-	defer session.Close()
+func CreateCollections(ctx context.Context, collections []CollectionToCreate) {
+	db := session.Database()
 
 	for _, collection := range collections {
-		err := db.C(collection.Name).Create(&collection.Info)
+		err := db.CreateCollection(ctx, collection.Name, collection.Options)
 		if err != nil {
 			log.WithFields(logrus.Fields{
 				"error":      err.Error(),
@@ -27,13 +27,12 @@ func CreateCollections(collections []CollectionToCreate) {
 }
 
 // RemoveCollections : removes the collections.
-func RemoveCollections(collections []string) {
-	session, db := session.Copy()
-	defer session.Close()
+func RemoveCollections(ctx context.Context, collections []string) {
+	db := session.Database()
 
 	for _, collection := range collections {
-		db.C(collection).DropAllIndexes()
-		err := db.C(collection).DropCollection()
+		db.Collection(collection).Indexes().DropAll(ctx)
+		err := db.Collection(collection).Drop(ctx)
 		if err != nil && err.Error() != fmt.Sprintf("collection not found with name [%s]", collection) {
 			log.WithFields(logrus.Fields{
 				"error":      err.Error(),
@@ -44,33 +43,31 @@ func RemoveCollections(collections []string) {
 }
 
 // RemoveUnusedCollections : removes the unused collections.
-func RemoveUnusedCollections() {
+func RemoveUnusedCollections(ctx context.Context) {
 	collectionsToRemove := []string{}
-
-	RemoveCollections(collectionsToRemove)
+	RemoveCollections(ctx, collectionsToRemove)
 }
 
 // CreateAllCollections : creates the collections.
-func CreateAllCollections() {
-	collectionInfo := mgo.CollectionInfo{
-		Collation: &mgo.Collation{
+func CreateAllCollections(ctx context.Context) {
+	collectionOptions := options.CreateCollection().
+		SetCollation(&options.Collation{
 			Locale:          "fr",
 			Strength:        1,
 			NumericOrdering: false,
-		},
-	}
+		})
 
 	collections := []CollectionToCreate{
 		{
 			Name: model.AuthTokenCollection,
 		},
 		{
-			Name: model.DeletedUserCollection,
-			Info: collectionInfo,
+			Name:    model.DeletedUserCollection,
+			Options: collectionOptions,
 		},
 		{
-			Name: model.DisabledUserCollection,
-			Info: collectionInfo,
+			Name:    model.DisabledUserCollection,
+			Options: collectionOptions,
 		},
 		{
 			Name: model.ForgotPasswordProcessCollection,
@@ -82,10 +79,10 @@ func CreateAllCollections() {
 			Name: model.UpdatePropertyProcessCollection,
 		},
 		{
-			Name: model.UserCollection,
-			Info: collectionInfo,
+			Name:    model.UserCollection,
+			Options: collectionOptions,
 		},
 	}
 
-	CreateCollections(collections)
+	CreateCollections(ctx, collections)
 }

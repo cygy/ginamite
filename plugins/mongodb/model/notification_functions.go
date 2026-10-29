@@ -1,35 +1,62 @@
 package model
 
 import (
+	"context"
+
+	"github.com/cygy/ginamite/common/errors"
 	"github.com/cygy/ginamite/common/mongo/document"
-	"github.com/globalsign/mgo"
-	"github.com/globalsign/mgo/bson"
+
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 // GetUserNotifications : returns the latest notifications received by a user.
-func GetUserNotifications(userID string, db *mgo.Database) ([]Notification, error) {
+func GetUserNotifications(ctx context.Context, userID string, db *mongo.Database) ([]Notification, error) {
 	notifications := []Notification{}
-	err := document.GetDocumentsBySelectorAndSort(&notifications, NotificationCollection, bson.M{"userId": bson.ObjectIdHex(userID)}, []string{"userId", "-createdAt"}, db)
 
+	objectID, err := bson.ObjectIDFromHex(userID)
+	if err != nil {
+		return notifications, errors.WrongObjectID()
+	}
+
+	err = document.GetDocumentsBySelectorAndSort(ctx, &notifications, NotificationCollection, bson.M{"userId": objectID}, []string{"userId", "-createdAt"}, db)
 	return notifications, err
 }
 
 // GetCountOfUserNotifications : returns the count of notifications received by a user.
-func GetCountOfUserNotifications(userID string, db *mgo.Database) (int, error) {
-	return document.CountBySelector(NotificationCollection, bson.M{"userId": bson.ObjectIdHex(userID)}, db)
+func GetCountOfUserNotifications(ctx context.Context, userID string, db *mongo.Database) (int64, error) {
+	objectID, err := bson.ObjectIDFromHex(userID)
+	if err != nil {
+		return 0, errors.WrongObjectID()
+	}
+
+	return document.CountBySelector(ctx, NotificationCollection, bson.M{"userId": objectID}, db)
 }
 
 // GetCountOfUserUnreadNotifications : returns the count of unread notifications received by a user.
-func GetCountOfUserUnreadNotifications(userID string, db *mgo.Database) (int, error) {
-	return document.CountBySelector(NotificationCollection, bson.D{{Name: "userId", Value: bson.ObjectIdHex(userID)}, {Name: "read", Value: false}}, db)
+func GetCountOfUserUnreadNotifications(ctx context.Context, userID string, db *mongo.Database) (int64, error) {
+	objectID, err := bson.ObjectIDFromHex(userID)
+	if err != nil {
+		return 0, errors.WrongObjectID()
+	}
+
+	return document.CountBySelector(ctx, NotificationCollection, bson.D{
+		{Key: "userId", Value: objectID},
+		{Key: "read", Value: false},
+	}, db)
 }
 
 // GetOldestUserNotifications : returns the IDs of the oldest notifications received by a user.
-func GetOldestUserNotifications(userID string, offset int, db *mgo.Database) ([]bson.ObjectId, error) {
-	notifications := []Notification{}
-	err := document.GetDocumentsBySelectorAndSortWithOffsetAndLimit(&notifications, NotificationCollection, bson.M{"userId": bson.ObjectIdHex(userID)}, []string{"userId", "-createdAt"}, offset, -1, db)
+func GetOldestUserNotifications(ctx context.Context, userID string, offset int64, db *mongo.Database) ([]bson.ObjectID, error) {
+	objectID, err := bson.ObjectIDFromHex(userID)
+	if err != nil {
+		return []bson.ObjectID{}, errors.WrongObjectID()
+	}
 
-	notificationIDs := make([]bson.ObjectId, len(notifications))
+	notifications := []Notification{}
+	err = document.GetDocumentsBySelectorAndSortWithOffsetAndLimit(ctx, &notifications, NotificationCollection, bson.M{"userId": objectID}, []string{"userId", "-createdAt"}, offset, -1, db)
+
+	notificationIDs := make([]bson.ObjectID, len(notifications))
 	for i, notification := range notifications {
 		notificationIDs[i] = notification.ID
 	}
@@ -38,11 +65,11 @@ func GetOldestUserNotifications(userID string, offset int, db *mgo.Database) ([]
 }
 
 // DeleteUserNotifications : deletes some notifications received by a user.
-func DeleteUserNotifications(notificationsIDs []bson.ObjectId, db *mgo.Database) (int, error) {
+func DeleteUserNotifications(ctx context.Context, notificationsIDs []bson.ObjectID, db *mongo.Database) (int64, error) {
 	IDs := make([]bson.M, len(notificationsIDs))
 	for i, notificationsID := range notificationsIDs {
 		IDs[i] = bson.M{"_id": notificationsID}
 	}
 
-	return document.DeleteDocumentsBySelector(NotificationCollection, bson.M{"$or": IDs}, db)
+	return document.DeleteDocumentsBySelector(ctx, NotificationCollection, bson.M{"$or": IDs}, db)
 }

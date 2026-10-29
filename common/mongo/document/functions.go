@@ -1,69 +1,91 @@
 package document
 
 import (
+	"context"
+
 	"github.com/cygy/ginamite/common/errors"
 	"github.com/cygy/ginamite/common/log"
 
-	"github.com/globalsign/mgo"
-	"github.com/globalsign/mgo/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 // SaveDocument : inserts a document into a collection.
-func SaveDocument(document Document, collection string, db *mgo.Database) (string, error) {
+func SaveDocument(ctx context.Context, document Document, collection string, db *mongo.Database) (string, error) {
 	objectID := document.GetID()
-	if len(objectID) == 0 {
-		objectID = bson.NewObjectId().Hex()
-		document.SetID(objectID)
+	// With mongo-driver, the Hex() of an empty ObjectID is 24 zeros, not "".
+	if len(objectID) == 0 || objectID == bson.NilObjectID.Hex() {
+		objectID = bson.NewObjectID().Hex()
+		if err := document.SetID(objectID); err != nil {
+			return "", err
+		}
 	}
 
-	err := db.C(collection).Insert(document)
+	_, err := db.Collection(collection).InsertOne(ctx, document)
 	log.DatabaseError(err, collection)
 
 	return objectID, err
 }
 
 // UpdateDocument : updates a document into a collection.
-func UpdateDocument(documentID bson.ObjectId, collection string, update interface{}, db *mgo.Database) error {
-	err := db.C(collection).UpdateId(documentID, update)
+func UpdateDocument(ctx context.Context, documentID bson.ObjectID, collection string, update any, db *mongo.Database) error {
+	result, err := db.Collection(collection).UpdateByID(ctx, documentID, update)
+	if err == nil && result.MatchedCount == 0 {
+		err = mongo.ErrNoDocuments
+	}
 	log.DatabaseError(err, collection)
 	return err
 }
 
 // UpdateDocumentsBySelector : updates documents into a collection.
-func UpdateDocumentsBySelector(collection string, selector interface{}, update interface{}, db *mgo.Database) (int, error) {
-	info, err := db.C(collection).UpdateAll(selector, update)
+func UpdateDocumentsBySelector(ctx context.Context, collection string, selector any, update any, db *mongo.Database) (int64, error) {
+	result, err := db.Collection(collection).UpdateMany(ctx, selector, update)
 	log.DatabaseError(err, collection)
-	return info.Updated, err
+	if err != nil {
+		return 0, err
+	}
+	return result.MatchedCount, nil
 }
 
 // UpsertDocumentBySelector : updates documents into a collection.
-func UpsertDocumentBySelector(collection string, selector interface{}, update interface{}, db *mgo.Database) (int, error) {
-	info, err := db.C(collection).Upsert(selector, update)
+func UpsertDocumentBySelector(ctx context.Context, collection string, selector any, update any, db *mongo.Database) (int64, error) {
+	result, err := db.Collection(collection).UpdateOne(ctx, selector, update, options.UpdateOne().SetUpsert(true))
 	log.DatabaseError(err, collection)
-	return info.Updated, err
+	if err != nil {
+		return 0, err
+	}
+	return result.MatchedCount, nil
 }
 
 // DeleteDocument : deletes a document from a collection.
-func DeleteDocument(documentID bson.ObjectId, collection string, db *mgo.Database) error {
-	err := db.C(collection).RemoveId(documentID)
+func DeleteDocument(ctx context.Context, documentID bson.ObjectID, collection string, db *mongo.Database) error {
+	result, err := db.Collection(collection).DeleteOne(ctx, bson.D{{Key: "_id", Value: documentID}})
+	if err == nil && result.DeletedCount == 0 {
+		err = mongo.ErrNoDocuments
+	}
 	log.DatabaseError(err, collection)
 	return err
 }
 
 // DeleteDocumentsBySelector : deletes documents into a collection.
-func DeleteDocumentsBySelector(collection string, selector interface{}, db *mgo.Database) (int, error) {
-	info, err := db.C(collection).RemoveAll(selector)
+func DeleteDocumentsBySelector(ctx context.Context, collection string, selector any, db *mongo.Database) (int64, error) {
+	result, err := db.Collection(collection).DeleteMany(ctx, selector)
 	log.DatabaseError(err, collection)
-	return info.Removed, err
+	if err != nil {
+		return 0, err
+	}
+	return result.DeletedCount, nil
 }
 
 // GetDocumentByID : returns a document from a collection.
-func GetDocumentByID(document Document, collection string, id string, db *mgo.Database) error {
-	if !bson.IsObjectIdHex(id) {
-		return errors.NotFound()
+func GetDocumentByID(ctx context.Context, document Document, collection string, id string, db *mongo.Database) error {
+	objectID, err := bson.ObjectIDFromHex(id)
+	if err != nil {
+		return errors.WrongObjectID()
 	}
 
-	err := db.C(collection).FindId(bson.ObjectIdHex(id)).One(document)
+	err = db.Collection(collection).FindOne(ctx, bson.D{{Key: "_id", Value: objectID}}).Decode(document)
 	log.DatabaseError(err, collection)
 
 	if !document.IsSaved() {
@@ -74,136 +96,145 @@ func GetDocumentByID(document Document, collection string, id string, db *mgo.Da
 }
 
 // GetDocumentsBySelectorAndSortWithFieldsOffsetAndLimit : returns the documents from a collection
-func GetDocumentsBySelectorAndSortWithFieldsOffsetAndLimit(result interface{}, collection string, selector interface{}, fields bson.M, sort []string, offset, limit int, db *mgo.Database) error {
-	query := db.C(collection).Find(selector)
+func GetDocumentsBySelectorAndSortWithFieldsOffsetAndLimit(ctx context.Context, result any, collection string, selector any, fields bson.M, sort []string, offset, limit int64, db *mongo.Database) error {
+	opts := options.Find()
 
 	if len(fields) > 0 {
-		query = query.Select(fields)
+		opts.SetProjection(fields)
 	}
 
 	if len(sort) > 0 {
-		query = query.Sort(sort...)
+		opts.SetSort(sortKeys(sort...))
 	}
 
 	if offset > -1 {
-		query = query.Skip(offset)
+		opts.SetSkip(int64(offset))
 	}
 
 	if limit > -1 {
-		query = query.Limit(limit)
+		opts.SetLimit(int64(limit))
 	}
 
-	err := query.All(result)
+	cursor, err := db.Collection(collection).Find(ctx, selector, opts)
+	if err == nil {
+		// All() decodes every document into result (a pointer to a slice) and closes the cursor.
+		err = cursor.All(ctx, result)
+	}
 	log.DatabaseError(err, collection)
 
 	return err
 }
 
 // GetDocumentsBySelectorAndSortWithOffsetAndLimit : returns the documents from a collection
-func GetDocumentsBySelectorAndSortWithOffsetAndLimit(result interface{}, collection string, selector interface{}, sort []string, offset, limit int, db *mgo.Database) error {
-	return GetDocumentsBySelectorAndSortWithFieldsOffsetAndLimit(result, collection, selector, bson.M{}, sort, offset, limit, db)
+func GetDocumentsBySelectorAndSortWithOffsetAndLimit(ctx context.Context, result any, collection string, selector any, sort []string, offset, limit int64, db *mongo.Database) error {
+	return GetDocumentsBySelectorAndSortWithFieldsOffsetAndLimit(ctx, result, collection, selector, bson.M{}, sort, offset, limit, db)
 }
 
 // GetDocumentsBySelectorAndSort : returns the documents from a collection
-func GetDocumentsBySelectorAndSort(result interface{}, collection string, selector interface{}, sort []string, db *mgo.Database) error {
-	return GetDocumentsBySelectorAndSortWithFieldsOffsetAndLimit(result, collection, selector, bson.M{}, sort, -1, -1, db)
+func GetDocumentsBySelectorAndSort(ctx context.Context, result any, collection string, selector any, sort []string, db *mongo.Database) error {
+	return GetDocumentsBySelectorAndSortWithFieldsOffsetAndLimit(ctx, result, collection, selector, bson.M{}, sort, -1, -1, db)
 }
 
 // GetDocumentsBySelector : returns the documents from a collection
-func GetDocumentsBySelector(result interface{}, collection string, selector interface{}, db *mgo.Database) error {
-	return GetDocumentsBySelectorAndSortWithFieldsOffsetAndLimit(result, collection, selector, bson.M{}, []string{}, -1, -1, db)
+func GetDocumentsBySelector(ctx context.Context, result any, collection string, selector any, db *mongo.Database) error {
+	return GetDocumentsBySelectorAndSortWithFieldsOffsetAndLimit(ctx, result, collection, selector, bson.M{}, []string{}, -1, -1, db)
 }
 
 // GetDocumentsBySelectorWithFields : returns the documents from a collection
-func GetDocumentsBySelectorWithFields(result interface{}, collection string, selector interface{}, fields bson.M, db *mgo.Database) error {
-	return GetDocumentsBySelectorAndSortWithFieldsOffsetAndLimit(result, collection, selector, fields, []string{}, -1, -1, db)
+func GetDocumentsBySelectorWithFields(ctx context.Context, result any, collection string, selector any, fields bson.M, db *mongo.Database) error {
+	return GetDocumentsBySelectorAndSortWithFieldsOffsetAndLimit(ctx, result, collection, selector, fields, []string{}, -1, -1, db)
 }
 
 // GetDocumentsBySelectorWithOffsetAndLimit : returns the documents from a collection
-func GetDocumentsBySelectorWithOffsetAndLimit(result interface{}, collection string, selector interface{}, offset, limit int, db *mgo.Database) error {
-	return GetDocumentsBySelectorAndSortWithFieldsOffsetAndLimit(result, collection, selector, bson.M{}, []string{}, offset, limit, db)
+func GetDocumentsBySelectorWithOffsetAndLimit(ctx context.Context, result any, collection string, selector any, offset, limit int64, db *mongo.Database) error {
+	return GetDocumentsBySelectorAndSortWithFieldsOffsetAndLimit(ctx, result, collection, selector, bson.M{}, []string{}, offset, limit, db)
 }
 
 // GetDocumentsBySort : returns the documents from a collection
-func GetDocumentsBySort(result interface{}, collection string, sort []string, db *mgo.Database) error {
-	return GetDocumentsBySelectorAndSortWithFieldsOffsetAndLimit(result, collection, nil, bson.M{}, sort, -1, -1, db)
+func GetDocumentsBySort(ctx context.Context, result any, collection string, sort []string, db *mongo.Database) error {
+	return GetDocumentsBySelectorAndSortWithFieldsOffsetAndLimit(ctx, result, collection, nil, bson.M{}, sort, -1, -1, db)
 }
 
 // GetDocumentsBySortWithOffsetAndLimit : returns the documents from a collection
-func GetDocumentsBySortWithOffsetAndLimit(result interface{}, collection string, sort []string, offset, limit int, db *mgo.Database) error {
-	return GetDocumentsBySelectorAndSortWithFieldsOffsetAndLimit(result, collection, nil, bson.M{}, sort, offset, limit, db)
+func GetDocumentsBySortWithOffsetAndLimit(ctx context.Context, result any, collection string, sort []string, offset, limit int64, db *mongo.Database) error {
+	return GetDocumentsBySelectorAndSortWithFieldsOffsetAndLimit(ctx, result, collection, nil, bson.M{}, sort, offset, limit, db)
 }
 
 // GetDocuments : returns the documents from a collection
-func GetDocuments(result interface{}, collection string, db *mgo.Database) error {
-	return GetDocumentsBySelectorAndSortWithFieldsOffsetAndLimit(result, collection, nil, bson.M{}, []string{}, -1, -1, db)
+func GetDocuments(ctx context.Context, result any, collection string, db *mongo.Database) error {
+	return GetDocumentsBySelectorAndSortWithFieldsOffsetAndLimit(ctx, result, collection, nil, bson.M{}, []string{}, -1, -1, db)
 }
 
 // GetDocumentsWithOffsetAndLimit : returns the documents from a collection
-func GetDocumentsWithOffsetAndLimit(result interface{}, collection string, offset, limit int, db *mgo.Database) error {
-	return GetDocumentsBySelectorAndSortWithFieldsOffsetAndLimit(result, collection, nil, bson.M{}, []string{}, offset, limit, db)
+func GetDocumentsWithOffsetAndLimit(ctx context.Context, result any, collection string, offset, limit int64, db *mongo.Database) error {
+	return GetDocumentsBySelectorAndSortWithFieldsOffsetAndLimit(ctx, result, collection, nil, bson.M{}, []string{}, offset, limit, db)
 }
 
 // GetDocumentBySelectorAndSort : returns a document from a collection
-func GetDocumentBySelectorAndSort(document Document, collection string, selector interface{}, sort []string, db *mgo.Database) error {
-	query := db.C(collection).Find(selector)
+func GetDocumentBySelectorAndSort(ctx context.Context, document Document, collection string, selector any, sort []string, db *mongo.Database) error {
+	opts := options.FindOne()
 
 	if len(sort) > 0 {
-		query = query.Sort(sort...)
+		opts.SetSort(sortKeys(sort...))
 	}
 
-	err := query.One(document)
+	err := db.Collection(collection).FindOne(ctx, selector, opts).Decode(document)
 	log.DatabaseError(err, collection)
-
-	if !document.IsSaved() {
-		return errors.NotFound()
-	}
 
 	return err
 }
 
 // GetDocumentBySelector : returns a document from a collection
-func GetDocumentBySelector(document Document, collection string, selector interface{}, db *mgo.Database) error {
-	return GetDocumentBySelectorAndSort(document, collection, selector, []string{}, db)
+func GetDocumentBySelector(ctx context.Context, document Document, collection string, selector any, db *mongo.Database) error {
+	return GetDocumentBySelectorAndSort(ctx, document, collection, selector, []string{}, db)
 }
 
 // GetDocumentBySort : returns a document from a collection
-func GetDocumentBySort(document Document, collection string, sort []string, db *mgo.Database) error {
-	return GetDocumentBySelectorAndSort(document, collection, nil, sort, db)
+func GetDocumentBySort(ctx context.Context, document Document, collection string, sort []string, db *mongo.Database) error {
+	return GetDocumentBySelectorAndSort(ctx, document, collection, nil, sort, db)
 }
 
 // GetDocument : returns a document from a collection
-func GetDocument(document Document, collection string, db *mgo.Database) error {
-	return GetDocumentBySelectorAndSort(document, collection, nil, []string{}, db)
+func GetDocument(ctx context.Context, document Document, collection string, db *mongo.Database) error {
+	return GetDocumentBySelectorAndSort(ctx, document, collection, nil, []string{}, db)
 }
 
 // CountBySelector : returns the count of documents from a collection
-func CountBySelector(collection string, selector interface{}, db *mgo.Database) (int, error) {
-	query := db.C(collection).Find(selector)
-	count, err := query.Count()
+func CountBySelector(ctx context.Context, collection string, selector any, db *mongo.Database) (int64, error) {
+	count, err := db.Collection(collection).CountDocuments(ctx, selector)
 	log.DatabaseError(err, collection)
 
 	return count, err
 }
 
 // Count : returns the count of documents from a collection
-func Count(collection string, db *mgo.Database) (int, error) {
-	return CountBySelector(collection, nil, db)
+func Count(ctx context.Context, collection string, db *mongo.Database) (int64, error) {
+	return CountBySelector(ctx, collection, nil, db)
 }
 
 // PipeAll : returns all the results of a pipeline.
-func PipeAll(result interface{}, collection string, pipeline interface{}, db *mgo.Database) error {
-	pipe := db.C(collection).Pipe(pipeline)
-	err := pipe.All(result)
+func PipeAll(ctx context.Context, result any, collection string, pipeline any, db *mongo.Database) error {
+	cursor, err := db.Collection(collection).Aggregate(ctx, pipeline)
+	if err == nil {
+		err = cursor.All(ctx, result)
+	}
 	log.DatabaseError(err, collection)
 
 	return err
 }
 
 // PipeOne : returns the first result of a pipeline.
-func PipeOne(result interface{}, collection string, pipeline interface{}, db *mgo.Database) error {
-	pipe := db.C(collection).Pipe(pipeline)
-	err := pipe.One(result)
+func PipeOne(ctx context.Context, result any, collection string, pipeline any, db *mongo.Database) error {
+	cursor, err := db.Collection(collection).Aggregate(ctx, pipeline)
+	if err == nil {
+		defer cursor.Close(ctx)
+
+		if cursor.Next(ctx) {
+			err = cursor.Decode(result)
+		} else if err = cursor.Err(); err == nil {
+			err = mongo.ErrNoDocuments
+		}
+	}
 	log.DatabaseError(err, collection)
 
 	return err

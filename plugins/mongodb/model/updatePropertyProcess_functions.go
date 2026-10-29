@@ -1,40 +1,50 @@
 package model
 
 import (
+	"context"
+
 	"github.com/cygy/ginamite/common/authentication"
+	"github.com/cygy/ginamite/common/errors"
 	"github.com/cygy/ginamite/common/mongo/document"
 
-	"github.com/globalsign/mgo"
-	"github.com/globalsign/mgo/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 // DeleteUpdatePropertyProcessByUserIDAndType : deletes a process linked to a user.
-func DeleteUpdatePropertyProcessByUserIDAndType(userID, t string, db *mgo.Database) error {
-	_, err := document.DeleteDocumentsBySelector(UpdatePropertyProcessCollection, bson.D{{Name: "userId", Value: bson.ObjectIdHex(userID)}, {Name: "type", Value: t}}, db)
+func DeleteUpdatePropertyProcessByUserIDAndType(ctx context.Context, userID, t string, db *mongo.Database) error {
+	objectID, err := bson.ObjectIDFromHex(userID)
+	if err != nil {
+		return errors.WrongObjectID()
+	}
+	_, err = document.DeleteDocumentsBySelector(ctx, UpdatePropertyProcessCollection, bson.D{
+		{Key: "userId", Value: objectID},
+		{Key: "type", Value: t},
+	}, db)
 	return err
 }
 
 // DeleteUpdatePasswordProcessByUserID : deletes a process linked to a user.
-func DeleteUpdatePasswordProcessByUserID(userID string, db *mgo.Database) error {
-	return DeleteUpdatePropertyProcessByUserIDAndType(userID, authentication.ProcessUpdatePassword, db)
+func DeleteUpdatePasswordProcessByUserID(ctx context.Context, userID string, db *mongo.Database) error {
+	return DeleteUpdatePropertyProcessByUserIDAndType(ctx, userID, authentication.ProcessUpdatePassword, db)
 }
 
 // DeleteUpdateEmailAddressProcessByUserID : deletes a process linked to a user.
-func DeleteUpdateEmailAddressProcessByUserID(userID string, db *mgo.Database) error {
-	return DeleteUpdatePropertyProcessByUserIDAndType(userID, authentication.ProcessUpdateEmailAddress, db)
+func DeleteUpdateEmailAddressProcessByUserID(ctx context.Context, userID string, db *mongo.Database) error {
+	return DeleteUpdatePropertyProcessByUserIDAndType(ctx, userID, authentication.ProcessUpdateEmailAddress, db)
 }
 
 // DeleteUpdateValidEmailAddressProcessByUserID : deletes a process linked to a user.
-func DeleteUpdateValidEmailAddressProcessByUserID(userID string, db *mgo.Database) error {
-	return DeleteUpdatePropertyProcessByUserIDAndType(userID, authentication.ProcessVerifyEmailAddress, db)
+func DeleteUpdateValidEmailAddressProcessByUserID(ctx context.Context, userID string, db *mongo.Database) error {
+	return DeleteUpdatePropertyProcessByUserIDAndType(ctx, userID, authentication.ProcessVerifyEmailAddress, db)
 }
 
 // DeleteDeleteAccountProcessByUserID : deletes a process linked to a user.
-func DeleteDeleteAccountProcessByUserID(userID string, db *mgo.Database) error {
-	return DeleteUpdatePropertyProcessByUserIDAndType(userID, authentication.ProcessDeleteAccount, db)
+func DeleteDeleteAccountProcessByUserID(ctx context.Context, userID string, db *mongo.Database) error {
+	return DeleteUpdatePropertyProcessByUserIDAndType(ctx, userID, authentication.ProcessDeleteAccount, db)
 }
 
 // DeleteDisableAccountProcessByUserID : deletes a process linked to a user.
-func DeleteDisableAccountProcessByUserID(userID string, db *mgo.Database) error {
-	return DeleteUpdatePropertyProcessByUserIDAndType(userID, authentication.ProcessDisableAccount, db)
+func DeleteDisableAccountProcessByUserID(ctx context.Context, userID string, db *mongo.Database) error {
+	return DeleteUpdatePropertyProcessByUserIDAndType(ctx, userID, authentication.ProcessDisableAccount, db)
 }

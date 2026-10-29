@@ -1,11 +1,13 @@
 package model
 
 import (
-	"github.com/globalsign/mgo"
-	"github.com/globalsign/mgo/bson"
+	"context"
+
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 // AcceptVersionOfTerms : updates the version of the terms accepted.
-func (user *User) AcceptVersionOfTerms(version string, db *mgo.Database) error {
-	return user.Update(bson.M{"$set": bson.M{"versionOfTermsAccepted": version}}, db)
+func (user *User) AcceptVersionOfTerms(ctx context.Context, version string, db *mongo.Database) error {
+	return user.Update(ctx, bson.M{"$set": bson.M{"versionOfTermsAccepted": version}}, db)
 }

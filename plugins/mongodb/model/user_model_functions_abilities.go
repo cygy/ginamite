@@ -1,10 +1,12 @@
 package model
 
 import (
+	"context"
+
 	"github.com/cygy/ginamite/common/mongo/document"
 
-	"github.com/globalsign/mgo"
-	"github.com/globalsign/mgo/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 // HasAbility : returns true if the user has the ability.
@@ -19,7 +21,7 @@ func (user *User) HasAbility(ability string) bool {
 }
 
 // SetAbilities : sets some abilities up to a user and saves the changes, returns an error if needed.
-func (user *User) SetAbilities(abilities []string, db *mgo.Database) error {
+func (user *User) SetAbilities(ctx context.Context, abilities []string, db *mongo.Database) error {
 	filteredAbilities := []string{}
 
 	for _, ability := range abilities {
@@ -37,16 +39,16 @@ func (user *User) SetAbilities(abilities []string, db *mgo.Database) error {
 		}
 	}
 
-	return user.Update(bson.M{"$set": bson.M{"abilities": filteredAbilities}}, db)
+	return user.Update(ctx, bson.M{"$set": bson.M{"abilities": filteredAbilities}}, db)
 }
 
 // RemoveAbilities : removes some abilities from a user and saves the changes, returns an error if needed.
-func (user *User) RemoveAbilities(abilities []string, db *mgo.Database) error {
-	return user.Update(bson.M{"$pullAll": bson.M{"abilities": abilities}}, db)
+func (user *User) RemoveAbilities(ctx context.Context, abilities []string, db *mongo.Database) error {
+	return user.Update(ctx, bson.M{"$pullAll": bson.M{"abilities": abilities}}, db)
 }
 
 // AddAbilities : adds some abilities to a user and saves the changes, returns an error if needed.
-func (user *User) AddAbilities(abilities []string, db *mgo.Database) error {
+func (user *User) AddAbilities(ctx context.Context, abilities []string, db *mongo.Database) error {
 	filteredAbilities := []string{}
 
 	for _, ability := range abilities {
@@ -64,13 +66,13 @@ func (user *User) AddAbilities(abilities []string, db *mgo.Database) error {
 		}
 	}
 
-	return user.Update(bson.M{"$addToSet": bson.M{"abilities": bson.M{"$each": filteredAbilities}}}, db)
+	return user.Update(ctx, bson.M{"$addToSet": bson.M{"abilities": bson.M{"$each": filteredAbilities}}}, db)
 }
 
 // GetUsersWithAbility : return the users with an ability.
-func GetUsersWithAbility(ability string, db *mgo.Database) ([]User, error) {
+func GetUsersWithAbility(ctx context.Context, ability string, db *mongo.Database) ([]User, error) {
 	users := []User{}
-	err := document.GetDocumentsBySelector(&users, UserCollection, bson.M{"abilities": ability}, db)
+	err := document.GetDocumentsBySelector(ctx, &users, UserCollection, bson.M{"abilities": ability}, db)
 
 	return users, err
 }

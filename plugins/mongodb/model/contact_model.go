@@ -1,17 +1,19 @@
 package model
 
 import (
+	"context"
 	"time"
 
+	"github.com/cygy/ginamite/common/errors"
 	"github.com/cygy/ginamite/common/mongo/document"
 
-	"github.com/globalsign/mgo"
-	"github.com/globalsign/mgo/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 // Contact : contact properties.
 type Contact struct {
-	ID           bson.ObjectId `json:"id,omitempty" bson:"_id,omitempty"`
+	ID           bson.ObjectID `json:"id,omitempty" bson:"_id,omitempty"`
 	EmailAddress string        `json:"email_address" bson:"emailAddress"`
 	Subject      string        `json:"subject" bson:"subject"`
 	Text         string        `json:"text" bson:"text"`
@@ -29,27 +31,27 @@ func NewContact() *Contact {
 
 // IsSaved : returns true if the 'Contact' document if saved in the collection.
 func (contact *Contact) IsSaved() bool {
-	return contact.ID.Valid()
+	return !contact.ID.IsZero()
 }
 
 // Save : inserts the 'Contact' document in the collection, returns an error if needed.
-func (contact *Contact) Save(db *mgo.Database) (string, error) {
-	return document.SaveDocument(contact, ContactCollection, db)
+func (contact *Contact) Save(ctx context.Context, db *mongo.Database) (string, error) {
+	return document.SaveDocument(ctx, contact, ContactCollection, db)
 }
 
 // Update : updates the 'Contact' document, returns an error if needed.
-func (contact *Contact) Update(update interface{}, db *mgo.Database) error {
-	return document.UpdateDocument(contact.ID, ContactCollection, update, db)
+func (contact *Contact) Update(ctx context.Context, update any, db *mongo.Database) error {
+	return document.UpdateDocument(ctx, contact.ID, ContactCollection, update, db)
 }
 
 // Delete : deletes the 'Contact' document from the collection, returns an error if needed.
-func (contact *Contact) Delete(db *mgo.Database) error {
-	return document.DeleteDocument(contact.ID, ContactCollection, db)
+func (contact *Contact) Delete(ctx context.Context, db *mongo.Database) error {
+	return document.DeleteDocument(ctx, contact.ID, ContactCollection, db)
 }
 
 // GetByID : initializes the 'Contact' struct from the 'Contact' document with the ID.
-func (contact *Contact) GetByID(id string, db *mgo.Database) error {
-	return document.GetDocumentByID(contact, ContactCollection, id, db)
+func (contact *Contact) GetByID(ctx context.Context, id string, db *mongo.Database) error {
+	return document.GetDocumentByID(ctx, contact, ContactCollection, id, db)
 }
 
 // GetID : returns the 'Contact' ID.
@@ -58,6 +60,11 @@ func (contact *Contact) GetID() string {
 }
 
 // SetID : initializes the 'Contact' ID.
-func (contact *Contact) SetID(id string) {
-	contact.ID = bson.ObjectIdHex(id)
+func (contact *Contact) SetID(id string) error {
+	objectID, err := bson.ObjectIDFromHex(id)
+	if err != nil {
+		return errors.WrongObjectID()
+	}
+	contact.ID = objectID
+	return nil
 }

@@ -11,5 +11,5 @@ import (
 func UpdateVersionOfTermsAcceptedByUser(c *gin.Context, userID, termsVersion string) error {
 	mongoSession := session.Get(c)
 	user := context.GetUser(c)
-	return user.AcceptVersionOfTerms(termsVersion, mongoSession)
+	return user.AcceptVersionOfTerms(c, termsVersion, mongoSession)
 }

@@ -82,10 +82,10 @@ type GetRegistrationDetailsFunc func(c *gin.Context, userID string) (*authentica
 type SaveAuthenticationTokenFunc func(c *gin.Context, details authentication.Details) (tokenID string, knownIPAddress bool, err error)
 
 // DoesAccountWithUsernameExistFunc : returns true if an account with this username does exist already.
-type DoesAccountWithUsernameExistFunc func(c *gin.Context, username string) bool
+type DoesAccountWithUsernameExistFunc func(c *gin.Context, username string) (bool, error)
 
 // DoesAccountWithEmailAddressExistFunc : returns true if an account with this email address does exist already.
-type DoesAccountWithEmailAddressExistFunc func(c *gin.Context, emailAddress string) bool
+type DoesAccountWithEmailAddressExistFunc func(c *gin.Context, emailAddress string) (bool, error)
 
 // RegisterByEmailAddressFunc : saves a newly registered user.
 type RegisterByEmailAddressFunc func(c *gin.Context, username, encryptedPassword, emailAddress, locale, termsVersion, registrationCode, privateKey, source, ip string, device authentication.Device) error
@@ -94,7 +94,7 @@ type RegisterByEmailAddressFunc func(c *gin.Context, username, encryptedPassword
 type RegisterByThirdPartyTokenFunc func(c *gin.Context, username string, tokenInfos validator.TokenInfos, tokenSource, locale, termsVersion, registrationCode, privateKey, source, ip string, device authentication.Device) error
 
 // DoesUserWithSocialNetworkUserIDExistFunc : function to know if a user with a social network user id is registered already.
-type DoesUserWithSocialNetworkUserIDExistFunc func(c *gin.Context, userID string) bool
+type DoesUserWithSocialNetworkUserIDExistFunc func(c *gin.Context, userID string) (bool, error)
 
 // SaveSocialNetworkUserTokenDetailsToUserFunc : function to save the auth token details from a social network to an account.
 type SaveSocialNetworkUserTokenDetailsToUserFunc func(c *gin.Context, userID string, tokenInfos validator.TokenInfos) error

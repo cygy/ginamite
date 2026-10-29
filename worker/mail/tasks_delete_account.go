@@ -1,6 +1,7 @@
 package mail
 
 import (
+	"context"
 	"fmt"
 	"html/template"
 
@@ -10,11 +11,11 @@ import (
 )
 
 // DeleteAccountConfirmation : sends a mail to confirm the account deletion.
-func DeleteAccountConfirmation(payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
+func DeleteAccountConfirmation(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
 	p := queue.MailDeleteAccountConfirmation{}
 	queue.UnmarshalPayload(payload, &p)
 
-	if !isEmailAddressValid(p.EmailAddress) {
+	if !isEmailAddressValid.check(ctx, p.EmailAddress) {
 		return
 	}
 
@@ -53,11 +54,11 @@ func DeleteAccountConfirmation(payload []byte, isEmailAddressValid IsEmailAddres
 }
 
 // DeleteAccountConfirmed : sends a mail to notify the account deletion is confirmed.
-func DeleteAccountConfirmed(payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
+func DeleteAccountConfirmed(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
 	p := queue.MailDeleteAccountConfirmed{}
 	queue.UnmarshalPayload(payload, &p)
 
-	if !isEmailAddressValid(p.EmailAddress) {
+	if !isEmailAddressValid.check(ctx, p.EmailAddress) {
 		return
 	}
 
@@ -87,11 +88,11 @@ func DeleteAccountConfirmed(payload []byte, isEmailAddressValid IsEmailAddressVa
 }
 
 // DeleteAccountCancelled : sends a mail to notify the account deletion is cancelled.
-func DeleteAccountCancelled(payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
+func DeleteAccountCancelled(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
 	p := queue.MailDeleteAccountCancelled{}
 	queue.UnmarshalPayload(payload, &p)
 
-	if !isEmailAddressValid(p.EmailAddress) {
+	if !isEmailAddressValid.check(ctx, p.EmailAddress) {
 		return
 	}
 

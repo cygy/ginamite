@@ -138,7 +138,7 @@ type TermsConfiguration struct {
 
 // UserNotificationsConfiguration : configuration of the notifications received by a user.
 type UserNotificationsConfiguration struct {
-	Limit int `yaml:"limit"`
+	Limit int64 `yaml:"limit"`
 }
 
 // AccountConfiguration : configuration of the users' account.

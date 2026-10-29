@@ -19,21 +19,21 @@ func VerifyLimitAndOffset(defaultOffset, defaultLimit, maxLimit int) gin.Handler
 }
 
 // GetOffsetFromRequest : returns the value of the request parameter "offset".
-func GetOffsetFromRequest(c *gin.Context) int {
+func GetOffsetFromRequest(c *gin.Context) int64 {
 	value, ok := c.Get("_offset")
 	if !ok {
 		return 0
 	}
 
-	return value.(int)
+	return value.(int64)
 }
 
 // GetLimitFromRequest : returns the value of the request parameter "limit".
-func GetLimitFromRequest(c *gin.Context) int {
+func GetLimitFromRequest(c *gin.Context) int64 {
 	value, ok := c.Get("_limit")
 	if !ok {
 		return 0
 	}
 
-	return value.(int)
+	return value.(int64)
 }

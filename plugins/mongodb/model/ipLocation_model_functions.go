@@ -1,15 +1,17 @@
 package model
 
 import (
+	"context"
+
 	"github.com/cygy/ginamite/common/mongo/document"
 
-	"github.com/globalsign/mgo"
-	"github.com/globalsign/mgo/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 // GetByIPAddress : initializes the 'IPLocation' struct from the 'IPLocation' document with the IP Address.
-func (location *IPLocation) GetByIPAddress(IPAddress string, db *mgo.Database) error {
-	return document.GetDocumentBySelector(location, IPLocationCollection, bson.M{"IP": IPAddress}, db)
+func (location *IPLocation) GetByIPAddress(ctx context.Context, IPAddress string, db *mongo.Database) error {
+	return document.GetDocumentBySelector(ctx, location, IPLocationCollection, bson.M{"IP": IPAddress}, db)
 }
 
 // IsEmpty : returns true if this location is empty.

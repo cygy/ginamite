@@ -1,17 +1,16 @@
 package functions
 
 import (
-	"errors"
 	"strings"
 
 	"github.com/cygy/ginamite/common/authentication"
-	commonErrors "github.com/cygy/ginamite/common/errors"
+	"github.com/cygy/ginamite/common/errors"
 	"github.com/cygy/ginamite/common/mongo/session"
 	"github.com/cygy/ginamite/plugins/mongodb/api/context"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
 
 	"github.com/gin-gonic/gin"
-	"github.com/globalsign/mgo/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // GetUserDetailsByIdentifier : returns the details of an user by its identifier (email address or username).
@@ -22,9 +21,9 @@ func GetUserDetailsByIdentifier(c *gin.Context, identifier string) (authenticati
 	var err error
 	user := &model.User{}
 	if strings.Contains(identifier, "@") {
-		err = user.GetByEmailAddress(identifier, mongoSession)
+		err = user.GetByEmailAddress(c, identifier, mongoSession)
 	} else {
-		err = user.GetByUsername(identifier, mongoSession)
+		err = user.GetByUsername(c, identifier, mongoSession)
 	}
 
 	if err != nil {
@@ -37,8 +36,8 @@ func GetUserDetailsByIdentifier(c *gin.Context, identifier string) (authenticati
 // GetUserDetailsByID : returns the details of an user by its ID.
 func GetUserDetailsByID(c *gin.Context, userID string) (authentication.User, error) {
 	// Check the userID.
-	if !bson.IsObjectIdHex(userID) {
-		return authentication.User{}, errors.New("wrong object ID")
+	if _, err := bson.ObjectIDFromHex(userID); err != nil {
+		return authentication.User{}, errors.WrongObjectID()
 	}
 
 	cachedUser := context.GetFullUser(c)
@@ -49,7 +48,7 @@ func GetUserDetailsByID(c *gin.Context, userID string) (authentication.User, err
 	mongoSession := session.Get(c)
 
 	user := &model.User{}
-	if err := user.GetByID(userID, mongoSession); err != nil {
+	if err := user.GetByID(c, userID, mongoSession); err != nil {
 		return authentication.User{}, err
 	}
 
@@ -60,7 +59,7 @@ func GetUserDetailsByID(c *gin.Context, userID string) (authentication.User, err
 func GetUserDetailsByFacebookUserID(c *gin.Context, userID string) (authentication.User, error) {
 	mongoSession := session.Get(c)
 	user := &model.User{}
-	err := user.GetByFacebookUserID(userID, mongoSession)
+	err := user.GetByFacebookUserID(c, userID, mongoSession)
 
 	return user.ToUser(), err
 }
@@ -69,7 +68,7 @@ func GetUserDetailsByFacebookUserID(c *gin.Context, userID string) (authenticati
 func GetUserDetailsByGoogleUserID(c *gin.Context, userID string) (authentication.User, error) {
 	mongoSession := session.Get(c)
 	user := &model.User{}
-	err := user.GetByGoogleUserID(userID, mongoSession)
+	err := user.GetByGoogleUserID(c, userID, mongoSession)
 
 	return user.ToUser(), err
 }
@@ -78,12 +77,12 @@ func GetUserDetailsByGoogleUserID(c *gin.Context, userID string) (authentication
 func GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser(c *gin.Context, identifier string) (authentication.User, string, error) {
 	mongoSession := session.Get(c)
 	user := &model.User{}
-	if err := user.GetByIdentifier(identifier, mongoSession); err != nil {
+	if err := user.GetByIdentifier(c, identifier, mongoSession); err != nil {
 		return authentication.User{}, "", err
 	}
 
 	if !user.IsSaved() {
-		return authentication.User{}, "", commonErrors.NotFound()
+		return authentication.User{}, "", errors.NotFound()
 	}
 
 	return user.ToUser(), user.IdentificationMethods.Password, nil
@@ -93,14 +92,20 @@ func GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser(c *gin.Contex
 func DeleteUserByID(c *gin.Context, userID string) error {
 	mongoSession := session.Get(c)
 
-	deletedUser := model.NewDeletedUser(userID)
-	if _, err := deletedUser.Save(mongoSession); err != nil {
+	deletedUser, err := model.NewDeletedUser(userID)
+	if err != nil {
+		return err
+	}
+	if _, err = deletedUser.Save(c, mongoSession); err != nil {
 		return err
 	}
 
-	user := model.UserWithID(userID)
+	user, err := model.UserWithID(userID)
+	if err != nil {
+		return err
+	}
 
-	return user.Delete(mongoSession)
+	return user.Delete(c, mongoSession)
 }
 
 // DisableUserByID : disables an user by its ID.
@@ -108,16 +113,16 @@ func DisableUserByID(c *gin.Context, userID string) (authentication.User, error)
 	mongoSession := session.Get(c)
 
 	user := &model.User{}
-	if err := user.GetByID(userID, mongoSession); err != nil {
+	if err := user.GetByID(c, userID, mongoSession); err != nil {
 		return authentication.User{}, err
 	}
 
 	disabledUser := model.NewDisabledUser(user)
-	if _, err := disabledUser.Save(mongoSession); err != nil {
+	if _, err := disabledUser.Save(c, mongoSession); err != nil {
 		return authentication.User{}, err
 	}
 
-	return user.ToUser(), user.Delete(mongoSession)
+	return user.ToUser(), user.Delete(c, mongoSession)
 }
 
 // EnableUserByID : enables an user by its ID.
@@ -125,14 +130,14 @@ func EnableUserByID(c *gin.Context, userID string) (authentication.User, error) 
 	mongoSession := session.Get(c)
 
 	disabledUser := &model.DisabledUser{}
-	if err := disabledUser.GetByID(userID, mongoSession); err != nil {
+	if err := disabledUser.GetByID(c, userID, mongoSession); err != nil {
 		return authentication.User{}, err
 	}
 
 	user := model.NewUserFromDisabledUser(disabledUser)
-	if _, err := user.Save(mongoSession); err != nil {
+	if _, err := user.Save(c, mongoSession); err != nil {
 		return authentication.User{}, err
 	}
 
-	return user.ToUser(), disabledUser.Delete(mongoSession)
+	return user.ToUser(), disabledUser.Delete(c, mongoSession)
 }

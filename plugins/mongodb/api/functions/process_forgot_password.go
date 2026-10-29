@@ -8,7 +8,7 @@ import (
 	"github.com/cygy/ginamite/plugins/mongodb/model"
 
 	"github.com/gin-gonic/gin"
-	"github.com/globalsign/mgo/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // NewForgotPasswordProcessForUser : returns the unique ID of a new forgot passsword process.
@@ -16,14 +16,17 @@ func NewForgotPasswordProcessForUser(c *gin.Context, userID, processPrivateKey s
 	mongoSession := session.Get(c)
 
 	// Delete the existing forgot password process.
-	if err := model.DeleteForgotPasswordProcessByUserID(userID, mongoSession); err != nil && !commonErrors.IsNotFound(err) {
+	if err := model.DeleteForgotPasswordProcessByUserID(c, userID, mongoSession); err != nil && !commonErrors.IsNotFound(err) {
 		return "", err
 	}
 
 	// Create a new forgot password process.
-	fpp := model.NewForgotPasswordProcess(userID)
+	fpp, err := model.NewForgotPasswordProcess(userID)
+	if err != nil {
+		return "", err
+	}
 	fpp.Code = processPrivateKey
-	fppID, err := fpp.Save(mongoSession)
+	fppID, err := fpp.Save(c, mongoSession)
 	if err != nil {
 		return "", err
 	}
@@ -33,14 +36,14 @@ func NewForgotPasswordProcessForUser(c *gin.Context, userID, processPrivateKey s
 
 // GetForgotPasswordProcessDetailsByID : returns the user ID and the private key a forgot passsword process.
 func GetForgotPasswordProcessDetailsByID(c *gin.Context, processID string) (userID, processPrivateKey string, err error) {
-	if !bson.IsObjectIdHex(processID) {
+	if _, err := bson.ObjectIDFromHex(processID); err != nil {
 		return "", "", errors.New("wrong forgot password process ID")
 	}
 
 	mongoSession := session.Get(c)
 
 	fpp := &model.ForgotPasswordProcess{}
-	if err := fpp.GetByID(processID, mongoSession); err != nil || !fpp.IsSaved() {
+	if err := fpp.GetByID(c, processID, mongoSession); err != nil || !fpp.IsSaved() {
 		return "", "", errors.New("unable to find the forgot password process")
 	}
 
@@ -52,24 +55,29 @@ func WrongAccessToForgotPasswordProcess(c *gin.Context, processID string) {
 	mongoSession := session.Get(c)
 
 	fpp := &model.ForgotPasswordProcess{}
-	if err := fpp.GetByID(processID, mongoSession); err != nil || !fpp.IsSaved() {
+	if err := fpp.GetByID(c, processID, mongoSession); err != nil || !fpp.IsSaved() {
 		return
 	}
 
 	if fpp.Tries >= 2 {
-		fpp.Delete(mongoSession)
+		fpp.Delete(c, mongoSession)
 	} else {
-		fpp.Increment(mongoSession)
+		fpp.Increment(c, mongoSession)
 	}
 }
 
 // DeleteForgotPasswordProcess : deletes a forgot password process.
 func DeleteForgotPasswordProcess(c *gin.Context, processID string) error {
+	objectID, err := bson.ObjectIDFromHex(processID)
+	if err != nil {
+		return commonErrors.WrongObjectID()
+	}
+
 	mongoSession := session.Get(c)
 
 	process := &model.ForgotPasswordProcess{
-		ID: bson.ObjectIdHex(processID),
+		ID: objectID,
 	}
 
-	return process.Delete(mongoSession)
+	return process.Delete(c, mongoSession)
 }

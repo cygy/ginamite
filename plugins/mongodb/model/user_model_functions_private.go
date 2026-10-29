@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -11,11 +12,11 @@ import (
 	"github.com/cygy/ginamite/common/timezone"
 	"github.com/gosimple/slug"
 
-	"github.com/globalsign/mgo"
-	"github.com/globalsign/mgo/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
-func (user *User) saveThirdPartyInfos(source, token, userID, firstName, lastName, email string, createdAt, expiresAt time.Time, db *mgo.Database) error {
+func (user *User) saveThirdPartyInfos(ctx context.Context, source, token, userID, firstName, lastName, email string, createdAt, expiresAt time.Time, db *mongo.Database) error {
 	infos := UserOAuthInfos{
 		UserID:    userID,
 		Token:     token,
@@ -39,7 +40,7 @@ func (user *User) saveThirdPartyInfos(source, token, userID, firstName, lastName
 		updatedFields["privateInfos.isEmailValid"] = true
 	}
 
-	return user.Update(bson.M{"$set": updatedFields}, db)
+	return user.Update(ctx, bson.M{"$set": updatedFields}, db)
 }
 
 func (user *User) initializeFromRegistration(username, emailAddress, termsVersion, locale, registrationCode, privateKey, method, source, ip string, device authentication.Device) {

@@ -1,6 +1,7 @@
 package mail
 
 import (
+	"context"
 	"fmt"
 	"html/template"
 
@@ -10,11 +11,11 @@ import (
 )
 
 // ForgotPasswordConfirmation : sends a mail to confirm the forgot password.
-func ForgotPasswordConfirmation(payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
+func ForgotPasswordConfirmation(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
 	p := queue.MailForgotPasswordConfirmation{}
 	queue.UnmarshalPayload(payload, &p)
 
-	if !isEmailAddressValid(p.EmailAddress) {
+	if !isEmailAddressValid.check(ctx, p.EmailAddress) {
 		return
 	}
 
@@ -53,11 +54,11 @@ func ForgotPasswordConfirmation(payload []byte, isEmailAddressValid IsEmailAddre
 }
 
 // ForgotPasswordConfirmed : sends a mail to notify the forgot password reset is confirmed.
-func ForgotPasswordConfirmed(payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
+func ForgotPasswordConfirmed(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
 	p := queue.MailForgotPasswordConfirmed{}
 	queue.UnmarshalPayload(payload, &p)
 
-	if !isEmailAddressValid(p.EmailAddress) {
+	if !isEmailAddressValid.check(ctx, p.EmailAddress) {
 		return
 	}
 
@@ -87,11 +88,11 @@ func ForgotPasswordConfirmed(payload []byte, isEmailAddressValid IsEmailAddressV
 }
 
 // ForgotPasswordCancelled : sends a mail to notify the forgot password reset is cancelled.
-func ForgotPasswordCancelled(payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
+func ForgotPasswordCancelled(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
 	p := queue.MailForgotPasswordCancelled{}
 	queue.UnmarshalPayload(payload, &p)
 
-	if !isEmailAddressValid(p.EmailAddress) {
+	if !isEmailAddressValid.check(ctx, p.EmailAddress) {
 		return
 	}
 

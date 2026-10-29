@@ -12,5 +12,10 @@ func NotFound() error {
 
 // IsNotFound returns true if the error is a 'not found' error.
 func IsNotFound(err error) bool {
-	return strings.ToLower(err.Error()) == strings.ToLower(NotFoundErrorMessage)
+	return strings.EqualFold(err.Error(), NotFoundErrorMessage)
+}
+
+// WrongObjectID returns a new error 'wrong object ID'.
+func WrongObjectID() error {
+	return errors.New(WrongObjectIDErrorMessage)
 }

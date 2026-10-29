@@ -269,7 +269,7 @@ func UpdateAuthToken(c *gin.Context) {
 func RefreshAuthToken(c *gin.Context) {
 	tokenID := context.GetAuthTokenID(c)
 
-	signedToken, err := authentication.RefreshAuthToken(config.Main.JWT.Secret, config.Main.JWT.SigningMethod, tokenID, time.Duration(config.Main.JWT.TTL))
+	signedToken, err := authentication.RefreshAuthToken(c, config.Main.JWT.Secret, config.Main.JWT.SigningMethod, tokenID, time.Duration(config.Main.JWT.TTL))
 	if err != nil {
 		locale := context.GetLocale(c)
 		t := localization.Translate(locale)

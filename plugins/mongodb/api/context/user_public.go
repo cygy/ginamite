@@ -25,7 +25,7 @@ func GetFullUser(c *gin.Context) *model.User {
 	userID := context.GetUserID(c)
 
 	user := &model.User{}
-	if err := user.GetByID(userID, mongoSession); err != nil || !user.IsSaved() {
+	if err := user.GetByID(c, userID, mongoSession); err != nil || !user.IsSaved() {
 		return nil
 	}
 

@@ -1,5 +1,7 @@
 package notifications
 
+import "context"
+
 // respresents a notification that can be subscribed by a user.
 type notificationType struct {
 	Name    string
@@ -14,4 +16,4 @@ type Target struct {
 }
 
 // GetNotificationTargetsByUserAndTypeFunc : func to get all the notification types subscribed by a user.
-type GetNotificationTargetsByUserAndTypeFunc func(userID, notificationType string) []Target
+type GetNotificationTargetsByUserAndTypeFunc func(ctx context.Context, userID, notificationType string) ([]Target, error)

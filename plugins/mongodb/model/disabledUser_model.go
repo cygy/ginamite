@@ -1,18 +1,20 @@
 package model
 
 import (
+	"context"
 	"time"
 
+	"github.com/cygy/ginamite/common/errors"
 	"github.com/cygy/ginamite/common/mongo/document"
 
-	"github.com/globalsign/mgo"
-	"github.com/globalsign/mgo/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 // DisabledUser : properties of a disabled user.
 type DisabledUser struct {
-	ID                     bson.ObjectId             `json:"id" bson:"_id,omitempty"`
-	UserID                 bson.ObjectId             `json:"user_id" bson:"userId"`
+	ID                     bson.ObjectID             `json:"id" bson:"_id,omitempty"`
+	UserID                 bson.ObjectID             `json:"user_id" bson:"userId"`
 	Username               string                    `json:"username" bson:"username"`
 	Slug                   string                    `json:"slug" bson:"slug"`
 	Abilities              []string                  `json:"abilities,omitempty" bson:"abilities,omitempty"`
@@ -56,27 +58,27 @@ func NewDisabledUser(user *User) *DisabledUser {
 
 // IsSaved : returns true if the 'DisabledUser' document if saved in the collection.
 func (user *DisabledUser) IsSaved() bool {
-	return user.ID.Valid()
+	return !user.ID.IsZero()
 }
 
 // Save : inserts the 'DisabledUser' document in the collection, returns an error if needed.
-func (user *DisabledUser) Save(db *mgo.Database) (string, error) {
-	return document.SaveDocument(user, DisabledUserCollection, db)
+func (user *DisabledUser) Save(ctx context.Context, db *mongo.Database) (string, error) {
+	return document.SaveDocument(ctx, user, DisabledUserCollection, db)
 }
 
 // Update : updates the 'DisabledUser' document, returns an error if needed.
-func (user *DisabledUser) Update(update interface{}, db *mgo.Database) error {
-	return document.UpdateDocument(user.ID, DisabledUserCollection, update, db)
+func (user *DisabledUser) Update(ctx context.Context, update any, db *mongo.Database) error {
+	return document.UpdateDocument(ctx, user.ID, DisabledUserCollection, update, db)
 }
 
 // Delete : deletes the 'DisabledUser' document from the collection, returns an error if needed.
-func (user *DisabledUser) Delete(db *mgo.Database) error {
-	return document.DeleteDocument(user.ID, DisabledUserCollection, db)
+func (user *DisabledUser) Delete(ctx context.Context, db *mongo.Database) error {
+	return document.DeleteDocument(ctx, user.ID, DisabledUserCollection, db)
 }
 
 // GetByID : initializes the 'DisabledUser' struct from the 'DisabledUser' document with the ID.
-func (user *DisabledUser) GetByID(id string, db *mgo.Database) error {
-	return document.GetDocumentByID(user, DisabledUserCollection, id, db)
+func (user *DisabledUser) GetByID(ctx context.Context, id string, db *mongo.Database) error {
+	return document.GetDocumentByID(ctx, user, DisabledUserCollection, id, db)
 }
 
 // GetID : returns the 'DisabledUser' ID.
@@ -85,6 +87,11 @@ func (user *DisabledUser) GetID() string {
 }
 
 // SetID : initializes the 'DisabledUser' ID.
-func (user *DisabledUser) SetID(id string) {
-	user.ID = bson.ObjectIdHex(id)
+func (user *DisabledUser) SetID(id string) error {
+	objectID, err := bson.ObjectIDFromHex(id)
+	if err != nil {
+		return errors.WrongObjectID()
+	}
+	user.ID = objectID
+	return nil
 }

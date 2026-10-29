@@ -1,14 +1,12 @@
 package functions
 
 import (
-	"errors"
-
-	commonErrors "github.com/cygy/ginamite/common/errors"
+	"github.com/cygy/ginamite/common/errors"
 	"github.com/cygy/ginamite/common/mongo/session"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
 
 	"github.com/gin-gonic/gin"
-	"github.com/globalsign/mgo/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // CreateNewDeleteAccountProcess : creates a process and returns its unique ID.
@@ -16,13 +14,17 @@ func CreateNewDeleteAccountProcess(c *gin.Context, userID string) (string, strin
 	mongoSession := session.Get(c)
 
 	// Delete the existing process.
-	if err := model.DeleteDeleteAccountProcessByUserID(userID, mongoSession); err != nil && !commonErrors.IsNotFound(err) {
+	if err := model.DeleteDeleteAccountProcessByUserID(c, userID, mongoSession); err != nil && !errors.IsNotFound(err) {
 		return "", "", err
 	}
 
 	// Create a new process.
-	process := model.NewDeleteAccountProcess(userID)
-	processID, err := process.Save(mongoSession)
+	process, err := model.NewDeleteAccountProcess(userID)
+	if err != nil {
+		return "", "", err
+	}
+
+	processID, err := process.Save(c, mongoSession)
 	if err != nil {
 		return "", "", err
 	}
@@ -35,13 +37,17 @@ func CreateNewDisableAccountProcess(c *gin.Context, userID string) (string, stri
 	mongoSession := session.Get(c)
 
 	// Delete the existing process.
-	if err := model.DeleteDisableAccountProcessByUserID(userID, mongoSession); err != nil && !commonErrors.IsNotFound(err) {
+	if err := model.DeleteDisableAccountProcessByUserID(c, userID, mongoSession); err != nil && !errors.IsNotFound(err) {
 		return "", "", err
 	}
 
 	// Create a new process.
-	process := model.NewDisableAccountProcess(userID)
-	processID, err := process.Save(mongoSession)
+	process, err := model.NewDisableAccountProcess(userID)
+	if err != nil {
+		return "", "", err
+	}
+
+	processID, err := process.Save(c, mongoSession)
 	if err != nil {
 		return "", "", err
 	}
@@ -54,13 +60,17 @@ func CreateNewUpdatePasswordProcess(c *gin.Context, userID, encryptedPassword st
 	mongoSession := session.Get(c)
 
 	// Delete the existing process.
-	if err := model.DeleteUpdatePasswordProcessByUserID(userID, mongoSession); err != nil && !commonErrors.IsNotFound(err) {
+	if err := model.DeleteUpdatePasswordProcessByUserID(c, userID, mongoSession); err != nil && !errors.IsNotFound(err) {
 		return "", "", err
 	}
 
 	// Create a new process.
-	process := model.NewUpdatePasswordProcess(userID, encryptedPassword)
-	processID, err := process.Save(mongoSession)
+	process, err := model.NewUpdatePasswordProcess(userID, encryptedPassword)
+	if err != nil {
+		return "", "", err
+	}
+
+	processID, err := process.Save(c, mongoSession)
 	if err != nil {
 		return "", "", err
 	}
@@ -73,13 +83,17 @@ func CreateNewUpdateEmailAddressProcess(c *gin.Context, userID, emailAddress str
 	mongoSession := session.Get(c)
 
 	// Delete the existing process.
-	if err := model.DeleteUpdateEmailAddressProcessByUserID(userID, mongoSession); err != nil && !commonErrors.IsNotFound(err) {
+	if err := model.DeleteUpdateEmailAddressProcessByUserID(c, userID, mongoSession); err != nil && !errors.IsNotFound(err) {
 		return "", "", err
 	}
 
 	// Create a new process.
-	process := model.NewUpdateEmailAddressProcess(userID, emailAddress)
-	processID, err := process.Save(mongoSession)
+	process, err := model.NewUpdateEmailAddressProcess(userID, emailAddress)
+	if err != nil {
+		return "", "", err
+	}
+
+	processID, err := process.Save(c, mongoSession)
 	if err != nil {
 		return "", "", err
 	}
@@ -92,13 +106,17 @@ func CreateNewVerifyEmailAddressProcess(c *gin.Context, userID string) (string, 
 	mongoSession := session.Get(c)
 
 	// Delete the existing process.
-	if err := model.DeleteUpdateValidEmailAddressProcessByUserID(userID, mongoSession); err != nil && !commonErrors.IsNotFound(err) {
+	if err := model.DeleteUpdateValidEmailAddressProcessByUserID(c, userID, mongoSession); err != nil && !errors.IsNotFound(err) {
 		return "", "", err
 	}
 
 	// Create a new process.
-	process := model.NewUpdateValidEmailAddressProcess(userID)
-	processID, err := process.Save(mongoSession)
+	process, err := model.NewUpdateValidEmailAddressProcess(userID)
+	if err != nil {
+		return "", "", err
+	}
+
+	processID, err := process.Save(c, mongoSession)
 	if err != nil {
 		return "", "", err
 	}
@@ -108,25 +126,25 @@ func CreateNewVerifyEmailAddressProcess(c *gin.Context, userID string) (string, 
 
 // VerifyProcess : verify a process and returns its unique ID and its stored value.
 func VerifyProcess(c *gin.Context, processID, key string) (string, string, error) {
-	if !bson.IsObjectIdHex(processID) {
-		return "", "", errors.New("wrong object ID")
+	if _, err := bson.ObjectIDFromHex(processID); err != nil {
+		return "", "", errors.WrongObjectID()
 	}
 
 	mongoSession := session.Get(c)
 
 	process := &model.UpdatePropertyProcess{}
-	if err := process.GetByID(processID, mongoSession); err != nil || !process.IsSaved() {
-		return "", "", commonErrors.NotFound()
+	if err := process.GetByID(c, processID, mongoSession); err != nil || !process.IsSaved() {
+		return "", "", errors.NotFound()
 	}
 
 	// Do not validate or cancel if the key is not verified.
 	if process.Code != key {
 		if process.Tries >= 2 {
-			process.Delete(mongoSession)
+			process.Delete(c, mongoSession)
 		} else {
-			process.Increment(mongoSession)
+			process.Increment(c, mongoSession)
 		}
-		return "", "", commonErrors.NotFound()
+		return "", "", errors.NotFound()
 	}
 
 	return process.UserID.Hex(), process.Value, nil
@@ -134,11 +152,16 @@ func VerifyProcess(c *gin.Context, processID, key string) (string, string, error
 
 // DeleteProcessByID : deletes a process by its unique ID.
 func DeleteProcessByID(c *gin.Context, processID string) error {
+	objectID, err := bson.ObjectIDFromHex(processID)
+	if err != nil {
+		return errors.WrongObjectID()
+	}
+
 	mongoSession := session.Get(c)
 
 	process := &model.UpdatePropertyProcess{
-		ID: bson.ObjectIdHex(processID),
+		ID: objectID,
 	}
 
-	return process.Delete(mongoSession)
+	return process.Delete(c, mongoSession)
 }

@@ -3,12 +3,12 @@ package model
 import (
 	"time"
 
-	"github.com/globalsign/mgo/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // OwnSummarizedNotification : own version of the Notification struct
 type OwnSummarizedNotification struct {
-	ID       bson.ObjectId `json:"id,omitempty"`
+	ID       bson.ObjectID `json:"id,omitempty"`
 	Type     string        `json:"type"`
 	Image    OwnImageSize  `json:"image,omitempty"`
 	Title    string        `json:"title"`
@@ -51,7 +51,7 @@ func (notification OwnSummarizedNotification) URLParams() map[string]string {
 
 // OwnNotification : own version of the Notification struct
 type OwnNotification struct {
-	ID        bson.ObjectId `json:"id,omitempty"`
+	ID        bson.ObjectID `json:"id,omitempty"`
 	Type      string        `json:"type"`
 	Data      string        `json:"data"`
 	Image     OwnImageSize  `json:"image,omitempty"`

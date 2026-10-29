@@ -1,10 +1,10 @@
 package model
 
-import "github.com/globalsign/mgo/bson"
+import "go.mongodb.org/mongo-driver/v2/bson"
 
 // AdminUser : admin version of the User struct
 type AdminUser struct {
-	ID           bson.ObjectId         `json:"id" bson:"_id,omitempty"`
+	ID           bson.ObjectID         `json:"id" bson:"_id,omitempty"`
 	Username     string                `json:"username" bson:"username"`
 	PrivateInfos AdminUserPrivateInfos `json:"private_infos" bson:"privateInfos,omitempty"`
 	Verified     bool                  `json:"verified" bson:"verified"`
