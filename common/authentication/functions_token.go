@@ -101,7 +101,7 @@ func GetSignedToken(ctx context.Context, signingMethod, secret, tokenID string) 
 
 // ParseToken : parses and verifies the authentication token and returns the claims.
 func ParseToken(signedToken, secret string) (*jwt.Token, error) {
-	token, err := jwt.Parse(signedToken, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.Parse(signedToken, func(token *jwt.Token) (any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
 		}

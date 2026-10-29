@@ -9,5 +9,5 @@ type Token struct {
 	PrivateKey     string
 	ExpirationDate time.Time
 	CreationDate   time.Time
-	Other          map[string]interface{}
+	Other          map[string]any
 }

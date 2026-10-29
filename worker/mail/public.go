@@ -14,7 +14,7 @@ import (
 )
 
 // Initialize initializes the mail session.
-func Initialize(identity, username, password, host string, port int, HTMLVars, textVars map[string]map[string]interface{}) {
+func Initialize(identity, username, password, host string, port int, HTMLVars, textVars map[string]map[string]any) {
 	mailAuth = smtp.PlainAuth(identity, username, password, host)
 	smtpHost = fmt.Sprintf("%s:%d", host, port)
 	commonHTMLVars = HTMLVars
@@ -24,7 +24,7 @@ func Initialize(identity, username, password, host string, port int, HTMLVars, t
 // Send sends a HTML mail to a recipient.
 func (m Message) Send() {
 	// Merge the HTML vars with the common vars.
-	fullHTMLVars := make(map[string]interface{})
+	fullHTMLVars := make(map[string]any)
 	for k, v := range commonHTMLVars {
 		fullHTMLVars[k] = v[m.Locale]
 	}
@@ -33,7 +33,7 @@ func (m Message) Send() {
 	}
 
 	// Merge the text vars with the common vars.
-	fullTextVars := make(map[string]interface{})
+	fullTextVars := make(map[string]any)
 	for k, v := range commonTextVars {
 		fullTextVars[k] = v[m.Locale]
 	}

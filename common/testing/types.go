@@ -8,7 +8,7 @@ import (
 )
 
 // H shorthand to a map struct
-type H map[string]interface{}
+type H map[string]any
 
 // S shorthand to a map struct
 type S map[string]string
@@ -29,7 +29,7 @@ type Request struct {
 		Error            response.Error
 		RenewedAuthToken bool
 	}
-	Response interface{}
+	Response any
 }
 
 // NewRequest : returns a new struct 'Request'

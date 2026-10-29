@@ -16,7 +16,7 @@ import (
 )
 
 // NotificationsReceivedByUser : returns the latest notifications received by the user.
-func NotificationsReceivedByUser(c *gin.Context, userID string) (interface{}, error) {
+func NotificationsReceivedByUser(c *gin.Context, userID string) (any, error) {
 	// Check the userID.
 	if _, err := bson.ObjectIDFromHex(userID); err != nil {
 		return nil, commonErrors.WrongObjectID()
@@ -40,7 +40,7 @@ func NotificationsReceivedByUser(c *gin.Context, userID string) (interface{}, er
 }
 
 // NotificationReceivedByUser : returns a notification received by the user.
-func NotificationReceivedByUser(c *gin.Context, userID, notificationID string) (interface{}, error) {
+func NotificationReceivedByUser(c *gin.Context, userID, notificationID string) (any, error) {
 	notification, err := checkUserIDAndNotificationID(c, userID, notificationID)
 	if err != nil {
 		return nil, err

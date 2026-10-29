@@ -7,7 +7,7 @@ import (
 )
 
 // GetContactsForAdmin : returns the contacts for the admin panel.
-func GetContactsForAdmin(c *gin.Context, offset, limit int64) (interface{}, error) {
+func GetContactsForAdmin(c *gin.Context, offset, limit int64) (any, error) {
 	mongoSession := session.Get(c)
 	contacts, err := model.GetContactsForAdmin(c, offset, limit, mongoSession)
 
@@ -15,7 +15,7 @@ func GetContactsForAdmin(c *gin.Context, offset, limit int64) (interface{}, erro
 }
 
 // GetContactForAdmin : gets a contact.
-func GetContactForAdmin(c *gin.Context, contactID string) (interface{}, error) {
+func GetContactForAdmin(c *gin.Context, contactID string) (any, error) {
 	mongoSession := session.Get(c)
 
 	contact := &model.Contact{}

@@ -90,7 +90,7 @@ func validateOrCancelUpdateProperty(c *gin.Context, property string, validate bo
 	}
 
 	// Some functions must be verified.
-	functions := []interface{}{GetUserDetailsByID, VerifyProcess, DeleteProcessByID}
+	functions := []any{GetUserDetailsByID, VerifyProcess, DeleteProcessByID}
 
 	if validate {
 		if isEmailAddressProcess {

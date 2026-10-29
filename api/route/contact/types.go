@@ -9,7 +9,7 @@ type CreateContactFunc func(c *gin.Context, emailAddress, subject, text string) 
 type UpdateContactFunc func(c *gin.Context, contactID string, done bool) error
 
 // GetContactsFunc : function to get the contacts.
-type GetContactsFunc func(c *gin.Context, offset, limit int64) (interface{}, error)
+type GetContactsFunc func(c *gin.Context, offset, limit int64) (any, error)
 
 // GetContactFunc : function to get a contact.
-type GetContactFunc func(c *gin.Context, contactID string) (interface{}, error)
+type GetContactFunc func(c *gin.Context, contactID string) (any, error)

@@ -13,7 +13,7 @@ import (
 )
 
 // Localize : returns a localized string (used into the templates).
-func (page *Page) Localize(key string, args ...interface{}) string {
+func (page *Page) Localize(key string, args ...any) string {
 	return localization.Translate(page.Locale)(key, args...)
 }
 

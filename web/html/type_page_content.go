@@ -28,7 +28,7 @@ type PageContent struct {
 	Title              string
 	Error              Error
 	Info               Info
-	Vars               map[string]interface{}
+	Vars               map[string]any
 	parsedMainTemplate string
 }
 

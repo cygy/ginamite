@@ -23,47 +23,47 @@ func Initialize(serverName string, productionEnvironment bool) {
 }
 
 // Debug shorthand
-func Debug(args ...interface{}) {
+func Debug(args ...any) {
 	Main.Debug(args...)
 }
 
 // Error shorthand
-func Error(args ...interface{}) {
+func Error(args ...any) {
 	Main.Error(args...)
 }
 
 // Fatal shorthand
-func Fatal(args ...interface{}) {
+func Fatal(args ...any) {
 	Main.Fatal(args...)
 }
 
 // Info shorthand
-func Info(args ...interface{}) {
+func Info(args ...any) {
 	Main.Info(args...)
 }
 
 // Panic shorthand
-func Panic(args ...interface{}) {
+func Panic(args ...any) {
 	Main.Panic(args...)
 }
 
 // Print shorthand
-func Print(args ...interface{}) {
+func Print(args ...any) {
 	Main.Print(args...)
 }
 
 // Warn shorthand
-func Warn(args ...interface{}) {
+func Warn(args ...any) {
 	Main.Warn(args...)
 }
 
 // Warning shorthand
-func Warning(args ...interface{}) {
+func Warning(args ...any) {
 	Main.Warning(args...)
 }
 
 // WithField shorthand
-func WithField(key string, value interface{}) *logrus.Entry {
+func WithField(key string, value any) *logrus.Entry {
 	return Main.WithField(key, value)
 }
 

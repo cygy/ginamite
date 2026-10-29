@@ -7,7 +7,7 @@ type Cache struct {
 
 // CachedValue : cached result of a API call.
 type CachedValue struct {
-	Value  interface{}
+	Value  any
 	Result Result
 	Ok     bool
 }
@@ -21,7 +21,7 @@ func NewCache() (c *Cache) {
 }
 
 // Save : saves the value to the cache.
-func (c *Cache) Save(key, locale string, value interface{}, result Result, ok bool) {
+func (c *Cache) Save(key, locale string, value any, result Result, ok bool) {
 	if _, ok := c.values[key]; !ok {
 		c.values[key] = map[string]CachedValue{}
 	}

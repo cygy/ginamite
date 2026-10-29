@@ -6,7 +6,7 @@ import (
 )
 
 // SetVar : sets up a variable to the list of the variables of the page.
-func (page *Page) SetVar(name string, value interface{}) {
+func (page *Page) SetVar(name string, value any) {
 	page.initializeVars()
 	page.Content.Vars[name] = value
 }
@@ -18,19 +18,19 @@ func (page *Page) SetLocalizedVar(name, value string) {
 }
 
 // SetLocaleVar : sets up a variable to the list of the variables of the page with the locale.
-func (page *Page) SetLocaleVar(name, locale string, value interface{}) {
+func (page *Page) SetLocaleVar(name, locale string, value any) {
 	page.initializeVars()
 	key := fmt.Sprintf("%s/%s", name, strings.ToLower(locale))
 	page.Content.Vars[key] = value
 }
 
 // Var : returns a variable from the list of the variables of the page.
-func (page *Page) Var(name string) interface{} {
+func (page *Page) Var(name string) any {
 	return page.Content.Vars[name]
 }
 
 // LocaleVar : returns a variable from the list of the variables of the page.
-func (page *Page) LocaleVar(name, locale string) interface{} {
+func (page *Page) LocaleVar(name, locale string) any {
 	key := fmt.Sprintf("%s/%s", name, strings.ToLower(locale))
 	return page.Content.Vars[key]
 }
@@ -48,6 +48,6 @@ func (page *Page) SetHrefLangParam(locale string, params map[string]string) {
 // Annex functions.
 func (page *Page) initializeVars() {
 	if page.Content.Vars == nil {
-		page.Content.Vars = map[string]interface{}{}
+		page.Content.Vars = map[string]any{}
 	}
 }

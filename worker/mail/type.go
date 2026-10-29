@@ -7,8 +7,8 @@ type Message struct {
 	Subject   string
 	Recipient string
 	Template  string
-	HTMLVars  map[string]interface{}
-	TextVars  map[string]interface{}
+	HTMLVars  map[string]any
+	TextVars  map[string]any
 	Locale    string
 }
 

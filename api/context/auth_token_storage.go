@@ -48,7 +48,7 @@ func GetUserID(c *gin.Context) string {
 }
 
 // GetUser : returns the user struct.
-func GetUser(c *gin.Context) interface{} {
+func GetUser(c *gin.Context) any {
 	user, ok := c.Get(userContextKey)
 	if !ok {
 		return nil

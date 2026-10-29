@@ -228,17 +228,17 @@ func (s *Server) Start() {
 	weburl.Initialize(s.RoutesFile, config.Main.Hosts.Web)
 
 	// Create the common vars for the emails.
-	commonHTMLVars := make(map[string]map[string]interface{})
-	commonHTMLVars["StaticHost"] = make(map[string]interface{})
-	commonHTMLVars["HomeURL"] = make(map[string]interface{})
-	commonHTMLVars["FacebookURL"] = make(map[string]interface{})
-	commonHTMLVars["TwitterURL"] = make(map[string]interface{})
+	commonHTMLVars := make(map[string]map[string]any)
+	commonHTMLVars["StaticHost"] = make(map[string]any)
+	commonHTMLVars["HomeURL"] = make(map[string]any)
+	commonHTMLVars["FacebookURL"] = make(map[string]any)
+	commonHTMLVars["TwitterURL"] = make(map[string]any)
 
-	commonTextVars := make(map[string]map[string]interface{})
-	commonTextVars["StaticHost"] = make(map[string]interface{})
-	commonTextVars["HomeURL"] = make(map[string]interface{})
-	commonTextVars["FacebookURL"] = make(map[string]interface{})
-	commonTextVars["TwitterURL"] = make(map[string]interface{})
+	commonTextVars := make(map[string]map[string]any)
+	commonTextVars["StaticHost"] = make(map[string]any)
+	commonTextVars["HomeURL"] = make(map[string]any)
+	commonTextVars["FacebookURL"] = make(map[string]any)
+	commonTextVars["TwitterURL"] = make(map[string]any)
 
 	for _, locale := range config.Main.SupportedLocales {
 		commonHTMLVars["StaticHost"][locale] = config.Main.Hosts.Static

@@ -36,7 +36,7 @@ func BuildTokenFromID(ctx context.Context, tokenID string) (*authentication.Toke
 		UserID:         user.ID.Hex(),
 		ExpirationDate: authToken.ExpiresAt,
 		CreationDate:   authToken.CreatedAt,
-		Other: map[string]interface{}{
+		Other: map[string]any{
 			"nickname": user.Username,
 			"locale":   user.Settings.Locale,
 			"timezone": user.Settings.Timezone,
@@ -58,7 +58,7 @@ func ExtendTokenExpirationDateFromID(ctx context.Context, tokenID string, ttl ti
 	}
 
 	// Extends the validity of the token.
-	if authToken.ExpiresAt.Sub(time.Now()) < (ttl*time.Second)/2 {
+	if time.Until(authToken.ExpiresAt) < (ttl*time.Second)/2 {
 		authToken.ExpiresAt = time.Now().Add(ttl * time.Second)
 		if err := authToken.UpdateExpirationDate(ctx, authToken.ExpiresAt, db); err != nil {
 			return err
@@ -140,7 +140,7 @@ func GetTokenDetailsByID(c *gin.Context, tokenID string) (authentication.Token, 
 }
 
 // GetOwnedTokens : returns the auth token for an user.
-func GetOwnedTokens(c *gin.Context, userID string) (interface{}, error) {
+func GetOwnedTokens(c *gin.Context, userID string) (any, error) {
 	mongoSession := session.Get(c)
 
 	tokens, err := model.GetAuthTokens(c, userID, mongoSession)
@@ -157,7 +157,7 @@ func GetOwnedTokens(c *gin.Context, userID string) (interface{}, error) {
 }
 
 // GetOwnedTokenByID : returns an auth token by its ID for an user.
-func GetOwnedTokenByID(c *gin.Context, tokenID string) (interface{}, string, error) {
+func GetOwnedTokenByID(c *gin.Context, tokenID string) (any, string, error) {
 	mongoSession := session.Get(c)
 
 	token := &model.AuthToken{}

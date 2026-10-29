@@ -25,7 +25,7 @@ import (
 )
 
 // GetOwnedAccountDetails : returns the details of the user's account.
-func GetOwnedAccountDetails(c *gin.Context, userID string) interface{} {
+func GetOwnedAccountDetails(c *gin.Context, userID string) any {
 	user := context.GetFullUser(c)
 	if user == nil {
 		return nil

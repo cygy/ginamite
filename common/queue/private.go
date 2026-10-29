@@ -9,7 +9,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func sendMessage(messageType string, payload interface{}, topic string) {
+func sendMessage(messageType string, payload any, topic string) {
 	message := Message{
 		Type:    messageType,
 		Payload: payload,

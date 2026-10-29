@@ -3,7 +3,7 @@ package queue
 import "time"
 
 // InvalidateCache : invalidates a cache.
-func InvalidateCache(message string, payload interface{}) {
+func InvalidateCache(message string, payload any) {
 	sendMessage(message, payload, TopicCache)
 }
 

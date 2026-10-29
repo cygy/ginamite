@@ -42,7 +42,7 @@ func apiClient(host string, timeOut, retryCount int, debugMode bool) *resty.Clie
 	return client
 }
 
-func extractClaimsFromJWTToken(token string, value interface{}, validator TokenValidator) bool {
+func extractClaimsFromJWTToken(token string, value any, validator TokenValidator) bool {
 	segments := strings.Split(token, ".")
 	if len(segments) != 3 {
 		log.WithFields(logrus.Fields{
@@ -87,7 +87,7 @@ func logResponseToken(token string, validator TokenValidator, r *resty.Response,
 	return true
 }
 
-func logParseToken(token string, validator TokenValidator, rawToken []byte, value interface{}) bool {
+func logParseToken(token string, validator TokenValidator, rawToken []byte, value any) bool {
 	if err := json.Unmarshal(rawToken, value); err != nil {
 		log.WithFields(logrus.Fields{
 			"token":  token,

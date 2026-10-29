@@ -10,7 +10,7 @@ import (
 type Document interface {
 	IsSaved() bool
 	Save(ctx context.Context, db *mongo.Database) (string, error)
-	Update(ctx context.Context, update interface{}, db *mongo.Database) error
+	Update(ctx context.Context, update any, db *mongo.Database) error
 	Delete(ctx context.Context, db *mongo.Database) error
 	GetByID(ctx context.Context, id string, db *mongo.Database) error
 	SetID(id string) error

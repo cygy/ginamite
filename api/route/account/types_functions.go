@@ -10,10 +10,10 @@ import (
 )
 
 // NotificationsReceivedByUserFunc : function to get all the notifications received by the user.
-type NotificationsReceivedByUserFunc func(c *gin.Context, userID string) (interface{}, error)
+type NotificationsReceivedByUserFunc func(c *gin.Context, userID string) (any, error)
 
 // NotificationReceivedByUserFunc : function to get a notification received by the user.
-type NotificationReceivedByUserFunc func(c *gin.Context, userID, notificationID string) (interface{}, error)
+type NotificationReceivedByUserFunc func(c *gin.Context, userID, notificationID string) (any, error)
 
 // UpdateUserNotificationReadFunc : function to update the read flag of a notification received by the user.
 type UpdateUserNotificationReadFunc func(c *gin.Context, userID, notificationID string) error
@@ -109,16 +109,16 @@ type DeleteTokenByIDFunc func(c *gin.Context, tokenID string) error
 type GetTokenDetailsByIDFunc func(c *gin.Context, tokenID string) (authentication.Token, error)
 
 // GetOwnedTokensFunc : function to get the auth tokens of a user.
-type GetOwnedTokensFunc func(c *gin.Context, userID string) (interface{}, error)
+type GetOwnedTokensFunc func(c *gin.Context, userID string) (any, error)
 
 // GetOwnedTokenByIDFunc : function to get the auth token by its ID and the ID of the token's owner.
-type GetOwnedTokenByIDFunc func(c *gin.Context, tokenID string) (token interface{}, ownerID string, err error)
+type GetOwnedTokenByIDFunc func(c *gin.Context, tokenID string) (token any, ownerID string, err error)
 
 // UpdateTokenByIDFunc : function to update the properties of a token.
 type UpdateTokenByIDFunc func(c *gin.Context, tokenID, name string, enableNotifications bool, notifications []string) error
 
 // GetOwnedAccountDetailsFunc : function to get the user details from its unique identifier.
-type GetOwnedAccountDetailsFunc func(c *gin.Context, userID string) interface{}
+type GetOwnedAccountDetailsFunc func(c *gin.Context, userID string) any
 
 // UpdatedAccountInfosFunc : function to update the user infos.
 type UpdatedAccountInfosFunc func(c *gin.Context, userID, firstName, lastName string) error

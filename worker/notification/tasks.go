@@ -17,7 +17,7 @@ func NewLogin(ctx context.Context, payload []byte, getNotificationTargetsByUserA
 		UserID:                     p.UserID,
 		Type:                       notifications.TypeNewLogin,
 		GetNotificationTargetsFunc: getNotificationTargetsByUserAndTypeFunc,
-		EmailFunc: func() (string, interface{}) {
+		EmailFunc: func() (string, any) {
 			return queue.MessageMailNewLogin, p
 		},
 	}

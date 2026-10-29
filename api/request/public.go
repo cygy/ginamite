@@ -14,7 +14,7 @@ import (
 )
 
 // DecodeBody : decodes the JSON-formatted body of a request to a struct.
-func DecodeBody(c *gin.Context, v interface{}) {
+func DecodeBody(c *gin.Context, v any) {
 	json.NewDecoder(c.Request.Body).Decode(&v)
 }
 

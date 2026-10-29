@@ -1,7 +1,7 @@
 package queue
 
 // NotifyUsersWithAbility : notify the users with an ability that an event occurs.
-func NotifyUsersWithAbility(ability, messageType string, payload interface{}) {
+func NotifyUsersWithAbility(ability, messageType string, payload any) {
 	groupPayload := GroupNotification{
 		Ability: ability,
 		Payload: payload,
@@ -10,36 +10,36 @@ func NotifyUsersWithAbility(ability, messageType string, payload interface{}) {
 }
 
 // NotifyUser : notify the user that an event occurs.
-func NotifyUser(messageType string, payload interface{}) {
+func NotifyUser(messageType string, payload any) {
 	sendMessage(messageType, payload, TopicUserNotification)
 }
 
 // SendMail : notify the user that an event occurs by email.
-func SendMail(messageType string, payload interface{}) {
+func SendMail(messageType string, payload any) {
 	sendMessage(messageType, payload, TopicMail)
 }
 
 // SendChromeNotification : notify the user that an event occurs by chrome.
-func SendChromeNotification(messageType string, payload interface{}) {
+func SendChromeNotification(messageType string, payload any) {
 	sendMessage(messageType, payload, TopicChrome)
 }
 
 // SendSafariNotification : notify the user that an event occurs by safari.
-func SendSafariNotification(messageType string, payload interface{}) {
+func SendSafariNotification(messageType string, payload any) {
 	sendMessage(messageType, payload, TopicSafari)
 }
 
 // SendFirefoxNotification : notify the user that an event occurs by firefox.
-func SendFirefoxNotification(messageType string, payload interface{}) {
+func SendFirefoxNotification(messageType string, payload any) {
 	sendMessage(messageType, payload, TopicFirefox)
 }
 
 // SendIOSNotification : notify the user that an event occurs by iOS.
-func SendIOSNotification(messageType string, payload interface{}) {
+func SendIOSNotification(messageType string, payload any) {
 	sendMessage(messageType, payload, TopicIOS)
 }
 
 // SendAndroidNotification : notify the user that an event occurs by android.
-func SendAndroidNotification(messageType string, payload interface{}) {
+func SendAndroidNotification(messageType string, payload any) {
 	sendMessage(messageType, payload, TopicAndroid)
 }

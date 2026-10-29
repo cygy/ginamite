@@ -9,7 +9,7 @@ import (
 )
 
 // Ok : returns a HTTP 200 response.
-func Ok(c *gin.Context, i interface{}) {
+func Ok(c *gin.Context, i any) {
 	c.AbortWithStatusJSON(http.StatusOK, i)
 }
 
@@ -19,7 +19,7 @@ func OkWithStatus(c *gin.Context, status string) {
 }
 
 // Created : returns a HTTP 201 response with a JSON object.
-func Created(c *gin.Context, i interface{}) {
+func Created(c *gin.Context, i any) {
 	c.AbortWithStatusJSON(http.StatusCreated, i)
 }
 

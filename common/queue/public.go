@@ -9,7 +9,7 @@ import (
 )
 
 // CreateTask : sends a new task to the topic 'task'.
-func CreateTask(taskName string, payload interface{}) {
+func CreateTask(taskName string, payload any) {
 	sendMessage(taskName, payload, TopicTasks)
 }
 
@@ -60,7 +60,7 @@ func ParseGroupAbilityAndPayload(value []byte, topic string) (string, []byte, bo
 }
 
 // UnmarshalPayload : unmarshals a payload of a kafka message.
-func UnmarshalPayload(data []byte, v interface{}) error {
+func UnmarshalPayload(data []byte, v any) error {
 	err := json.Unmarshal(data, &v)
 	if err != nil {
 		log.Error("unable to parse the payload from json")

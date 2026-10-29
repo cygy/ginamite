@@ -8,7 +8,7 @@ import (
 )
 
 // Handler : must return a message type (string) and the associated payload to send to the notification.
-type Handler func() (string, interface{})
+type Handler func() (string, any)
 
 // Event : settings of an event.
 type Event struct {

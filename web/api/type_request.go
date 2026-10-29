@@ -6,8 +6,8 @@ type Request struct {
 	Endpoint                   string
 	ContentType                string
 	Authenticated              bool
-	Body                       interface{}
-	Response                   interface{}
+	Body                       any
+	Response                   any
 	UseDefaultResponseHandlers bool
 	ResponseHandlers           []ResponseHandlerFunc
 }

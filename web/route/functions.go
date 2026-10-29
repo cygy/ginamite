@@ -120,7 +120,7 @@ func (r *Router) LoadDefaultRoutes() {
 						}
 
 						body, _ := io.ReadAll(c.Request.Body)
-						var res interface{}
+						var res any
 
 						request := api.NewRequest()
 						request.Endpoint = fullEndpoint

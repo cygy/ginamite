@@ -50,7 +50,7 @@ func (page *Page) render(c *gin.Context, httpCode int) {
 }
 
 // Replaces the defined page variables into the string.
-func replaceVars(entry string, vars interface{}) string {
+func replaceVars(entry string, vars any) string {
 	var output bytes.Buffer
 
 	t, err := template.New("_temp").Parse(entry)

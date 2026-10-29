@@ -3,7 +3,7 @@ package user
 import "github.com/gin-gonic/gin"
 
 // GetUsersForAdminFunc : returns the list of the users to display in the admin panel.
-type GetUsersForAdminFunc func(c *gin.Context) (interface{}, error)
+type GetUsersForAdminFunc func(c *gin.Context) (any, error)
 
 // UpdatePasswordByAdminFunc : updates the password  of a user by a admin.
 type UpdatePasswordByAdminFunc func(c *gin.Context, userID, password string) error
@@ -24,7 +24,7 @@ type UpdateSettingsByAdminFunc func(c *gin.Context, userID, locale, timezone str
 type UpdateNotificationsByAdminFunc func(c *gin.Context, userID string, notifications []string) error
 
 // GetTokensForAdminFunc : returns the list of the user's auth tokens to display in the admin panel.
-type GetTokensForAdminFunc func(c *gin.Context, userID string) (interface{}, error)
+type GetTokensForAdminFunc func(c *gin.Context, userID string) (any, error)
 
 // DeleteTokenByIDByAdminFunc : deletes a user's auth token by an admin.
 type DeleteTokenByIDByAdminFunc func(c *gin.Context, tokenID string) error

@@ -47,7 +47,7 @@ func HandleAPICallToPartialPage(c *gin.Context, result api.Result, ok bool) bool
 	}
 
 	if !result.Handled {
-		c.AbortWithStatusJSON(result.StatusCode, map[string]interface{}{"error": result.APIError})
+		c.AbortWithStatusJSON(result.StatusCode, map[string]any{"error": result.APIError})
 	}
 
 	return true

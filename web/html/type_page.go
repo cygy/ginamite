@@ -47,14 +47,14 @@ type Page struct {
 	Key           string            // The key defining the route in the 'routes' file.
 	BetaVersion   bool
 	Production    bool
-	Vars          map[string]interface{} // Common variables to all the pages.
+	Vars          map[string]any // Common variables to all the pages.
 }
 
 // NewPage : returns a new struct *Page
 func NewPage() *Page {
 	page := &Page{}
-	page.Content.Vars = map[string]interface{}{}
-	page.Vars = map[string]interface{}{}
+	page.Content.Vars = map[string]any{}
+	page.Vars = map[string]any{}
 	page.Partial = false
 
 	return page
@@ -81,7 +81,7 @@ func (page *Page) Copy() (copied *Page) {
 		copied.Paths[key] = value
 	}
 
-	copied.Vars = make(map[string]interface{}, len(page.Vars))
+	copied.Vars = make(map[string]any, len(page.Vars))
 	for key, value := range page.Vars {
 		copied.Vars[key] = value
 	}
@@ -125,7 +125,7 @@ func (page *Page) Merge(toMerge Page) {
 
 	if len(toMerge.Vars) > 0 {
 		if page.Vars == nil {
-			page.Vars = make(map[string]interface{}, len(toMerge.Vars))
+			page.Vars = make(map[string]any, len(toMerge.Vars))
 		}
 		for key, value := range toMerge.Vars {
 			page.Vars[key] = value
@@ -257,7 +257,7 @@ func (page *Page) InitializeData(c *gin.Context) {
 	}
 
 	if tokenString, err := c.Cookie(jwtCookieName); err == nil {
-		if token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if token, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 			}

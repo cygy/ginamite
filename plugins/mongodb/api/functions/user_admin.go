@@ -91,7 +91,7 @@ func UpdateUserNotificationsByAdmin(c *gin.Context, userID string, notifications
 }
 
 // GetTokensForAdmin : returns the user's auth tokens for the admin panel.
-func GetTokensForAdmin(c *gin.Context, userID string) (interface{}, error) {
+func GetTokensForAdmin(c *gin.Context, userID string) (any, error) {
 	mongoSession := session.Get(c)
 
 	tokens, err := model.GetAuthTokens(c, userID, mongoSession)

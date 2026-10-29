@@ -131,7 +131,7 @@ func isNumber(n any) bool {
 	return false
 }
 
-// toMap : converts a map (with string keys) or a struct to a new map[string]interface{}.
+// toMap : converts a map (with string keys) or a struct to a new map[string]any.
 func toMap(data any) map[string]any {
 	result := map[string]any{}
 	if data == nil {

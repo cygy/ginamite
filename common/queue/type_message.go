@@ -10,8 +10,8 @@ import (
 
 // Message : struct Message
 type Message struct {
-	Type    string      `json:"type"`
-	Payload interface{} `json:"payload"`
+	Type    string `json:"type"`
+	Payload any    `json:"payload"`
 }
 
 // Decode : decodes a message received.
