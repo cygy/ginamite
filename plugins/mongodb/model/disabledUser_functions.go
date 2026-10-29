@@ -3,10 +3,9 @@ package model
 import (
 	"context"
 
-	"github.com/cygy/ginamite/common/errors"
+	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/document"
 
-	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
@@ -26,7 +25,7 @@ func IsDisabledUserWithEmailAddressExisting(ctx context.Context, emailAddress st
 func IsDisabledUserWithFacebookUserIDExisting(ctx context.Context, userID string, db *mongo.Database) (bool, error) {
 	objectID, err := bson.ObjectIDFromHex(userID)
 	if err != nil {
-		return false, errors.WrongObjectID()
+		return false, err
 	}
 	count, err := document.CountBySelector(ctx, DisabledUserCollection, bson.M{"identificationMethods.facebook.userId": objectID}, db)
 	return count > 0, err
@@ -36,7 +35,7 @@ func IsDisabledUserWithFacebookUserIDExisting(ctx context.Context, userID string
 func IsDisabledUserWithGoogleUserIDExisting(ctx context.Context, userID string, db *mongo.Database) (bool, error) {
 	objectID, err := bson.ObjectIDFromHex(userID)
 	if err != nil {
-		return false, errors.WrongObjectID()
+		return false, err
 	}
 	count, err := document.CountBySelector(ctx, DisabledUserCollection, bson.M{"identificationMethods.google.userId": objectID}, db)
 	return count > 0, err
@@ -52,7 +51,7 @@ func IsDisabledUserWithValidEmailAddressExisting(ctx context.Context, emailAddre
 func DeleteDisabledUserByUserID(ctx context.Context, userID string, db *mongo.Database) error {
 	objectID, err := bson.ObjectIDFromHex(userID)
 	if err != nil {
-		return errors.WrongObjectID()
+		return err
 	}
 	_, err = document.DeleteDocumentsBySelector(ctx, DisabledUserCollection, bson.M{"userId": objectID}, db)
 	return err

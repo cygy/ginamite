@@ -5,12 +5,11 @@ import (
 
 	"github.com/cygy/ginamite/common/authentication"
 	"github.com/cygy/ginamite/common/errors"
+	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/session"
 	"github.com/cygy/ginamite/plugins/mongodb/api/context"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
-
 	"github.com/gin-gonic/gin"
-	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // GetUserDetailsByIdentifier : returns the details of an user by its identifier (email address or username).
@@ -37,7 +36,7 @@ func GetUserDetailsByIdentifier(c *gin.Context, identifier string) (authenticati
 func GetUserDetailsByID(c *gin.Context, userID string) (authentication.User, error) {
 	// Check the userID.
 	if _, err := bson.ObjectIDFromHex(userID); err != nil {
-		return authentication.User{}, errors.WrongObjectID()
+		return authentication.User{}, err
 	}
 
 	cachedUser := context.GetFullUser(c)

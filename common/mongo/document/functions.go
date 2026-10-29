@@ -5,8 +5,8 @@ import (
 
 	"github.com/cygy/ginamite/common/errors"
 	"github.com/cygy/ginamite/common/log"
+	"github.com/cygy/ginamite/common/mongo/bson"
 
-	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
@@ -15,7 +15,7 @@ import (
 func SaveDocument(ctx context.Context, document Document, collection string, db *mongo.Database) (string, error) {
 	objectID := document.GetID()
 	// With mongo-driver, the Hex() of an empty ObjectID is 24 zeros, not "".
-	if len(objectID) == 0 || objectID == bson.NilObjectID.Hex() {
+	if bson.IsNilObjectID(objectID) {
 		objectID = bson.NewObjectID().Hex()
 		if err := document.SetID(objectID); err != nil {
 			return "", err
@@ -82,7 +82,7 @@ func DeleteDocumentsBySelector(ctx context.Context, collection string, selector 
 func GetDocumentByID(ctx context.Context, document Document, collection string, id string, db *mongo.Database) error {
 	objectID, err := bson.ObjectIDFromHex(id)
 	if err != nil {
-		return errors.WrongObjectID()
+		return err
 	}
 
 	err = db.Collection(collection).FindOne(ctx, bson.D{{Key: "_id", Value: objectID}}).Decode(document)

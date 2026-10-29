@@ -4,11 +4,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/cygy/ginamite/common/errors"
+	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/document"
-
 	jwt "github.com/golang-jwt/jwt/v5"
-	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
@@ -18,7 +16,7 @@ func GetAuthTokens(ctx context.Context, userID string, db *mongo.Database) ([]Au
 
 	objectID, err := bson.ObjectIDFromHex(userID)
 	if err != nil {
-		return tokens, errors.WrongObjectID()
+		return tokens, err
 	}
 
 	err = document.GetDocumentsBySelectorAndSort(ctx, &tokens, AuthTokenCollection, bson.M{"userId": objectID}, []string{"userId", "-createdAt"}, db)
@@ -34,7 +32,7 @@ func UserFromAuthToken(token *jwt.Token) (*User, error) {
 	if value, ok := claims["sub"]; ok {
 		objectID, err := bson.ObjectIDFromHex(value.(string))
 		if err != nil {
-			return nil, errors.WrongObjectID()
+			return nil, err
 		}
 		userID = objectID
 	}
@@ -62,7 +60,7 @@ func UserFromAuthToken(token *jwt.Token) (*User, error) {
 func DeleteAuthTokenByID(ctx context.Context, tokenID string, db *mongo.Database) error {
 	objectID, err := bson.ObjectIDFromHex(tokenID)
 	if err != nil {
-		return errors.WrongObjectID()
+		return err
 	}
 	return document.DeleteDocument(ctx, objectID, AuthTokenCollection, db)
 }
@@ -71,7 +69,7 @@ func DeleteAuthTokenByID(ctx context.Context, tokenID string, db *mongo.Database
 func DeleteAuthTokensByUser(ctx context.Context, userID string, db *mongo.Database) (int64, error) {
 	objectID, err := bson.ObjectIDFromHex(userID)
 	if err != nil {
-		return 0, errors.WrongObjectID()
+		return 0, err
 	}
 	return document.DeleteDocumentsBySelector(ctx, AuthTokenCollection, bson.M{"userId": objectID}, db)
 }
@@ -85,7 +83,7 @@ func DeleteExpiredAuthTokens(ctx context.Context, db *mongo.Database) (int64, er
 func IsValidAuthToken(ctx context.Context, tokenID string, db *mongo.Database) (bool, error) {
 	objectID, err := bson.ObjectIDFromHex(tokenID)
 	if err != nil {
-		return false, errors.WrongObjectID()
+		return false, err
 	}
 	count, err := document.CountBySelector(ctx, AuthTokenCollection, bson.D{
 		{Key: "_id", Value: objectID},

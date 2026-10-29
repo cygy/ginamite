@@ -6,9 +6,8 @@ import (
 	"time"
 
 	"github.com/cygy/ginamite/common/authentication"
-	"github.com/cygy/ginamite/common/errors"
+	"github.com/cygy/ginamite/common/mongo/bson"
 
-	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
@@ -45,7 +44,7 @@ func (token *AuthToken) ToToken() authentication.Token {
 func (token *AuthToken) FromToken(t authentication.Token) error {
 	userID, err := bson.ObjectIDFromHex(t.UserID)
 	if err != nil {
-		return errors.WrongObjectID()
+		return err
 	}
 	token.UserID = userID
 	token.Source = t.Source

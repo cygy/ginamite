@@ -4,9 +4,9 @@ import (
 	"context"
 
 	"github.com/cygy/ginamite/common/log"
+	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/notifications"
 
-	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 

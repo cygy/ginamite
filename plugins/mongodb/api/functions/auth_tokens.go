@@ -7,11 +7,10 @@ import (
 
 	"github.com/cygy/ginamite/common/authentication"
 	"github.com/cygy/ginamite/common/errors"
+	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/session"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
-
 	"github.com/gin-gonic/gin"
-	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // BuildTokenFromID : returns the content of an auth token.
@@ -77,7 +76,7 @@ func ExtendTokenExpirationDateFromID(ctx context.Context, tokenID string, ttl ti
 func SaveAuthenticationToken(c *gin.Context, details authentication.Details) (tokenID string, knownIPAddress bool, err error) {
 	userID, err := bson.ObjectIDFromHex(details.UserID)
 	if err != nil {
-		return "", false, errors.WrongObjectID()
+		return "", false, err
 	}
 
 	mongoSession := session.Get(c)
@@ -172,7 +171,7 @@ func GetOwnedTokenByID(c *gin.Context, tokenID string) (any, string, error) {
 func UpdateTokenByID(c *gin.Context, tokenID, name string, enableNotifications bool, notifications []string) error {
 	objectID, err := bson.ObjectIDFromHex(tokenID)
 	if err != nil {
-		return errors.WrongObjectID()
+		return err
 	}
 	mongoSession := session.Get(c)
 

@@ -4,11 +4,10 @@ import (
 	"errors"
 
 	commonErrors "github.com/cygy/ginamite/common/errors"
+	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/session"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
-
 	"github.com/gin-gonic/gin"
-	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // NewForgotPasswordProcessForUser : returns the unique ID of a new forgot passsword process.
@@ -70,7 +69,7 @@ func WrongAccessToForgotPasswordProcess(c *gin.Context, processID string) {
 func DeleteForgotPasswordProcess(c *gin.Context, processID string) error {
 	objectID, err := bson.ObjectIDFromHex(processID)
 	if err != nil {
-		return commonErrors.WrongObjectID()
+		return err
 	}
 
 	mongoSession := session.Get(c)

@@ -4,10 +4,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/cygy/ginamite/common/errors"
+	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/document"
 
-	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
@@ -31,7 +30,7 @@ func NewContact() *Contact {
 
 // IsSaved : returns true if the 'Contact' document if saved in the collection.
 func (contact *Contact) IsSaved() bool {
-	return !contact.ID.IsZero()
+	return bson.IsObjectIDProvided(contact.ID)
 }
 
 // Save : inserts the 'Contact' document in the collection, returns an error if needed.
@@ -63,7 +62,7 @@ func (contact *Contact) GetID() string {
 func (contact *Contact) SetID(id string) error {
 	objectID, err := bson.ObjectIDFromHex(id)
 	if err != nil {
-		return errors.WrongObjectID()
+		return err
 	}
 	contact.ID = objectID
 	return nil

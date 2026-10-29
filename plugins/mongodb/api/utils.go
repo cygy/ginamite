@@ -4,9 +4,8 @@ import (
 	"context"
 
 	"github.com/cygy/ginamite/common/config"
-	"github.com/cygy/ginamite/common/errors"
+	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
-	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
@@ -14,7 +13,7 @@ import (
 func CreateStoredNotification(ctx context.Context, userID, notificationType, data string, image model.PublicImage, locales map[string]model.NotificationLocale, db *mongo.Database) error {
 	objectID, err := bson.ObjectIDFromHex(userID)
 	if err != nil {
-		return errors.WrongObjectID()
+		return err
 	}
 
 	// Create and save the user notifications.

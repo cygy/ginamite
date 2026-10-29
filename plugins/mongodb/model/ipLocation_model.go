@@ -3,10 +3,9 @@ package model
 import (
 	"context"
 
-	"github.com/cygy/ginamite/common/errors"
+	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/document"
 
-	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
@@ -32,7 +31,7 @@ func NewIPLocation() *IPLocation {
 
 // IsSaved : returns true if the 'IPLocation' document if saved in the collection.
 func (IPLocation *IPLocation) IsSaved() bool {
-	return !IPLocation.ID.IsZero()
+	return bson.IsObjectIDProvided(IPLocation.ID)
 }
 
 // Save : inserts the 'IPLocation' document in the collection, returns an error if needed.
@@ -64,7 +63,7 @@ func (IPLocation *IPLocation) GetID() string {
 func (IPLocation *IPLocation) SetID(id string) error {
 	objectID, err := bson.ObjectIDFromHex(id)
 	if err != nil {
-		return errors.WrongObjectID()
+		return err
 	}
 	IPLocation.ID = objectID
 	return nil

@@ -5,8 +5,8 @@ import (
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common/localization"
+	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/gin-gonic/gin"
-	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // VerifyURLParameter : verify that a URL parameter is present and its format.

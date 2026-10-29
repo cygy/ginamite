@@ -3,10 +3,9 @@ package model
 import (
 	"context"
 
-	"github.com/cygy/ginamite/common/errors"
+	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/document"
 
-	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
@@ -22,7 +21,7 @@ type ForgotPasswordProcess struct {
 func NewForgotPasswordProcess(userID string) (*ForgotPasswordProcess, error) {
 	objectID, err := bson.ObjectIDFromHex(userID)
 	if err != nil {
-		return nil, errors.WrongObjectID()
+		return nil, err
 	}
 
 	return &ForgotPasswordProcess{
@@ -33,7 +32,7 @@ func NewForgotPasswordProcess(userID string) (*ForgotPasswordProcess, error) {
 
 // IsSaved : returns true if the 'ForgotPasswordProcess' document if saved in the collection.
 func (fpp *ForgotPasswordProcess) IsSaved() bool {
-	return !fpp.ID.IsZero()
+	return bson.IsObjectIDProvided(fpp.ID)
 }
 
 // Save : inserts the 'ForgotPasswordProcess' document in the collection, returns an error if needed.
@@ -65,7 +64,7 @@ func (fpp *ForgotPasswordProcess) GetID() string {
 func (fpp *ForgotPasswordProcess) SetID(id string) error {
 	objectID, err := bson.ObjectIDFromHex(id)
 	if err != nil {
-		return errors.WrongObjectID()
+		return err
 	}
 	fpp.ID = objectID
 	return nil

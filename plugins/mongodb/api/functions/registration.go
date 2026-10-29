@@ -3,16 +3,14 @@ package functions
 import (
 	"errors"
 
-	commonErrors "github.com/cygy/ginamite/common/errors"
 	"github.com/cygy/ginamite/common/queue"
 
 	"github.com/cygy/ginamite/api/validator"
 	"github.com/cygy/ginamite/common/authentication"
+	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/session"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
-
 	"github.com/gin-gonic/gin"
-	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // RegisterByEmailAddress : saves the registration details of an user.
@@ -33,7 +31,7 @@ func RegisterByThirdPartyToken(c *gin.Context, username string, tokenInfos valid
 func ValidateUserRegistration(c *gin.Context, userID, registrationKey string) error {
 	// Check the userID.
 	if _, err := bson.ObjectIDFromHex(userID); err != nil {
-		return commonErrors.WrongObjectID()
+		return err
 	}
 
 	mongoSession := session.Get(c)
@@ -59,7 +57,7 @@ func ValidateUserRegistration(c *gin.Context, userID, registrationKey string) er
 func CancelUserRegistration(c *gin.Context, userID, registrationKey string) error {
 	// Check the userID.
 	if _, err := bson.ObjectIDFromHex(userID); err != nil {
-		return commonErrors.WrongObjectID()
+		return err
 	}
 
 	mongoSession := session.Get(c)
@@ -89,7 +87,7 @@ func CancelUserRegistration(c *gin.Context, userID, registrationKey string) erro
 func GetRegistrationDetails(c *gin.Context, userID string) (*authentication.Details, error) {
 	// Check the userID.
 	if _, err := bson.ObjectIDFromHex(userID); err != nil {
-		return nil, commonErrors.WrongObjectID()
+		return nil, err
 	}
 
 	mongoSession := session.Get(c)

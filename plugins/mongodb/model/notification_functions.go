@@ -3,10 +3,9 @@ package model
 import (
 	"context"
 
-	"github.com/cygy/ginamite/common/errors"
+	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/document"
 
-	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
@@ -16,7 +15,7 @@ func GetUserNotifications(ctx context.Context, userID string, db *mongo.Database
 
 	objectID, err := bson.ObjectIDFromHex(userID)
 	if err != nil {
-		return notifications, errors.WrongObjectID()
+		return notifications, err
 	}
 
 	err = document.GetDocumentsBySelectorAndSort(ctx, &notifications, NotificationCollection, bson.M{"userId": objectID}, []string{"userId", "-createdAt"}, db)
@@ -27,7 +26,7 @@ func GetUserNotifications(ctx context.Context, userID string, db *mongo.Database
 func GetCountOfUserNotifications(ctx context.Context, userID string, db *mongo.Database) (int64, error) {
 	objectID, err := bson.ObjectIDFromHex(userID)
 	if err != nil {
-		return 0, errors.WrongObjectID()
+		return 0, err
 	}
 
 	return document.CountBySelector(ctx, NotificationCollection, bson.M{"userId": objectID}, db)
@@ -37,7 +36,7 @@ func GetCountOfUserNotifications(ctx context.Context, userID string, db *mongo.D
 func GetCountOfUserUnreadNotifications(ctx context.Context, userID string, db *mongo.Database) (int64, error) {
 	objectID, err := bson.ObjectIDFromHex(userID)
 	if err != nil {
-		return 0, errors.WrongObjectID()
+		return 0, err
 	}
 
 	return document.CountBySelector(ctx, NotificationCollection, bson.D{
@@ -50,7 +49,7 @@ func GetCountOfUserUnreadNotifications(ctx context.Context, userID string, db *m
 func GetOldestUserNotifications(ctx context.Context, userID string, offset int64, db *mongo.Database) ([]bson.ObjectID, error) {
 	objectID, err := bson.ObjectIDFromHex(userID)
 	if err != nil {
-		return []bson.ObjectID{}, errors.WrongObjectID()
+		return []bson.ObjectID{}, err
 	}
 
 	notifications := []Notification{}

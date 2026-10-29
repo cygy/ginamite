@@ -5,11 +5,10 @@ import (
 	"fmt"
 
 	"github.com/cygy/ginamite/common/authentication"
-	"github.com/cygy/ginamite/common/errors"
+	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/document"
 	"github.com/cygy/ginamite/common/random"
 
-	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
@@ -28,7 +27,7 @@ type UpdatePropertyProcess struct {
 func NewUpdatePropertyProcess(userID, t, value string) (*UpdatePropertyProcess, error) {
 	objectID, err := bson.ObjectIDFromHex(userID)
 	if err != nil {
-		return nil, errors.WrongObjectID()
+		return nil, err
 	}
 
 	return &UpdatePropertyProcess{
@@ -68,7 +67,7 @@ func NewDisableAccountProcess(userID string) (*UpdatePropertyProcess, error) {
 
 // IsSaved : returns true if the 'UpdatePropertyProcess' document if saved in the collection.
 func (process *UpdatePropertyProcess) IsSaved() bool {
-	return !process.ID.IsZero()
+	return bson.IsObjectIDProvided(process.ID)
 }
 
 // Save : inserts the 'UpdatePropertyProcess' document in the collection, returns an error if needed.
@@ -100,7 +99,7 @@ func (process *UpdatePropertyProcess) GetID() string {
 func (process *UpdatePropertyProcess) SetID(id string) error {
 	objectID, err := bson.ObjectIDFromHex(id)
 	if err != nil {
-		return errors.WrongObjectID()
+		return err
 	}
 
 	process.ID = objectID

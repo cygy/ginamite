@@ -4,10 +4,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/cygy/ginamite/common/errors"
+	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/document"
 
-	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
@@ -58,7 +57,7 @@ func NewDisabledUser(user *User) *DisabledUser {
 
 // IsSaved : returns true if the 'DisabledUser' document if saved in the collection.
 func (user *DisabledUser) IsSaved() bool {
-	return !user.ID.IsZero()
+	return bson.IsObjectIDProvided(user.ID)
 }
 
 // Save : inserts the 'DisabledUser' document in the collection, returns an error if needed.
@@ -90,7 +89,7 @@ func (user *DisabledUser) GetID() string {
 func (user *DisabledUser) SetID(id string) error {
 	objectID, err := bson.ObjectIDFromHex(id)
 	if err != nil {
-		return errors.WrongObjectID()
+		return err
 	}
 	user.ID = objectID
 	return nil

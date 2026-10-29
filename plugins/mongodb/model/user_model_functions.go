@@ -6,9 +6,9 @@ import (
 
 	"github.com/cygy/ginamite/common/authentication"
 	"github.com/cygy/ginamite/common/errors"
+	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/document"
 
-	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
@@ -36,7 +36,7 @@ func (user *User) GetByGoogleUserID(ctx context.Context, userID string, db *mong
 func (user *User) GetByIDAndNotification(ctx context.Context, userID, notificationType string, db *mongo.Database) error {
 	objectID, err := bson.ObjectIDFromHex(userID)
 	if err != nil {
-		return errors.WrongObjectID()
+		return err
 	}
 	return document.GetDocumentBySelector(ctx, user, UserCollection, bson.D{
 		{Key: "_id", Value: objectID},

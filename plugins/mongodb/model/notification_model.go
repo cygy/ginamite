@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/cygy/ginamite/common/errors"
+	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/document"
-	"go.mongodb.org/mongo-driver/v2/bson"
+
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
@@ -41,7 +41,7 @@ func NewNotification() *Notification {
 
 // IsSaved : returns true if the 'Notification' document if saved in the collection.
 func (notification *Notification) IsSaved() bool {
-	return !notification.ID.IsZero()
+	return bson.IsObjectIDProvided(notification.ID)
 }
 
 // Save : inserts the 'Notification' document in the collection, returns an error if needed.
@@ -73,7 +73,7 @@ func (notification *Notification) GetID() string {
 func (notification *Notification) SetID(id string) error {
 	objectID, err := bson.ObjectIDFromHex(id)
 	if err != nil {
-		return errors.WrongObjectID()
+		return err
 	}
 
 	notification.ID = objectID

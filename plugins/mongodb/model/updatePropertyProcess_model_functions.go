@@ -4,10 +4,9 @@ import (
 	"context"
 
 	"github.com/cygy/ginamite/common/authentication"
-	"github.com/cygy/ginamite/common/errors"
+	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/document"
 
-	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
@@ -15,7 +14,7 @@ import (
 func (process *UpdatePropertyProcess) GetByUserIDAndType(ctx context.Context, userID, t string, db *mongo.Database) error {
 	objectID, err := bson.ObjectIDFromHex(userID)
 	if err != nil {
-		return errors.WrongObjectID()
+		return err
 	}
 	return document.GetDocumentBySelector(ctx, process, UpdatePropertyProcessCollection, bson.D{
 		{Key: "userId", Value: objectID},

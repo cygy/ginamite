@@ -5,21 +5,19 @@ import (
 
 	apiContext "github.com/cygy/ginamite/api/context"
 	"github.com/cygy/ginamite/common/config"
-	commonErrors "github.com/cygy/ginamite/common/errors"
+	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/session"
 	"github.com/cygy/ginamite/common/notifications"
 	"github.com/cygy/ginamite/plugins/mongodb/api/context"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
-
 	"github.com/gin-gonic/gin"
-	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // NotificationsReceivedByUser : returns the latest notifications received by the user.
 func NotificationsReceivedByUser(c *gin.Context, userID string) (any, error) {
 	// Check the userID.
 	if _, err := bson.ObjectIDFromHex(userID); err != nil {
-		return nil, commonErrors.WrongObjectID()
+		return nil, err
 	}
 
 	mongoSession := session.Get(c)
@@ -70,7 +68,7 @@ func UpdateUserNotificationRead(c *gin.Context, userID, notificationID string) e
 
 	objectID, err := bson.ObjectIDFromHex(userID)
 	if err != nil {
-		return commonErrors.WrongObjectID()
+		return err
 	}
 	user := model.User{}
 	user.ID = objectID
@@ -110,7 +108,7 @@ func DeleteUserNotification(c *gin.Context, userID, notificationID string) error
 
 	objectID, err := bson.ObjectIDFromHex(userID)
 	if err != nil {
-		return commonErrors.WrongObjectID()
+		return err
 	}
 
 	// Update the count of user notifications, total and unread.
@@ -141,7 +139,7 @@ func SubscribeNotificationsToUser(c *gin.Context, userID string, notifications [
 func UnsubscribeNotificationFromUser(c *gin.Context, userID, notification, unsubscribeKey string) error {
 	// Check the userID.
 	if _, err := bson.ObjectIDFromHex(userID); err != nil {
-		return commonErrors.WrongObjectID()
+		return err
 	}
 
 	// Check the encoded key.

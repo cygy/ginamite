@@ -4,8 +4,8 @@ import (
 	"github.com/cygy/ginamite/api/context"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common/localization"
+	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/gin-gonic/gin"
-	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 func checkNotificationID(c *gin.Context, messageKey string) (string, bool) {

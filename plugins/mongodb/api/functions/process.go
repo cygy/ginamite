@@ -2,11 +2,10 @@ package functions
 
 import (
 	"github.com/cygy/ginamite/common/errors"
+	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/session"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
-
 	"github.com/gin-gonic/gin"
-	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // CreateNewDeleteAccountProcess : creates a process and returns its unique ID.
@@ -127,7 +126,7 @@ func CreateNewVerifyEmailAddressProcess(c *gin.Context, userID string) (string, 
 // VerifyProcess : verify a process and returns its unique ID and its stored value.
 func VerifyProcess(c *gin.Context, processID, key string) (string, string, error) {
 	if _, err := bson.ObjectIDFromHex(processID); err != nil {
-		return "", "", errors.WrongObjectID()
+		return "", "", err
 	}
 
 	mongoSession := session.Get(c)
@@ -154,7 +153,7 @@ func VerifyProcess(c *gin.Context, processID, key string) (string, string, error
 func DeleteProcessByID(c *gin.Context, processID string) error {
 	objectID, err := bson.ObjectIDFromHex(processID)
 	if err != nil {
-		return errors.WrongObjectID()
+		return err
 	}
 
 	mongoSession := session.Get(c)

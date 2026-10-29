@@ -2,19 +2,17 @@ package functions
 
 import (
 	"github.com/cygy/ginamite/api/validator"
-	"github.com/cygy/ginamite/common/errors"
+	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/session"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
-
 	"github.com/gin-gonic/gin"
-	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // SaveFacebookUserTokenDetailsToUser : saves the user's facebook details of an user.
 func SaveFacebookUserTokenDetailsToUser(c *gin.Context, userID string, tokenInfos validator.TokenInfos) error {
 	// Check the userID.
 	if _, err := bson.ObjectIDFromHex(userID); err != nil {
-		return errors.WrongObjectID()
+		return err
 	}
 
 	mongoSession := session.Get(c)
@@ -31,7 +29,7 @@ func SaveFacebookUserTokenDetailsToUser(c *gin.Context, userID string, tokenInfo
 func SaveGoogleUserTokenDetailsToUser(c *gin.Context, userID string, tokenInfos validator.TokenInfos) error {
 	// Check the userID.
 	if _, err := bson.ObjectIDFromHex(userID); err != nil {
-		return errors.WrongObjectID()
+		return err
 	}
 
 	mongoSession := session.Get(c)

@@ -4,10 +4,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/cygy/ginamite/common/errors"
+	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/document"
 
-	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
@@ -22,7 +21,7 @@ type DeletedUser struct {
 func NewDeletedUser(userID string) (*DeletedUser, error) {
 	objectID, err := bson.ObjectIDFromHex(userID)
 	if err != nil {
-		return nil, errors.WrongObjectID()
+		return nil, err
 	}
 	return &DeletedUser{
 		UserID:    objectID,
@@ -32,7 +31,7 @@ func NewDeletedUser(userID string) (*DeletedUser, error) {
 
 // IsSaved : returns true if the 'DeletedUser' document if saved in the collection.
 func (deletedUser *DeletedUser) IsSaved() bool {
-	return !deletedUser.ID.IsZero()
+	return bson.IsObjectIDProvided(deletedUser.ID)
 }
 
 // Save : inserts the 'DeletedUser' document in the collection, returns an error if needed.
@@ -64,7 +63,7 @@ func (deletedUser *DeletedUser) GetID() string {
 func (deletedUser *DeletedUser) SetID(id string) error {
 	objectID, err := bson.ObjectIDFromHex(id)
 	if err != nil {
-		return errors.WrongObjectID()
+		return err
 	}
 	deletedUser.ID = objectID
 	return nil

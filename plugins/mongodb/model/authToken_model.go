@@ -4,10 +4,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/cygy/ginamite/common/errors"
+	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/document"
 
-	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
@@ -33,7 +32,7 @@ func NewAuthToken() *AuthToken {
 
 // IsSaved : returns true if the 'AuthToken' document if saved in the collection.
 func (token *AuthToken) IsSaved() bool {
-	return !token.ID.IsZero()
+	return bson.IsObjectIDProvided(token.ID)
 }
 
 // Save : inserts the 'AuthToken' document in the collection, returns an error if needed.
@@ -65,7 +64,7 @@ func (token *AuthToken) GetID() string {
 func (token *AuthToken) SetID(id string) error {
 	objectID, err := bson.ObjectIDFromHex(id)
 	if err != nil {
-		return errors.WrongObjectID()
+		return err
 	}
 	token.ID = objectID
 	return nil

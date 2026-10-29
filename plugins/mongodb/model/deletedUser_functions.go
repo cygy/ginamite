@@ -3,10 +3,9 @@ package model
 import (
 	"context"
 
-	"github.com/cygy/ginamite/common/errors"
+	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/document"
 
-	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
@@ -14,7 +13,7 @@ import (
 func DeleteDeletedUserByUserID(ctx context.Context, userID string, db *mongo.Database) error {
 	objectID, err := bson.ObjectIDFromHex(userID)
 	if err != nil {
-		return errors.WrongObjectID()
+		return err
 	}
 	_, err = document.DeleteDocumentsBySelector(ctx, DeletedUserCollection, bson.M{"userId": objectID}, db)
 	return err
