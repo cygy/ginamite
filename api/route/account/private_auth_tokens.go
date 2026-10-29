@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/cygy/ginamite/api/context"
+	ctxLocale "github.com/cygy/ginamite/api/context/locale"
+	ctxUser "github.com/cygy/ginamite/api/context/user"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common/authentication"
 	"github.com/cygy/ginamite/common/config"
@@ -21,7 +22,7 @@ import (
 )
 
 func deleteAuthenticationToken(c *gin.Context, checkKey bool) {
-	locale := context.GetLocale(c)
+	locale := ctxLocale.GetLocale(c)
 	t := localization.Translate(locale)
 
 	// Closure to send an invalid request error.
@@ -70,7 +71,7 @@ func deleteAuthenticationToken(c *gin.Context, checkKey bool) {
 	}
 
 	// Verify the key or the user and delete the token.
-	userID := context.GetUserID(c)
+	userID := ctxUser.GetUserID(c)
 	if (!checkKey && userID != token.UserID) || (checkKey && tokenKey != token.PrivateKey) {
 		sendError()
 		return

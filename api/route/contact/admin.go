@@ -3,8 +3,7 @@ package contact
 import (
 	"errors"
 
-	"github.com/cygy/ginamite/api/context"
-	"github.com/cygy/ginamite/api/middleware"
+	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common/localization"
@@ -19,8 +18,8 @@ func GetAdminContacts(c *gin.Context) {
 		return
 	}
 
-	offset := middleware.GetOffsetFromRequest(c)
-	limit := middleware.GetLimitFromRequest(c)
+	offset := request.GetOffsetFromRequest(c)
+	limit := request.GetLimitFromRequest(c)
 
 	contacts, err := GetContacts(c, offset, limit)
 	if err != nil {
@@ -75,7 +74,7 @@ func Update(c *gin.Context) {
 		return
 	}
 
-	locale := context.GetLocale(c)
+	locale := ctxLocale.GetLocale(c)
 	t := localization.Translate(locale)
 
 	response.OkWithStatus(c, t("status.admin.contact.updated"))

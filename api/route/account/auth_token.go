@@ -5,7 +5,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cygy/ginamite/api/context"
+	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
+	ctxLocale "github.com/cygy/ginamite/api/context/locale"
+	ctxUser "github.com/cygy/ginamite/api/context/user"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/api/validator"
@@ -38,7 +40,7 @@ func LoginWithPassword(c *gin.Context) {
 	}
 	request.DecodeBody(c, &jsonBody)
 
-	locale := context.GetLocale(c)
+	locale := ctxLocale.GetLocale(c)
 	t := localization.Translate(locale)
 
 	// Identifier is mandatory.
@@ -115,7 +117,7 @@ func Logout(c *gin.Context) {
 		return
 	}
 
-	tokenID := context.GetAuthTokenID(c)
+	tokenID := ctxAuthToken.GetAuthTokenID(c)
 
 	expirationDate := time.Now().Add(time.Duration(config.Main.JWT.TTL) * time.Second)
 	if GetTokenExpirationDate != nil {
@@ -146,7 +148,7 @@ func GetAuthTokens(c *gin.Context) {
 		return
 	}
 
-	userID := context.GetUserID(c)
+	userID := ctxUser.GetUserID(c)
 
 	tokens, err := GetOwnedTokens(c, userID)
 	if err != nil {
@@ -185,7 +187,7 @@ func GetAuthToken(c *gin.Context) {
 		return
 	}
 
-	userID := context.GetUserID(c)
+	userID := ctxUser.GetUserID(c)
 	if tokenOwnerID != userID {
 		response.NotFound(c)
 		return
@@ -210,7 +212,7 @@ func UpdateAuthToken(c *gin.Context) {
 		return
 	}
 
-	locale := context.GetLocale(c)
+	locale := ctxLocale.GetLocale(c)
 	t := localization.Translate(locale)
 
 	tokenID := c.Param("id")
@@ -251,7 +253,7 @@ func UpdateAuthToken(c *gin.Context) {
 		return
 	}
 
-	userID := context.GetUserID(c)
+	userID := ctxUser.GetUserID(c)
 	if token.UserID != userID {
 		response.NotFound(c)
 		return
@@ -267,11 +269,11 @@ func UpdateAuthToken(c *gin.Context) {
 
 // RefreshAuthToken : refreshes a auth token.
 func RefreshAuthToken(c *gin.Context) {
-	tokenID := context.GetAuthTokenID(c)
+	tokenID := ctxAuthToken.GetAuthTokenID(c)
 
 	signedToken, err := authentication.RefreshAuthToken(c, config.Main.JWT.Secret, config.Main.JWT.SigningMethod, tokenID, time.Duration(config.Main.JWT.TTL))
 	if err != nil {
-		locale := context.GetLocale(c)
+		locale := ctxLocale.GetLocale(c)
 		t := localization.Translate(locale)
 
 		response.BadRequestWithError(c, res.Error{

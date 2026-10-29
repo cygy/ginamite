@@ -3,7 +3,7 @@ package account
 import (
 	"errors"
 
-	"github.com/cygy/ginamite/api/context"
+	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/api/validator"
@@ -29,7 +29,7 @@ func loginWithThirdParty(c *gin.Context, v validator.TokenValidator) {
 	isFacebookMethod := (authenticationMethod == authentication.MethodFacebook)
 	isGoogleMethod := (authenticationMethod == authentication.MethodGoogle)
 
-	locale := context.GetLocale(c)
+	locale := ctxLocale.GetLocale(c)
 	t := localization.Translate(locale)
 
 	errorMessageKey := "error.login.unable.message"
@@ -146,7 +146,7 @@ func canNotLoginError(c *gin.Context, err error) {
 		c.Error(err)
 	}
 
-	locale := context.GetLocale(c)
+	locale := ctxLocale.GetLocale(c)
 	t := localization.Translate(locale)
 
 	response.BadRequestWithError(c, res.Error{

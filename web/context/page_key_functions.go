@@ -1,8 +1,6 @@
 package context
 
-import (
-	"github.com/gin-gonic/gin"
-)
+import "github.com/gin-gonic/gin"
 
 // SavePageKey : saves the unique key of the target page to the context.
 func SavePageKey(pageKey string) gin.HandlerFunc {

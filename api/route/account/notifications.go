@@ -4,7 +4,9 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/cygy/ginamite/api/context"
+	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
+	ctxLocale "github.com/cygy/ginamite/api/context/locale"
+	ctxUser "github.com/cygy/ginamite/api/context/user"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common/localization"
@@ -21,7 +23,7 @@ func GetNotifications(c *gin.Context) {
 		return
 	}
 
-	userID := context.GetUserID(c)
+	userID := ctxUser.GetUserID(c)
 
 	notifications, err := NotificationsReceivedByUser(c, userID)
 	if err != nil {
@@ -49,7 +51,7 @@ func GetNotification(c *gin.Context) {
 		return
 	}
 
-	userID := context.GetUserID(c)
+	userID := ctxUser.GetUserID(c)
 
 	notification, err := NotificationReceivedByUser(c, userID, notificationID)
 	if err != nil {
@@ -75,7 +77,7 @@ func UpdateNotificationRead(c *gin.Context) {
 	if UpdateUserNotificationRead == nil {
 		err = c.Error(errors.New("undefined function 'UpdateUserNotificationRead'"))
 	} else {
-		userID := context.GetUserID(c)
+		userID := ctxUser.GetUserID(c)
 		err = UpdateUserNotificationRead(c, userID, notificationID)
 	}
 
@@ -85,9 +87,9 @@ func UpdateNotificationRead(c *gin.Context) {
 	}
 
 	// The auth token is updated too with the latest properties of the user.
-	context.RefreshAuthToken(c)
+	ctxAuthToken.RefreshAuthToken(c)
 
-	locale := context.GetLocale(c)
+	locale := ctxLocale.GetLocale(c)
 	response.OkWithStatus(c, localization.Translate(locale)("status.account.notification.read.updated"))
 }
 
@@ -104,7 +106,7 @@ func UpdateNotificationNotified(c *gin.Context) {
 	if UpdateUserNotificationNotified == nil {
 		err = c.Error(errors.New("undefined function 'UpdateUserNotificationNotified'"))
 	} else {
-		userID := context.GetUserID(c)
+		userID := ctxUser.GetUserID(c)
 		err = UpdateUserNotificationNotified(c, userID, notificationID)
 	}
 
@@ -113,7 +115,7 @@ func UpdateNotificationNotified(c *gin.Context) {
 		return
 	}
 
-	locale := context.GetLocale(c)
+	locale := ctxLocale.GetLocale(c)
 	response.OkWithStatus(c, localization.Translate(locale)("status.account.notification.notified.updated"))
 }
 
@@ -130,7 +132,7 @@ func DeleteNotification(c *gin.Context) {
 	if DeleteUserNotification == nil {
 		err = c.Error(errors.New("undefined function 'DeleteUserNotification'"))
 	} else {
-		userID := context.GetUserID(c)
+		userID := ctxUser.GetUserID(c)
 		err = DeleteUserNotification(c, userID, notificationID)
 	}
 
@@ -140,9 +142,9 @@ func DeleteNotification(c *gin.Context) {
 	}
 
 	// The auth token is updated too with the latest properties of the user.
-	context.RefreshAuthToken(c)
+	ctxAuthToken.RefreshAuthToken(c)
 
-	locale := context.GetLocale(c)
+	locale := ctxLocale.GetLocale(c)
 	response.OkWithStatus(c, localization.Translate(locale)("status.account.notification.deleted"))
 }
 
@@ -154,7 +156,7 @@ func GetNotificationsSettings(c *gin.Context) {
 		return
 	}
 
-	userID := context.GetUserID(c)
+	userID := ctxUser.GetUserID(c)
 	userNotifications := NotificationsSubscribedByUser(c, userID)
 	response.Ok(c, response.H{
 		"notifications": userNotifications,
@@ -174,7 +176,7 @@ func SaveNotificationsSettings(c *gin.Context) {
 	}
 	request.DecodeBody(c, &jsonBody)
 
-	locale := context.GetLocale(c)
+	locale := ctxLocale.GetLocale(c)
 	t := localization.Translate(locale)
 
 	notificationsToSave := jsonBody.Notifications
@@ -189,7 +191,7 @@ func SaveNotificationsSettings(c *gin.Context) {
 		}
 	}
 
-	userID := context.GetUserID(c)
+	userID := ctxUser.GetUserID(c)
 	if err := SubscribeNotificationsToUser(c, userID, notificationsToSave); err != nil {
 		response.InternalServerError(c)
 		return
@@ -200,7 +202,7 @@ func SaveNotificationsSettings(c *gin.Context) {
 
 // UnsubscribeNotificationByKey : unsubscribes from an encrypted key.
 func UnsubscribeNotificationByKey(c *gin.Context) {
-	locale := context.GetLocale(c)
+	locale := ctxLocale.GetLocale(c)
 	t := localization.Translate(locale)
 
 	// The same error is always sent to avoid giving some clues.

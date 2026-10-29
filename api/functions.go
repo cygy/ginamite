@@ -6,8 +6,8 @@ import (
 
 	"github.com/cygy/ginamite/api/route/contact"
 
-	"github.com/cygy/ginamite/api/cache"
-	"github.com/cygy/ginamite/api/context"
+	cache "github.com/cygy/ginamite/api/cache/authtoken"
+	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/route"
 	"github.com/cygy/ginamite/api/route/account"
 	"github.com/cygy/ginamite/api/route/terms"
@@ -48,7 +48,6 @@ func (s *Server) CreateKafkaConsumers() []kafka.MessageConsumer {
 				p := queue.CacheAuthToken{}
 				queue.UnmarshalPayload(payload, &p)
 				cache.AddRevokedAuthTokens(p.Tokens)
-				break
 			default:
 				if s.Functions.NewMessageFromQueueCache == nil || !s.Functions.NewMessageFromQueueCache(msgType) {
 					log.WithFields(logrus.Fields{
@@ -170,7 +169,7 @@ func (s *Server) Start() {
 	if config.Main.IsMongoDBDatabase() {
 		server.Use(mongo.Inject())
 	}
-	server.Use(context.InjectLocale(config.Main.DefaultLocale, config.Main.SupportedLocales))
+	server.Use(ctxLocale.InjectLocale(config.Main.DefaultLocale, config.Main.SupportedLocales))
 
 	// Load the templates.
 	html.LoadTemplatesWithDelimiters(config.Main.TemplatesPath+"/html", "[[", "]]", server)

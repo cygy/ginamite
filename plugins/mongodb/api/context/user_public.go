@@ -1,7 +1,7 @@
 package context
 
 import (
-	"github.com/cygy/ginamite/api/context"
+	ctxUser "github.com/cygy/ginamite/api/context/user"
 	"github.com/cygy/ginamite/common/mongo/session"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
 
@@ -10,7 +10,7 @@ import (
 
 // GetUser : returns a cached user struct from the context.
 func GetUser(c *gin.Context) model.User {
-	return context.GetUser(c).(model.User)
+	return ctxUser.GetUser(c).(model.User)
 }
 
 // GetFullUser : returns the user from the dabatase.
@@ -22,7 +22,7 @@ func GetFullUser(c *gin.Context) *model.User {
 
 	// Get the user from the database.
 	mongoSession := session.Get(c)
-	userID := context.GetUserID(c)
+	userID := ctxUser.GetUserID(c)
 
 	user := &model.User{}
 	if err := user.GetByID(c, userID, mongoSession); err != nil || !user.IsSaved() {

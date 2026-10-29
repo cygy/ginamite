@@ -3,7 +3,8 @@ package account
 import (
 	"errors"
 
-	"github.com/cygy/ginamite/api/context"
+	ctxLocale "github.com/cygy/ginamite/api/context/locale"
+	ctxUser "github.com/cygy/ginamite/api/context/user"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common/authentication"
@@ -33,7 +34,7 @@ func UpdatePassword(c *gin.Context) {
 	}
 	request.DecodeBody(c, &jsonBody)
 
-	locale := context.GetLocale(c)
+	locale := ctxLocale.GetLocale(c)
 	t := localization.Translate(locale)
 
 	// Password is mandatory.
@@ -48,7 +49,7 @@ func UpdatePassword(c *gin.Context) {
 		return
 	}
 
-	userID := context.GetUserID(c)
+	userID := ctxUser.GetUserID(c)
 	user, err := GetUserDetailsByID(c, userID)
 	if err != nil {
 		response.InternalServerError(c)

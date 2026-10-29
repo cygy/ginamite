@@ -4,7 +4,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/cygy/ginamite/api/context"
+	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/api/route/account"
@@ -66,7 +66,7 @@ func AdminUpdatePassword(c *gin.Context) {
 	}
 	request.DecodeBody(c, &jsonBody)
 
-	locale := context.GetLocale(c)
+	locale := ctxLocale.GetLocale(c)
 	t := localization.Translate(locale)
 
 	// Password is mandatory.
@@ -107,7 +107,7 @@ func AdminUpdateInformations(c *gin.Context) {
 	}
 	request.DecodeBody(c, &jsonBody)
 
-	locale := context.GetLocale(c)
+	locale := ctxLocale.GetLocale(c)
 	t := localization.Translate(locale)
 
 	// EmailAddress is mandatory.
@@ -156,7 +156,7 @@ func AdminUpdateDescription(c *gin.Context) {
 	}
 	request.DecodeBody(c, &jsonBody)
 
-	locale := context.GetLocale(c)
+	locale := ctxLocale.GetLocale(c)
 	t := localization.Translate(locale)
 
 	// Locale is mandatory.
@@ -202,7 +202,7 @@ func AdminUpdateSocial(c *gin.Context) {
 	}
 	request.DecodeBody(c, &jsonBody)
 
-	locale := context.GetLocale(c)
+	locale := ctxLocale.GetLocale(c)
 	t := localization.Translate(locale)
 
 	// The facebook profile must begin with a valid url.
@@ -269,7 +269,7 @@ func AdminUpdateSettings(c *gin.Context) {
 	}
 	request.DecodeBody(c, &jsonBody)
 
-	locale := context.GetLocale(c)
+	locale := ctxLocale.GetLocale(c)
 	t := localization.Translate(locale)
 
 	// Locale is mandatory.
@@ -333,7 +333,7 @@ func AdminUpdateNotifications(c *gin.Context) {
 	}
 	request.DecodeBody(c, &jsonBody)
 
-	locale := context.GetLocale(c)
+	locale := ctxLocale.GetLocale(c)
 	t := localization.Translate(locale)
 
 	notificationsToSave := jsonBody.Notifications
@@ -416,7 +416,7 @@ func AdminDeleteUserToken(c *gin.Context) {
 		queue.InvalidAuthToken(tokenID, token.ExpirationDate)
 	}
 
-	locale := context.GetLocale(c)
+	locale := ctxLocale.GetLocale(c)
 	response.OkWithStatus(c, localization.Translate(locale)("status.admin.user.token.deleted"))
 }
 
@@ -464,7 +464,7 @@ func AdminDelete(c *gin.Context) {
 		Locale:       user.Locale,
 	})
 
-	locale := context.GetLocale(c)
+	locale := ctxLocale.GetLocale(c)
 	t := localization.Translate(locale)
 
 	response.OkWithStatus(c, t("status.admin.account.deleted"))
@@ -493,7 +493,7 @@ func AdminDisable(c *gin.Context) {
 		Locale:       user.Locale,
 	})
 
-	locale := context.GetLocale(c)
+	locale := ctxLocale.GetLocale(c)
 	t := localization.Translate(locale)
 
 	response.OkWithStatus(c, t("status.admin.account.disabled"))
@@ -522,7 +522,7 @@ func AdminEnable(c *gin.Context) {
 		Locale:       user.Locale,
 	})
 
-	locale := context.GetLocale(c)
+	locale := ctxLocale.GetLocale(c)
 	t := localization.Translate(locale)
 
 	response.OkWithStatus(c, t("status.admin.account.enabled"))

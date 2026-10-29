@@ -1,7 +1,7 @@
 package api
 
 import (
-	"github.com/cygy/ginamite/api/context"
+	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
 	"github.com/cygy/ginamite/api/rights"
 	"github.com/cygy/ginamite/api/route"
 	"github.com/cygy/ginamite/api/route/account"
@@ -23,10 +23,10 @@ type Server struct {
 type Handlers struct {
 	RecurringTasks                                                func()
 	NewMessageFromQueueCache                                      func(message string) bool
-	MiddlewareIsValidAuthToken                                    context.IsAuthTokenValidFunc
-	MiddlewareGetUserAndLocaleFromAuthToken                       context.GetUserAndLocaleFromAuthTokenFunc
+	MiddlewareIsValidAuthToken                                    ctxAuthToken.IsAuthTokenValidFunc
+	MiddlewareGetUserAndLocaleFromAuthToken                       ctxAuthToken.GetUserAndLocaleFromAuthTokenFunc
 	MiddlewareGetUserAbilities                                    rights.GetUserAbilitesFunc
-	MiddlewareGetLatestVersionOfTermsAcceptedByUser               context.GetLatestVersionOfTermsAcceptedByUserFunc
+	MiddlewareGetLatestVersionOfTermsAcceptedByUser               terms.GetLatestVersionOfTermsAcceptedByUserFunc
 	BuildTokenFromID                                              authentication.BuildTokenFunc
 	ExtraPropertiesForTokenWithID                                 authentication.ExtraPropertiesForTokenWithIDFunc
 	ExtendTokenExpirationDateFromID                               authentication.ExtendTokenExpirationDateFunc

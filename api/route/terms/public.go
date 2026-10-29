@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/cygy/ginamite/api/context"
+	ctxLocale "github.com/cygy/ginamite/api/context/locale"
+	ctxUser "github.com/cygy/ginamite/api/context/user"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common/config"
@@ -18,7 +19,7 @@ import (
 
 // GetTerms returns the current terms and version.
 func GetTerms(c *gin.Context) {
-	locale := context.GetLocale(c)
+	locale := ctxLocale.GetLocale(c)
 	version := config.Main.Terms.Version
 	filename := fmt.Sprintf("%s/%s", version, locale)
 
@@ -61,7 +62,7 @@ func AcceptTerms(c *gin.Context) {
 	}
 	request.DecodeBody(c, &jsonBody)
 
-	locale := context.GetLocale(c)
+	locale := ctxLocale.GetLocale(c)
 	t := localization.Translate(locale)
 
 	// Terms version is mandatory.
@@ -86,7 +87,7 @@ func AcceptTerms(c *gin.Context) {
 	}
 
 	if UpdateVersionOfTermsAcceptedByUser != nil {
-		userID := context.GetUserID(c)
+		userID := ctxUser.GetUserID(c)
 		if err := UpdateVersionOfTermsAcceptedByUser(c, userID, termsVersion); err != nil {
 			response.InternalServerError(c)
 			return

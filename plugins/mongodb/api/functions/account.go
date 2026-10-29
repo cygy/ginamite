@@ -9,7 +9,9 @@ import (
 	"strings"
 	"time"
 
-	apiContext "github.com/cygy/ginamite/api/context"
+	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
+	ctxLocale "github.com/cygy/ginamite/api/context/locale"
+	ctxUser "github.com/cygy/ginamite/api/context/user"
 	"github.com/cygy/ginamite/api/image"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
@@ -58,7 +60,7 @@ func UpdateAccountPublicProfile(c *gin.Context) {
 	}
 	request.DecodeBody(c, &jsonBody)
 
-	locale := apiContext.GetLocale(c)
+	locale := ctxLocale.GetLocale(c)
 	t := localization.Translate(locale)
 
 	// The locale must be present and supported.
@@ -105,7 +107,7 @@ func UpdateAccountPublicImage(c *gin.Context) {
 		return
 	}
 
-	userID := apiContext.GetUserID(c)
+	userID := ctxUser.GetUserID(c)
 
 	// Save the uploaded file to a temp file.
 	rawFilename := fmt.Sprintf("%s_%d", userID, time.Now().Unix())
@@ -120,7 +122,7 @@ func UpdateAccountPublicImage(c *gin.Context) {
 	}
 	defer os.Remove(tmpFilePath)
 
-	locale := apiContext.GetLocale(c)
+	locale := ctxLocale.GetLocale(c)
 
 	// Copy the different versions of the image.
 	destinationDirectory := model.UserImagePath
@@ -177,7 +179,7 @@ func UpdateAccountPublicImage(c *gin.Context) {
 	image.Delete(oldImages, destinationDirectory)
 
 	// The auth token is updated too with the updated image of the user.
-	apiContext.RefreshAuthToken(c)
+	ctxAuthToken.RefreshAuthToken(c)
 
 	queue.CreateTask(pluginQueue.MessageTaskUpdateUserPublicImage, pluginQueue.TaskUpdateUserPublicImage{
 		UserID: user.ID.Hex(),
@@ -191,7 +193,7 @@ func UpdateAccountPublicImage(c *gin.Context) {
 
 // DeleteAccountPublicImage : deletes the image of the public profile.
 func DeleteAccountPublicImage(c *gin.Context) {
-	locale := apiContext.GetLocale(c)
+	locale := ctxLocale.GetLocale(c)
 	user := context.GetFullUser(c)
 	mongoSession := session.Get(c)
 
@@ -216,7 +218,7 @@ func DeleteAccountPublicImage(c *gin.Context) {
 	image.Delete(oldImages, model.UserImagePath)
 
 	// The auth token is updated too with the updated image of the user.
-	apiContext.RefreshAuthToken(c)
+	ctxAuthToken.RefreshAuthToken(c)
 
 	queue.CreateTask(pluginQueue.MessageTaskUpdateUserPublicImage, pluginQueue.TaskUpdateUserPublicImage{
 		UserID: user.ID.Hex(),

@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/cygy/ginamite/api/context"
+	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common/authentication"
 	"github.com/cygy/ginamite/common/config"
@@ -17,7 +17,7 @@ import (
 
 // CheckUsernameParameter : checks the username parameter.
 func CheckUsernameParameter(c *gin.Context, username, parameterName string) bool {
-	locale := context.GetLocale(c)
+	locale := ctxLocale.GetLocale(c)
 
 	usernameLength := len(username)
 

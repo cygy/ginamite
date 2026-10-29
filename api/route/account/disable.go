@@ -3,7 +3,8 @@ package account
 import (
 	"errors"
 
-	"github.com/cygy/ginamite/api/context"
+	ctxLocale "github.com/cygy/ginamite/api/context/locale"
+	ctxUser "github.com/cygy/ginamite/api/context/user"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common/authentication"
 	"github.com/cygy/ginamite/common/config"
@@ -27,10 +28,10 @@ func DisableAccount(c *gin.Context) {
 		return
 	}
 
-	locale := context.GetLocale(c)
+	locale := ctxLocale.GetLocale(c)
 	t := localization.Translate(locale)
 
-	userID := context.GetUserID(c)
+	userID := ctxUser.GetUserID(c)
 	user, err := GetUserDetailsByID(c, userID)
 	if err != nil {
 		response.InternalServerError(c)

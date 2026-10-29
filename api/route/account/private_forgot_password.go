@@ -3,7 +3,7 @@ package account
 import (
 	"errors"
 
-	"github.com/cygy/ginamite/api/context"
+	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common/authentication"
@@ -14,7 +14,7 @@ import (
 )
 
 func validateOrCancelForgotPassword(c *gin.Context, validate bool) {
-	locale := context.GetLocale(c)
+	locale := ctxLocale.GetLocale(c)
 	t := localization.Translate(locale)
 
 	// Here is a local function that returns an error. This route does only return a single error.

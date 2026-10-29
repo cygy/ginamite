@@ -3,7 +3,7 @@ package notifications
 import (
 	"fmt"
 
-	"github.com/cygy/ginamite/api/context"
+	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common/localization"
 
@@ -13,7 +13,7 @@ import (
 // GetNotifications returns the available notifications.
 func GetNotifications(supportedNotifications []string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		locale := context.GetLocale(c)
+		locale := ctxLocale.GetLocale(c)
 
 		localizedNotifications, ok := notifications[locale]
 		if !ok {

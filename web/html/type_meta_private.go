@@ -1,8 +1,6 @@
 package html
 
-import (
-	"fmt"
-)
+import "fmt"
 
 func (meta *Meta) setUpHrefLangs(paths map[string]string, fallbackLocales map[string]string, host string) {
 	meta.HrefLang = []HrefLang{}

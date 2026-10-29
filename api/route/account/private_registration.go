@@ -4,7 +4,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/cygy/ginamite/api/context"
+	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/api/validator"
@@ -75,7 +75,7 @@ func register(c *gin.Context, method string) {
 		return
 	}
 
-	locale := context.GetLocale(c)
+	locale := ctxLocale.GetLocale(c)
 	t := localization.Translate(locale)
 
 	// Verify that the username follows some rules.
@@ -320,7 +320,7 @@ func register(c *gin.Context, method string) {
 }
 
 func validateOrCancelRegistration(c *gin.Context, validate bool) {
-	locale := context.GetLocale(c)
+	locale := ctxLocale.GetLocale(c)
 	t := localization.Translate(locale)
 
 	// Here is a local function that returns an error. This route does only return a single error.

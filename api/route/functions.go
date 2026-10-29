@@ -1,8 +1,9 @@
 package route
 
 import (
-	"github.com/cygy/ginamite/api/context"
-	"github.com/cygy/ginamite/api/middleware"
+	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
+	ctxTerms "github.com/cygy/ginamite/api/context/terms"
+	middleware "github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/rights"
 	"github.com/cygy/ginamite/api/route/account"
 	"github.com/cygy/ginamite/api/route/contact"
@@ -19,7 +20,7 @@ import (
 )
 
 // NewRouter : returns a new Router struct.
-func NewRouter(e *gin.Engine, version string, productionEnvironment bool, jwtTokenSecret, latestTermsVersion string, IsAuthTokenValid context.IsAuthTokenValidFunc, getUserAndLocaleFromAuthToken context.GetUserAndLocaleFromAuthTokenFunc, getUserAbilities rights.GetUserAbilitesFunc, getLatestVersionOfTermsAcceptedByUser context.GetLatestVersionOfTermsAcceptedByUserFunc) *Router {
+func NewRouter(e *gin.Engine, version string, productionEnvironment bool, jwtTokenSecret, latestTermsVersion string, IsAuthTokenValid ctxAuthToken.IsAuthTokenValidFunc, getUserAndLocaleFromAuthToken ctxAuthToken.GetUserAndLocaleFromAuthTokenFunc, getUserAbilities rights.GetUserAbilitesFunc, getLatestVersionOfTermsAcceptedByUser terms.GetLatestVersionOfTermsAcceptedByUserFunc) *Router {
 	r := &Router{}
 
 	r.getUserAbilities = getUserAbilities
@@ -27,13 +28,13 @@ func NewRouter(e *gin.Engine, version string, productionEnvironment bool, jwtTok
 	r.Group = e.Group("/" + version)
 	r.ProductionEnvironment = productionEnvironment
 
-	r.Handlers.CanBeAuthenticated = context.ParseAuthToken(jwtTokenSecret, getUserAndLocaleFromAuthToken, false)
-	r.Handlers.MustBeAuthenticated = context.ParseAuthToken(jwtTokenSecret, getUserAndLocaleFromAuthToken, true)
-	r.Handlers.MustAuthenticationBeValid = context.VerifyAuthToken(IsAuthTokenValid)
+	r.Handlers.CanBeAuthenticated = ctxAuthToken.ParseAuthToken(jwtTokenSecret, getUserAndLocaleFromAuthToken, false)
+	r.Handlers.MustBeAuthenticated = ctxAuthToken.ParseAuthToken(jwtTokenSecret, getUserAndLocaleFromAuthToken, true)
+	r.Handlers.MustAuthenticationBeValid = ctxAuthToken.VerifyAuthToken(IsAuthTokenValid)
 	r.Handlers.MustBeAdmin = r.Rights(true, []string{})
 	r.Handlers.AbleToManageUsers = r.Rights(false, []string{rights.AbilityToManageUsers})
 	r.Handlers.AbleToManageContacts = r.Rights(false, []string{rights.AbilityToManageContacts})
-	r.Handlers.MustHaveAcceptedTheLatestVersionOfTerms = context.VerifyLatestVersionOfTermsAcceptedByUser(latestTermsVersion, getLatestVersionOfTermsAcceptedByUser)
+	r.Handlers.MustHaveAcceptedTheLatestVersionOfTerms = ctxTerms.VerifyLatestVersionOfTermsAcceptedByUser(latestTermsVersion, getLatestVersionOfTermsAcceptedByUser)
 
 	r.DefaultRoutes.Status.Enabled = true
 	r.DefaultRoutes.Status.Paths.Get.Enabled = true
@@ -209,7 +210,7 @@ func NewRouter(e *gin.Engine, version string, productionEnvironment bool, jwtTok
 
 // Rights : returns the rights for a route.
 func (r *Router) Rights(admin bool, abilities []string) gin.HandlerFunc {
-	return rights.CheckRights(rights.Rights{AdminRequired: admin, Abilities: abilities}, r.getUserAbilities)
+	return rights.CheckRights(admin, abilities, r.getUserAbilities)
 }
 
 // LoadDefaultRoutes : load the default routes.

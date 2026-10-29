@@ -1,7 +1,7 @@
 package account
 
 import (
-	"github.com/cygy/ginamite/api/context"
+	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/mongo/bson"
@@ -9,7 +9,7 @@ import (
 )
 
 func checkNotificationID(c *gin.Context, messageKey string) (string, bool) {
-	locale := context.GetLocale(c)
+	locale := ctxLocale.GetLocale(c)
 	t := localization.Translate(locale)
 
 	notificationID := c.Param("id")

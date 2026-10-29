@@ -1,8 +1,6 @@
 package model
 
-import (
-	"go.mongodb.org/mongo-driver/v2/bson"
-)
+import "go.mongodb.org/mongo-driver/v2/bson"
 
 // AdminDisabledUser : properties of a disabled user for the admin.
 type AdminDisabledUser struct {

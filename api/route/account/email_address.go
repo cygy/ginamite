@@ -4,7 +4,8 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/cygy/ginamite/api/context"
+	ctxLocale "github.com/cygy/ginamite/api/context/locale"
+	ctxUser "github.com/cygy/ginamite/api/context/user"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common/authentication"
@@ -36,7 +37,7 @@ func UpdateEmailAddress(c *gin.Context) {
 	}
 	request.DecodeBody(c, &jsonBody)
 
-	locale := context.GetLocale(c)
+	locale := ctxLocale.GetLocale(c)
 	t := localization.Translate(locale)
 
 	emailAddress := jsonBody.EmailAddress
@@ -46,7 +47,7 @@ func UpdateEmailAddress(c *gin.Context) {
 		return
 	}
 
-	userID := context.GetUserID(c)
+	userID := ctxUser.GetUserID(c)
 	user, err := GetUserDetailsByID(c, userID)
 	if err != nil {
 		response.InternalServerError(c)
@@ -54,7 +55,7 @@ func UpdateEmailAddress(c *gin.Context) {
 	}
 
 	// The same email address can not be used.
-	if strings.ToLower(emailAddress) == strings.ToLower(user.EmailAddress) {
+	if strings.EqualFold(emailAddress, user.EmailAddress) {
 		message := t("error.update_email_address.message")
 		reason := t("error.update_email_address.same_email_address.reason")
 		recovery := t("error.update_email_address.same_email_address.recovery")
@@ -113,10 +114,10 @@ func ConfirmEmailAddress(c *gin.Context) {
 		return
 	}
 
-	locale := context.GetLocale(c)
+	locale := ctxLocale.GetLocale(c)
 	t := localization.Translate(locale)
 
-	userID := context.GetUserID(c)
+	userID := ctxUser.GetUserID(c)
 	user, err := GetUserDetailsByID(c, userID)
 	if err != nil {
 		response.InternalServerError(c)

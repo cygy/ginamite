@@ -4,7 +4,8 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/cygy/ginamite/api/context"
+	ctxLocale "github.com/cygy/ginamite/api/context/locale"
+	ctxUser "github.com/cygy/ginamite/api/context/user"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common"
@@ -29,7 +30,7 @@ func UpdateSocialNetworks(c *gin.Context) {
 	}
 	request.DecodeBody(c, &jsonBody)
 
-	locale := context.GetLocale(c)
+	locale := ctxLocale.GetLocale(c)
 	t := localization.Translate(locale)
 
 	errorMessageKey := "error.account.social.update.message"
@@ -67,7 +68,7 @@ func UpdateSocialNetworks(c *gin.Context) {
 		return
 	}
 
-	userID := context.GetUserID(c)
+	userID := ctxUser.GetUserID(c)
 	if err := UpdateUserSocialNetworks(c, userID, facebook, twitter, instagram); err != nil {
 		response.InternalServerError(c)
 		return

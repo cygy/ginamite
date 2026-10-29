@@ -3,7 +3,9 @@ package account
 import (
 	"errors"
 
-	"github.com/cygy/ginamite/api/context"
+	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
+	ctxLocale "github.com/cygy/ginamite/api/context/locale"
+	ctxUser "github.com/cygy/ginamite/api/context/user"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common/config"
@@ -21,7 +23,7 @@ func GetInfos(c *gin.Context) {
 		return
 	}
 
-	userID := context.GetUserID(c)
+	userID := ctxUser.GetUserID(c)
 	user := GetOwnedAccountDetails(c, userID)
 	if user == nil {
 		response.InternalServerError(c)
@@ -47,7 +49,7 @@ func UpdateInfos(c *gin.Context) {
 	}
 	request.DecodeBody(c, &jsonBody)
 
-	locale := context.GetLocale(c)
+	locale := ctxLocale.GetLocale(c)
 	t := localization.Translate(locale)
 
 	errorMessageKey := "error.account.infos.update.unable.message"
@@ -75,14 +77,14 @@ func UpdateInfos(c *gin.Context) {
 	}
 
 	// Update the infos of the user.
-	userID := context.GetUserID(c)
+	userID := ctxUser.GetUserID(c)
 	if err := UpdatedAccountInfos(c, userID, firstName, lastName); err != nil {
 		response.InternalServerError(c)
 		return
 	}
 
 	// The auth token is updated too with the latest properties of the user.
-	context.RefreshAuthToken(c)
+	ctxAuthToken.RefreshAuthToken(c)
 
 	response.OkWithStatus(c, t("status.account.infos.updated"))
 }
@@ -101,7 +103,7 @@ func UpdateSettings(c *gin.Context) {
 	}
 	request.DecodeBody(c, &jsonBody)
 
-	locale := context.GetLocale(c)
+	locale := ctxLocale.GetLocale(c)
 	t := localization.Translate(locale)
 
 	errorMessageKey := "error.account.settings.update.unable.message"
@@ -145,14 +147,14 @@ func UpdateSettings(c *gin.Context) {
 	}
 
 	// Update the settings of the user.
-	userID := context.GetUserID(c)
+	userID := ctxUser.GetUserID(c)
 	if err := UpdatedAccountSettings(c, userID, accountLocale, accountTimezone); err != nil {
 		response.InternalServerError(c)
 		return
 	}
 
 	// The auth token is updated too with the latest properties of the user.
-	context.RefreshAuthToken(c)
+	ctxAuthToken.RefreshAuthToken(c)
 
 	response.OkWithStatus(c, t("status.account.settings.updated"))
 }
