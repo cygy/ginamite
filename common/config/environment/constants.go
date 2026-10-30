@@ -1,12 +1,13 @@
+// Package environment defines the running environments of the application.
 package environment
 
 const (
-	// Development "development"
+	// Development is the development environment.
 	Development string = "development"
 
-	// Production "production"
+	// Production is the production environment.
 	Production string = "production"
 
-	// Test "test"
+	// Test is the test environment.
 	Test string = "test"
 )

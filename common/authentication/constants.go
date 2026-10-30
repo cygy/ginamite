@@ -1,57 +1,68 @@
+// Package authentication defines the authentication primitives shared by the
+// API: devices, users, auth tokens (JWT) and password encryption.
 package authentication
 
+// Types of device.
 const (
-	// TypeWeb : type of a device
+	// TypeWeb is the type of a web browser.
 	TypeWeb = "web"
 
-	// TypeIOS : type of a device
+	// TypeIOS is the type of an iOS device.
 	TypeIOS = "ios"
 
-	// TypeAndroid : type of a device
+	// TypeAndroid is the type of an Android device.
 	TypeAndroid = "android"
+)
 
-	// MethodPassword : authentication method by password
+// Authentication methods.
+const (
+	// MethodPassword is the authentication by password.
 	MethodPassword = "password"
 
-	// MethodFacebook : authentication method by facebook
+	// MethodFacebook is the authentication by Facebook.
 	MethodFacebook = "facebook"
 
-	// MethodGoogle : authentication method by google
+	// MethodGoogle is the authentication by Google.
 	MethodGoogle = "google"
+)
 
-	// InvalidCharactersSetForUsername : forbidden characters in an username.
+const (
+	// InvalidCharactersSetForUsername lists the characters forbidden in a username.
 	InvalidCharactersSetForUsername = "'‘{}/"
 
-	// MinimumCharactersForPassword : minimum number of characters in a password.
+	// MinimumCharactersForPassword is the minimum number of characters in a password.
 	MinimumCharactersForPassword = 10
 
-	// MinimumCharactersForUsername : minimum number of characters in a username.
+	// MinimumCharactersForUsername is the minimum number of characters in a username.
 	MinimumCharactersForUsername = 4
 
-	// PrivateKeyLength : length of the generated key code.
+	// PrivateKeyLength is the length of the generated private key.
 	PrivateKeyLength = 128
 
-	// RegisterCodeLength : length of the generated register code.
+	// RegisterCodeLength is the length of the generated register code.
 	RegisterCodeLength = 64
 
-	// PasswordEncryptionSalt : salt used to encrypt the password.
+	// PasswordEncryptionSalt is the salt prefix used to encrypt a password.
 	PasswordEncryptionSalt = "$6$rounds=5000$"
 
-	// PasswordEncryptionSaltLength : length of the salt used to encrypt the password.
+	// PasswordEncryptionSaltLength is the length of the random part of the salt used to encrypt a password.
 	PasswordEncryptionSaltLength = 16
+)
 
-	// ProcessUpdateEmailAddress :
+// Types of process a user can start on their account.
+const (
+	// ProcessUpdateEmailAddress is the process to update the email address.
 	ProcessUpdateEmailAddress = "update_email"
 
-	// ProcessUpdatePassword :
+	// ProcessUpdatePassword is the process to update the password.
 	ProcessUpdatePassword = "update_password"
 
-	// ProcessVerifyEmailAddress :
+	// ProcessVerifyEmailAddress is the process to verify the email address.
 	ProcessVerifyEmailAddress = "verify_email"
 
-	// ProcessDeleteAccount :
+	// ProcessDeleteAccount is the process to delete the account.
 	ProcessDeleteAccount = "delete_account"
 
-	// ProcessDisableAccount :
+	// ProcessDisableAccount is the process to disable the account.
 	ProcessDisableAccount = "disable_account"
 )

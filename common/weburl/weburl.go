@@ -1,0 +1,122 @@
+// Package weburl resolves the URLs of the web routes from their key and their locale.
+package weburl
+
+import (
+	"fmt"
+	"os"
+	"strings"
+
+	"github.com/cygy/ginamite/common/log"
+	"github.com/cygy/ginamite/web/html"
+
+	"github.com/sirupsen/logrus"
+	yaml "gopkg.in/yaml.v3"
+)
+
+// Configuration holds the web routes, loaded from a YAML file.
+type Configuration struct {
+	Routes map[string]Route `yaml:"routes"` // The index is the unique key of the route (i.e. "account.registration").
+}
+
+// Route is a web route, with its path for each locale.
+type Route struct {
+	RelativePaths map[string]string `yaml:"paths"`
+	AbsolutePaths map[string]string `yaml:"-"` // The index is the locale of the route (i.e. "fr-fr"), the value is the localized route (i.e. "http://.../account/registration").
+	Sitemap       html.Sitemap      `yaml:"sitemap"`
+}
+
+// NewConfiguration returns an empty Configuration.
+func NewConfiguration() (conf *Configuration) {
+	conf = &Configuration{
+		Routes: map[string]Route{},
+	}
+
+	return
+}
+
+// Main is the global configuration of the web routes, set by Initialize.
+var Main *Configuration
+
+// GetURL returns the absolute URL of the web route key for the locale.
+// It logs a warning and returns an empty string if the route or the locale is unknown.
+func (conf *Configuration) GetURL(key, locale string) string {
+	url, ok := conf.Routes[key].AbsolutePaths[locale]
+	if !ok {
+		log.WithFields(logrus.Fields{
+			"route":  key,
+			"locale": locale,
+		}).Warn("web url not found")
+	}
+
+	return url
+}
+
+// Initialize loads the routes from the YAML file and computes their absolute paths,
+// prefixing the paths with webHost and replacing the locale keyword.
+// A route is also reachable with the language of a locale ("fr" for "fr-fr").
+// It panics, after logging the error, if the file can not be read or parsed.
+func (conf *Configuration) Initialize(file, webHost string) bool {
+	// Read the configuration file.
+	source, err := os.ReadFile(file)
+	if err != nil {
+		log.WithFields(logrus.Fields{
+			"path":  file,
+			"error": err.Error(),
+		}).Panic("unable to load web urls")
+	}
+
+	// Get the routes from the file.
+	err = yaml.Unmarshal(source, conf)
+	if err != nil {
+		log.WithFields(logrus.Fields{
+			"path":  file,
+			"error": err.Error(),
+		}).Panic("unable to load web urls")
+	}
+
+	// Normalize the routes.
+	localeKey := fmt.Sprintf("{{.%s}}", html.LocaleKeyword)
+	for k, r := range conf.Routes {
+		absolutePaths := map[string]string{}
+
+		for locale, path := range r.RelativePaths {
+			url := fmt.Sprintf("%s%s", webHost, path)
+			url = strings.ReplaceAll(url, localeKey, locale)
+			absolutePaths[locale] = url
+
+			parts := strings.Split(locale, "-")
+			if len(parts) == 2 {
+				absolutePaths[parts[0]] = url
+			}
+		}
+
+		r.AbsolutePaths = absolutePaths
+		conf.Routes[k] = r
+	}
+
+	return true
+}
+
+// HasVariable reports whether a path of the route is generic, i.e. contains some variables.
+func (route *Route) HasVariable() bool {
+	for _, path := range route.RelativePaths {
+		if strings.Contains(path, "/:") {
+			return true
+		}
+	}
+
+	return false
+}
+
+// GetURL returns the absolute URL of the web route key for the locale, with the main configuration.
+// See Configuration.GetURL.
+func GetURL(key, locale string) string {
+	return Main.GetURL(key, locale)
+}
+
+// Initialize creates the main configuration of the web routes Main and initializes it.
+// It always returns true: failures panic. See Configuration.Initialize.
+func Initialize(file, webHost string) bool {
+	Main = NewConfiguration()
+	return Main.Initialize(file, webHost)
+}

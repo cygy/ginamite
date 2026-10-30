@@ -1,6 +1,5 @@
+// Package database defines the supported database services.
 package database
 
-const (
-	// MongoDB "mongodb"
-	MongoDB string = "mongodb"
-)
+// MongoDB is the MongoDB service.
+const MongoDB string = "mongodb"

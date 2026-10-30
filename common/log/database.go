@@ -6,7 +6,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// DatabaseError logs a database error.
+// DatabaseError logs a database error with the collection it occurred on.
+// A nil or "not found" error is not logged.
 func DatabaseError(err error, collection string) {
 	if err != nil && !errors.IsNotFound(err) {
 		WithFields(logrus.Fields{

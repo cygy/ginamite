@@ -1,18 +1,20 @@
+// Package request lists the error codes of the "request" domain.
 package request
 
+// Domain is the name of the domain of the errors.
+const Domain = "request"
+
+// InvalidCharactersSet lists the characters forbidden in the value of a JSON field.
+const InvalidCharactersSet = "'‘{}"
+
+// Error codes of the domain.
 const (
-	// Domain :
-	Domain = "request"
-
-	// InvalidCharactersSet forbidden characters in a JSON field value.
-	InvalidCharactersSet = "'‘{}"
-
-	// InvalidParameterValue :
+	// InvalidParameterValue is the code of the error raised when a parameter has an invalid value.
 	InvalidParameterValue = 0
 
-	// NotFoundParameterValue :
+	// NotFoundParameterValue is the code of the error raised when a mandatory parameter is missing.
 	NotFoundParameterValue = 1
 
-	// InvalidRequest :
+	// InvalidRequest is the code of the error raised when the request is invalid.
 	InvalidRequest = 2
 )

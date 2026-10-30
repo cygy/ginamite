@@ -1,12 +1,13 @@
+// Package version defines the release stages of the application.
 package version
 
 const (
-	// Alpha "alpha"
+	// Alpha is the alpha stage.
 	Alpha string = "alpha"
 
-	// Beta "beta"
+	// Beta is the beta stage.
 	Beta string = "beta"
 
-	// Final "final"
+	// Final is the final stage.
 	Final string = "final"
 )

@@ -20,24 +20,29 @@ import (
 const (
 	obfuscatorReplacingString = "***"
 
-	// ErrorContextKey field name of the error in the context, if provided this error will be logged.
+	// ErrorContextKey is the key of the error in the Gin context. If set, the error is logged with the request.
 	ErrorContextKey = "request_error"
 
-	// RequestIDHeaderName header name of the request ID value.
+	// RequestIDHeaderName is the name of the header containing the request ID.
 	RequestIDHeaderName = "X-Request-ID"
 )
 
+// requestLogWriter copies the response body while writing it.
 type requestLogWriter struct {
 	gin.ResponseWriter
 	body *bytes.Buffer
 }
 
+// Write writes b to the response and keeps a copy of it.
 func (w requestLogWriter) Write(b []byte) (int, error) {
 	w.body.Write(b)
 	return w.ResponseWriter.Write(b)
 }
 
-// InjectRequestLogger log the requests and the responses.
+// InjectRequestLogger returns a middleware logging each request and its response.
+// It generates a request ID if the request has none. Passwords and the local part of
+// the email addresses are obfuscated, and multipart bodies are not logged. The
+// response body is logged, gzip-decoded, only if logResponseBody is true.
 func InjectRequestLogger(logResponseBody bool) gin.HandlerFunc {
 	// Here are the obfuscators.
 	sensitiveObfuscatorRegExp := regexp.MustCompile(`"(password)":"([^\"]*)"`)
@@ -49,8 +54,7 @@ func InjectRequestLogger(logResponseBody bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Get the request details
 		if len(c.Request.Header.Get(RequestIDHeaderName)) == 0 {
-			uuid := uuid.New()
-			c.Request.Header.Set(RequestIDHeaderName, uuid.String())
+			c.Request.Header.Set(RequestIDHeaderName, uuid.NewString())
 		}
 
 		requestIP := request.GetRealIPAddress(c)
@@ -69,7 +73,7 @@ func InjectRequestLogger(logResponseBody bool) gin.HandlerFunc {
 			if body, _ := io.ReadAll(c.Request.Body); body != nil {
 				obfuscatedBody := sensitiveObfuscatorRegExp.ReplaceAll(body, sensitiveObfuscatorReplacingString)
 				obfuscatedBody = emailObfuscatorRegExp.ReplaceAll(obfuscatedBody, emailObfuscatorReplacingString)
-				requestBody = string(obfuscatedBody[:])
+				requestBody = string(obfuscatedBody)
 
 				// Restore the io.ReadCloser to its original state
 				c.Request.Body = io.NopCloser(bytes.NewBuffer(body))
@@ -78,7 +82,9 @@ func InjectRequestLogger(logResponseBody bool) gin.HandlerFunc {
 
 		requestHeaders := map[string]string{}
 		for key, value := range c.Request.Header {
-			requestHeaders[key] = value[0]
+			if len(value) > 0 {
+				requestHeaders[key] = value[0]
+			}
 		}
 
 		// Replace the writer
@@ -112,7 +118,7 @@ func InjectRequestLogger(logResponseBody bool) gin.HandlerFunc {
 		// Get the error if provided
 		if err, errExists := c.Get(ErrorContextKey); errExists {
 			entry = entry.WithFields(logrus.Fields{
-				"error": err.(string),
+				"error": fmt.Sprint(err),
 			})
 		}
 
@@ -147,7 +153,7 @@ func InjectRequestLogger(logResponseBody bool) gin.HandlerFunc {
 
 			obfuscatedResponseBody = emailObfuscatorRegExp.ReplaceAll(obfuscatedResponseBody, emailObfuscatorReplacingString)
 
-			responseLog["body"] = string(obfuscatedResponseBody[:])
+			responseLog["body"] = string(obfuscatedResponseBody)
 		}
 
 		entry.WithFields(logrus.Fields{
