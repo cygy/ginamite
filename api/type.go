@@ -9,6 +9,8 @@ import (
 	"github.com/cygy/ginamite/api/route/terms"
 	"github.com/cygy/ginamite/api/route/user"
 	"github.com/cygy/ginamite/common/authentication"
+
+	"github.com/gin-gonic/gin"
 )
 
 // Server defines an API server.
@@ -16,12 +18,17 @@ type Server struct {
 	RoutesFile string
 	Functions  Handlers
 
+	// Middlewares are added to the Gin engine, in order, before the middleware that sets the locale and the routes.
+	// A database plugin uses them to put its connection in the context of the requests.
+	Middlewares []gin.HandlerFunc
+
 	customRoutes []route.ConfigureCustomRoutes
 }
 
 // Handlers lists the functions of an API.
 type Handlers struct {
 	RecurringTasks                                                func()
+	IsValidID                                                     func(id string) bool
 	NewMessageFromQueueCache                                      func(message string) bool
 	MiddlewareIsValidAuthToken                                    ctxAuthToken.IsValidFunc
 	MiddlewareGetUserAndLocaleFromAuthToken                       ctxAuthToken.GetUserAndLocaleFunc

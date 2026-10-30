@@ -8,6 +8,7 @@ import (
 
 	tokencache "github.com/cygy/ginamite/api/cache/authtoken"
 	_ "github.com/cygy/ginamite/api/internal/apitest"
+	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/route"
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/queue"
@@ -22,6 +23,23 @@ func TestNewServer(t *testing.T) {
 
 	if s == nil || s.customRoutes == nil || len(s.customRoutes) != 0 {
 		t.Errorf("NewServer() = %+v, want a server without custom routes", s)
+	}
+}
+
+func TestServer_setUpIDValidation(t *testing.T) {
+	old := request.IsValidID
+	t.Cleanup(func() { request.IsValidID = old })
+
+	s := NewServer()
+	s.setUpIDValidation()
+	if !request.IsValidID("anything") {
+		t.Error("without a function, every ID must stay valid")
+	}
+
+	s.Functions.IsValidID = func(id string) bool { return id == "ok" }
+	s.setUpIDValidation()
+	if !request.IsValidID("ok") || request.IsValidID("anything") {
+		t.Error("the function of the server must validate the IDs")
 	}
 }
 

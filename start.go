@@ -2,8 +2,6 @@ package ginamite
 
 import (
 	"os"
-	"strconv"
-	"time"
 
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/config/environment"
@@ -11,7 +9,6 @@ import (
 	"github.com/cygy/ginamite/common/kafka"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/log"
-	mongo "github.com/cygy/ginamite/common/mongo/session"
 	"github.com/cygy/ginamite/common/timezone"
 	"github.com/cygy/ginamite/web/robots"
 )
@@ -29,14 +26,7 @@ func (s *Server) Start() {
 	s.initializeConfiguration(f)
 
 	if f.IsAPIServer || f.IsWorkerServer {
-		if config.Main.IsMongoDBDatabase() {
-			mongo.Initialize(config.Main.Database.Host+":"+strconv.Itoa(config.Main.Database.Port),
-				config.Main.Database.Database,
-				config.Main.Database.Username,
-				config.Main.Database.Password,
-				time.Duration(config.Main.Database.TimeOut))
-			defer mongo.Close()
-		}
+		defer s.connectPlugins()()
 
 		if err := timezone.Initialize(config.Main.TimezonesFilePath); err != nil {
 			log.WithField("error", err).Fatal("unable to initialize the timezones")
@@ -79,6 +69,24 @@ func (s *Server) initializeConfiguration(f *flags.Flags) {
 	}
 
 	localization.Initialize(config.Main.LocalizationPath, config.Main.SupportedLocales)
+}
+
+// connectPlugins connects the plugins which are Connectors, and returns the function which closes them, in the reverse
+// order.
+func (s *Server) connectPlugins() (closeAll func()) {
+	var connected []Connector
+	for _, plugin := range s.plugins {
+		if connector, ok := plugin.(Connector); ok {
+			connector.Connect()
+			connected = append(connected, connector)
+		}
+	}
+
+	return func() {
+		for i := len(connected) - 1; i >= 0; i-- {
+			connected[i].Close()
+		}
+	}
 }
 
 // specializedServer returns the server chosen by the arguments, with its routes file, or nil if none is.

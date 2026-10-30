@@ -2,6 +2,8 @@
 //
 // A Server holds the three specialized servers and the settings of the application. The command line arguments choose
 // the one which runs, see the package flags.
+//
+// The storage is provided by plugins, see Plugin and Connector: the core does not depend on a database.
 package ginamite
 
 import (
@@ -37,6 +39,16 @@ type SpecializedServer interface {
 // Plugin is a plugin which configures a server, such as the functions of the API and of the workers.
 type Plugin interface {
 	Configure(s *Server)
+}
+
+// Connector is a Plugin which holds a connection to a database, or to any other service the API and the worker need.
+//
+// Start calls Connect, before it configures the plugins, only if the API or the worker server runs, then Close when
+// the server stops. Connect does not return if the connection fails: it logs the error and exits or panics.
+type Connector interface {
+	Plugin
+	Connect()
+	Close()
 }
 
 // NewServer returns a Server whose API functions are placeholders which accept nothing: a plugin or the application

@@ -9,6 +9,7 @@ import (
 
 	tokencache "github.com/cygy/ginamite/api/cache/authtoken"
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
+	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/route"
 	"github.com/cygy/ginamite/api/route/account"
 	"github.com/cygy/ginamite/api/route/terms"
@@ -17,7 +18,6 @@ import (
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/kafka"
 	"github.com/cygy/ginamite/common/log"
-	mongo "github.com/cygy/ginamite/common/mongo/session"
 	"github.com/cygy/ginamite/common/queue"
 	"github.com/cygy/ginamite/common/template/html"
 	"github.com/cygy/ginamite/common/template/text"
@@ -94,6 +94,7 @@ func (s *Server) Start() {
 	}
 
 	// Set up some global functions.
+	s.setUpIDValidation()
 	authentication.BuildTokenFromID = s.Functions.BuildTokenFromID
 	authentication.ExtraPropertiesForTokenWithID = s.Functions.ExtraPropertiesForTokenWithID
 	authentication.ExtendTokenExpirationDateFromID = s.Functions.ExtendTokenExpirationDateFromID
@@ -169,9 +170,7 @@ func (s *Server) Start() {
 	contact.GetContact = s.Functions.GetContact
 
 	// Load the middlewares.
-	if config.Main.IsMongoDBDatabase() {
-		server.Use(mongo.Inject())
-	}
+	server.Use(s.Middlewares...)
 	server.Use(ctxLocale.Inject(config.Main.DefaultLocale, config.Main.SupportedLocales))
 
 	// Load the templates.
@@ -228,10 +227,20 @@ func NewServer() *Server {
 	}
 }
 
+// setUpIDValidation makes the requests use the IsValidID function of the server, if any, to validate the identifiers.
+func (s *Server) setUpIDValidation() {
+	if s.Functions.IsValidID != nil {
+		request.IsValidID = s.Functions.IsValidID
+	}
+}
+
 // Helping functions.
 func (s *Server) warnUndefinedFunctions() {
 	if s.Functions.RecurringTasks == nil {
 		log.Warn("The function 'RecurringTasks' is undefined.")
+	}
+	if s.Functions.IsValidID == nil {
+		log.Warn("The function 'IsValidID' is undefined: every identifier will be accepted.")
 	}
 	if s.Functions.NewMessageFromQueueCache == nil {
 		log.Warn("The function 'NewMessageFromQueueCache' is undefined.")

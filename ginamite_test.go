@@ -23,6 +23,16 @@ type testPlugin struct{ configured []*Server }
 
 func (p *testPlugin) Configure(s *Server) { p.configured = append(p.configured, s) }
 
+// testConnector is a Plugin which records its connection into events.
+type testConnector struct {
+	testPlugin
+	name   string
+	events *[]string
+}
+
+func (c *testConnector) Connect() { *c.events = append(*c.events, "connect "+c.name) }
+func (c *testConnector) Close()   { *c.events = append(*c.events, "close "+c.name) }
+
 func TestNewServer(t *testing.T) {
 	s := NewServer()
 

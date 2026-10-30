@@ -4,10 +4,15 @@ package mongodb
 
 import (
 	"context"
+	"strconv"
+	"time"
 
 	"github.com/cygy/ginamite"
 	"github.com/cygy/ginamite/api"
 	"github.com/cygy/ginamite/api/route"
+	"github.com/cygy/ginamite/common/config"
+	"github.com/cygy/ginamite/common/mongo/bson"
+	"github.com/cygy/ginamite/common/mongo/session"
 	"github.com/cygy/ginamite/common/mongo/store"
 	apiFunctions "github.com/cygy/ginamite/plugins/mongodb/api/functions"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
@@ -69,12 +74,43 @@ func NewPlugin() *Plugin {
 	}
 }
 
+var _ ginamite.Connector = (*Plugin)(nil)
+
+// Connect opens the main MongoDB session with the database settings of the main configuration. It does nothing if
+// the database service of the configuration is not MongoDB. The server calls it before Configure, if it is the API
+// or the worker. If the server is not reachable, it panics after logging the error.
+func (p *Plugin) Connect() {
+	if !config.Main.IsMongoDBDatabase() {
+		return
+	}
+
+	database := config.Main.Database
+	session.Initialize(database.Host+":"+strconv.Itoa(database.Port),
+		database.Database,
+		database.Username,
+		database.Password,
+		time.Duration(database.TimeOut))
+}
+
+// Close closes the main MongoDB session, if it is open.
+func (p *Plugin) Close() {
+	if session.Main != nil {
+		session.Close()
+	}
+}
+
 // Configure applies the settings of the plugin to the model package, and sets the functions of the plugin on the
 // worker and the API of the server. It also adds the routes of the plugin to the API.
 func (p *Plugin) Configure(server *ginamite.Server) {
 	p.applySettings()
 	p.configureWorker(server.Worker)
 	p.configureAPI(server.API)
+}
+
+// isValidID reports whether id is the hexadecimal representation of a MongoDB ObjectID.
+func isValidID(id string) bool {
+	_, err := bson.ObjectIDFromHex(id)
+	return err == nil
 }
 
 // applySettings applies the settings of the plugin to the model package, and adds its abilities.
@@ -156,8 +192,14 @@ func (p *Plugin) startUpTasks(ctx context.Context, environment, version string) 
 	}
 }
 
-// configureAPI sets the functions of the API, and adds its routes.
+// configureAPI sets the functions of the API, the validation of the identifiers and the middleware which saves the
+// database in the context of the requests, if the session is open, and adds its routes.
 func (p *Plugin) configureAPI(a *api.Server) {
+	a.Functions.IsValidID = isValidID
+	if session.Main != nil {
+		a.Middlewares = append(a.Middlewares, session.Inject())
+	}
+
 	a.Functions.BuildTokenFromID = apiFunctions.BuildTokenFromID
 	a.Functions.ExtendTokenExpirationDateFromID = apiFunctions.ExtendTokenExpirationDateFromID
 

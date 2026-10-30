@@ -75,6 +75,7 @@ func TestVerifyURLParameter(t *testing.T) {
 	initLocalization(t)
 
 	const validID = "507f1f77bcf86cd799439011"
+	setIDValidator(t, func(id string) bool { return id == validID })
 
 	tests := []struct {
 		name       string
@@ -83,9 +84,9 @@ func TestVerifyURLParameter(t *testing.T) {
 		wantStatus int
 		wantStored any
 	}{
-		{"valid object ID", Config{Name: "id", StoreKey: "stored"}, "/" + validID, http.StatusOK, validID},
-		{"invalid object ID", Config{Name: "id", StoreKey: "stored", InvalidObjectIDReasonKey: "reason"}, "/xyz", http.StatusBadRequest, nil},
-		{"invalid object ID accepted when skipped", Config{Name: "id", StoreKey: "stored", SkipVerifyingInvalidObjectID: true}, "/xyz", http.StatusOK, "xyz"},
+		{"valid ID", Config{Name: "id", StoreKey: "stored"}, "/" + validID, http.StatusOK, validID},
+		{"invalid ID", Config{Name: "id", StoreKey: "stored", InvalidObjectIDReasonKey: "reason"}, "/xyz", http.StatusBadRequest, nil},
+		{"invalid ID accepted when skipped", Config{Name: "id", StoreKey: "stored", SkipVerifyingInvalidObjectID: true}, "/xyz", http.StatusOK, "xyz"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -4,7 +4,6 @@ import (
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common/localization"
-	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/gin-gonic/gin"
 )
 
@@ -33,7 +32,8 @@ func VerifyLocaleParameter(cfg Config) gin.HandlerFunc {
 	}
 }
 
-// VerifyURLParameter verify that a URL parameter is present and its format.
+// VerifyURLParameter verify that a URL parameter is present and, unless the configuration skips it, that it is a valid
+// identifier, see IsValidID.
 func VerifyURLParameter(cfg Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		locale := ctxLocale.Get(c)
@@ -50,7 +50,7 @@ func VerifyURLParameter(cfg Config) gin.HandlerFunc {
 		}
 
 		if !cfg.SkipVerifyingInvalidObjectID {
-			if _, err := bson.ObjectIDFromHex(value); err != nil {
+			if !IsValidID(value) {
 				response.InvalidRequestParameterWithDetails(c,
 					t(cfg.MessageKey),
 					t(cfg.InvalidObjectIDReasonKey),

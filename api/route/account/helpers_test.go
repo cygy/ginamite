@@ -13,6 +13,7 @@ import (
 	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/internal/apitest"
+	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/validator"
 	"github.com/cygy/ginamite/common/authentication"
 	"github.com/cygy/ginamite/common/config"
@@ -72,8 +73,12 @@ func setup(t *testing.T) {
 	authentication.ExtraPropertiesForTokenWithID = func(string) (map[string]string, error) { return nil, nil }
 	authentication.ExtendTokenExpirationDateFromID = func(context.Context, string, time.Duration) error { return nil }
 
+	originalIDValidator := request.IsValidID
+	request.IsValidID = func(id string) bool { return len(id) == len(validNotificationID) }
+
 	originalValidator := newTokenValidator
 	t.Cleanup(func() {
+		request.IsValidID = originalIDValidator
 		newTokenValidator = originalValidator
 		resetFunctions()
 		authentication.BuildTokenFromID = nil

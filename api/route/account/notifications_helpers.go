@@ -2,12 +2,14 @@ package account
 
 import (
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
+	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common/localization"
-	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/gin-gonic/gin"
 )
 
+// checkNotificationID returns the identifier of the notification in the URL, or writes an error response and returns
+// false if it is missing or not a valid ID, see request.IsValidID.
 func checkNotificationID(c *gin.Context, messageKey string) (string, bool) {
 	locale := ctxLocale.Get(c)
 	t := localization.Translate(locale)
@@ -21,7 +23,7 @@ func checkNotificationID(c *gin.Context, messageKey string) (string, bool) {
 		return "", false
 	}
 
-	if _, err := bson.ObjectIDFromHex(notificationID); err != nil {
+	if !request.IsValidID(notificationID) {
 		response.InvalidRequestParameterWithDetails(c,
 			t(messageKey),
 			t("error.account.notification.id.invalid.reason"),

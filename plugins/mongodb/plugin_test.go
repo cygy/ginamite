@@ -10,6 +10,8 @@ import (
 
 	"github.com/cygy/ginamite"
 	"github.com/cygy/ginamite/api/route"
+	"github.com/cygy/ginamite/common/config"
+	"github.com/cygy/ginamite/common/config/database"
 	"github.com/cygy/ginamite/common/mongo/session"
 	"github.com/cygy/ginamite/common/mongo/store"
 	"github.com/cygy/ginamite/common/mongo/store/mock"
@@ -47,6 +49,137 @@ func TestNewPlugin(t *testing.T) {
 	if p.ExtraUserAbilities == nil || p.ExtraDefaultUserAbilities == nil {
 		t.Error("the abilities must be empty lists")
 	}
+}
+
+// setMainConfiguration replaces the main configuration for the duration of the test.
+func setMainConfiguration(t *testing.T, service string) {
+	t.Helper()
+
+	old := config.Main
+	t.Cleanup(func() { config.Main = old })
+
+	config.Main = config.NewConfiguration()
+	config.Main.Database.Service = service
+}
+
+// setMainSession replaces the main session for the duration of the test.
+func setMainSession(t *testing.T, s *session.Session) {
+	t.Helper()
+
+	old := session.Main
+	t.Cleanup(func() { session.Main = old })
+	session.Main = s
+}
+
+func TestPlugin_Connect_OtherService(t *testing.T) {
+	setMainConfiguration(t, "postgresql")
+	setMainSession(t, nil)
+
+	NewPlugin().Connect()
+
+	if session.Main != nil {
+		t.Error("the plugin must not connect to MongoDB when the service is another one")
+	}
+}
+
+func TestPlugin_Connect_Unreachable(t *testing.T) {
+	setMainConfiguration(t, database.MongoDB)
+	setMainSession(t, nil)
+	config.Main.Database.Host = "127.0.0.1"
+	config.Main.Database.Port = 1
+	config.Main.Database.TimeOut = 1
+
+	defer func() {
+		if recover() == nil {
+			t.Error("Connect() must panic when the server is unreachable")
+		}
+		if session.Main == nil || session.Main.DatabaseName != config.Main.Database.Database {
+			t.Errorf("the main session must be created with the database of the configuration: %+v", session.Main)
+		}
+	}()
+
+	NewPlugin().Connect()
+}
+
+func TestPlugin_Close(t *testing.T) {
+	t.Run("without session", func(t *testing.T) {
+		setMainSession(t, nil)
+
+		NewPlugin().Close()
+	})
+
+	t.Run("with a session which is not connected", func(t *testing.T) {
+		setMainSession(t, session.NewSession())
+
+		NewPlugin().Close()
+	})
+}
+
+func TestIsValidID(t *testing.T) {
+	tests := []struct {
+		id   string
+		want bool
+	}{
+		{"507f1f77bcf86cd799439011", true},
+		{"", false},
+		{"xyz", false},
+		{"507f1f77bcf86cd79943901", false},
+		{"507f1f77bcf86cd79943901g", false},
+		{"123e4567-e89b-12d3-a456-426614174000", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.id, func(t *testing.T) {
+			if got := isValidID(tt.id); got != tt.want {
+				t.Errorf("isValidID(%q) = %v, want %v", tt.id, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestPlugin_Configure_IsValidID(t *testing.T) {
+	saveModelSettings(t)
+
+	server := ginamite.NewServer()
+	NewPlugin().Configure(server)
+
+	if isValid := server.API.Functions.IsValidID; isValid == nil || !isValid("507f1f77bcf86cd799439011") || isValid("xyz") {
+		t.Error("the API must validate the IDs as ObjectIDs")
+	}
+}
+
+func TestPlugin_Configure_Middlewares(t *testing.T) {
+	saveModelSettings(t)
+
+	t.Run("without session", func(t *testing.T) {
+		setMainSession(t, nil)
+
+		server := ginamite.NewServer()
+		NewPlugin().Configure(server)
+
+		if len(server.API.Middlewares) != 0 {
+			t.Errorf("len(Middlewares) = %d, want 0", len(server.API.Middlewares))
+		}
+	})
+
+	t.Run("with a session", func(t *testing.T) {
+		db := mock.NewDatabase("app")
+		setMainSession(t, &session.Session{Store: db})
+
+		server := ginamite.NewServer()
+		NewPlugin().Configure(server)
+
+		if len(server.API.Middlewares) != 1 {
+			t.Fatalf("len(Middlewares) = %d, want 1", len(server.API.Middlewares))
+		}
+
+		c, _ := gin.CreateTestContext(httptest.NewRecorder())
+		c.Request = httptest.NewRequest(http.MethodGet, "/", nil)
+		server.API.Middlewares[0](c)
+
+		if session.Get(c) != store.Database(db) {
+			t.Error("the middleware must save the database in the context")
+		}
+	})
 }
 
 func TestPlugin_Configure_Settings(t *testing.T) {

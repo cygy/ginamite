@@ -3,6 +3,7 @@ package ginamite
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/cygy/ginamite/common/config"
@@ -10,6 +11,33 @@ import (
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/log"
 )
+
+func TestServer_ConnectPlugins(t *testing.T) {
+	var events []string
+	s := NewServer()
+	s.AddPlugin(&testConnector{name: "first", events: &events})
+	s.AddPlugin(&testPlugin{})
+	s.AddPlugin(&testConnector{name: "second", events: &events})
+
+	closeAll := s.connectPlugins()
+
+	if want := []string{"connect first", "connect second"}; !slices.Equal(events, want) {
+		t.Fatalf("events = %v, want %v", events, want)
+	}
+
+	closeAll()
+
+	if want := []string{"connect first", "connect second", "close second", "close first"}; !slices.Equal(events, want) {
+		t.Errorf("events = %v, want %v", events, want)
+	}
+}
+
+func TestServer_ConnectPlugins_NoConnector(t *testing.T) {
+	s := NewServer()
+	s.AddPlugin(&testPlugin{})
+
+	s.connectPlugins()()
+}
 
 func TestServer_SpecializedServer(t *testing.T) {
 	tests := []struct {

@@ -17,7 +17,7 @@ func TestCheckNotificationID(t *testing.T) {
 		status int
 	}{
 		{"missing", nil, false, http.StatusBadRequest},
-		{"not an object ID", gin.Params{{Key: "id", Value: "nope"}}, false, http.StatusBadRequest},
+		{"not a valid ID", gin.Params{{Key: "id", Value: "nope"}}, false, http.StatusBadRequest},
 		{"valid", gin.Params{{Key: "id", Value: validNotificationID}}, true, http.StatusOK},
 	}
 	for _, tt := range tests {
