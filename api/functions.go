@@ -6,7 +6,7 @@ import (
 
 	"github.com/cygy/ginamite/api/route/contact"
 
-	cache "github.com/cygy/ginamite/api/cache/authtoken"
+	tokencache "github.com/cygy/ginamite/api/cache/authtoken"
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/route"
 	"github.com/cygy/ginamite/api/route/account"
@@ -46,8 +46,10 @@ func (s *Server) CreateKafkaConsumers() []kafka.MessageConsumer {
 			switch msgType {
 			case queue.MessageCacheInvalidAuthToken:
 				p := queue.CacheAuthToken{}
-				queue.UnmarshalPayload(payload, &p)
-				cache.AddRevokedAuthTokens(p.Tokens)
+				if err := queue.UnmarshalPayload(payload, &p); err != nil {
+					return
+				}
+				tokencache.Add(p.Tokens)
 			default:
 				if s.Functions.NewMessageFromQueueCache == nil || !s.Functions.NewMessageFromQueueCache(msgType) {
 					log.WithFields(logrus.Fields{
@@ -56,8 +58,8 @@ func (s *Server) CreateKafkaConsumers() []kafka.MessageConsumer {
 					}).Warn("unknown kafka message")
 				}
 			}
-
-		}})
+		},
+	})
 
 	return consumers
 }
@@ -195,7 +197,7 @@ func (s *Server) Start() {
 	}
 
 	// Start the built-in recurring tasks.
-	cache.StartDeletingExpiredTokens(time.Duration(config.Main.ExpiredAuthTokens.FlushCacheInterval))
+	tokencache.StartDeletingExpired(time.Duration(config.Main.ExpiredAuthTokens.FlushCacheInterval))
 
 	// Start the custom recurring tasks.
 	if s.Functions.RecurringTasks != nil {
@@ -205,9 +207,11 @@ func (s *Server) Start() {
 	// Start the server.
 	address := fmt.Sprintf(":%d", config.Main.Server.Port)
 	if config.Main.Server.SSL.Enabled {
-		endless.ListenAndServeTLS(address, config.Main.Server.SSL.CertPath, config.Main.Server.SSL.KeyPath, server)
-	} else {
-		endless.ListenAndServe(address, server)
+		if err := endless.ListenAndServeTLS(address, config.Main.Server.SSL.CertPath, config.Main.Server.SSL.KeyPath, server); err != nil {
+			log.WithField("error", err).Error("the server stopped")
+		}
+	} else if err := endless.ListenAndServe(address, server); err != nil {
+		log.WithField("error", err).Error("the server stopped")
 	}
 }
 
