@@ -138,7 +138,10 @@ func loginWithThirdParty(c *gin.Context, v validator.TokenValidator) {
 	}
 
 	IPAddress := req.GetRealIPAddress(c)
-	createAuthenticationToken(c, user, IPAddress, source, device, authenticationMethod, true, false)
+	// The errors are already reported to the client.
+	if _, err := createAuthenticationToken(c, user, IPAddress, source, device, authenticationMethod, true, false); err != nil {
+		return
+	}
 }
 
 func canNotLoginError(c *gin.Context, err error) {

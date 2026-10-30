@@ -149,7 +149,7 @@ func (page *Page) UpdateMetaRobots() {
 
 	if page.Sitemap.Included {
 		if strings.Contains(robots, "noindex") {
-			robots = strings.Replace(robots, "noindex", "index", -1)
+			robots = strings.ReplaceAll(robots, "noindex", "index")
 		} else if len(robots) == 0 {
 			robots = "index"
 		} else if !strings.Contains(robots, "index") {
@@ -157,7 +157,7 @@ func (page *Page) UpdateMetaRobots() {
 		}
 	} else if !strings.Contains(robots, "noindex") {
 		if strings.Contains(robots, "index") {
-			robots = strings.Replace(robots, "index", "noindex", -1)
+			robots = strings.ReplaceAll(robots, "index", "noindex")
 		} else if len(robots) == 0 {
 			robots = "noindex"
 		} else {

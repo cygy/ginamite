@@ -94,7 +94,10 @@ func LoginWithPassword(c *gin.Context) {
 	}
 
 	IPAddress := req.GetRealIPAddress(c)
-	createAuthenticationToken(c, user, IPAddress, source, device, authentication.MethodPassword, true, false)
+	// The errors are already reported to the client.
+	if _, err := createAuthenticationToken(c, user, IPAddress, source, device, authentication.MethodPassword, true, false); err != nil {
+		return
+	}
 }
 
 // LoginWithFacebook : creates a token to log in an account.

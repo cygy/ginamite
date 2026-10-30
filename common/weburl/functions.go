@@ -54,7 +54,7 @@ func (conf *Configuration) Initialize(file, webHost string) bool {
 
 		for locale, path := range r.RelativePaths {
 			url := fmt.Sprintf("%s%s", webHost, path)
-			url = strings.Replace(url, localeKey, locale, -1)
+			url = strings.ReplaceAll(url, localeKey, locale)
 			absolutePaths[locale] = url
 
 			parts := strings.Split(locale, "-")

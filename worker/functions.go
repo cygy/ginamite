@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
@@ -44,34 +45,28 @@ func (s *Server) CreateKafkaConsumers() []kafka.MessageConsumer {
 			switch msgType {
 			case queue.MessageTaskIPLocation:
 				location.GetIPInfo(payload, s.Functions.SaveIPAddressDetails)
-				break
 			case queue.MessageTaskDeleteUser:
 				user.DeleteByID(payload, s.Functions.DeleteUserByID)
-				break
 			case queue.MessageTaskDisableUser:
 				user.DisableByID(payload, s.Functions.DisableUserByID)
-				break
 			case queue.MessageTaskEnableUser:
 				user.EnableByID(payload, s.Functions.EnableUserByID)
-				break
 			case queue.MessageTaskUpdateUserSocialNetworks:
 				user.UpdateSocialNetworksByID(payload, s.Functions.UpdateUserSocialNetworksByID)
-				break
 			case queue.MessageTaskRegistrationDone:
 				user.RegistrationDone(payload, s.Functions.RegistrationDone)
-				break
 			case queue.MessageTaskRegistrationValidated:
 				user.RegistrationDone(payload, s.Functions.RegistrationValidated)
-				break
 			default:
-				if s.Functions.HandleTask == nil || !s.Functions.HandleTask(nil, msgType, payload) {
+				if s.Functions.HandleTask == nil || !s.Functions.HandleTask(context.TODO(), msgType, payload) {
 					log.WithFields(logrus.Fields{
 						"topic": queue.TopicTasks,
 						"type":  msgType,
 					}).Warn("unknown kafka message")
 				}
 			}
-		}})
+		},
+	})
 
 	// Handle the group notifications to send.
 	consumers = append(consumers, kafka.MessageConsumer{
@@ -89,13 +84,14 @@ func (s *Server) CreateKafkaConsumers() []kafka.MessageConsumer {
 				return
 			}
 
-			if s.Functions.HandleNotificationForUsersWithAbility == nil || !s.Functions.HandleNotificationForUsersWithAbility(nil, ability, msgType, payload) {
+			if s.Functions.HandleNotificationForUsersWithAbility == nil || !s.Functions.HandleNotificationForUsersWithAbility(context.TODO(), ability, msgType, payload) {
 				log.WithFields(logrus.Fields{
 					"topic": queue.TopicGroupNotification,
 					"type":  msgType,
 				}).Warn("unknown kafka message")
 			}
-		}})
+		},
+	})
 
 	// Handle the notifications to send.
 	consumers = append(consumers, kafka.MessageConsumer{
@@ -110,17 +106,17 @@ func (s *Server) CreateKafkaConsumers() []kafka.MessageConsumer {
 
 			switch msgType {
 			case notifications.TypeNewLogin:
-				notification.NewLogin(nil, payload, s.Functions.GetNotificationTargetsByUserAndType)
-				break
+				notification.NewLogin(context.TODO(), payload, s.Functions.GetNotificationTargetsByUserAndType)
 			default:
-				if s.Functions.HandleUserNotification == nil || !s.Functions.HandleUserNotification(nil, msgType, payload, s.Functions.GetNotificationTargetsByUserAndType) {
+				if s.Functions.HandleUserNotification == nil || !s.Functions.HandleUserNotification(context.TODO(), msgType, payload, s.Functions.GetNotificationTargetsByUserAndType) {
 					log.WithFields(logrus.Fields{
 						"topic": queue.TopicUserNotification,
 						"type":  msgType,
 					}).Warn("unknown kafka message")
 				}
 			}
-		}})
+		},
+	})
 
 	// Handle the emails to send.
 	consumers = append(consumers, kafka.MessageConsumer{
@@ -138,79 +134,58 @@ func (s *Server) CreateKafkaConsumers() []kafka.MessageConsumer {
 			switch msgType {
 			case queue.MessageMailRegistrationConfirmation:
 				mail.RegistrationConfirmation(payload)
-				break
 			case queue.MessageMailRegistrationConfirmed:
 				mail.RegistrationConfirmed(payload)
-				break
 			case queue.MessageMailRegistrationCancelled:
 				mail.RegistrationCancelled(payload)
-				break
 			case queue.MessageMailRegistrationWelcome:
 				mail.RegistrationWelcome(payload)
-				break
 			case queue.MessageMailForgotPasswordConfirmation:
-				mail.ForgotPasswordConfirmation(nil, payload, isEmailAddressValid)
-				break
+				mail.ForgotPasswordConfirmation(context.TODO(), payload, isEmailAddressValid)
 			case queue.MessageMailForgotPasswordConfirmed:
-				mail.ForgotPasswordConfirmed(nil, payload, isEmailAddressValid)
-				break
+				mail.ForgotPasswordConfirmed(context.TODO(), payload, isEmailAddressValid)
 			case queue.MessageMailForgotPasswordCancelled:
-				mail.ForgotPasswordCancelled(nil, payload, isEmailAddressValid)
-				break
+				mail.ForgotPasswordCancelled(context.TODO(), payload, isEmailAddressValid)
 			case queue.MessageMailUpdateEmailAddressConfirmation:
-				mail.UpdateEmailAddressConfirmation(nil, payload, isEmailAddressValid)
-				break
+				mail.UpdateEmailAddressConfirmation(context.TODO(), payload, isEmailAddressValid)
 			case queue.MessageMailUpdateEmailAddressConfirmed:
-				mail.UpdateEmailAddressConfirmed(nil, payload, isEmailAddressValid)
-				break
+				mail.UpdateEmailAddressConfirmed(context.TODO(), payload, isEmailAddressValid)
 			case queue.MessageMailUpdateEmailAddressCancelled:
-				mail.UpdateEmailAddressCancelled(nil, payload, isEmailAddressValid)
-				break
+				mail.UpdateEmailAddressCancelled(context.TODO(), payload, isEmailAddressValid)
 			case queue.MessageMailUpdatePasswordConfirmation:
-				mail.UpdatePasswordConfirmation(nil, payload, isEmailAddressValid)
-				break
+				mail.UpdatePasswordConfirmation(context.TODO(), payload, isEmailAddressValid)
 			case queue.MessageMailUpdatePasswordConfirmed:
-				mail.UpdatePasswordConfirmed(nil, payload, isEmailAddressValid)
-				break
+				mail.UpdatePasswordConfirmed(context.TODO(), payload, isEmailAddressValid)
 			case queue.MessageMailUpdatePasswordCancelled:
-				mail.UpdatePasswordCancelled(nil, payload, isEmailAddressValid)
-				break
+				mail.UpdatePasswordCancelled(context.TODO(), payload, isEmailAddressValid)
 			case queue.MessageMailValidateNewEmailAddress:
-				mail.ValidateNewEmailAddress(nil, payload, isEmailAddressValid)
-				break
+				mail.ValidateNewEmailAddress(context.TODO(), payload, isEmailAddressValid)
 			case queue.MessageMailDeleteAccountConfirmation:
-				mail.DeleteAccountConfirmation(nil, payload, isEmailAddressValid)
-				break
+				mail.DeleteAccountConfirmation(context.TODO(), payload, isEmailAddressValid)
 			case queue.MessageMailDeleteAccountConfirmed:
-				mail.DeleteAccountConfirmed(nil, payload, isEmailAddressValid)
-				break
+				mail.DeleteAccountConfirmed(context.TODO(), payload, isEmailAddressValid)
 			case queue.MessageMailDeleteAccountCancelled:
-				mail.DeleteAccountCancelled(nil, payload, isEmailAddressValid)
-				break
+				mail.DeleteAccountCancelled(context.TODO(), payload, isEmailAddressValid)
 			case queue.MessageMailDisableAccountConfirmation:
-				mail.DisableAccountConfirmation(nil, payload, isEmailAddressValid)
-				break
+				mail.DisableAccountConfirmation(context.TODO(), payload, isEmailAddressValid)
 			case queue.MessageMailDisableAccountConfirmed:
-				mail.DisableAccountConfirmed(nil, payload, isEmailAddressValid)
-				break
+				mail.DisableAccountConfirmed(context.TODO(), payload, isEmailAddressValid)
 			case queue.MessageMailDisableAccountCancelled:
-				mail.DisableAccountCancelled(nil, payload, isEmailAddressValid)
-				break
+				mail.DisableAccountCancelled(context.TODO(), payload, isEmailAddressValid)
 			case queue.MessageMailEnableAccountConfirmed:
-				mail.EnableAccountConfirmed(nil, payload, isEmailAddressValid)
-				break
+				mail.EnableAccountConfirmed(context.TODO(), payload, isEmailAddressValid)
 			case queue.MessageMailNewLogin:
-				mail.NewLogin(nil, payload, isEmailAddressValid)
-				break
+				mail.NewLogin(context.TODO(), payload, isEmailAddressValid)
 			default:
-				if s.Functions.HandleMail == nil || !s.Functions.HandleMail(nil, msgType, payload, isEmailAddressValid) {
+				if s.Functions.HandleMail == nil || !s.Functions.HandleMail(context.TODO(), msgType, payload, isEmailAddressValid) {
 					log.WithFields(logrus.Fields{
 						"topic": queue.TopicMail,
 						"type":  msgType,
 					}).Warn("unknown kafka message")
 				}
 			}
-		}})
+		},
+	})
 
 	return consumers
 }
@@ -260,7 +235,7 @@ func (s *Server) Start() {
 	// Run the check up tasks.
 	if s.Functions.StartUpTasks != nil && config.Main.RunStartUpTasks {
 		log.Info("check up started")
-		s.Functions.StartUpTasks(nil, config.Main.Environment, config.Main.Version)
+		s.Functions.StartUpTasks(context.TODO(), config.Main.Environment, config.Main.Version)
 		log.Info("check up done")
 	}
 
@@ -270,52 +245,41 @@ func (s *Server) Start() {
 		switch task.Name {
 		// Delete the expired auth tokens.
 		case recurring.DeleteExpiredTokens:
-			if s.Functions.DeleteExpiredTokens == nil {
-				break
+			if s.Functions.DeleteExpiredTokens != nil {
+				recurring.SetFunc(task.Name, func(taskName string) {
+					authtokens.DeleteExpired(context.TODO(), taskName, s.Functions.DeleteExpiredTokens)
+				})
 			}
-			recurring.SetFunc(task.Name, func(taskName string) {
-				authtokens.DeleteExpired(nil, taskName, s.Functions.DeleteExpiredTokens)
-			})
-			break
 		// Delete/update the data associated to deleted accounts.
 		case recurring.SanitizeAccounts:
-			if s.Functions.SanitizeAccounts == nil {
-				break
+			if s.Functions.SanitizeAccounts != nil {
+				recurring.SetFunc(task.Name, func(taskName string) {
+					account.Sanitize(taskName, s.Functions.SanitizeAccounts)
+				})
 			}
-			recurring.SetFunc(task.Name, func(taskName string) {
-				account.Sanitize(taskName, s.Functions.SanitizeAccounts)
-			})
-			break
 		// Delete the never used accounts.
 		case recurring.DeleteNeverUsedAccounts:
-			if !config.Main.Account.EmailAddressMustBeConfirmed || s.Functions.GetNeverUsedAccounts == nil || s.Functions.IsUserEmpty == nil || s.Functions.DeleteUserByID == nil {
-				break
+			if config.Main.Account.EmailAddressMustBeConfirmed && s.Functions.GetNeverUsedAccounts != nil && s.Functions.IsUserEmpty != nil && s.Functions.DeleteUserByID != nil {
+				recurring.SetFunc(task.Name, func(taskName string) {
+					account.DeleteNeverUsed(context.TODO(), taskName, config.Main.Account.DeleteNeverUsedAfter, s.Functions.GetNeverUsedAccounts, s.Functions.IsUserEmpty, s.Functions.DeleteUserByID)
+				})
 			}
-			recurring.SetFunc(task.Name, func(taskName string) {
-				account.DeleteNeverUsed(nil, taskName, config.Main.Account.DeleteNeverUsedAfter, s.Functions.GetNeverUsedAccounts, s.Functions.IsUserEmpty, s.Functions.DeleteUserByID)
-			})
-			break
 		// Delete the inactive accounts.
 		case recurring.DeleteInactiveAccounts:
-			if s.Functions.GetInactiveAccounts == nil || s.Functions.DeleteUserByID == nil {
-				break
+			if s.Functions.GetInactiveAccounts != nil && s.Functions.DeleteUserByID != nil {
+				recurring.SetFunc(task.Name, func(taskName string) {
+					account.DeleteInactive(context.TODO(), taskName, config.Main.Account.DeleteInactiveAfter, s.Functions.GetInactiveAccounts, s.Functions.DeleteUserByID)
+				})
 			}
-			recurring.SetFunc(task.Name, func(taskName string) {
-				account.DeleteInactive(nil, taskName, config.Main.Account.DeleteInactiveAfter, s.Functions.GetInactiveAccounts, s.Functions.DeleteUserByID)
-			})
-			break
 		// Send again the registration emails.
 		case recurring.SendRegistrationMails:
-			break
 		// Generate the XML sitemap files.
 		case recurring.GenerateSitemaps:
-			if s.Functions.GetLocalizedRouteVariables == nil {
-				break
+			if s.Functions.GetLocalizedRouteVariables != nil {
+				recurring.SetFunc(task.Name, func(taskName string) {
+					sitemap.Generate(taskName, s.Functions.GetLocalizedRouteVariables)
+				})
 			}
-			recurring.SetFunc(task.Name, func(taskName string) {
-				sitemap.Generate(taskName, s.Functions.GetLocalizedRouteVariables)
-			})
-			break
 		default:
 		}
 	}

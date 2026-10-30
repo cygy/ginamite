@@ -13,7 +13,9 @@ import (
 // UpdateEmailAddressConfirmation : sends a mail to confirm the email address update.
 func UpdateEmailAddressConfirmation(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
 	p := queue.MailUpdateEmailAddressConfirmation{}
-	queue.UnmarshalPayload(payload, &p)
+	if err := queue.UnmarshalPayload(payload, &p); err != nil {
+		return
+	}
 
 	if !isEmailAddressValid.check(ctx, p.EmailAddress) {
 		return
@@ -58,7 +60,9 @@ func UpdateEmailAddressConfirmation(ctx context.Context, payload []byte, isEmail
 // UpdateEmailAddressConfirmed : sends a mail to notify the email address update is confirmed.
 func UpdateEmailAddressConfirmed(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
 	p := queue.MailUpdateEmailAddressConfirmed{}
-	queue.UnmarshalPayload(payload, &p)
+	if err := queue.UnmarshalPayload(payload, &p); err != nil {
+		return
+	}
 
 	if !isEmailAddressValid.check(ctx, p.EmailAddress) {
 		return
@@ -92,7 +96,9 @@ func UpdateEmailAddressConfirmed(ctx context.Context, payload []byte, isEmailAdd
 // UpdateEmailAddressCancelled : sends a mail to notify the email address update is cancelled.
 func UpdateEmailAddressCancelled(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
 	p := queue.MailUpdateEmailAddressCancelled{}
-	queue.UnmarshalPayload(payload, &p)
+	if err := queue.UnmarshalPayload(payload, &p); err != nil {
+		return
+	}
 
 	if !isEmailAddressValid.check(ctx, p.EmailAddress) {
 		return
@@ -126,7 +132,9 @@ func UpdateEmailAddressCancelled(ctx context.Context, payload []byte, isEmailAdd
 // ValidateNewEmailAddress : sends a mail to validate the new email address.
 func ValidateNewEmailAddress(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
 	p := queue.MailValidateNewEmailAddress{}
-	queue.UnmarshalPayload(payload, &p)
+	if err := queue.UnmarshalPayload(payload, &p); err != nil {
+		return
+	}
 
 	if !isEmailAddressValid.check(ctx, p.EmailAddress) {
 		return

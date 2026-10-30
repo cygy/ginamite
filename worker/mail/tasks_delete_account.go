@@ -13,7 +13,9 @@ import (
 // DeleteAccountConfirmation : sends a mail to confirm the account deletion.
 func DeleteAccountConfirmation(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
 	p := queue.MailDeleteAccountConfirmation{}
-	queue.UnmarshalPayload(payload, &p)
+	if err := queue.UnmarshalPayload(payload, &p); err != nil {
+		return
+	}
 
 	if !isEmailAddressValid.check(ctx, p.EmailAddress) {
 		return
@@ -56,7 +58,9 @@ func DeleteAccountConfirmation(ctx context.Context, payload []byte, isEmailAddre
 // DeleteAccountConfirmed : sends a mail to notify the account deletion is confirmed.
 func DeleteAccountConfirmed(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
 	p := queue.MailDeleteAccountConfirmed{}
-	queue.UnmarshalPayload(payload, &p)
+	if err := queue.UnmarshalPayload(payload, &p); err != nil {
+		return
+	}
 
 	if !isEmailAddressValid.check(ctx, p.EmailAddress) {
 		return
@@ -90,7 +94,9 @@ func DeleteAccountConfirmed(ctx context.Context, payload []byte, isEmailAddressV
 // DeleteAccountCancelled : sends a mail to notify the account deletion is cancelled.
 func DeleteAccountCancelled(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
 	p := queue.MailDeleteAccountCancelled{}
-	queue.UnmarshalPayload(payload, &p)
+	if err := queue.UnmarshalPayload(payload, &p); err != nil {
+		return
+	}
 
 	if !isEmailAddressValid.check(ctx, p.EmailAddress) {
 		return

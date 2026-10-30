@@ -12,7 +12,9 @@ import (
 // RegistrationWelcome : sends a mail to welcome the user after the registration.
 func RegistrationWelcome(payload []byte) {
 	p := queue.MailRegistrationWelcome{}
-	queue.UnmarshalPayload(payload, &p)
+	if err := queue.UnmarshalPayload(payload, &p); err != nil {
+		return
+	}
 
 	t := localization.Translate(p.Locale)
 
@@ -42,7 +44,9 @@ func RegistrationWelcome(payload []byte) {
 // RegistrationConfirmation : sends a mail to confirm the registration.
 func RegistrationConfirmation(payload []byte) {
 	p := queue.MailRegistrationConfirmation{}
-	queue.UnmarshalPayload(payload, &p)
+	if err := queue.UnmarshalPayload(payload, &p); err != nil {
+		return
+	}
 
 	t := localization.Translate(p.Locale)
 
@@ -81,7 +85,9 @@ func RegistrationConfirmation(payload []byte) {
 // RegistrationConfirmed : sends a mail to notify the registration is confirmed.
 func RegistrationConfirmed(payload []byte) {
 	p := queue.MailRegistrationConfirmed{}
-	queue.UnmarshalPayload(payload, &p)
+	if err := queue.UnmarshalPayload(payload, &p); err != nil {
+		return
+	}
 
 	t := localization.Translate(p.Locale)
 
@@ -111,7 +117,9 @@ func RegistrationConfirmed(payload []byte) {
 // RegistrationCancelled : sends a mail to notify the registration is cancelled.
 func RegistrationCancelled(payload []byte) {
 	p := queue.MailRegistrationCancelled{}
-	queue.UnmarshalPayload(payload, &p)
+	if err := queue.UnmarshalPayload(payload, &p); err != nil {
+		return
+	}
 
 	t := localization.Translate(p.Locale)
 

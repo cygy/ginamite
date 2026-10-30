@@ -158,10 +158,10 @@ func (client *Client) Initialize(host string, port int, prefix string, hasProduc
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			select {
-			case <-consumerSignals:
-				partitionConsumer.AsyncClose()
-				consumer.Close()
+			<-consumerSignals
+			partitionConsumer.AsyncClose()
+			if err := consumer.Close(); err != nil {
+				log.WithField("error", err).Error("unable to close the kafka consumer")
 			}
 		}()
 

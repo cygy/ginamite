@@ -1,7 +1,6 @@
 package ginamite
 
 import (
-	"math/rand"
 	"os"
 	"runtime"
 	"strconv"
@@ -27,7 +26,6 @@ func (s *Server) AddPlugin(p Plugin) {
 // Start : starts the server.
 func (s *Server) Start() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
-	rand.Seed(time.Now().UTC().UnixNano())
 
 	// Parse the command arguments.
 	flags := flags.NewFlags()
@@ -40,7 +38,9 @@ func (s *Server) Start() {
 	log.Initialize(flags.ServerName, (flags.Environment == environment.Production))
 
 	// Set up the server configuration.
-	config.Initialize(flags.ServerConfigurationFile, flags.Environment, flags.Version)
+	if err := config.Initialize(flags.ServerConfigurationFile, flags.Environment, flags.Version); err != nil {
+		log.WithField("error", err).Fatal("unable to initialize the server configuration")
+	}
 
 	// Set up the application configuration.
 	if s.ApplicationConfiguration.InitializeFunc != nil {
@@ -63,13 +63,17 @@ func (s *Server) Start() {
 		}
 
 		// Define the timezones.
-		timezone.Initialize(config.Main.TimezonesFilePath)
+		if err := timezone.Initialize(config.Main.TimezonesFilePath); err != nil {
+			log.WithField("error", err).Fatal("unable to initialize the timezones")
+		}
 	}
 
 	// Web relative settings.
 	if flags.IsWebServer {
 		// Load the robots.txt file.
-		robots.Initialize(config.Main.RobotsFilePath)
+		if err := robots.Initialize(config.Main.RobotsFilePath); err != nil {
+			log.WithField("error", err).Fatal("unable to initialize the robots.txt file")
+		}
 	}
 
 	// Create the specialized server.

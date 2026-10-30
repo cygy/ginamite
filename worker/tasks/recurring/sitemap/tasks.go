@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/cygy/ginamite/common/config"
+	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/weburl"
 	"github.com/cygy/ginamite/worker/tasks"
 	"github.com/sirupsen/logrus"
@@ -150,7 +151,9 @@ func Generate(taskName string, getLocalizedVariables func(routeKey string, offse
 
 	// Close the sitemaps.
 	closeSitemaps(mainSitemaps)
-	indexSitemap.Close()
+	if err := indexSitemap.Close(); err != nil {
+		log.WithField("error", err).Error("unable to close the index sitemap")
+	}
 
 	tasks.LogDone(taskName, nil)
 }

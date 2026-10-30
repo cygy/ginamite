@@ -14,13 +14,15 @@ func DeleteByID(payload []byte, deleteUserByIDFunc func(ctx context.Context, use
 	}
 
 	p := queue.TaskDeleteUser{}
-	queue.UnmarshalPayload(payload, &p)
+	if err := queue.UnmarshalPayload(payload, &p); err != nil {
+		return
+	}
 
 	// Here is the function to delete the user and which return the auth tokens revoked.
 	// Each token is defined with its unique ID and its expiration date.
-	revokedAuthTokens := deleteUserByIDFunc(nil, p.UserID)
+	revokedAuthTokens := deleteUserByIDFunc(context.TODO(), p.UserID)
 
-	if revokedAuthTokens != nil && len(revokedAuthTokens) > 0 {
+	if len(revokedAuthTokens) > 0 {
 		queue.InvalidAuthTokens(revokedAuthTokens)
 	}
 }
@@ -32,13 +34,15 @@ func DisableByID(payload []byte, disableUserByIDFunc func(ctx context.Context, u
 	}
 
 	p := queue.TaskDisableUser{}
-	queue.UnmarshalPayload(payload, &p)
+	if err := queue.UnmarshalPayload(payload, &p); err != nil {
+		return
+	}
 
 	// Here is the function to disable the user and which return the auth tokens revoked.
 	// Each token is defined with its unique ID and its expiration date.
-	revokedAuthTokens := disableUserByIDFunc(nil, p.UserID)
+	revokedAuthTokens := disableUserByIDFunc(context.TODO(), p.UserID)
 
-	if revokedAuthTokens != nil && len(revokedAuthTokens) > 0 {
+	if len(revokedAuthTokens) > 0 {
 		queue.InvalidAuthTokens(revokedAuthTokens)
 	}
 }
@@ -50,9 +54,11 @@ func EnableByID(payload []byte, enableUserByIDFunc func(ctx context.Context, use
 	}
 
 	p := queue.TaskDisableUser{}
-	queue.UnmarshalPayload(payload, &p)
+	if err := queue.UnmarshalPayload(payload, &p); err != nil {
+		return
+	}
 
-	enableUserByIDFunc(nil, p.UserID)
+	enableUserByIDFunc(context.TODO(), p.UserID)
 }
 
 // UpdateSocialNetworksByID : updates the documents referencing the social networks of a user.
@@ -62,10 +68,12 @@ func UpdateSocialNetworksByID(payload []byte, updateUserSocialNetworksByIDFunc f
 	}
 
 	p := queue.TaskUpdateUserSocialNetworks{}
-	queue.UnmarshalPayload(payload, &p)
+	if err := queue.UnmarshalPayload(payload, &p); err != nil {
+		return
+	}
 
 	// Here is the function to update the documents referencing the social networks of a user.
-	updateUserSocialNetworksByIDFunc(nil, p.UserID)
+	updateUserSocialNetworksByIDFunc(context.TODO(), p.UserID)
 }
 
 // RegistrationDone : informs that a user is registered.
@@ -75,10 +83,12 @@ func RegistrationDone(payload []byte, registrationDoneFunc func(ctx context.Cont
 	}
 
 	p := queue.TaskRegistrationDone{}
-	queue.UnmarshalPayload(payload, &p)
+	if err := queue.UnmarshalPayload(payload, &p); err != nil {
+		return
+	}
 
 	// Here is the function to inform that a user is registered.
-	registrationDoneFunc(nil, p.UserID)
+	registrationDoneFunc(context.TODO(), p.UserID)
 }
 
 // RegistrationValidated : informs that a user is validated.
@@ -88,8 +98,10 @@ func RegistrationValidated(payload []byte, registrationValidatedFunc func(ctx co
 	}
 
 	p := queue.TaskRegistrationValidated{}
-	queue.UnmarshalPayload(payload, &p)
+	if err := queue.UnmarshalPayload(payload, &p); err != nil {
+		return
+	}
 
 	// Here is the function to inform that a user is registered.
-	registrationValidatedFunc(nil, p.UserID)
+	registrationValidatedFunc(context.TODO(), p.UserID)
 }

@@ -105,9 +105,11 @@ func (s *Server) Start() {
 	// Start the server.
 	address := fmt.Sprintf(":%d", config.Main.Server.Port)
 	if config.Main.Server.SSL.Enabled {
-		endless.ListenAndServeTLS(address, config.Main.Server.SSL.CertPath, config.Main.Server.SSL.KeyPath, server)
-	} else {
-		endless.ListenAndServe(address, server)
+		if err := endless.ListenAndServeTLS(address, config.Main.Server.SSL.CertPath, config.Main.Server.SSL.KeyPath, server); err != nil {
+			log.WithField("error", err).Error("the server stopped")
+		}
+	} else if err := endless.ListenAndServe(address, server); err != nil {
+		log.WithField("error", err).Error("the server stopped")
 	}
 }
 

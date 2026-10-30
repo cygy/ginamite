@@ -24,7 +24,7 @@ func NewClient(host, APIVersion string, port, timeout, retryCount int, debug boo
 	hostURL := fmt.Sprintf("%s:%d/%s", host, port, APIVersion)
 
 	apiClient := resty.New()
-	apiClient.SetHostURL(hostURL).
+	apiClient.SetBaseURL(hostURL).
 		SetHeader("Accept", "application/json").
 		SetHeader("Accept-Encoding", "gzip").
 		SetTimeout(time.Duration(timeout) * time.Millisecond).

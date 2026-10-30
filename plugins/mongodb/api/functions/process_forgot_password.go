@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	commonErrors "github.com/cygy/ginamite/common/errors"
+	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/session"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
@@ -59,9 +60,13 @@ func WrongAccessToForgotPasswordProcess(c *gin.Context, processID string) {
 	}
 
 	if fpp.Tries >= 2 {
-		fpp.Delete(c, mongoSession)
+		if err := fpp.Delete(c, mongoSession); err != nil {
+			log.WithField("error", err).Error("unable to delete")
+		}
 	} else {
-		fpp.Increment(c, mongoSession)
+		if err := fpp.Increment(c, mongoSession); err != nil {
+			log.WithField("error", err).Error("unable to increment")
+		}
 	}
 }
 

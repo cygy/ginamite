@@ -33,7 +33,6 @@ func NewRouter(e *gin.Engine, locales []string, defaultLocale, cookieName, JWTSe
 			authTokenID := context.GetAuthTokenID(c)
 
 			if len(authTokenID) == 0 {
-
 				if partial {
 					locale := context.GetLocale(c)
 					t := localization.Translate(locale)
@@ -151,19 +150,14 @@ func (r *Router) LoadDefaultRoutes() {
 					switch strings.ToUpper(async.Method) {
 					case api.GET:
 						group.GET(path, f)
-						break
 					case api.POST:
 						group.POST(path, f)
-						break
 					case api.PUT:
 						group.PUT(path, f)
-						break
 					case api.DELETE:
 						group.DELETE(path, f)
-						break
 					case api.PATCH:
 						group.PATCH(path, f)
-						break
 					}
 				}
 			}

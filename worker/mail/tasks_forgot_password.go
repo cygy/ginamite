@@ -13,7 +13,9 @@ import (
 // ForgotPasswordConfirmation : sends a mail to confirm the forgot password.
 func ForgotPasswordConfirmation(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
 	p := queue.MailForgotPasswordConfirmation{}
-	queue.UnmarshalPayload(payload, &p)
+	if err := queue.UnmarshalPayload(payload, &p); err != nil {
+		return
+	}
 
 	if !isEmailAddressValid.check(ctx, p.EmailAddress) {
 		return
@@ -56,7 +58,9 @@ func ForgotPasswordConfirmation(ctx context.Context, payload []byte, isEmailAddr
 // ForgotPasswordConfirmed : sends a mail to notify the forgot password reset is confirmed.
 func ForgotPasswordConfirmed(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
 	p := queue.MailForgotPasswordConfirmed{}
-	queue.UnmarshalPayload(payload, &p)
+	if err := queue.UnmarshalPayload(payload, &p); err != nil {
+		return
+	}
 
 	if !isEmailAddressValid.check(ctx, p.EmailAddress) {
 		return
@@ -90,7 +94,9 @@ func ForgotPasswordConfirmed(ctx context.Context, payload []byte, isEmailAddress
 // ForgotPasswordCancelled : sends a mail to notify the forgot password reset is cancelled.
 func ForgotPasswordCancelled(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
 	p := queue.MailForgotPasswordCancelled{}
-	queue.UnmarshalPayload(payload, &p)
+	if err := queue.UnmarshalPayload(payload, &p); err != nil {
+		return
+	}
 
 	if !isEmailAddressValid.check(ctx, p.EmailAddress) {
 		return

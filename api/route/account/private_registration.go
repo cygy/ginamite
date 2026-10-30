@@ -407,7 +407,10 @@ func validateOrCancelRegistration(c *gin.Context, validate bool) {
 		})
 
 		IPAddress := req.GetRealIPAddress(c)
-		createAuthenticationToken(c, user, IPAddress, registrationDetails.Source, registrationDetails.Device, registrationDetails.Method, true, true)
+		// The errors are already reported to the client.
+		if _, err := createAuthenticationToken(c, user, IPAddress, registrationDetails.Source, registrationDetails.Device, registrationDetails.Method, true, true); err != nil {
+			return
+		}
 	} else {
 		queue.SendMail(queue.MessageMailRegistrationCancelled, queue.MailRegistrationCancelled{
 			EmailAddress: user.EmailAddress,

@@ -13,7 +13,9 @@ import (
 // DisableAccountConfirmation : sends a mail to confirm the account disable.
 func DisableAccountConfirmation(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
 	p := queue.MailDisableAccountConfirmation{}
-	queue.UnmarshalPayload(payload, &p)
+	if err := queue.UnmarshalPayload(payload, &p); err != nil {
+		return
+	}
 
 	if !isEmailAddressValid.check(ctx, p.EmailAddress) {
 		return
@@ -56,7 +58,9 @@ func DisableAccountConfirmation(ctx context.Context, payload []byte, isEmailAddr
 // DisableAccountConfirmed : sends a mail to notify the account disable is confirmed.
 func DisableAccountConfirmed(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
 	p := queue.MailDisableAccountConfirmed{}
-	queue.UnmarshalPayload(payload, &p)
+	if err := queue.UnmarshalPayload(payload, &p); err != nil {
+		return
+	}
 
 	if !isEmailAddressValid.check(ctx, p.EmailAddress) {
 		return
@@ -90,7 +94,9 @@ func DisableAccountConfirmed(ctx context.Context, payload []byte, isEmailAddress
 // DisableAccountCancelled : sends a mail to notify the account disable is cancelled.
 func DisableAccountCancelled(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
 	p := queue.MailDisableAccountCancelled{}
-	queue.UnmarshalPayload(payload, &p)
+	if err := queue.UnmarshalPayload(payload, &p); err != nil {
+		return
+	}
 
 	if !isEmailAddressValid.check(ctx, p.EmailAddress) {
 		return
@@ -124,7 +130,9 @@ func DisableAccountCancelled(ctx context.Context, payload []byte, isEmailAddress
 // EnableAccountConfirmed : sends a mail to notify the account enable is confirmed.
 func EnableAccountConfirmed(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
 	p := queue.MailEnableAccountConfirmed{}
-	queue.UnmarshalPayload(payload, &p)
+	if err := queue.UnmarshalPayload(payload, &p); err != nil {
+		return
+	}
 
 	if !isEmailAddressValid.check(ctx, p.EmailAddress) {
 		return

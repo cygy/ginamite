@@ -79,7 +79,7 @@ func (page *Page) HTMLEscape(text string) string {
 
 // Nl2br : replaces the \n to a <br>.
 func (page *Page) Nl2br(text string) string {
-	return strings.Replace(text, "\n", "<br/>", -1)
+	return strings.ReplaceAll(text, "\n", "<br/>")
 }
 
 // HTMLEscapeWithNl : replaces the \n to a <br>.

@@ -2,6 +2,7 @@ package functions
 
 import (
 	"github.com/cygy/ginamite/common/errors"
+	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/session"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
@@ -139,9 +140,13 @@ func VerifyProcess(c *gin.Context, processID, key string) (string, string, error
 	// Do not validate or cancel if the key is not verified.
 	if process.Code != key {
 		if process.Tries >= 2 {
-			process.Delete(c, mongoSession)
+			if err := process.Delete(c, mongoSession); err != nil {
+				log.WithField("error", err).Error("unable to delete")
+			}
 		} else {
-			process.Increment(c, mongoSession)
+			if err := process.Increment(c, mongoSession); err != nil {
+				log.WithField("error", err).Error("unable to increment")
+			}
 		}
 		return "", "", errors.NotFound()
 	}

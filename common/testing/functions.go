@@ -51,7 +51,11 @@ func (request *Request) Do() {
 		return
 	}
 
-	defer httpResponse.Body.Close()
+	defer func() {
+		if err := httpResponse.Body.Close(); err != nil {
+			request.T.Error(err)
+		}
+	}()
 	responseContent, _ := io.ReadAll(httpResponse.Body)
 
 	logPrefix := fmt.Sprintf("[%s %s]", request.Method, request.Endpoint)
@@ -61,12 +65,16 @@ func (request *Request) Do() {
 	}
 
 	if httpResponse.StatusCode >= 200 && httpResponse.StatusCode < 300 && request.Response != nil {
-		json.Unmarshal(responseContent, request.Response)
+		if err := json.Unmarshal(responseContent, request.Response); err != nil {
+			request.T.Errorf("%s unable to decode the response: %v", logPrefix, err)
+		}
 	}
 
 	if len(request.ExpectedResponse.Status) > 0 || !request.ExpectedResponse.Error.IsNil() {
 		var response r.Response
-		json.Unmarshal(responseContent, &response)
+		if err := json.Unmarshal(responseContent, &response); err != nil {
+			request.T.Errorf("%s unable to decode the response: %v", logPrefix, err)
+		}
 
 		if len(request.ExpectedResponse.Status) > 0 && request.ExpectedResponse.Status != response.Status {
 			request.T.Errorf("%s status %s expected, but get %s.", logPrefix, request.ExpectedResponse.Status, response.Status)

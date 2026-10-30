@@ -5,6 +5,7 @@ import (
 
 	apiContextLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/common/config"
+	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/session"
 	"github.com/cygy/ginamite/common/notifications"
@@ -72,7 +73,9 @@ func UpdateUserNotificationRead(c *gin.Context, userID, notificationID string) e
 	}
 	user := model.User{}
 	user.ID = objectID
-	user.DecrementCountOfUnreadNotifications(c, mongoSession)
+	if err := user.DecrementCountOfUnreadNotifications(c, mongoSession); err != nil {
+		log.WithField("error", err).Error("unable to decrement count of unread notifications")
+	}
 
 	return nil
 }
@@ -123,7 +126,9 @@ func DeleteUserNotification(c *gin.Context, userID, notificationID string) error
 
 	user := model.User{}
 	user.ID = objectID
-	user.UpdateCountOfNotifications(c, countOfNotifications, countOfUnreadNotifications, mongoSession)
+	if err := user.UpdateCountOfNotifications(c, countOfNotifications, countOfUnreadNotifications, mongoSession); err != nil {
+		log.WithField("error", err).Error("unable to update count of notifications")
+	}
 
 	return nil
 }

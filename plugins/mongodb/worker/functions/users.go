@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/mongo/session"
 	"github.com/cygy/ginamite/common/notifications"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
@@ -30,8 +31,12 @@ func DeleteUserByID(updateDocumentsReferencingToDeletedUser func(ctx context.Con
 			updateDocumentsReferencingToDeletedUser(ctx, userID, db)
 		}
 
-		model.DeleteDeletedUserByUserID(ctx, userID, db)
-		model.DeleteUserByUserID(ctx, userID, db)
+		if err := model.DeleteDeletedUserByUserID(ctx, userID, db); err != nil {
+			log.WithField("error", err).Error("unable to delete deleted user by user i d")
+		}
+		if err := model.DeleteUserByUserID(ctx, userID, db); err != nil {
+			log.WithField("error", err).Error("unable to delete user by user i d")
+		}
 
 		authTokens, err := model.GetAuthTokens(ctx, userID, db)
 		revokedAuthTokens := make(map[string]time.Time, len(authTokens))
@@ -41,7 +46,9 @@ func DeleteUserByID(updateDocumentsReferencingToDeletedUser func(ctx context.Con
 			}
 		}
 
-		model.DeleteAuthTokensByUser(ctx, userID, db)
+		if _, err := model.DeleteAuthTokensByUser(ctx, userID, db); err != nil {
+			log.WithField("error", err).Error("unable to delete auth tokens by user")
+		}
 
 		return revokedAuthTokens
 	}
@@ -56,7 +63,9 @@ func DisableUserByID(updateDocumentsReferencingToDisabledUser func(ctx context.C
 			updateDocumentsReferencingToDisabledUser(ctx, userID, db)
 		}
 
-		model.DeleteUserByUserID(ctx, userID, db)
+		if err := model.DeleteUserByUserID(ctx, userID, db); err != nil {
+			log.WithField("error", err).Error("unable to delete user by user i d")
+		}
 
 		authTokens, err := model.GetAuthTokens(ctx, userID, db)
 		revokedAuthTokens := make(map[string]time.Time, len(authTokens))
@@ -66,7 +75,9 @@ func DisableUserByID(updateDocumentsReferencingToDisabledUser func(ctx context.C
 			}
 		}
 
-		model.DeleteAuthTokensByUser(ctx, userID, db)
+		if _, err := model.DeleteAuthTokensByUser(ctx, userID, db); err != nil {
+			log.WithField("error", err).Error("unable to delete auth tokens by user")
+		}
 
 		return revokedAuthTokens
 	}
@@ -81,7 +92,9 @@ func EnableUserByID(updateDocumentsReferencingToEnabledUser func(ctx context.Con
 			updateDocumentsReferencingToEnabledUser(ctx, userID, db)
 		}
 
-		model.DeleteDisabledUserByUserID(ctx, userID, db)
+		if err := model.DeleteDisabledUserByUserID(ctx, userID, db); err != nil {
+			log.WithField("error", err).Error("unable to delete disabled user by user i d")
+		}
 	}
 }
 
@@ -94,7 +107,6 @@ func UpdateUserSocialNetworksByID(UpdateDocumentsReferencingToUpdatedUserSocialN
 		db := session.Database()
 		UpdateDocumentsReferencingToUpdatedUserSocialNetworks(ctx, userID, db)
 	}
-
 }
 
 // GetNotificationTargetsByUserAndType : gets the targets of a notification sent to an user.

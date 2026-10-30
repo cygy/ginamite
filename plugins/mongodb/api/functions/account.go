@@ -17,6 +17,7 @@ import (
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/localization"
+	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/mongo/session"
 	"github.com/cygy/ginamite/common/queue"
 	"github.com/cygy/ginamite/plugins/mongodb/api/context"
@@ -120,7 +121,11 @@ func UpdateAccountPublicImage(c *gin.Context) {
 	if !request.SaveUploadedFile(c, file, tmpFilePath, logContext, errorMessageKey) {
 		return
 	}
-	defer os.Remove(tmpFilePath)
+	defer func() {
+		if err := os.Remove(tmpFilePath); err != nil {
+			log.WithField("error", err).Error("unable to remove the temporary file")
+		}
+	}()
 
 	locale := ctxLocale.GetLocale(c)
 

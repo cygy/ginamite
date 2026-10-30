@@ -7,6 +7,7 @@ import (
 
 	"github.com/cygy/ginamite/common/authentication"
 	"github.com/cygy/ginamite/common/errors"
+	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/session"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
@@ -67,7 +68,9 @@ func ExtendTokenExpirationDateFromID(ctx context.Context, tokenID string, ttl ti
 	user := model.User{
 		ID: authToken.UserID,
 	}
-	user.UpdateLastLogin(ctx, db)
+	if err := user.UpdateLastLogin(ctx, db); err != nil {
+		log.WithField("error", err).Error("unable to update last login")
+	}
 
 	return nil
 }
@@ -111,7 +114,9 @@ func SaveAuthenticationToken(c *gin.Context, details authentication.Details) (to
 	user := model.User{
 		ID: userID,
 	}
-	user.UpdateLastLogin(c, mongoSession)
+	if err := user.UpdateLastLogin(c, mongoSession); err != nil {
+		log.WithField("error", err).Error("unable to update last login")
+	}
 
 	return authTokenID, (location != nil), nil
 }

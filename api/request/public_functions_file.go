@@ -18,7 +18,6 @@ func GetUploadedFile(c *gin.Context, fieldName string, maxSize int64, checkIsIma
 	locale := ctxLocale.GetLocale(c)
 
 	file, err := c.FormFile(fieldName)
-
 	if err != nil {
 		log.WithFields(logrus.Fields{
 			"context": logContext,
@@ -47,7 +46,11 @@ func GetUploadedFile(c *gin.Context, fieldName string, maxSize int64, checkIsIma
 			return nil
 		}
 
-		defer f.Close()
+		defer func() {
+			if err := f.Close(); err != nil {
+				log.WithField("error", err).Error("unable to close the uploaded file")
+			}
+		}()
 
 		buff := make([]byte, 512) // docs tell that it take only first 512 bytes into consideration
 		if _, err = f.Read(buff); err != nil {

@@ -31,7 +31,9 @@ func RemoveCollections(ctx context.Context, collections []string) {
 	db := session.Database()
 
 	for _, collection := range collections {
-		db.Collection(collection).Indexes().DropAll(ctx)
+		if err := db.Collection(collection).Indexes().DropAll(ctx); err != nil {
+			log.WithField("error", err).Error("unable to drop all")
+		}
 		err := db.Collection(collection).Drop(ctx)
 		if err != nil && err.Error() != fmt.Sprintf("collection not found with name [%s]", collection) {
 			log.WithFields(logrus.Fields{

@@ -133,9 +133,11 @@ func InjectRequestLogger(logResponseBody bool) gin.HandlerFunc {
 					if data, err = io.ReadAll(gzipReader); err == nil {
 						obfuscatedResponseBody = data
 					}
-				}
 
-				gzipReader.Close()
+					if closeErr := gzipReader.Close(); err == nil {
+						err = closeErr
+					}
+				}
 
 				if err != nil {
 					obfuscatedResponseBody = []byte{}

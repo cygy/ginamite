@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/cygy/ginamite/common/config"
+	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
 	"go.mongodb.org/mongo-driver/v2/mongo"
@@ -38,7 +39,9 @@ func CreateStoredNotification(ctx context.Context, userID, notificationType, dat
 	if countOfNotifications > config.Main.UserNotifications.Limit {
 		notificationIDs, err := model.GetOldestUserNotifications(ctx, userID, config.Main.UserNotifications.Limit, db)
 		if err == nil {
-			model.DeleteUserNotifications(ctx, notificationIDs, db)
+			if _, err := model.DeleteUserNotifications(ctx, notificationIDs, db); err != nil {
+				log.WithField("error", err).Error("unable to delete user notifications")
+			}
 		}
 
 		countOfNotifications, _ = model.GetCountOfUserNotifications(ctx, userID, db)
@@ -52,7 +55,9 @@ func CreateStoredNotification(ctx context.Context, userID, notificationType, dat
 
 	user := model.User{}
 	user.ID = notification.UserID
-	user.UpdateCountOfNotifications(ctx, countOfNotifications, countOfUnreadNotifications, db)
+	if err := user.UpdateCountOfNotifications(ctx, countOfNotifications, countOfUnreadNotifications, db); err != nil {
+		log.WithField("error", err).Error("unable to update count of notifications")
+	}
 
 	return nil
 }

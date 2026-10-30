@@ -42,20 +42,21 @@ func updateAbilities(c *gin.Context, action string) {
 	}
 
 	var err error
-	if action == "add" {
+	switch action {
+	case "add":
 		if AddAbilitiesToUser == nil {
 			err = c.Error(errors.New("undefined function 'AddAbilitiesToUser'"))
 		} else {
 			err = AddAbilitiesToUser(c, abilities, userID)
 		}
-	} else if action == "remove" {
+	case "remove":
 		if RemoveAbilitiesFromUser == nil {
 			err = c.Error(errors.New("undefined function 'RemoveAbilitiesFromUser'"))
 		} else {
 			err = RemoveAbilitiesFromUser(c, abilities, userID)
 		}
-	} else if action == "set" {
-		if RemoveAbilitiesFromUser == nil {
+	case "set":
+		if SetAbilitiesToUser == nil {
 			err = c.Error(errors.New("undefined function 'SetAbilitiesToUser'"))
 		} else {
 			err = SetAbilitiesToUser(c, abilities, userID)

@@ -182,7 +182,9 @@ func validateOrCancelUpdateProperty(c *gin.Context, property string, validate bo
 			})
 
 			// Another mail is sent to the new email address to verify it.
-			startProcessValidateNewEmailAddress(c, user.ID, value, user.Username, user.Locale)
+			if _, _, err := startProcessValidateNewEmailAddress(c, user.ID, value, user.Username, user.Locale); err != nil {
+				c.Error(err)
+			}
 
 			response.OkWithStatus(c, t("status.update_email_address.confirmed"))
 		} else if isPasswordProcess {

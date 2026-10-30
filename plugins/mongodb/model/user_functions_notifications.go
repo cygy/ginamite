@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"errors"
 
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/mongo/bson"
@@ -47,7 +48,11 @@ func GetUserNotificationTargetsByType(ctx context.Context, userID, notificationT
 		log.DatabaseError(err, UserCollection)
 		return targets, err
 	}
-	defer cursor.Close(ctx)
+	defer func() {
+		if err := cursor.Close(ctx); err != nil {
+			log.WithField("error", err).Error("unable to close the cursor")
+		}
+	}()
 
 	err = cursor.All(ctx, &targets)
 	if err != nil {
@@ -57,7 +62,9 @@ func GetUserNotificationTargetsByType(ctx context.Context, userID, notificationT
 
 	// Get the email address if the user wants to receive this notification by email.
 	user := &User{}
-	user.GetByIDAndNotification(ctx, userID, notificationType, db)
+	if err := user.GetByIDAndNotification(ctx, userID, notificationType, db); err != nil && !errors.Is(err, mongo.ErrNoDocuments) {
+		return targets, err
+	}
 	if user.IsSaved() && user.PrivateInfos.IsEmailValid {
 		targets = append(targets, UserNotificationTarget{
 			Type:  notifications.TargetEmail,

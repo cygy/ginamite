@@ -227,7 +227,11 @@ func PipeAll(ctx context.Context, result any, collection string, pipeline any, d
 func PipeOne(ctx context.Context, result any, collection string, pipeline any, db *mongo.Database) error {
 	cursor, err := db.Collection(collection).Aggregate(ctx, pipeline)
 	if err == nil {
-		defer cursor.Close(ctx)
+		defer func() {
+			if closeErr := cursor.Close(ctx); closeErr != nil {
+				log.DatabaseError(closeErr, collection)
+			}
+		}()
 
 		if cursor.Next(ctx) {
 			err = cursor.Decode(result)

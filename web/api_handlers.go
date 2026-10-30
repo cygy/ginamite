@@ -25,13 +25,10 @@ func HandleAPICallToPage(c *gin.Context, page *html.Page, result api.Result, ok 
 			switch result.StatusCode {
 			case http.StatusNotFound:
 				response.NotFound(c)
-				break
 			case http.StatusInternalServerError:
 				response.InternalServerError(c)
-				break
 			case http.StatusUnauthorized:
 				response.Unauthorized(c)
-				break
 			default:
 			}
 		}

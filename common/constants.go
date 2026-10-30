@@ -10,9 +10,9 @@ const (
 	// InstagramPrefix : the prefix of a Instagram account URL.
 	InstagramPrefix = "https://www.instagram.com/"
 
-	//ContactSubjectMaxLength : max length of the subject of a contact.
+	// ContactSubjectMaxLength : max length of the subject of a contact.
 	ContactSubjectMaxLength = 150
 
-	//ContactTextMaxLength : max length of the text of a contact.
+	// ContactTextMaxLength : max length of the text of a contact.
 	ContactTextMaxLength = 1000
 )

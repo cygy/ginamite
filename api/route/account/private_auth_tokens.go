@@ -133,7 +133,9 @@ func createAuthenticationToken(c *gin.Context, user authentication.User, IPAddre
 	// Sign and get the complete encoded token as a string.
 	signedToken, err := authentication.GetSignedToken(c, config.Main.JWT.SigningMethod, config.Main.JWT.Secret, tokenID)
 	if err != nil {
-		DeleteTokenByID(c, tokenID)
+		if deleteErr := DeleteTokenByID(c, tokenID); deleteErr != nil {
+			c.Error(deleteErr)
+		}
 		canNotLoginError(c, err)
 		return "", err
 	}

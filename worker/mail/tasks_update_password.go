@@ -13,7 +13,9 @@ import (
 // UpdatePasswordConfirmation : sends a mail to confirm the password update.
 func UpdatePasswordConfirmation(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
 	p := queue.MailUpdatePasswordConfirmation{}
-	queue.UnmarshalPayload(payload, &p)
+	if err := queue.UnmarshalPayload(payload, &p); err != nil {
+		return
+	}
 
 	if !isEmailAddressValid.check(ctx, p.EmailAddress) {
 		return
@@ -56,7 +58,9 @@ func UpdatePasswordConfirmation(ctx context.Context, payload []byte, isEmailAddr
 // UpdatePasswordConfirmed : sends a mail to notify the password update is confirmed.
 func UpdatePasswordConfirmed(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
 	p := queue.MailUpdatePasswordConfirmed{}
-	queue.UnmarshalPayload(payload, &p)
+	if err := queue.UnmarshalPayload(payload, &p); err != nil {
+		return
+	}
 
 	if !isEmailAddressValid.check(ctx, p.EmailAddress) {
 		return
@@ -90,7 +94,9 @@ func UpdatePasswordConfirmed(ctx context.Context, payload []byte, isEmailAddress
 // UpdatePasswordCancelled : sends a mail to notify the password update is cancelled.
 func UpdatePasswordCancelled(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
 	p := queue.MailUpdatePasswordCancelled{}
-	queue.UnmarshalPayload(payload, &p)
+	if err := queue.UnmarshalPayload(payload, &p); err != nil {
+		return
+	}
 
 	if !isEmailAddressValid.check(ctx, p.EmailAddress) {
 		return

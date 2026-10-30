@@ -19,7 +19,9 @@ func GetIPInfo(payload []byte, saveIPAddressDetailsFunc func(ctx context.Context
 	}
 
 	p := queue.TaskIPLocation{}
-	queue.UnmarshalPayload(payload, &p)
+	if err := queue.UnmarshalPayload(payload, &p); err != nil {
+		return
+	}
 
 	saveIPAddressDetailsFunc(nil, p.IPAddress, p.TokenID, GetIPAddressDetails)
 }
@@ -36,7 +38,11 @@ func GetIPAddressDetails(IPAddress string) *IPAddressDetails {
 		return nil
 	}
 
-	defer httpResponse.Body.Close()
+	defer func() {
+		if err := httpResponse.Body.Close(); err != nil {
+			logError(IPAddress, err)
+		}
+	}()
 	responseContent, err := io.ReadAll(httpResponse.Body)
 	if err != nil {
 		logError(IPAddress, err)

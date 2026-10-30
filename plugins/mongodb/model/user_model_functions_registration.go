@@ -6,6 +6,7 @@ import (
 
 	"github.com/cygy/ginamite/api/validator"
 	"github.com/cygy/ginamite/common/authentication"
+	"github.com/cygy/ginamite/common/log"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
@@ -25,9 +26,13 @@ func (user *User) ValidateRegistrationByEmailAddress(ctx context.Context, code s
 	// Wrong verification code.
 	if user.RegistrationInfos.Code != code {
 		if user.RegistrationInfos.CodeAttempts <= UserMaxValidateRegistrationAttemps {
-			user.Update(ctx, bson.M{"$inc": bson.M{"registrationInfos.codeAttempts": 1}}, db)
+			if err := user.Update(ctx, bson.M{"$inc": bson.M{"registrationInfos.codeAttempts": 1}}, db); err != nil {
+				log.WithField("error", err).Error("unable to update")
+			}
 		} else {
-			user.Update(ctx, bson.M{"$unset": bson.M{"registrationInfos.source": "", "registrationInfos.device": "", "registrationInfos.method": "", "registrationInfos.code": "", "registrationInfos.codeAttempts": ""}}, db)
+			if err := user.Update(ctx, bson.M{"$unset": bson.M{"registrationInfos.source": "", "registrationInfos.device": "", "registrationInfos.method": "", "registrationInfos.code": "", "registrationInfos.codeAttempts": ""}}, db); err != nil {
+				log.WithField("error", err).Error("unable to update")
+			}
 		}
 
 		return errors.New("registration code is different")

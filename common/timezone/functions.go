@@ -47,7 +47,11 @@ func (conf *Configuration) Initialize(filepath string) error {
 		return err
 	}
 
-	defer file.Close()
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil {
+			log.WithField("error", closeErr).Error("unable to close the timezones file")
+		}
+	}()
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {

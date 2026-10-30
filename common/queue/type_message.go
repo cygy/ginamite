@@ -17,7 +17,6 @@ type Message struct {
 // Decode : decodes a message received.
 func (m *Message) Decode(bytes []byte) bool {
 	err := json.Unmarshal(bytes, m)
-
 	if err != nil {
 		log.WithFields(logrus.Fields{
 			"error": err.Error(),

@@ -47,7 +47,6 @@ func RemoveIndexes(ctx context.Context, indexes []IndexToDelete) {
 // CreateAllIndexes : checks the indexes of the collections.
 func CreateAllIndexes(ctx context.Context) {
 	indexes := []IndexToCreate{
-
 		// Indexes of the collection "authTokens"
 		{
 			Collection: model.AuthTokenCollection,
@@ -447,7 +446,6 @@ func CreateAllIndexes(ctx context.Context) {
 // RemoveUnusedIndexes : removes some indexes from the collections.
 func RemoveUnusedIndexes(ctx context.Context) {
 	indexes := []IndexToDelete{
-
 		// Indexes of the collection "authTokens"
 		{
 			Collection: model.AuthTokenCollection,

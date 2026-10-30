@@ -10,7 +10,9 @@ import (
 // NewLogin : notifies a user that a login occurs on its account.
 func NewLogin(ctx context.Context, payload []byte, getNotificationTargetsByUserAndTypeFunc notifications.GetNotificationTargetsByUserAndTypeFunc) {
 	p := queue.UserNotificationNewLogin{}
-	queue.UnmarshalPayload(payload, &p)
+	if err := queue.UnmarshalPayload(payload, &p); err != nil {
+		return
+	}
 
 	// Dispatch this event to the different notifications.
 	event := Event{

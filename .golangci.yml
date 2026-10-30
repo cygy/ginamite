@@ -1,0 +1,8 @@
+version: "2"
+
+linters:
+  settings:
+    errcheck:
+      exclude-functions:
+        # gin.Context.Error returns its argument, it cannot fail.
+        - (*github.com/gin-gonic/gin.Context).Error

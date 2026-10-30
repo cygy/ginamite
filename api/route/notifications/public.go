@@ -35,5 +35,4 @@ func GetNotifications(supportedNotifications []string) gin.HandlerFunc {
 			"notifications": localizedNotifications,
 		})
 	}
-
 }

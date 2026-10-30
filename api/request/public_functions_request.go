@@ -9,13 +9,16 @@ import (
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/localization"
+	"github.com/cygy/ginamite/common/log"
 
 	"github.com/gin-gonic/gin"
 )
 
 // DecodeBody : decodes the JSON-formatted body of a request to a struct.
 func DecodeBody(c *gin.Context, v any) {
-	json.NewDecoder(c.Request.Body).Decode(&v)
+	if err := json.NewDecoder(c.Request.Body).Decode(&v); err != nil {
+		log.WithField("error", err).Warn("unable to decode the request body")
+	}
 }
 
 // Unescape : unescapes a string.
