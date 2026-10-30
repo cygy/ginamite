@@ -6,7 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// GetContactsForAdmin : returns the contacts for the admin panel.
+// GetContactsForAdmin returns the contacts for the admin panel.
 func GetContactsForAdmin(c *gin.Context, offset, limit int64) (any, error) {
 	mongoSession := session.Get(c)
 	contacts, err := model.GetContactsForAdmin(c, offset, limit, mongoSession)
@@ -14,7 +14,7 @@ func GetContactsForAdmin(c *gin.Context, offset, limit int64) (any, error) {
 	return contacts, err
 }
 
-// GetContactForAdmin : gets a contact.
+// GetContactForAdmin gets a contact.
 func GetContactForAdmin(c *gin.Context, contactID string) (any, error) {
 	mongoSession := session.Get(c)
 
@@ -26,7 +26,7 @@ func GetContactForAdmin(c *gin.Context, contactID string) (any, error) {
 	return model.NewAdminContact(contact), nil
 }
 
-// UpdateContact : updates a contact.
+// UpdateContact updates a contact.
 func UpdateContact(c *gin.Context, contactID string, done bool) error {
 	mongoSession := session.Get(c)
 
@@ -38,7 +38,7 @@ func UpdateContact(c *gin.Context, contactID string, done bool) error {
 	return contact.UpdateDone(c, done, mongoSession)
 }
 
-// CreateContact : creates a contact.
+// CreateContact creates a contact.
 func CreateContact(c *gin.Context, emailAddress, subject, text string) error {
 	mongoSession := session.Get(c)
 

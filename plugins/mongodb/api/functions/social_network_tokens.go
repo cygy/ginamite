@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// SaveFacebookUserTokenDetailsToUser : saves the user's facebook details of an user.
+// SaveFacebookUserTokenDetailsToUser saves the user's facebook details of a user.
 func SaveFacebookUserTokenDetailsToUser(c *gin.Context, userID string, tokenInfos validator.TokenInfos) error {
 	// Check the userID.
 	if _, err := bson.ObjectIDFromHex(userID); err != nil {
@@ -25,7 +25,7 @@ func SaveFacebookUserTokenDetailsToUser(c *gin.Context, userID string, tokenInfo
 	return user.SaveFacebookInfos(c, tokenInfos.Token, tokenInfos.UserID, tokenInfos.FirstName, tokenInfos.LastName, tokenInfos.Email, tokenInfos.CreatedAt, tokenInfos.ExpiresAt, mongoSession)
 }
 
-// SaveGoogleUserTokenDetailsToUser : saves the user's google details of an user.
+// SaveGoogleUserTokenDetailsToUser saves the user's google details of a user.
 func SaveGoogleUserTokenDetailsToUser(c *gin.Context, userID string, tokenInfos validator.TokenInfos) error {
 	// Check the userID.
 	if _, err := bson.ObjectIDFromHex(userID); err != nil {

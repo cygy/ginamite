@@ -20,6 +20,10 @@ import (
 type Session struct {
 	Client       *mongo.Client
 	DatabaseName string
+
+	// Store, if set, is returned by Database instead of the database of the client. It lets the tests
+	// use a stub, see the mock package of the store.
+	Store store.Database
 }
 
 // NewSession returns an empty Session.
@@ -98,6 +102,10 @@ func (session *Session) Close() {
 // Database returns the database of the session.
 // There is no need to copy the session or to close the database: the client manages a pool of connections.
 func (session *Session) Database() store.Database {
+	if session.Store != nil {
+		return session.Store
+	}
+
 	return store.NewDatabase(session.Client.Database(session.DatabaseName))
 }
 
@@ -129,6 +137,11 @@ func Database() store.Database {
 // Inject returns a middleware saving the database of the main session in the Gin context.
 func Inject() gin.HandlerFunc {
 	return Main.Inject()
+}
+
+// Set saves the database in the Gin context, like Inject does. It is meant for the tests, to use a stub.
+func Set(c *gin.Context, db store.Database) {
+	c.Set(contextKey, db)
 }
 
 // Get returns the database saved in the Gin context by Inject, or nil if there is none.

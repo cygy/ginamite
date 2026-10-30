@@ -13,21 +13,21 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// RegisterByEmailAddress : saves the registration details of an user.
+// RegisterByEmailAddress saves the registration details of a user.
 func RegisterByEmailAddress(c *gin.Context, username, encryptedPassword, emailAddress, locale, termsVersion, registrationCode, privateKey, source, ip string, device authentication.Device) error {
 	mongoSession := session.Get(c)
 	user := model.NewUser()
 	return user.RegisterByEmailAddress(c, username, encryptedPassword, emailAddress, locale, termsVersion, registrationCode, privateKey, source, ip, device, mongoSession)
 }
 
-// RegisterByThirdPartyToken : saves the registration details of an user.
+// RegisterByThirdPartyToken saves the registration details of a user.
 func RegisterByThirdPartyToken(c *gin.Context, username string, tokenInfos validator.TokenInfos, tokenSource, locale, termsVersion, registrationCode, privateKey, source, ip string, device authentication.Device) error {
 	mongoSession := session.Get(c)
 	user := model.NewUser()
 	return user.RegisterByThirdPartyToken(c, username, tokenInfos, tokenSource, locale, termsVersion, registrationCode, privateKey, source, ip, device, mongoSession)
 }
 
-// ValidateUserRegistration : validate the registration of an user.
+// ValidateUserRegistration validates the registration of a user.
 func ValidateUserRegistration(c *gin.Context, userID, registrationKey string) error {
 	// Check the userID.
 	if _, err := bson.ObjectIDFromHex(userID); err != nil {
@@ -36,24 +36,15 @@ func ValidateUserRegistration(c *gin.Context, userID, registrationKey string) er
 
 	mongoSession := session.Get(c)
 
-	// Do not validate or cancel if the account is verified already.
-	user := &model.User{}
-	if err := user.GetByID(c, userID, mongoSession); err != nil {
+	user, err := unverifiedUser(c, userID)
+	if err != nil {
 		return err
 	}
 
-	if !user.IsSaved() || user.PrivateInfos.IsEmailValid {
-		return errors.New("user is already verified")
-	}
-
-	if err := user.ValidateRegistrationByEmailAddress(c, registrationKey, mongoSession); err != nil {
-		return err
-	}
-
-	return nil
+	return user.ValidateRegistrationByEmailAddress(c, registrationKey, mongoSession)
 }
 
-// CancelUserRegistration : cancel the registration of an user.
+// CancelUserRegistration cancels the registration of a user.
 func CancelUserRegistration(c *gin.Context, userID, registrationKey string) error {
 	// Check the userID.
 	if _, err := bson.ObjectIDFromHex(userID); err != nil {
@@ -62,14 +53,9 @@ func CancelUserRegistration(c *gin.Context, userID, registrationKey string) erro
 
 	mongoSession := session.Get(c)
 
-	// Do not validate or cancel if the account is verified already.
-	user := &model.User{}
-	if err := user.GetByID(c, userID, mongoSession); err != nil {
+	user, err := unverifiedUser(c, userID)
+	if err != nil {
 		return err
-	}
-
-	if !user.IsSaved() || user.PrivateInfos.IsEmailValid {
-		return errors.New("user is already verified")
 	}
 
 	if err := user.CancelRegistrationByEmailAddress(c, registrationKey, mongoSession); err != nil {
@@ -83,7 +69,7 @@ func CancelUserRegistration(c *gin.Context, userID, registrationKey string) erro
 	return nil
 }
 
-// GetRegistrationDetails : returns the details of the registration of an user.
+// GetRegistrationDetails returns the details of the registration of a user.
 func GetRegistrationDetails(c *gin.Context, userID string) (*authentication.Details, error) {
 	// Check the userID.
 	if _, err := bson.ObjectIDFromHex(userID); err != nil {
@@ -103,4 +89,18 @@ func GetRegistrationDetails(c *gin.Context, userID string) (*authentication.Deta
 		Source: user.RegistrationInfos.Source,
 		Method: user.RegistrationInfos.Method,
 	}, nil
+}
+
+// unverifiedUser loads the user, and returns an error if its registration is already validated.
+func unverifiedUser(c *gin.Context, userID string) (*model.User, error) {
+	user := &model.User{}
+	if err := user.GetByID(c, userID, session.Get(c)); err != nil {
+		return nil, err
+	}
+
+	if !user.IsSaved() || user.PrivateInfos.IsEmailValid {
+		return nil, errors.New("user is already verified")
+	}
+
+	return user, nil
 }

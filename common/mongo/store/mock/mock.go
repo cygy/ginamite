@@ -38,6 +38,7 @@ type Database struct {
 	mu          sync.Mutex
 	collections map[string]*Collection
 	created     []string
+	createOpts  map[string][]options.Lister[options.CreateCollectionOptions]
 }
 
 // NewDatabase returns a stub database with the name.
@@ -73,14 +74,26 @@ func (d *Database) Coll(name string) *Collection {
 	return c
 }
 
-// CreateCollection records the name of the collection and returns CreateCollectionErr.
-func (d *Database) CreateCollection(_ context.Context, name string, _ ...options.Lister[options.CreateCollectionOptions]) error {
+// CreateCollection records the name and the options of the collection and returns CreateCollectionErr.
+func (d *Database) CreateCollection(_ context.Context, name string, opts ...options.Lister[options.CreateCollectionOptions]) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
 	d.created = append(d.created, name)
+	if d.createOpts == nil {
+		d.createOpts = map[string][]options.Lister[options.CreateCollectionOptions]{}
+	}
+	d.createOpts[name] = opts
 
 	return d.CreateCollectionErr
+}
+
+// CreateOptions returns the options given when the collection was created.
+func (d *Database) CreateOptions(name string) []options.Lister[options.CreateCollectionOptions] {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	return d.createOpts[name]
 }
 
 // Created returns the names of the collections created with CreateCollection.
@@ -99,8 +112,11 @@ type Collection struct {
 	// Name is the name of the collection.
 	Name string
 
-	// Err is returned by every method that returns an error, unless a more specific field is set.
+	// Err is returned by every method that returns an error, unless the method has its own error in Errs.
 	Err error
+
+	// Errs are the errors returned by a given method, e.g. "CountDocuments".
+	Errs map[string]error
 
 	// InsertResult, UpdateResult and DeleteResult are returned by the writes. They default to one affected document.
 	InsertResult *mongo.InsertOneResult
@@ -126,11 +142,18 @@ type Collection struct {
 	calls []Call
 }
 
-func (c *Collection) record(method string, args []any, opts []any) {
+// record saves the call and returns the error to return for the method, if any.
+func (c *Collection) record(method string, args []any, opts []any) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	c.calls = append(c.calls, Call{Method: method, Args: args, Opts: opts})
+
+	if err, ok := c.Errs[method]; ok {
+		return err
+	}
+
+	return c.Err
 }
 
 // Calls returns the calls received by the collection, in order.
@@ -162,9 +185,8 @@ func listerArgs[T any](opts []options.Lister[T]) []any {
 
 // InsertOne records the call.
 func (c *Collection) InsertOne(_ context.Context, document any, opts ...options.Lister[options.InsertOneOptions]) (*mongo.InsertOneResult, error) {
-	c.record("InsertOne", []any{document}, listerArgs(opts))
-	if c.Err != nil {
-		return nil, c.Err
+	if err := c.record("InsertOne", []any{document}, listerArgs(opts)); err != nil {
+		return nil, err
 	}
 	if c.InsertResult != nil {
 		return c.InsertResult, nil
@@ -173,9 +195,9 @@ func (c *Collection) InsertOne(_ context.Context, document any, opts ...options.
 	return &mongo.InsertOneResult{}, nil
 }
 
-func (c *Collection) updated() (*mongo.UpdateResult, error) {
-	if c.Err != nil {
-		return nil, c.Err
+func (c *Collection) updated(err error) (*mongo.UpdateResult, error) {
+	if err != nil {
+		return nil, err
 	}
 	if c.UpdateResult != nil {
 		return c.UpdateResult, nil
@@ -186,25 +208,22 @@ func (c *Collection) updated() (*mongo.UpdateResult, error) {
 
 // UpdateByID records the call.
 func (c *Collection) UpdateByID(_ context.Context, id, update any, opts ...options.Lister[options.UpdateOneOptions]) (*mongo.UpdateResult, error) {
-	c.record("UpdateByID", []any{id, update}, listerArgs(opts))
-	return c.updated()
+	return c.updated(c.record("UpdateByID", []any{id, update}, listerArgs(opts)))
 }
 
 // UpdateOne records the call.
 func (c *Collection) UpdateOne(_ context.Context, filter, update any, opts ...options.Lister[options.UpdateOneOptions]) (*mongo.UpdateResult, error) {
-	c.record("UpdateOne", []any{filter, update}, listerArgs(opts))
-	return c.updated()
+	return c.updated(c.record("UpdateOne", []any{filter, update}, listerArgs(opts)))
 }
 
 // UpdateMany records the call.
 func (c *Collection) UpdateMany(_ context.Context, filter, update any, opts ...options.Lister[options.UpdateManyOptions]) (*mongo.UpdateResult, error) {
-	c.record("UpdateMany", []any{filter, update}, listerArgs(opts))
-	return c.updated()
+	return c.updated(c.record("UpdateMany", []any{filter, update}, listerArgs(opts)))
 }
 
-func (c *Collection) deleted() (*mongo.DeleteResult, error) {
-	if c.Err != nil {
-		return nil, c.Err
+func (c *Collection) deleted(err error) (*mongo.DeleteResult, error) {
+	if err != nil {
+		return nil, err
 	}
 	if c.DeleteResult != nil {
 		return c.DeleteResult, nil
@@ -215,21 +234,18 @@ func (c *Collection) deleted() (*mongo.DeleteResult, error) {
 
 // DeleteOne records the call.
 func (c *Collection) DeleteOne(_ context.Context, filter any, opts ...options.Lister[options.DeleteOneOptions]) (*mongo.DeleteResult, error) {
-	c.record("DeleteOne", []any{filter}, listerArgs(opts))
-	return c.deleted()
+	return c.deleted(c.record("DeleteOne", []any{filter}, listerArgs(opts)))
 }
 
 // DeleteMany records the call.
 func (c *Collection) DeleteMany(_ context.Context, filter any, opts ...options.Lister[options.DeleteManyOptions]) (*mongo.DeleteResult, error) {
-	c.record("DeleteMany", []any{filter}, listerArgs(opts))
-	return c.deleted()
+	return c.deleted(c.record("DeleteMany", []any{filter}, listerArgs(opts)))
 }
 
 // FindOne records the call and returns One, or Err, or a result without document.
 func (c *Collection) FindOne(_ context.Context, filter any, opts ...options.Lister[options.FindOneOptions]) store.SingleResult {
-	c.record("FindOne", []any{filter}, listerArgs(opts))
-	if c.Err != nil {
-		return Result{Error: c.Err}
+	if err := c.record("FindOne", []any{filter}, listerArgs(opts)); err != nil {
+		return Result{Error: err}
 	}
 	if c.One != nil {
 		return c.One
@@ -240,9 +256,8 @@ func (c *Collection) FindOne(_ context.Context, filter any, opts ...options.List
 
 // Find records the call and returns a cursor over Docs, or Err.
 func (c *Collection) Find(_ context.Context, filter any, opts ...options.Lister[options.FindOptions]) (store.Cursor, error) {
-	c.record("Find", []any{filter}, listerArgs(opts))
-	if c.Err != nil {
-		return nil, c.Err
+	if err := c.record("Find", []any{filter}, listerArgs(opts)); err != nil {
+		return nil, err
 	}
 
 	return c.cursor(), nil
@@ -258,9 +273,8 @@ func (c *Collection) cursor() *Cursor {
 
 // CountDocuments records the call and returns Count, or Err.
 func (c *Collection) CountDocuments(_ context.Context, filter any, opts ...options.Lister[options.CountOptions]) (int64, error) {
-	c.record("CountDocuments", []any{filter}, listerArgs(opts))
-	if c.Err != nil {
-		return 0, c.Err
+	if err := c.record("CountDocuments", []any{filter}, listerArgs(opts)); err != nil {
+		return 0, err
 	}
 
 	return c.Count, nil
@@ -268,9 +282,8 @@ func (c *Collection) CountDocuments(_ context.Context, filter any, opts ...optio
 
 // Aggregate records the call and returns a cursor over Docs, or Err.
 func (c *Collection) Aggregate(_ context.Context, pipeline any, opts ...options.Lister[options.AggregateOptions]) (store.Cursor, error) {
-	c.record("Aggregate", []any{pipeline}, listerArgs(opts))
-	if c.Err != nil {
-		return nil, c.Err
+	if err := c.record("Aggregate", []any{pipeline}, listerArgs(opts)); err != nil {
+		return nil, err
 	}
 
 	return c.cursor(), nil
@@ -290,8 +303,7 @@ func (c *Collection) Indexes() store.IndexView {
 
 // Drop records the call and returns Err.
 func (c *Collection) Drop(_ context.Context, _ ...options.Lister[options.DropCollectionOptions]) error {
-	c.record("Drop", nil, nil)
-	return c.Err
+	return c.record("Drop", nil, nil)
 }
 
 // applyOptions applies the options of a call to a new T.

@@ -1,19 +1,27 @@
+// Package mongodb is the plugin that stores the data of the application in MongoDB: the users, their auth tokens,
+// their notifications and the contacts. It plugs the functions of the API and of the workers into a ginamite.Server.
 package mongodb
 
 import (
 	"context"
 
 	"github.com/cygy/ginamite"
+	"github.com/cygy/ginamite/api"
 	"github.com/cygy/ginamite/api/route"
 	"github.com/cygy/ginamite/common/mongo/store"
 	apiFunctions "github.com/cygy/ginamite/plugins/mongodb/api/functions"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
 	workerFunctions "github.com/cygy/ginamite/plugins/mongodb/worker/functions"
+	"github.com/cygy/ginamite/worker"
 
 	"github.com/gin-gonic/gin"
 )
 
-// Plugin : structure of the plugin.
+// Plugin is the MongoDB plugin. Create it with NewPlugin, set the properties that differ from the defaults, then
+// register it on the server, which calls Configure.
+//
+// The functions are optional hooks: the application provides them to extend the plugin with its own collections,
+// indexes, default documents and documents that reference the users.
 type Plugin struct {
 	ExtraUserAbilities        []string
 	ExtraDefaultUserAbilities []string
@@ -45,7 +53,7 @@ type Plugin struct {
 	IsUserEmpty func(context.Context, string, store.Database) bool
 }
 
-// NewPlugin : returns a new struct 'Plugin'.
+// NewPlugin returns a Plugin with the default settings of the model package.
 func NewPlugin() *Plugin {
 	return &Plugin{
 		ExtraUserAbilities:                 []string{},
@@ -61,8 +69,16 @@ func NewPlugin() *Plugin {
 	}
 }
 
-// Configure : configure the plugin.
+// Configure applies the settings of the plugin to the model package, and sets the functions of the plugin on the
+// worker and the API of the server. It also adds the routes of the plugin to the API.
 func (p *Plugin) Configure(server *ginamite.Server) {
+	p.applySettings()
+	p.configureWorker(server.Worker)
+	p.configureAPI(server.API)
+}
+
+// applySettings applies the settings of the plugin to the model package, and adds its abilities.
+func (p *Plugin) applySettings() {
 	model.UserMaxValidateRegistrationAttemps = p.UserMaxValidateRegistrationAttemps
 	model.UserMaxDescriptionLength = p.UserMaxDescriptionLength
 	model.UserMaxImageSize = p.UserMaxImageSize
@@ -74,162 +90,175 @@ func (p *Plugin) Configure(server *ginamite.Server) {
 
 	model.AddUserAbilities(p.ExtraUserAbilities)
 	model.AddDefaultUserAbilities(p.ExtraDefaultUserAbilities)
+}
 
-	server.Worker.Functions.DeleteExpiredTokens = workerFunctions.DeleteExpiredTokens
-	server.Worker.Functions.GetNeverUsedAccounts = workerFunctions.GetNeverUsedAccounts
-	server.Worker.Functions.GetInactiveAccounts = workerFunctions.GetInactiveAccounts
-	server.Worker.Functions.IsUserEmpty = workerFunctions.IsEmptyUser(p.IsUserEmpty)
-	server.Worker.Functions.SanitizeAccounts = workerFunctions.SanitizeAccounts(p.SanitizeAccounts)
-	server.Worker.Functions.DeleteUserByID = workerFunctions.DeleteUserByID(p.UpdateDocumentsReferencingToDeletedUser)
-	server.Worker.Functions.DisableUserByID = workerFunctions.DisableUserByID(p.UpdateDocumentsReferencingToDisabledUser)
-	server.Worker.Functions.EnableUserByID = workerFunctions.EnableUserByID(p.UpdateDocumentsReferencingToEnabledUser)
-	server.Worker.Functions.UpdateUserSocialNetworksByID = workerFunctions.UpdateUserSocialNetworksByID(p.UpdateDocumentsReferencingToUpdatedUserSocialNetworks)
-	server.Worker.Functions.SaveIPAddressDetails = workerFunctions.SaveIPAddressDetails
-	server.Worker.Functions.GetNotificationTargetsByUserAndType = workerFunctions.GetNotificationTargetsByUserAndType
-	server.Worker.Functions.IsEmailAddressValid = workerFunctions.IsEmailAddressValid
-	server.Worker.Functions.StartUpTasks = func(ctx context.Context, environment, version string) {
-		workerFunctions.RemoveUnusedCollections(ctx)
-		if p.CollectionsToRemove != nil {
-			collections := p.CollectionsToRemove()
-			workerFunctions.RemoveCollections(ctx, collections)
-		}
+// configureWorker sets the functions of the worker.
+func (p *Plugin) configureWorker(w *worker.Server) {
+	w.Functions.DeleteExpiredTokens = workerFunctions.DeleteExpiredTokens
+	w.Functions.GetNeverUsedAccounts = workerFunctions.GetNeverUsedAccounts
+	w.Functions.GetInactiveAccounts = workerFunctions.GetInactiveAccounts
+	w.Functions.IsUserEmpty = workerFunctions.IsEmptyUser(p.IsUserEmpty)
+	w.Functions.SanitizeAccounts = workerFunctions.SanitizeAccounts(p.SanitizeAccounts)
+	w.Functions.DeleteUserByID = workerFunctions.DeleteUserByID(p.UpdateDocumentsReferencingToDeletedUser)
+	w.Functions.DisableUserByID = workerFunctions.DisableUserByID(p.UpdateDocumentsReferencingToDisabledUser)
+	w.Functions.EnableUserByID = workerFunctions.EnableUserByID(p.UpdateDocumentsReferencingToEnabledUser)
+	w.Functions.UpdateUserSocialNetworksByID = workerFunctions.UpdateUserSocialNetworksByID(p.UpdateDocumentsReferencingToUpdatedUserSocialNetworks)
+	w.Functions.SaveIPAddressDetails = workerFunctions.SaveIPAddressDetails
+	w.Functions.GetNotificationTargetsByUserAndType = workerFunctions.GetNotificationTargetsByUserAndType
+	w.Functions.IsEmailAddressValid = workerFunctions.IsEmailAddressValid
+	w.Functions.StartUpTasks = p.startUpTasks
+}
 
-		workerFunctions.CreateAllCollections(ctx)
-		if p.CollectionsToCreate != nil {
-			collections := p.CollectionsToCreate()
-			workerFunctions.CreateCollections(ctx, collections)
-		}
-
-		workerFunctions.RemoveUnusedIndexes(ctx)
-		if p.IndexesToRemove != nil {
-			indexes := p.IndexesToRemove()
-			workerFunctions.RemoveIndexes(ctx, indexes)
-		}
-
-		workerFunctions.CreateAllIndexes(ctx)
-		if p.IndexesToCreate != nil {
-			indexes := p.IndexesToCreate()
-			workerFunctions.CreateIndexes(ctx, indexes)
-		}
-
-		workerFunctions.RemoveUnusedDefaultDocuments(environment, version)
-		if p.RemoveDefaultDocuments != nil {
-			workerFunctions.RemoveDefaultDocuments(environment, version, p.RemoveDefaultDocuments)
-		}
-
-		workerFunctions.CreateAllDefaultDocuments(environment, version)
-		if p.CreateDefaultDocuments != nil {
-			workerFunctions.CreateDefaultDocuments(environment, version, p.CreateDefaultDocuments)
-		}
-
-		workerFunctions.UpdateAllDefaultDocuments(environment, version)
-		if p.UpdateDefaultDocuments != nil {
-			workerFunctions.UpdateDefaultDocuments(environment, version, p.UpdateDefaultDocuments)
-		}
-
-		if p.StartUpTasks != nil {
-			p.StartUpTasks()
-		}
+// startUpTasks creates and cleans the collections, the indexes and the default documents, when the worker starts.
+// The hooks of the plugin run after the default ones.
+func (p *Plugin) startUpTasks(ctx context.Context, environment, version string) {
+	workerFunctions.RemoveUnusedCollections(ctx)
+	if p.CollectionsToRemove != nil {
+		collections := p.CollectionsToRemove()
+		workerFunctions.RemoveCollections(ctx, collections)
 	}
 
-	server.API.Functions.BuildTokenFromID = apiFunctions.BuildTokenFromID
-	server.API.Functions.ExtendTokenExpirationDateFromID = apiFunctions.ExtendTokenExpirationDateFromID
+	workerFunctions.CreateAllCollections(ctx)
+	if p.CollectionsToCreate != nil {
+		collections := p.CollectionsToCreate()
+		workerFunctions.CreateCollections(ctx, collections)
+	}
 
-	server.API.Functions.MiddlewareIsValidAuthToken = apiFunctions.IsValidAuthToken
-	server.API.Functions.MiddlewareGetUserAndLocaleFromAuthToken = apiFunctions.GetUserAndLocaleFromAuthToken
-	server.API.Functions.MiddlewareGetUserAbilities = apiFunctions.GetUserAbilities
-	server.API.Functions.MiddlewareGetLatestVersionOfTermsAcceptedByUser = apiFunctions.GetLatestVersionOfTermsAcceptedByUser
+	workerFunctions.RemoveUnusedIndexes(ctx)
+	if p.IndexesToRemove != nil {
+		indexes := p.IndexesToRemove()
+		workerFunctions.RemoveIndexes(ctx, indexes)
+	}
 
-	server.API.Functions.GetEnabledUsersForAdmin = apiFunctions.GetEnabledUsersForAdmin
-	server.API.Functions.GetDisabledUsersForAdmin = apiFunctions.GetDisabledUsersForAdmin
-	server.API.Functions.UpdatePasswordByAdmin = apiFunctions.UpdateUserPasswordByAdmin
-	server.API.Functions.UpdateInformationsByAdmin = apiFunctions.UpdateUserInformationsByAdmin
-	server.API.Functions.UpdateDescriptionByAdmin = apiFunctions.UpdateUserDescriptionByAdmin
-	server.API.Functions.UpdateSocialByAdmin = apiFunctions.UpdateUserSocialByAdmin
-	server.API.Functions.UpdateSettingsByAdmin = apiFunctions.UpdateUserSettingsByAdmin
-	server.API.Functions.UpdateNotificationsByAdmin = apiFunctions.UpdateUserNotificationsByAdmin
-	server.API.Functions.GetTokensForAdmin = apiFunctions.GetTokensForAdmin
-	server.API.Functions.DeleteTokenByIDByAdmin = apiFunctions.DeleteTokenByIDByAdmin
-	server.API.Functions.SetAbilitiesToUser = apiFunctions.SetAbilitiesToUser
-	server.API.Functions.AddAbilitiesToUser = apiFunctions.AddAbilitiesToUser
-	server.API.Functions.RemoveAbilitiesFromUser = apiFunctions.RemoveAbilitiesFromUser
+	workerFunctions.CreateAllIndexes(ctx)
+	if p.IndexesToCreate != nil {
+		indexes := p.IndexesToCreate()
+		workerFunctions.CreateIndexes(ctx, indexes)
+	}
 
-	server.API.Functions.NotificationsReceivedByUser = apiFunctions.NotificationsReceivedByUser
-	server.API.Functions.NotificationReceivedByUser = apiFunctions.NotificationReceivedByUser
-	server.API.Functions.UpdateUserNotificationRead = apiFunctions.UpdateUserNotificationRead
-	server.API.Functions.UpdateUserNotificationNotified = apiFunctions.UpdateUserNotificationNotified
-	server.API.Functions.DeleteUserNotification = apiFunctions.DeleteUserNotification
-	server.API.Functions.NotificationsSubscribedByUser = apiFunctions.NotificationsSubscribedByUser
-	server.API.Functions.SubscribeNotificationsToUser = apiFunctions.SubscribeNotificationsToUser
-	server.API.Functions.UnsubscribeNotificationFromUser = apiFunctions.UnsubscribeNotificationFromUser
+	workerFunctions.RemoveUnusedDefaultDocuments(environment, version)
+	if p.RemoveDefaultDocuments != nil {
+		workerFunctions.RemoveDefaultDocuments(environment, version, p.RemoveDefaultDocuments)
+	}
 
-	server.API.Functions.GetUserDetailsByIdentifier = apiFunctions.GetUserDetailsByIdentifier
-	server.API.Functions.GetUserDetailsByID = apiFunctions.GetUserDetailsByID
-	server.API.Functions.GetUserDetailsByFacebookUserID = apiFunctions.GetUserDetailsByFacebookUserID
-	server.API.Functions.GetUserDetailsByGoogleUserID = apiFunctions.GetUserDetailsByGoogleUserID
-	server.API.Functions.GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser = apiFunctions.GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser
+	workerFunctions.CreateAllDefaultDocuments(environment, version)
+	if p.CreateDefaultDocuments != nil {
+		workerFunctions.CreateDefaultDocuments(environment, version, p.CreateDefaultDocuments)
+	}
 
-	server.API.Functions.NewForgotPasswordProcessForUser = apiFunctions.NewForgotPasswordProcessForUser
-	server.API.Functions.GetForgotPasswordProcessDetailsByID = apiFunctions.GetForgotPasswordProcessDetailsByID
-	server.API.Functions.WrongAccessToForgotPasswordProcess = apiFunctions.WrongAccessToForgotPasswordProcess
-	server.API.Functions.DeleteForgotPasswordProcess = apiFunctions.DeleteForgotPasswordProcess
+	workerFunctions.UpdateAllDefaultDocuments(environment, version)
+	if p.UpdateDefaultDocuments != nil {
+		workerFunctions.UpdateDefaultDocuments(environment, version, p.UpdateDefaultDocuments)
+	}
 
-	server.API.Functions.UpdateUserPassword = apiFunctions.UpdateUserPassword
-	server.API.Functions.UpdateUserEmailAddress = apiFunctions.UpdateUserEmailAddress
-	server.API.Functions.UserEmailAddressIsVerified = apiFunctions.UserEmailAddressIsVerified
-	server.API.Functions.UpdateUserSocialNetworks = apiFunctions.UpdateUserSocialNetworks
-	server.API.Functions.UpdateVersionOfTermsAcceptedByUser = apiFunctions.UpdateVersionOfTermsAcceptedByUser
+	if p.StartUpTasks != nil {
+		p.StartUpTasks()
+	}
+}
 
-	server.API.Functions.ValidateUserRegistration = apiFunctions.ValidateUserRegistration
-	server.API.Functions.CancelUserRegistration = apiFunctions.CancelUserRegistration
-	server.API.Functions.GetRegistrationDetails = apiFunctions.GetRegistrationDetails
-	server.API.Functions.RegisterByEmailAddress = apiFunctions.RegisterByEmailAddress
-	server.API.Functions.RegisterByThirdPartyToken = apiFunctions.RegisterByThirdPartyToken
+// configureAPI sets the functions of the API, and adds its routes.
+func (p *Plugin) configureAPI(a *api.Server) {
+	a.Functions.BuildTokenFromID = apiFunctions.BuildTokenFromID
+	a.Functions.ExtendTokenExpirationDateFromID = apiFunctions.ExtendTokenExpirationDateFromID
 
-	server.API.Functions.DoesAccountWithUsernameExist = apiFunctions.DoesAccountWithUsernameExist
-	server.API.Functions.DoesAccountWithEmailAddressExist = apiFunctions.DoesAccountWithEmailAddressExist
-	server.API.Functions.DoesUserWithFacebookUserIDExist = apiFunctions.DoesUserWithFacebookUserIDExist
-	server.API.Functions.DoesUserWithGoogleUserIDExist = apiFunctions.DoesUserWithGoogleUserIDExist
+	a.Functions.MiddlewareIsValidAuthToken = apiFunctions.IsValidAuthToken
+	a.Functions.MiddlewareGetUserAndLocaleFromAuthToken = apiFunctions.GetUserAndLocaleFromAuthToken
+	a.Functions.MiddlewareGetUserAbilities = apiFunctions.GetUserAbilities
+	a.Functions.MiddlewareGetLatestVersionOfTermsAcceptedByUser = apiFunctions.GetLatestVersionOfTermsAcceptedByUser
 
-	server.API.Functions.SaveFacebookUserTokenDetailsToUser = apiFunctions.SaveFacebookUserTokenDetailsToUser
-	server.API.Functions.SaveGoogleUserTokenDetailsToUser = apiFunctions.SaveGoogleUserTokenDetailsToUser
+	a.Functions.GetEnabledUsersForAdmin = apiFunctions.GetEnabledUsersForAdmin
+	a.Functions.GetDisabledUsersForAdmin = apiFunctions.GetDisabledUsersForAdmin
+	a.Functions.UpdatePasswordByAdmin = apiFunctions.UpdateUserPasswordByAdmin
+	a.Functions.UpdateInformationsByAdmin = apiFunctions.UpdateUserInformationsByAdmin
+	a.Functions.UpdateDescriptionByAdmin = apiFunctions.UpdateUserDescriptionByAdmin
+	a.Functions.UpdateSocialByAdmin = apiFunctions.UpdateUserSocialByAdmin
+	a.Functions.UpdateSettingsByAdmin = apiFunctions.UpdateUserSettingsByAdmin
+	a.Functions.UpdateNotificationsByAdmin = apiFunctions.UpdateUserNotificationsByAdmin
+	a.Functions.GetTokensForAdmin = apiFunctions.GetTokensForAdmin
+	a.Functions.DeleteTokenByIDByAdmin = apiFunctions.DeleteTokenByIDByAdmin
+	a.Functions.SetAbilitiesToUser = apiFunctions.SetAbilitiesToUser
+	a.Functions.AddAbilitiesToUser = apiFunctions.AddAbilitiesToUser
+	a.Functions.RemoveAbilitiesFromUser = apiFunctions.RemoveAbilitiesFromUser
 
-	server.API.Functions.SaveAuthenticationToken = apiFunctions.SaveAuthenticationToken
-	server.API.Functions.GetTokenExpirationDate = apiFunctions.GetTokenExpirationDate
-	server.API.Functions.DeleteTokenByID = apiFunctions.DeleteTokenByID
-	server.API.Functions.GetTokenDetailsByID = apiFunctions.GetTokenDetailsByID
-	server.API.Functions.GetOwnedTokens = apiFunctions.GetOwnedTokens
-	server.API.Functions.GetOwnedTokenByID = apiFunctions.GetOwnedTokenByID
-	server.API.Functions.UpdateTokenByID = apiFunctions.UpdateTokenByID
+	a.Functions.NotificationsReceivedByUser = apiFunctions.NotificationsReceivedByUser
+	a.Functions.NotificationReceivedByUser = apiFunctions.NotificationReceivedByUser
+	a.Functions.UpdateUserNotificationRead = apiFunctions.UpdateUserNotificationRead
+	a.Functions.UpdateUserNotificationNotified = apiFunctions.UpdateUserNotificationNotified
+	a.Functions.DeleteUserNotification = apiFunctions.DeleteUserNotification
+	a.Functions.NotificationsSubscribedByUser = apiFunctions.NotificationsSubscribedByUser
+	a.Functions.SubscribeNotificationsToUser = apiFunctions.SubscribeNotificationsToUser
+	a.Functions.UnsubscribeNotificationFromUser = apiFunctions.UnsubscribeNotificationFromUser
 
-	server.API.Functions.GetOwnedAccountDetails = apiFunctions.GetOwnedAccountDetails
-	server.API.Functions.UpdatedAccountInfos = apiFunctions.UpdatedAccountInfos
-	server.API.Functions.UpdatedAccountSettings = apiFunctions.UpdatedAccountSettings
+	a.Functions.GetUserDetailsByIdentifier = apiFunctions.GetUserDetailsByIdentifier
+	a.Functions.GetUserDetailsByID = apiFunctions.GetUserDetailsByID
+	a.Functions.GetUserDetailsByFacebookUserID = apiFunctions.GetUserDetailsByFacebookUserID
+	a.Functions.GetUserDetailsByGoogleUserID = apiFunctions.GetUserDetailsByGoogleUserID
+	a.Functions.GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser = apiFunctions.GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser
 
-	server.API.Functions.CreateNewDeleteAccountProcess = apiFunctions.CreateNewDeleteAccountProcess
-	server.API.Functions.CreateNewDisableAccountProcess = apiFunctions.CreateNewDisableAccountProcess
-	server.API.Functions.CreateNewUpdatePasswordProcess = apiFunctions.CreateNewUpdatePasswordProcess
-	server.API.Functions.CreateNewUpdateEmailAddressProcess = apiFunctions.CreateNewUpdateEmailAddressProcess
-	server.API.Functions.CreateNewVerifyEmailAddressProcess = apiFunctions.CreateNewVerifyEmailAddressProcess
-	server.API.Functions.VerifyProcess = apiFunctions.VerifyProcess
-	server.API.Functions.DeleteProcessByID = apiFunctions.DeleteProcessByID
+	a.Functions.NewForgotPasswordProcessForUser = apiFunctions.NewForgotPasswordProcessForUser
+	a.Functions.GetForgotPasswordProcessDetailsByID = apiFunctions.GetForgotPasswordProcessDetailsByID
+	a.Functions.WrongAccessToForgotPasswordProcess = apiFunctions.WrongAccessToForgotPasswordProcess
+	a.Functions.DeleteForgotPasswordProcess = apiFunctions.DeleteForgotPasswordProcess
 
-	server.API.Functions.DeleteUserByID = apiFunctions.DeleteUserByID
-	server.API.Functions.DisableUserByID = apiFunctions.DisableUserByID
-	server.API.Functions.EnableUserByID = apiFunctions.EnableUserByID
+	a.Functions.UpdateUserPassword = apiFunctions.UpdateUserPassword
+	a.Functions.UpdateUserEmailAddress = apiFunctions.UpdateUserEmailAddress
+	a.Functions.UserEmailAddressIsVerified = apiFunctions.UserEmailAddressIsVerified
+	a.Functions.UpdateUserSocialNetworks = apiFunctions.UpdateUserSocialNetworks
+	a.Functions.UpdateVersionOfTermsAcceptedByUser = apiFunctions.UpdateVersionOfTermsAcceptedByUser
 
-	server.API.Functions.CreateContact = apiFunctions.CreateContact
-	server.API.Functions.UpdateContact = apiFunctions.UpdateContact
-	server.API.Functions.GetContacts = apiFunctions.GetContactsForAdmin
-	server.API.Functions.GetContact = apiFunctions.GetContactForAdmin
+	a.Functions.ValidateUserRegistration = apiFunctions.ValidateUserRegistration
+	a.Functions.CancelUserRegistration = apiFunctions.CancelUserRegistration
+	a.Functions.GetRegistrationDetails = apiFunctions.GetRegistrationDetails
+	a.Functions.RegisterByEmailAddress = apiFunctions.RegisterByEmailAddress
+	a.Functions.RegisterByThirdPartyToken = apiFunctions.RegisterByThirdPartyToken
 
-	server.API.AddCustomRoutes(func(v *gin.RouterGroup, handlers route.Middlewares, isProductionEnvironment bool, rights func(admin bool, abilities []string) gin.HandlerFunc) {
-		mustBeAuthenticated := handlers.MustBeAuthenticated
-		mustAuthenticationBeValid := handlers.MustAuthenticationBeValid
-		mustHaveAcceptedTheLatestVersionOfTerms := handlers.MustHaveAcceptedTheLatestVersionOfTerms
+	a.Functions.DoesAccountWithUsernameExist = apiFunctions.DoesAccountWithUsernameExist
+	a.Functions.DoesAccountWithEmailAddressExist = apiFunctions.DoesAccountWithEmailAddressExist
+	a.Functions.DoesUserWithFacebookUserIDExist = apiFunctions.DoesUserWithFacebookUserIDExist
+	a.Functions.DoesUserWithGoogleUserIDExist = apiFunctions.DoesUserWithGoogleUserIDExist
 
-		v.PUT("/account/image", mustBeAuthenticated, mustAuthenticationBeValid, mustHaveAcceptedTheLatestVersionOfTerms, apiFunctions.UpdateAccountPublicImage)
-		v.DELETE("/account/image", mustBeAuthenticated, mustAuthenticationBeValid, mustHaveAcceptedTheLatestVersionOfTerms, apiFunctions.DeleteAccountPublicImage)
-		v.PUT("/account/public", mustBeAuthenticated, mustAuthenticationBeValid, mustHaveAcceptedTheLatestVersionOfTerms, apiFunctions.UpdateAccountPublicProfile)
-	})
+	a.Functions.SaveFacebookUserTokenDetailsToUser = apiFunctions.SaveFacebookUserTokenDetailsToUser
+	a.Functions.SaveGoogleUserTokenDetailsToUser = apiFunctions.SaveGoogleUserTokenDetailsToUser
+
+	a.Functions.SaveAuthenticationToken = apiFunctions.SaveAuthenticationToken
+	a.Functions.GetTokenExpirationDate = apiFunctions.GetTokenExpirationDate
+	a.Functions.DeleteTokenByID = apiFunctions.DeleteTokenByID
+	a.Functions.GetTokenDetailsByID = apiFunctions.GetTokenDetailsByID
+	a.Functions.GetOwnedTokens = apiFunctions.GetOwnedTokens
+	a.Functions.GetOwnedTokenByID = apiFunctions.GetOwnedTokenByID
+	a.Functions.UpdateTokenByID = apiFunctions.UpdateTokenByID
+
+	a.Functions.GetOwnedAccountDetails = apiFunctions.GetOwnedAccountDetails
+	a.Functions.UpdatedAccountInfos = apiFunctions.UpdatedAccountInfos
+	a.Functions.UpdatedAccountSettings = apiFunctions.UpdatedAccountSettings
+
+	a.Functions.CreateNewDeleteAccountProcess = apiFunctions.CreateNewDeleteAccountProcess
+	a.Functions.CreateNewDisableAccountProcess = apiFunctions.CreateNewDisableAccountProcess
+	a.Functions.CreateNewUpdatePasswordProcess = apiFunctions.CreateNewUpdatePasswordProcess
+	a.Functions.CreateNewUpdateEmailAddressProcess = apiFunctions.CreateNewUpdateEmailAddressProcess
+	a.Functions.CreateNewVerifyEmailAddressProcess = apiFunctions.CreateNewVerifyEmailAddressProcess
+	a.Functions.VerifyProcess = apiFunctions.VerifyProcess
+	a.Functions.DeleteProcessByID = apiFunctions.DeleteProcessByID
+
+	a.Functions.DeleteUserByID = apiFunctions.DeleteUserByID
+	a.Functions.DisableUserByID = apiFunctions.DisableUserByID
+	a.Functions.EnableUserByID = apiFunctions.EnableUserByID
+
+	a.Functions.CreateContact = apiFunctions.CreateContact
+	a.Functions.UpdateContact = apiFunctions.UpdateContact
+	a.Functions.GetContacts = apiFunctions.GetContactsForAdmin
+	a.Functions.GetContact = apiFunctions.GetContactForAdmin
+
+	a.AddCustomRoutes(addRoutes)
+}
+
+// addRoutes adds the routes of the plugin: the image and the public profile of the account.
+func addRoutes(v *gin.RouterGroup, handlers route.Middlewares, isProductionEnvironment bool, rights func(admin bool, abilities []string) gin.HandlerFunc) {
+	mustBeAuthenticated := handlers.MustBeAuthenticated
+	mustAuthenticationBeValid := handlers.MustAuthenticationBeValid
+	mustHaveAcceptedTheLatestVersionOfTerms := handlers.MustHaveAcceptedTheLatestVersionOfTerms
+
+	v.PUT("/account/image", mustBeAuthenticated, mustAuthenticationBeValid, mustHaveAcceptedTheLatestVersionOfTerms, apiFunctions.UpdateAccountPublicImage)
+	v.DELETE("/account/image", mustBeAuthenticated, mustAuthenticationBeValid, mustHaveAcceptedTheLatestVersionOfTerms, apiFunctions.DeleteAccountPublicImage)
+	v.PUT("/account/public", mustBeAuthenticated, mustAuthenticationBeValid, mustHaveAcceptedTheLatestVersionOfTerms, apiFunctions.UpdateAccountPublicProfile)
 }

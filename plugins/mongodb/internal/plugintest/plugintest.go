@@ -1,0 +1,153 @@
+// Package plugintest provides helpers shared by the tests of the MongoDB plugin: a gin context bound to a stub
+// database, and optionally to a signed-in user.
+package plugintest
+
+import (
+	"encoding/json"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"testing"
+	"time"
+
+	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
+	ctxLocale "github.com/cygy/ginamite/api/context/locale"
+	"github.com/cygy/ginamite/common/kafka"
+	"github.com/cygy/ginamite/common/localization"
+	"github.com/cygy/ginamite/common/log"
+	"github.com/cygy/ginamite/common/mongo/session"
+	"github.com/cygy/ginamite/common/mongo/store/mock"
+	"github.com/cygy/ginamite/common/queue"
+	"github.com/cygy/ginamite/plugins/mongodb/model"
+
+	"github.com/IBM/sarama/mocks"
+	"github.com/gin-gonic/gin"
+	jwt "github.com/golang-jwt/jwt/v5"
+)
+
+// Secret is the secret used to sign the tokens of the tests.
+const Secret = "secret"
+
+func init() {
+	gin.SetMode(gin.TestMode)
+	log.Initialize("test", false)
+	log.Main.Logger.SetOutput(io.Discard)
+}
+
+// NewContext returns a gin context bound to a request, to the stub database and to the recorder of the response.
+// The locale of the context is "en", see InitLocalization.
+func NewContext(db *mock.Database, method, target string, body io.Reader) (*gin.Context, *httptest.ResponseRecorder) {
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequest(method, target, body)
+	session.Set(c, db)
+	ctxLocale.Set(c, "en", "en")
+
+	return c, recorder
+}
+
+// SignedInContext returns a gin context like NewContext, with the user signed in: the auth token is parsed and the
+// user is built from it, as the authentication middleware does.
+func SignedInContext(t *testing.T, db *mock.Database, user model.User) (*gin.Context, *httptest.ResponseRecorder) {
+	t.Helper()
+
+	c, recorder := NewContext(db, http.MethodGet, "/", nil)
+	c.Request.Header.Set("Authorization", "Bearer "+signToken(t, user.ID.Hex(), "token-1"))
+
+	buildUser := func(*jwt.Token) (any, string, error) { return user, user.Settings.Locale, nil }
+	ctxAuthToken.Parse(Secret, buildUser, true)(c)
+	if c.IsAborted() {
+		t.Fatalf("the user is not signed in: %s", recorder.Body.String())
+	}
+	ctxLocale.Set(c, "en", "en")
+
+	return c, recorder
+}
+
+func signToken(t *testing.T, userID, tokenID string) string {
+	t.Helper()
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"sub": userID,
+		"id":  tokenID,
+		"exp": time.Now().Add(time.Hour).Unix(),
+	})
+
+	signed, err := token.SignedString([]byte(Secret))
+	if err != nil {
+		t.Fatalf("unable to sign the token: %v", err)
+	}
+
+	return signed
+}
+
+// InitLocalization initializes the translation engine with the "en" messages.
+func InitLocalization(t *testing.T, messages map[string]string) {
+	t.Helper()
+
+	content, err := json.Marshal(messages)
+	if err != nil {
+		t.Fatalf("unable to encode the messages: %v", err)
+	}
+
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "en.all.json"), content, 0o600); err != nil {
+		t.Fatalf("unable to write the messages: %v", err)
+	}
+
+	localization.Initialize(dir, []string{"en"})
+}
+
+// Queue captures the messages sent to Kafka.
+type Queue struct {
+	t        *testing.T
+	producer *mocks.AsyncProducer
+}
+
+// CaptureQueue replaces the main Kafka client, for the duration of the test, with a client sending its messages to
+// the returned Queue.
+func CaptureQueue(t *testing.T) *Queue {
+	t.Helper()
+
+	config := mocks.NewTestConfig()
+	config.Producer.Return.Successes = true
+	producer := mocks.NewAsyncProducer(t, config)
+	for range maxMessages {
+		producer.ExpectInputAndSucceed()
+	}
+
+	client := kafka.NewClient()
+	client.HasProducer = true
+	client.Producer = producer
+
+	old := kafka.Main
+	kafka.Main = client
+	t.Cleanup(func() { kafka.Main = old })
+
+	return &Queue{t: t, producer: producer}
+}
+
+// maxMessages is the number of messages a Queue can capture.
+const maxMessages = 10
+
+// Next returns the next message sent to Kafka, and ok is false if there is none after a short delay.
+func (q *Queue) Next() (message queue.Message, ok bool) {
+	q.t.Helper()
+
+	select {
+	case sent := <-q.producer.Successes():
+		value, err := sent.Value.Encode()
+		if err != nil {
+			q.t.Fatal(err)
+		}
+		if err := json.Unmarshal(value, &message); err != nil {
+			q.t.Fatal(err)
+		}
+
+		return message, true
+	case <-time.After(time.Second):
+		return message, false
+	}
+}

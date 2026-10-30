@@ -9,30 +9,41 @@ import (
 	jwt "github.com/golang-jwt/jwt/v5"
 )
 
-// IsValidAuthToken : returns trus if the auth token is valid.
+// IsValidAuthToken reports whether the auth token is valid: neither expired nor revoked.
 func IsValidAuthToken(c *gin.Context, tokenID string) (bool, error) {
-	// Checks if the auth token is valid and not expired/revoked.
 	mongoSession := session.Get(c)
 	return model.IsValidAuthToken(c, tokenID, mongoSession)
 }
 
-// GetUserAndLocaleFromAuthToken : returns the user struct and the user's locale.
+// GetUserAndLocaleFromAuthToken returns the model.User built from the claims of the auth token, and the locale of
+// the user. The user is stored by value in the context, see context.GetUser.
 func GetUserAndLocaleFromAuthToken(token *jwt.Token) (any, string, error) {
 	user, err := model.UserFromAuthToken(token)
 	if err != nil {
 		return nil, "", err
 	}
-	return user, user.Settings.Locale, nil
+
+	return *user, user.Settings.Locale, nil
 }
 
-// GetUserAbilities ; returns the abilities of an user.
+// GetUserAbilities reports whether the authenticated user is an administrator, and returns the abilities of the user.
+// The user is not an administrator and has no ability if it can not be loaded.
 func GetUserAbilities(c *gin.Context, userID string) (bool, []string) {
 	user := context.GetFullUser(c)
+	if user == nil {
+		return false, nil
+	}
+
 	return user.IsAdmin, user.Abilities
 }
 
-// GetLatestVersionOfTermsAcceptedByUser : returns the latest version of the terms accepted by the user.
+// GetLatestVersionOfTermsAcceptedByUser returns the latest version of the terms accepted by the authenticated user,
+// or an empty string if the user can not be loaded.
 func GetLatestVersionOfTermsAcceptedByUser(c *gin.Context, userID string) string {
 	user := context.GetFullUser(c)
+	if user == nil {
+		return ""
+	}
+
 	return user.VersionOfTermsAccepted
 }

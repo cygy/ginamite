@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"github.com/cygy/ginamite/common/log"
+	"github.com/cygy/ginamite/common/mongo/store"
+	"github.com/cygy/ginamite/common/mongo/store/mock"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/v2/mongo"
@@ -132,4 +134,35 @@ func TestInitialize_Unreachable(t *testing.T) {
 	}()
 
 	Initialize("127.0.0.1:1", "app", "", "", 1)
+}
+
+func TestSession_Store(t *testing.T) {
+	stub := mock.NewDatabase("stub")
+
+	s := NewSession()
+	s.Store = stub
+	if s.Database() != store.Database(stub) {
+		t.Error("Database() must return the store when there is one")
+	}
+
+	// Without client, the session can still be injected and closed.
+	gin.SetMode(gin.TestMode)
+	c, _ := gin.CreateTestContext(httptest.NewRecorder())
+	s.Inject()(c)
+	if Get(c) != store.Database(stub) {
+		t.Errorf("Get() = %v", Get(c))
+	}
+	s.Close()
+}
+
+func TestSet(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	c, _ := gin.CreateTestContext(httptest.NewRecorder())
+
+	stub := mock.NewDatabase("stub")
+	Set(c, stub)
+
+	if Get(c) != store.Database(stub) {
+		t.Errorf("Get() = %v", Get(c))
+	}
 }

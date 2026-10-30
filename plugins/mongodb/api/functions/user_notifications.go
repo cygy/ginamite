@@ -1,20 +1,23 @@
 package functions
 
 import (
+	"crypto/subtle"
 	"errors"
 
 	apiContextLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/common/config"
+	commonErrors "github.com/cygy/ginamite/common/errors"
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/session"
 	"github.com/cygy/ginamite/common/notifications"
 	"github.com/cygy/ginamite/plugins/mongodb/api/context"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
+
 	"github.com/gin-gonic/gin"
 )
 
-// NotificationsReceivedByUser : returns the latest notifications received by the user.
+// NotificationsReceivedByUser returns the latest notifications received by the user.
 func NotificationsReceivedByUser(c *gin.Context, userID string) (any, error) {
 	// Check the userID.
 	if _, err := bson.ObjectIDFromHex(userID); err != nil {
@@ -38,7 +41,7 @@ func NotificationsReceivedByUser(c *gin.Context, userID string) (any, error) {
 	return summarizedNotifications, nil
 }
 
-// NotificationReceivedByUser : returns a notification received by the user.
+// NotificationReceivedByUser returns a notification received by the user.
 func NotificationReceivedByUser(c *gin.Context, userID, notificationID string) (any, error) {
 	notification, err := checkUserIDAndNotificationID(c, userID, notificationID)
 	if err != nil {
@@ -50,7 +53,7 @@ func NotificationReceivedByUser(c *gin.Context, userID, notificationID string) (
 	return model.NewOwnNotification(*notification, locale, config.Main.DefaultLocale), nil
 }
 
-// UpdateUserNotificationRead : updates the read flag of a notification received by the user.
+// UpdateUserNotificationRead updates the read flag of a notification received by the user.
 func UpdateUserNotificationRead(c *gin.Context, userID, notificationID string) error {
 	notification, err := checkUserIDAndNotificationID(c, userID, notificationID)
 	if err != nil {
@@ -80,7 +83,7 @@ func UpdateUserNotificationRead(c *gin.Context, userID, notificationID string) e
 	return nil
 }
 
-// UpdateUserNotificationNotified : updates the notified flag of a notification received by the user.
+// UpdateUserNotificationNotified updates the notified flag of a notification received by the user.
 func UpdateUserNotificationNotified(c *gin.Context, userID, notificationID string) error {
 	notification, err := checkUserIDAndNotificationID(c, userID, notificationID)
 	if err != nil {
@@ -96,7 +99,7 @@ func UpdateUserNotificationNotified(c *gin.Context, userID, notificationID strin
 	return notification.UpdateNotified(c, mongoSession)
 }
 
-// DeleteUserNotification : deletes a notification received by the user.
+// DeleteUserNotification deletes a notification received by the user.
 func DeleteUserNotification(c *gin.Context, userID, notificationID string) error {
 	notification, err := checkUserIDAndNotificationID(c, userID, notificationID)
 	if err != nil {
@@ -133,14 +136,14 @@ func DeleteUserNotification(c *gin.Context, userID, notificationID string) error
 	return nil
 }
 
-// SubscribeNotificationsToUser : the user subscribes to these notifications.
+// SubscribeNotificationsToUser sets the notifications received by the authenticated user by email.
 func SubscribeNotificationsToUser(c *gin.Context, userID string, notifications []string) error {
 	mongoSession := session.Get(c)
 	user := context.GetUser(c)
 	return user.UpdateNotifications(c, notifications, mongoSession)
 }
 
-// UnsubscribeNotificationFromUser : the user has unsubscribed from a notification.
+// UnsubscribeNotificationFromUser unsubscribes the user from a notification, if the unsubscribe key matches.
 func UnsubscribeNotificationFromUser(c *gin.Context, userID, notification, unsubscribeKey string) error {
 	// Check the userID.
 	if _, err := bson.ObjectIDFromHex(userID); err != nil {
@@ -156,7 +159,7 @@ func UnsubscribeNotificationFromUser(c *gin.Context, userID, notification, unsub
 
 	// Validate the encoded key.
 	verifiedUnsubscribeKey := notifications.GenerateUnsubscribeKey(userID, user.PrivateKey, notification)
-	if verifiedUnsubscribeKey != unsubscribeKey {
+	if subtle.ConstantTimeCompare([]byte(verifiedUnsubscribeKey), []byte(unsubscribeKey)) != 1 {
 		return errors.New("wrong unsubscribe key")
 	}
 
@@ -167,8 +170,35 @@ func UnsubscribeNotificationFromUser(c *gin.Context, userID, notification, unsub
 	return nil
 }
 
-// NotificationsSubscribedByUser : returns the notifications subscribed by the user.
+// NotificationsSubscribedByUser returns the notifications subscribed by the user.
 func NotificationsSubscribedByUser(c *gin.Context, userID string) []string {
 	user := context.GetFullUser(c)
+	if user == nil {
+		return []string{}
+	}
+
 	return user.Notifications
+}
+
+func checkUserIDAndNotificationID(c *gin.Context, userID, notificationID string) (*model.Notification, error) {
+	// Check the userID and the notificationID.
+	if _, err := bson.ObjectIDFromHex(userID); err != nil {
+		return nil, err
+	}
+	if _, err := bson.ObjectIDFromHex(notificationID); err != nil {
+		return nil, err
+	}
+
+	mongoSession := session.Get(c)
+
+	notification := &model.Notification{}
+	if err := notification.GetByID(c, notificationID, mongoSession); err != nil {
+		return nil, err
+	}
+
+	if notification.UserID.Hex() != userID {
+		return nil, commonErrors.NotFound()
+	}
+
+	return notification, nil
 }

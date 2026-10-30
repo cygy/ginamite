@@ -5,31 +5,34 @@ import (
 	"github.com/cygy/ginamite/common/mongo/store"
 )
 
-// CreateAllDefaultDocuments : populates the database with the initial documents.
+// CreateAllDefaultDocuments populates the database with the initial documents of the plugin, for an environment and
+// a version of the application. The plugin has none.
 func CreateAllDefaultDocuments(environment, version string) {
 }
 
-// RemoveUnusedDefaultDocuments : removes some unused documents from the database.
+// RemoveUnusedDefaultDocuments removes the documents of the plugin that are not used anymore, for an environment and a
+// version of the application. The plugin has none.
 func RemoveUnusedDefaultDocuments(environment, version string) {
 }
 
-// UpdateAllDefaultDocuments : updates some default documents from the database.
+// UpdateAllDefaultDocuments updates the default documents of the plugin, for an environment and a version of the
+// application. The plugin has none.
 func UpdateAllDefaultDocuments(environment, version string) {
 }
 
-// CreateDefaultDocuments : populates the database with the initial documents.
+// CreateDefaultDocuments calls f, which populates the database with the initial documents, with the main database.
 func CreateDefaultDocuments(environment, version string, f func(string, string, store.Database)) {
 	db := session.Database()
 	f(environment, version, db)
 }
 
-// RemoveDefaultDocuments : removes some unused documents from the database.
+// RemoveDefaultDocuments calls f, which removes the unused documents, with the main database.
 func RemoveDefaultDocuments(environment, version string, f func(string, string, store.Database)) {
 	db := session.Database()
 	f(environment, version, db)
 }
 
-// UpdateDefaultDocuments : updates some default documents from the database.
+// UpdateDefaultDocuments calls f, which updates the default documents, with the main database.
 func UpdateDefaultDocuments(environment, version string, f func(string, string, store.Database)) {
 	db := session.Database()
 	f(environment, version, db)

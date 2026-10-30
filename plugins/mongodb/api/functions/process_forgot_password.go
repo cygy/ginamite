@@ -11,7 +11,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// NewForgotPasswordProcessForUser : returns the unique ID of a new forgot passsword process.
+// NewForgotPasswordProcessForUser creates a forgot password process for the user, replacing the existing one, and
+// returns its unique ID. The private key is the code to give to the user.
 func NewForgotPasswordProcessForUser(c *gin.Context, userID, processPrivateKey string) (string, error) {
 	mongoSession := session.Get(c)
 
@@ -34,7 +35,7 @@ func NewForgotPasswordProcessForUser(c *gin.Context, userID, processPrivateKey s
 	return fppID, nil
 }
 
-// GetForgotPasswordProcessDetailsByID : returns the user ID and the private key a forgot passsword process.
+// GetForgotPasswordProcessDetailsByID returns the ID of the user and the private key of a forgot password process.
 func GetForgotPasswordProcessDetailsByID(c *gin.Context, processID string) (userID, processPrivateKey string, err error) {
 	if _, err := bson.ObjectIDFromHex(processID); err != nil {
 		return "", "", errors.New("wrong forgot password process ID")
@@ -50,7 +51,8 @@ func GetForgotPasswordProcessDetailsByID(c *gin.Context, processID string) (user
 	return fpp.UserID.Hex(), fpp.Code, nil
 }
 
-// WrongAccessToForgotPasswordProcess : actions to execute when a wrong access to a forgot password process occurs.
+// WrongAccessToForgotPasswordProcess records a wrong access to a forgot password process: it counts as a try, and
+// the process is deleted after three wrong tries.
 func WrongAccessToForgotPasswordProcess(c *gin.Context, processID string) {
 	mongoSession := session.Get(c)
 
@@ -70,7 +72,7 @@ func WrongAccessToForgotPasswordProcess(c *gin.Context, processID string) {
 	}
 }
 
-// DeleteForgotPasswordProcess : deletes a forgot password process.
+// DeleteForgotPasswordProcess deletes a forgot password process.
 func DeleteForgotPasswordProcess(c *gin.Context, processID string) error {
 	objectID, err := bson.ObjectIDFromHex(processID)
 	if err != nil {

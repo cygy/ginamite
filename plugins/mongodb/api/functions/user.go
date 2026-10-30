@@ -12,7 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// GetUserDetailsByIdentifier : returns the details of an user by its identifier (email address or username).
+// GetUserDetailsByIdentifier returns the details of a user by its identifier (email address or username).
 func GetUserDetailsByIdentifier(c *gin.Context, identifier string) (authentication.User, error) {
 	mongoSession := session.Get(c)
 
@@ -32,7 +32,7 @@ func GetUserDetailsByIdentifier(c *gin.Context, identifier string) (authenticati
 	return user.ToUser(), nil
 }
 
-// GetUserDetailsByID : returns the details of an user by its ID.
+// GetUserDetailsByID returns the details of a user by its ID.
 func GetUserDetailsByID(c *gin.Context, userID string) (authentication.User, error) {
 	// Check the userID.
 	if _, err := bson.ObjectIDFromHex(userID); err != nil {
@@ -54,7 +54,7 @@ func GetUserDetailsByID(c *gin.Context, userID string) (authentication.User, err
 	return user.ToUser(), nil
 }
 
-// GetUserDetailsByFacebookUserID : returns the details of an user by its unique facebook ID.
+// GetUserDetailsByFacebookUserID returns the details of a user by its unique facebook ID.
 func GetUserDetailsByFacebookUserID(c *gin.Context, userID string) (authentication.User, error) {
 	mongoSession := session.Get(c)
 	user := &model.User{}
@@ -63,7 +63,7 @@ func GetUserDetailsByFacebookUserID(c *gin.Context, userID string) (authenticati
 	return user.ToUser(), err
 }
 
-// GetUserDetailsByGoogleUserID : returns the details of an user by its unique google ID.
+// GetUserDetailsByGoogleUserID returns the details of a user by its unique google ID.
 func GetUserDetailsByGoogleUserID(c *gin.Context, userID string) (authentication.User, error) {
 	mongoSession := session.Get(c)
 	user := &model.User{}
@@ -72,7 +72,8 @@ func GetUserDetailsByGoogleUserID(c *gin.Context, userID string) (authentication
 	return user.ToUser(), err
 }
 
-// GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser : returns the details of an user and its encrypted password by its identifier (email address or username).
+// GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser returns the details and the encrypted password of an
+// enabled user, by its identifier: the username or the email address.
 func GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser(c *gin.Context, identifier string) (authentication.User, string, error) {
 	mongoSession := session.Get(c)
 	user := &model.User{}
@@ -87,7 +88,7 @@ func GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser(c *gin.Contex
 	return user.ToUser(), user.IdentificationMethods.Password, nil
 }
 
-// DeleteUserByID : deletes an user by its ID.
+// DeleteUserByID deletes a user by its ID.
 func DeleteUserByID(c *gin.Context, userID string) error {
 	mongoSession := session.Get(c)
 
@@ -107,7 +108,7 @@ func DeleteUserByID(c *gin.Context, userID string) error {
 	return user.Delete(c, mongoSession)
 }
 
-// DisableUserByID : disables an user by its ID.
+// DisableUserByID moves the user to the disabled users and returns its details.
 func DisableUserByID(c *gin.Context, userID string) (authentication.User, error) {
 	mongoSession := session.Get(c)
 
@@ -124,7 +125,7 @@ func DisableUserByID(c *gin.Context, userID string) (authentication.User, error)
 	return user.ToUser(), user.Delete(c, mongoSession)
 }
 
-// EnableUserByID : enables an user by its ID.
+// EnableUserByID restores the disabled user as an enabled user and returns its details.
 func EnableUserByID(c *gin.Context, userID string) (authentication.User, error) {
 	mongoSession := session.Get(c)
 

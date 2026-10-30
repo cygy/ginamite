@@ -47,8 +47,12 @@ func TestDatabase_CreateCollection(t *testing.T) {
 	db := NewDatabase("app")
 	boom := errors.New("boom")
 
-	if err := db.CreateCollection(context.Background(), "a"); err != nil {
+	opts := options.CreateCollection()
+	if err := db.CreateCollection(context.Background(), "a", opts); err != nil {
 		t.Fatal(err)
+	}
+	if got := db.CreateOptions("a"); len(got) != 1 || got[0] != options.Lister[options.CreateCollectionOptions](opts) {
+		t.Errorf("CreateOptions() = %v", got)
 	}
 	db.CreateCollectionErr = boom
 	if err := db.CreateCollection(context.Background(), "b"); !errors.Is(err, boom) {
@@ -343,4 +347,28 @@ func TestCursor(t *testing.T) {
 			t.Errorf("Close err = %v, closed = %v", err, c.Closed())
 		}
 	})
+}
+
+func TestCollection_ErrorsByMethod(t *testing.T) {
+	ctx := context.Background()
+	boom := errors.New("boom")
+
+	c := &Collection{Errs: map[string]error{"CountDocuments": boom}}
+
+	if _, err := c.InsertOne(ctx, nil); err != nil {
+		t.Errorf("InsertOne err = %v", err)
+	}
+	if _, err := c.CountDocuments(ctx, nil); !errors.Is(err, boom) {
+		t.Errorf("CountDocuments err = %v", err)
+	}
+
+	// Err applies to the other methods.
+	other := errors.New("other")
+	c.Err = other
+	if _, err := c.InsertOne(ctx, nil); !errors.Is(err, other) {
+		t.Errorf("InsertOne err = %v", err)
+	}
+	if _, err := c.CountDocuments(ctx, nil); !errors.Is(err, boom) {
+		t.Errorf("CountDocuments err = %v", err)
+	}
 }

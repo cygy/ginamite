@@ -5,15 +5,15 @@ import (
 	"fmt"
 
 	"github.com/cygy/ginamite/common/log"
+	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/session"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
 	"github.com/sirupsen/logrus"
-	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
-// CreateIndexes : creates the indexes of the collections.
+// CreateIndexes creates the indexes of the collections.
 func CreateIndexes(ctx context.Context, indexes []IndexToCreate) {
 	db := session.Database()
 
@@ -28,13 +28,13 @@ func CreateIndexes(ctx context.Context, indexes []IndexToCreate) {
 	}
 }
 
-// RemoveIndexes : removes indexes from the collections.
+// RemoveIndexes removes indexes from the collections.
 func RemoveIndexes(ctx context.Context, indexes []IndexToDelete) {
 	db := session.Database()
 
 	for _, index := range indexes {
 		err := db.Collection(index.Collection).Indexes().DropOne(ctx, index.IndexName)
-		if err != nil && err.Error() != fmt.Sprintf("index not found with name [%s]", index.IndexName) {
+		if err != nil && !isNotFound(err, errorCodeIndexNotFound, fmt.Sprintf("index not found with name [%s]", index.IndexName)) {
 			log.WithFields(logrus.Fields{
 				"error":      err.Error(),
 				"collection": index.Collection,
@@ -44,10 +44,10 @@ func RemoveIndexes(ctx context.Context, indexes []IndexToDelete) {
 	}
 }
 
-// CreateAllIndexes : checks the indexes of the collections.
+// CreateAllIndexes checks the indexes of the collections.
 func CreateAllIndexes(ctx context.Context) {
 	indexes := []IndexToCreate{
-		// Indexes of the collection "authTokens"
+		// Indexes of the collection "authTokens".
 		{
 			Collection: model.AuthTokenCollection,
 			Index: mongo.IndexModel{
@@ -79,7 +79,7 @@ func CreateAllIndexes(ctx context.Context) {
 			},
 		},
 
-		// Indexes of the collection "deletedUsers"
+		// Indexes of the collection "deletedUsers".
 		{
 			Collection: model.DeletedUserCollection,
 			Index: mongo.IndexModel{
@@ -95,7 +95,7 @@ func CreateAllIndexes(ctx context.Context) {
 			},
 		},
 
-		// Indexes of the collection "disabledUsers"
+		// Indexes of the collection "disabledUsers".
 		{
 			Collection: model.DisabledUserCollection,
 			Index: mongo.IndexModel{
@@ -177,7 +177,7 @@ func CreateAllIndexes(ctx context.Context) {
 			},
 		},
 
-		// Indexes of the collection "forgotPassword"
+		// Indexes of the collection "forgotPassword".
 		{
 			Collection: model.ForgotPasswordProcessCollection,
 			Index: mongo.IndexModel{
@@ -194,7 +194,7 @@ func CreateAllIndexes(ctx context.Context) {
 			},
 		},
 
-		// Indexes of the collection "IPLocation"
+		// Indexes of the collection "IPLocation".
 		{
 			Collection: model.IPLocationCollection,
 			Index: mongo.IndexModel{
@@ -211,7 +211,7 @@ func CreateAllIndexes(ctx context.Context) {
 			},
 		},
 
-		// Indexes of the collection "updateProperty"
+		// Indexes of the collection "updateProperty".
 		{
 			Collection: model.UpdatePropertyProcessCollection,
 			Index: mongo.IndexModel{
@@ -246,7 +246,7 @@ func CreateAllIndexes(ctx context.Context) {
 			},
 		},
 
-		// Indexes of the collection "users"
+		// Indexes of the collection "users".
 		{
 			Collection: model.UserCollection,
 			Index: mongo.IndexModel{
@@ -388,7 +388,7 @@ func CreateAllIndexes(ctx context.Context) {
 			},
 		},
 
-		// Indexes of the collection "contact"
+		// Indexes of the collection "contact".
 		{
 			Collection: model.ContactCollection,
 			Index: mongo.IndexModel{
@@ -403,7 +403,7 @@ func CreateAllIndexes(ctx context.Context) {
 			},
 		},
 
-		// Indexes of the collection "notifications"
+		// Indexes of the collection "notifications".
 		{
 			Collection: model.NotificationCollection,
 			Index: mongo.IndexModel{
@@ -443,10 +443,10 @@ func CreateAllIndexes(ctx context.Context) {
 	CreateIndexes(ctx, indexes)
 }
 
-// RemoveUnusedIndexes : removes some indexes from the collections.
+// RemoveUnusedIndexes removes some indexes from the collections.
 func RemoveUnusedIndexes(ctx context.Context) {
 	indexes := []IndexToDelete{
-		// Indexes of the collection "authTokens"
+		// Indexes of the collection "authTokens".
 		{
 			Collection: model.AuthTokenCollection,
 			IndexName:  "userId_1_createdAt_-1",
@@ -456,37 +456,37 @@ func RemoveUnusedIndexes(ctx context.Context) {
 			IndexName:  "expiresAt_1",
 		},
 
-		// Indexes of the collection "deletedUsers"
+		// Indexes of the collection "deletedUsers".
 		{
 			Collection: model.DeletedUserCollection,
 			IndexName:  "userId_1",
 		},
 
-		// Indexes of the collection "disabledUsers"
+		// Indexes of the collection "disabledUsers".
 		{
 			Collection: model.DisabledUserCollection,
 			IndexName:  "privateInfos.email_1_1",
 		},
 
-		// Indexes of the collection "forgotPassword"
+		// Indexes of the collection "forgotPassword".
 		{
 			Collection: model.ForgotPasswordProcessCollection,
 			IndexName:  "userId_1",
 		},
 
-		// Indexes of the collection "IPLocation"
+		// Indexes of the collection "IPLocation".
 		{
 			Collection: model.IPLocationCollection,
 			IndexName:  "IP_1",
 		},
 
-		// Indexes of the collection "notifications"
+		// Indexes of the collection "notifications".
 		{
 			Collection: model.NotificationCollection,
 			IndexName:  "userId_1_unread_1_1",
 		},
 
-		// Indexes of the collection "updateProperty"
+		// Indexes of the collection "updateProperty".
 		{
 			Collection: model.UpdatePropertyProcessCollection,
 			IndexName:  "userId_1_type_1",
@@ -496,7 +496,7 @@ func RemoveUnusedIndexes(ctx context.Context) {
 			IndexName:  "userIdtype_1",
 		},
 
-		// Indexes of the collection "users"
+		// Indexes of the collection "users".
 		{
 			Collection: model.UserCollection,
 			IndexName:  "username_1_enabled_1",

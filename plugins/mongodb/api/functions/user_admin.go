@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// GetEnabledUsersForAdmin : returns the enabled users for the admin panel.
+// GetEnabledUsersForAdmin returns the enabled users for the admin panel.
 func GetEnabledUsersForAdmin(c *gin.Context) (any, error) {
 	mongoSession := session.Get(c)
 	users, err := model.GetEnabledUsersForAdmin(c, mongoSession)
@@ -16,7 +16,7 @@ func GetEnabledUsersForAdmin(c *gin.Context) (any, error) {
 	return users, err
 }
 
-// GetDisabledUsersForAdmin : returns the disabled users for the admin panel.
+// GetDisabledUsersForAdmin returns the disabled users for the admin panel.
 func GetDisabledUsersForAdmin(c *gin.Context) (any, error) {
 	mongoSession := session.Get(c)
 	users, err := model.GetDisabledUsersForAdmin(c, mongoSession)
@@ -24,7 +24,7 @@ func GetDisabledUsersForAdmin(c *gin.Context) (any, error) {
 	return users, err
 }
 
-// UpdateUserPasswordByAdmin : updates the password of a user by an admin.
+// UpdateUserPasswordByAdmin updates the password of a user by an admin.
 func UpdateUserPasswordByAdmin(c *gin.Context, userID, password string) error {
 	mongoSession := session.Get(c)
 	user, err := model.UserWithID(userID)
@@ -35,7 +35,7 @@ func UpdateUserPasswordByAdmin(c *gin.Context, userID, password string) error {
 	return user.UpdatePassword(c, password, false, mongoSession)
 }
 
-// UpdateUserInformationsByAdmin : updates the informations of a user by an admin.
+// UpdateUserInformationsByAdmin updates the informations of a user by an admin.
 func UpdateUserInformationsByAdmin(c *gin.Context, userID, firstName, lastName, emailAddress string, validEmailAddress bool) error {
 	mongoSession := session.Get(c)
 	user, err := model.UserWithID(userID)
@@ -46,7 +46,7 @@ func UpdateUserInformationsByAdmin(c *gin.Context, userID, firstName, lastName, 
 	return user.UpdateAllInformations(c, firstName, lastName, emailAddress, validEmailAddress, mongoSession)
 }
 
-// UpdateUserDescriptionByAdmin : updates the description of a user by an admin.
+// UpdateUserDescriptionByAdmin updates the description of a user by an admin.
 func UpdateUserDescriptionByAdmin(c *gin.Context, userID, locale, description string) error {
 	mongoSession := session.Get(c)
 	user, err := model.UserWithID(userID)
@@ -57,7 +57,7 @@ func UpdateUserDescriptionByAdmin(c *gin.Context, userID, locale, description st
 	return user.UpdatePublicProfile(c, locale, description, mongoSession)
 }
 
-// UpdateUserSocialByAdmin : updates the social networks of a user by an admin.
+// UpdateUserSocialByAdmin updates the social networks of a user by an admin.
 func UpdateUserSocialByAdmin(c *gin.Context, userID, facebook, twitter, instagram string) error {
 	mongoSession := session.Get(c)
 	user, err := model.UserWithID(userID)
@@ -68,7 +68,7 @@ func UpdateUserSocialByAdmin(c *gin.Context, userID, facebook, twitter, instagra
 	return user.UpdateSocialNetworks(c, facebook, twitter, instagram, mongoSession)
 }
 
-// UpdateUserSettingsByAdmin : updates the settings of a user by an admin.
+// UpdateUserSettingsByAdmin updates the settings of a user by an admin.
 func UpdateUserSettingsByAdmin(c *gin.Context, userID, locale, timezone string) error {
 	mongoSession := session.Get(c)
 	user, err := model.UserWithID(userID)
@@ -79,7 +79,7 @@ func UpdateUserSettingsByAdmin(c *gin.Context, userID, locale, timezone string) 
 	return user.UpdateSettings(c, locale, timezone, mongoSession)
 }
 
-// UpdateUserNotificationsByAdmin : updates the notifications of a user by an admin.
+// UpdateUserNotificationsByAdmin updates the notifications of a user by an admin.
 func UpdateUserNotificationsByAdmin(c *gin.Context, userID string, notifications []string) error {
 	mongoSession := session.Get(c)
 	user, err := model.UserWithID(userID)
@@ -90,7 +90,7 @@ func UpdateUserNotificationsByAdmin(c *gin.Context, userID string, notifications
 	return user.UpdateNotifications(c, notifications, mongoSession)
 }
 
-// GetTokensForAdmin : returns the user's auth tokens for the admin panel.
+// GetTokensForAdmin returns the auth tokens of the user, as model.AdminAuthToken, for the admin panel.
 func GetTokensForAdmin(c *gin.Context, userID string) (any, error) {
 	mongoSession := session.Get(c)
 
@@ -107,13 +107,13 @@ func GetTokensForAdmin(c *gin.Context, userID string) (any, error) {
 	return adminTokens, nil
 }
 
-// DeleteTokenByIDByAdmin : deletes a user's auth token by an admin.
+// DeleteTokenByIDByAdmin deletes a user's auth token by an admin.
 func DeleteTokenByIDByAdmin(c *gin.Context, tokenID string) error {
 	mongoSession := session.Get(c)
 	return model.DeleteAuthTokenByID(c, tokenID, mongoSession)
 }
 
-// SetAbilitiesToUser : sets the abilities to an user.
+// SetAbilitiesToUser sets the abilities to a user.
 func SetAbilitiesToUser(c *gin.Context, abilities []string, userID string) error {
 	mongoSession := session.Get(c)
 	user, err := model.UserWithID(userID)
@@ -124,7 +124,7 @@ func SetAbilitiesToUser(c *gin.Context, abilities []string, userID string) error
 	return user.SetAbilities(c, abilities, mongoSession)
 }
 
-// AddAbilitiesToUser : adds some abilities to an user.
+// AddAbilitiesToUser adds some abilities to a user.
 func AddAbilitiesToUser(c *gin.Context, abilities []string, userID string) error {
 	mongoSession := session.Get(c)
 	user, err := model.UserWithID(userID)
@@ -135,7 +135,7 @@ func AddAbilitiesToUser(c *gin.Context, abilities []string, userID string) error
 	return user.AddAbilities(c, abilities, mongoSession)
 }
 
-// RemoveAbilitiesFromUser : remove some abilities from an user.
+// RemoveAbilitiesFromUser removes some abilities from a user.
 func RemoveAbilitiesFromUser(c *gin.Context, abilities []string, userID string) error {
 	mongoSession := session.Get(c)
 	user, err := model.UserWithID(userID)
