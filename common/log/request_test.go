@@ -97,6 +97,38 @@ func TestInjectRequestLogger_Request(t *testing.T) {
 	}
 }
 
+func TestInjectRequestLogger_MasksSensitiveHeaders(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Set("Authorization", "Bearer abc.def.ghi")
+	req.Header.Set("Proxy-Authorization", "Basic xyz")
+	req.Header.Set("Cookie", "session=s3cr3t")
+	req.Header.Set("X-Custom", "visible")
+	req.Header["X-Empty"] = nil
+
+	var seenAuth string
+	fields, _, _ := do(t, false, func(c *gin.Context) {
+		seenAuth = c.GetHeader("Authorization")
+		c.Status(http.StatusOK)
+	}, req)
+
+	if seenAuth != "Bearer abc.def.ghi" {
+		t.Errorf("the handler must still see the Authorization header, got %q", seenAuth)
+	}
+
+	headers := fields["request"].(logrus.Fields)["headers"].(map[string]string)
+	for _, name := range []string{"Authorization", "Proxy-Authorization", "Cookie"} {
+		if headers[name] != obfuscatorReplacingString {
+			t.Errorf("%s = %q, want it masked", name, headers[name])
+		}
+	}
+	if headers["X-Custom"] != "visible" {
+		t.Errorf("X-Custom = %q", headers["X-Custom"])
+	}
+	if _, ok := headers["X-Empty"]; ok {
+		t.Error("a header without value must not be logged")
+	}
+}
+
 func TestInjectRequestLogger_KeepsRequestID(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.Header.Set(RequestIDHeaderName, "abc")

@@ -6,6 +6,7 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
+	"net/http"
 	"regexp"
 	"strings"
 	"time"
@@ -27,6 +28,13 @@ const (
 	RequestIDHeaderName = "X-Request-ID"
 )
 
+// sensitiveHeaders are the request headers whose value is never logged.
+var sensitiveHeaders = map[string]bool{
+	"Authorization":       true,
+	"Proxy-Authorization": true,
+	"Cookie":              true,
+}
+
 // requestLogWriter copies the response body while writing it.
 type requestLogWriter struct {
 	gin.ResponseWriter
@@ -41,7 +49,8 @@ func (w requestLogWriter) Write(b []byte) (int, error) {
 
 // InjectRequestLogger returns a middleware logging each request and its response.
 // It generates a request ID if the request has none. Passwords and the local part of
-// the email addresses are obfuscated, and multipart bodies are not logged. The
+// the email addresses are obfuscated, the Authorization, Proxy-Authorization and Cookie
+// headers are masked, and multipart bodies are not logged. The
 // response body is logged, gzip-decoded, only if logResponseBody is true.
 func InjectRequestLogger(logResponseBody bool) gin.HandlerFunc {
 	// Here are the obfuscators.
@@ -82,7 +91,13 @@ func InjectRequestLogger(logResponseBody bool) gin.HandlerFunc {
 
 		requestHeaders := map[string]string{}
 		for key, value := range c.Request.Header {
-			if len(value) > 0 {
+			if len(value) == 0 {
+				continue
+			}
+
+			if sensitiveHeaders[http.CanonicalHeaderKey(key)] {
+				requestHeaders[key] = obfuscatorReplacingString
+			} else {
 				requestHeaders[key] = value[0]
 			}
 		}
