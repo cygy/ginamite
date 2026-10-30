@@ -132,9 +132,19 @@ func TestUser_ValidateRegistrationByEmailAddress(t *testing.T) {
 		checkUpdate(t, db, UserCollection, id, bson.M{"$inc": bson.M{"registrationInfos.codeAttempts": 1}})
 	})
 
+	t.Run("last allowed attempt increments the attempts", func(t *testing.T) {
+		db := mock.NewDatabase("app")
+		if err := newUser(UserMaxValidateRegistrationAttemps-2).ValidateRegistrationByEmailAddress(ctx, "wrong", db); err == nil {
+			t.Fatal("expected an error")
+		}
+		if update := lastCall(db, UserCollection).Args[1].(bson.M); update["$inc"] == nil {
+			t.Errorf("update = %v", update)
+		}
+	})
+
 	t.Run("too many attempts clear the registration", func(t *testing.T) {
 		db := mock.NewDatabase("app")
-		if err := newUser(UserMaxValidateRegistrationAttemps+1).ValidateRegistrationByEmailAddress(ctx, "wrong", db); err == nil {
+		if err := newUser(UserMaxValidateRegistrationAttemps-1).ValidateRegistrationByEmailAddress(ctx, "wrong", db); err == nil {
 			t.Fatal("expected an error")
 		}
 		if update := lastCall(db, UserCollection).Args[1].(bson.M); update["$unset"] == nil || update["$inc"] != nil {
@@ -143,7 +153,7 @@ func TestUser_ValidateRegistrationByEmailAddress(t *testing.T) {
 	})
 
 	t.Run("update failures are only logged for a wrong code", func(t *testing.T) {
-		for _, attempts := range []uint{0, UserMaxValidateRegistrationAttemps + 1} {
+		for _, attempts := range []uint{0, UserMaxValidateRegistrationAttemps - 1} {
 			db := mock.NewDatabase("app")
 			db.Coll(UserCollection).Err = errBoom
 

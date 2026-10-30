@@ -30,10 +30,11 @@ func (user *User) RegisterByEmailAddress(ctx context.Context, username, encrypte
 }
 
 // ValidateRegistrationByEmailAddress validates the registration by email address.
+// A wrong code is counted as an attempt; the registration is cleared when it is the UserMaxValidateRegistrationAttemps-th one.
 func (user *User) ValidateRegistrationByEmailAddress(ctx context.Context, code string, db store.Database) error {
 	// Wrong verification code.
 	if user.RegistrationInfos.Code != code {
-		if user.RegistrationInfos.CodeAttempts <= UserMaxValidateRegistrationAttemps {
+		if user.RegistrationInfos.CodeAttempts+1 < UserMaxValidateRegistrationAttemps {
 			if err := user.Update(ctx, bson.M{"$inc": bson.M{"registrationInfos.codeAttempts": 1}}, db); err != nil {
 				log.WithField("error", err).Error("unable to update")
 			}
