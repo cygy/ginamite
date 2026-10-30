@@ -1,0 +1,255 @@
+// Package worker runs the worker: it consumes the messages of Kafka, to run the asynchronous tasks, send the
+// emails and the notifications, and it runs the recurring tasks.
+package worker
+
+import (
+	"context"
+	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"github.com/cygy/ginamite/common/config"
+	"github.com/cygy/ginamite/common/log"
+	"github.com/cygy/ginamite/common/notifications"
+	"github.com/cygy/ginamite/common/template/html"
+	"github.com/cygy/ginamite/common/template/text"
+	"github.com/cygy/ginamite/common/weburl"
+	"github.com/cygy/ginamite/worker/mail"
+	"github.com/cygy/ginamite/worker/tasks/async/location"
+	"github.com/cygy/ginamite/worker/tasks/recurring"
+	"github.com/cygy/ginamite/worker/tasks/recurring/account"
+	"github.com/cygy/ginamite/worker/tasks/recurring/authtokens"
+	"github.com/cygy/ginamite/worker/tasks/recurring/sitemap"
+)
+
+// Server is a worker.
+type Server struct {
+	RoutesFile string
+	Functions  Handlers
+}
+
+// Handlers are the functions of a worker, which depend on the storage of the application.
+// The worker warns about the undefined functions: the features relying on them are disabled.
+type Handlers struct {
+	// DeleteExpiredTokens deletes the expired auth tokens and returns their count.
+	DeleteExpiredTokens func(ctx context.Context) int64
+
+	// SanitizeAccounts deletes, or updates, the data associated to the deleted accounts and returns their count.
+	SanitizeAccounts func() uint
+
+	// DeleteUserByID deletes a user and returns the auth tokens revoked, with their expiration date, by ID.
+	DeleteUserByID func(ctx context.Context, userID string) map[string]time.Time
+
+	// DisableUserByID disables a user and returns the auth tokens revoked, with their expiration date, by ID.
+	DisableUserByID func(ctx context.Context, userID string) map[string]time.Time
+
+	// EnableUserByID enables a user.
+	EnableUserByID func(ctx context.Context, userID string)
+
+	// UpdateUserSocialNetworksByID updates the documents referencing the social networks of a user.
+	UpdateUserSocialNetworksByID func(ctx context.Context, userID string)
+
+	// RegistrationDone handles a user who registered.
+	RegistrationDone func(ctx context.Context, userID string)
+
+	// RegistrationValidated handles a user who validated their registration.
+	RegistrationValidated func(ctx context.Context, userID string)
+
+	// GetNotificationTargetsByUserAndType returns the targets of a user for a type of notification.
+	GetNotificationTargetsByUserAndType notifications.GetNotificationTargetsByUserAndTypeFunc
+
+	// SaveIPAddressDetails saves the location of an IP address, returned by getIPAddressDetailsFunc, for an auth token.
+	SaveIPAddressDetails func(ctx context.Context, IPAddress, tokenID string, getIPAddressDetailsFunc func(IPAddress string) *location.IPAddressDetails)
+
+	// StartUpTasks runs once when the worker starts, if the configuration asks for it.
+	StartUpTasks func(ctx context.Context, environment, version string)
+
+	// SetFuncOfRecurringTasks sets the functions of the custom recurring tasks with the function it receives.
+	SetFuncOfRecurringTasks func(registerTaskFunc func(taskName string, task func(string)))
+
+	// HandleTask handles the custom messages of the topic of the tasks and reports whether it did.
+	HandleTask func(ctx context.Context, messageType string, payload []byte) bool
+
+	// HandleUserNotification handles the custom messages of the topic of the user notifications and reports whether it did.
+	HandleUserNotification func(ctx context.Context, messageType string, payload []byte, getNotificationTargetsByUserAndTypeFunc notifications.GetNotificationTargetsByUserAndTypeFunc) bool
+
+	// HandleMail handles the custom messages of the topic of the mails and reports whether it did.
+	HandleMail func(ctx context.Context, messageType string, payload []byte, isEmailAddressValidFunc mail.IsEmailAddressValidFunc) bool
+
+	// HandleNotificationForUsersWithAbility handles the messages of the topic of the group notifications and reports whether it did.
+	HandleNotificationForUsersWithAbility func(ctx context.Context, ability, messageType string, payload []byte) bool
+
+	// IsEmailAddressValid reports whether an email can be sent to an email address.
+	IsEmailAddressValid mail.IsEmailAddressValidFunc
+
+	// GetLocalizedRouteVariables returns the variables of the URLs of a route, by locale, from offset, up to limit.
+	GetLocalizedRouteVariables func(routeKey string, offset, limit int) map[string][]map[string]string
+
+	// GetNeverUsedAccounts returns the IDs of the accounts which never logged in for intervalInDays days.
+	GetNeverUsedAccounts func(ctx context.Context, intervalInDays uint) []string
+
+	// GetInactiveAccounts returns the IDs of the accounts inactive for intervalInMonths months.
+	GetInactiveAccounts func(ctx context.Context, intervalInMonths uint) []string
+
+	// IsUserEmpty reports whether a user has no data.
+	IsUserEmpty func(ctx context.Context, userID string) bool
+}
+
+// NewServer returns a new worker.
+func NewServer() *Server {
+	return &Server{}
+}
+
+// Start starts the worker: it loads the templates and the routes, initializes the emails, runs the start up tasks
+// and starts the recurring tasks. It returns, exiting the process, when the worker is interrupted or terminated.
+func (s *Server) Start() {
+	s.setup()
+
+	log.Info("started")
+
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, os.Interrupt)
+	signal.Notify(signals, syscall.SIGTERM)
+	<-signals
+
+	log.Info("shutdown")
+
+	os.Exit(1)
+}
+
+// setup prepares and starts the worker, except the consumption of the messages.
+func (s *Server) setup() {
+	s.warnUndefinedFunctions()
+
+	html.LoadTemplatesWithDelimiters(config.Main.TemplatesPath+"/html", "[[", "]]", nil)
+	text.LoadTemplates(config.Main.TemplatesPath + "/text")
+
+	weburl.Initialize(s.RoutesFile, config.Main.Hosts.Web)
+
+	commonHTMLVars, commonTextVars := commonMailVars(), commonMailVars()
+	mail.Initialize("", config.Main.SMTP.Username, config.Main.SMTP.Password, config.Main.SMTP.Host, config.Main.SMTP.Port, commonHTMLVars, commonTextVars)
+
+	if s.Functions.StartUpTasks != nil && config.Main.RunStartUpTasks {
+		log.Info("check up started")
+		s.Functions.StartUpTasks(context.Background(), config.Main.Environment, config.Main.Version)
+		log.Info("check up done")
+	}
+
+	s.loadRecurringTasks()
+	recurring.StartScheduledTasks()
+}
+
+// commonMailVars returns the variables available in all the emails, by name then by locale.
+func commonMailVars() map[string]map[string]any {
+	vars := map[string]map[string]any{
+		"StaticHost":  {},
+		"HomeURL":     {},
+		"FacebookURL": {},
+		"TwitterURL":  {},
+	}
+
+	for _, locale := range config.Main.SupportedLocales {
+		vars["StaticHost"][locale] = config.Main.Hosts.Static
+		vars["HomeURL"][locale] = fmt.Sprintf("%s/%s/", config.Main.Hosts.Web, locale)
+		vars["FacebookURL"][locale] = config.Main.SocialNetworks.Facebook
+		vars["TwitterURL"][locale] = config.Main.SocialNetworks.Twitter
+	}
+
+	return vars
+}
+
+// loadRecurringTasks registers the recurring tasks of the configuration and sets the function of each one.
+// A built-in task without the functions it relies on has no function: it is not scheduled.
+func (s *Server) loadRecurringTasks() {
+	recurring.LoadScheduledTasks(config.Main.RecurringTasks)
+
+	funcs := s.recurringFuncs()
+	for _, task := range config.Main.RecurringTasks {
+		if f, ok := funcs[task.Name]; ok {
+			recurring.SetFunc(task.Name, f)
+		}
+	}
+
+	if s.Functions.SetFuncOfRecurringTasks != nil {
+		s.Functions.SetFuncOfRecurringTasks(recurring.SetFunc)
+	}
+}
+
+// recurringFuncs returns the functions of the built-in recurring tasks which can run, by name of task.
+func (s *Server) recurringFuncs() map[string]func(taskName string) {
+	h := s.Functions
+	funcs := map[string]func(taskName string){}
+
+	// Delete the expired auth tokens.
+	if h.DeleteExpiredTokens != nil {
+		funcs[recurring.DeleteExpiredTokens] = func(taskName string) {
+			authtokens.DeleteExpired(context.Background(), taskName, h.DeleteExpiredTokens)
+		}
+	}
+
+	// Delete, or update, the data associated to the deleted accounts.
+	if h.SanitizeAccounts != nil {
+		funcs[recurring.SanitizeAccounts] = func(taskName string) {
+			account.Sanitize(taskName, h.SanitizeAccounts)
+		}
+	}
+
+	// Delete the never used accounts.
+	if config.Main.Account.EmailAddressMustBeConfirmed && h.GetNeverUsedAccounts != nil && h.IsUserEmpty != nil && h.DeleteUserByID != nil {
+		funcs[recurring.DeleteNeverUsedAccounts] = func(taskName string) {
+			account.DeleteNeverUsed(context.Background(), taskName, config.Main.Account.DeleteNeverUsedAfter, h.GetNeverUsedAccounts, h.IsUserEmpty, h.DeleteUserByID)
+		}
+	}
+
+	// Delete the inactive accounts.
+	if h.GetInactiveAccounts != nil && h.DeleteUserByID != nil {
+		funcs[recurring.DeleteInactiveAccounts] = func(taskName string) {
+			account.DeleteInactive(context.Background(), taskName, config.Main.Account.DeleteInactiveAfter, h.GetInactiveAccounts, h.DeleteUserByID)
+		}
+	}
+
+	// Generate the XML sitemap files.
+	if h.GetLocalizedRouteVariables != nil {
+		funcs[recurring.GenerateSitemaps] = func(taskName string) {
+			sitemap.Generate(taskName, h.GetLocalizedRouteVariables)
+		}
+	}
+
+	// The task SendRegistrationMails, sending again the registration emails, is not implemented.
+
+	return funcs
+}
+
+// warnUndefinedFunctions logs a warning for each undefined function.
+func (s *Server) warnUndefinedFunctions() {
+	h := s.Functions
+
+	functions := []struct {
+		name    string
+		defined bool
+	}{
+		{"DeleteExpiredTokens", h.DeleteExpiredTokens != nil},
+		{"DeleteUserByID", h.DeleteUserByID != nil},
+		{"DisableUserByID", h.DisableUserByID != nil},
+		{"EnableUserByID", h.EnableUserByID != nil},
+		{"UpdateUserSocialNetworksByID", h.UpdateUserSocialNetworksByID != nil},
+		{"GetNotificationTargetsByUserAndType", h.GetNotificationTargetsByUserAndType != nil},
+		{"SaveIPAddressDetails", h.SaveIPAddressDetails != nil},
+		{"SetFuncOfRecurringTasks", h.SetFuncOfRecurringTasks != nil},
+		{"StartUpTasks", h.StartUpTasks != nil},
+		{"HandleTask", h.HandleTask != nil},
+		{"HandleUserNotification", h.HandleUserNotification != nil},
+		{"HandleMail", h.HandleMail != nil},
+		{"HandleNotificationForUsersWithAbility", h.HandleNotificationForUsersWithAbility != nil},
+		{"IsEmailAddressValid", h.IsEmailAddressValid != nil},
+		{"GetLocalizedRouteVariables", h.GetLocalizedRouteVariables != nil},
+	}
+
+	for _, function := range functions {
+		if !function.defined {
+			log.Warn(fmt.Sprintf("The function '%s' is undefined.", function.name))
+		}
+	}
+}

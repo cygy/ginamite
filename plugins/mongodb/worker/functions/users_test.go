@@ -227,12 +227,16 @@ func TestGetAccounts(t *testing.T) {
 	db := withMainSession(t)
 	db.Coll(model.UserCollection).Docs = []any{model.User{ID: first}, model.User{ID: second}}
 
-	for name, get := range map[string]func() []string{
-		"never used": func() []string { return GetNeverUsedAccounts(ctx, 30) },
-		"inactive":   func() []string { return GetInactiveAccounts(ctx, 6) },
+	// The inactive accounts come last: the following checks are about the last query.
+	for _, tt := range []struct {
+		name string
+		get  func() []string
+	}{
+		{"never used", func() []string { return GetNeverUsedAccounts(ctx, 30) }},
+		{"inactive", func() []string { return GetInactiveAccounts(ctx, 6) }},
 	} {
-		if ids := get(); len(ids) != 2 || ids[0] != first.Hex() || ids[1] != second.Hex() {
-			t.Errorf("%s: ids = %v", name, ids)
+		if ids := tt.get(); len(ids) != 2 || ids[0] != first.Hex() || ids[1] != second.Hex() {
+			t.Errorf("%s: ids = %v", tt.name, ids)
 		}
 	}
 
