@@ -1,3 +1,7 @@
+// Package ginamite is a framework to build an application made of an API server, a worker server and a web server.
+//
+// A Server holds the three specialized servers and the settings of the application. The command line arguments choose
+// the one which runs, see the package flags.
 package ginamite
 
 import (
@@ -13,7 +17,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// Server : represents the main struct of the application containing all the settings.
+// Server is the main struct of the application, containing all the settings.
 type Server struct {
 	ApplicationConfiguration ApplicationConfiguration
 	Worker                   *worker.Server
@@ -24,33 +28,28 @@ type Server struct {
 	plugins []Plugin
 }
 
-// SpecializedServer : abstract defintion of a API/Worker/Web specialized server.
+// SpecializedServer is the definition of a specialized server: API, worker or web.
 type SpecializedServer interface {
 	CreateKafkaConsumers() []kafka.MessageConsumer
 	Start()
 }
 
-// Plugin : interface that loads some configuration ot a server.
+// Plugin is a plugin which configures a server, such as the functions of the API and of the workers.
 type Plugin interface {
 	Configure(s *Server)
 }
 
-// ApplicationConfiguration : additional and optional configuration of te application.
-type ApplicationConfiguration struct {
-	FileRequired   bool
-	InitializeFunc func(filePath string)
-}
-
-// NewServer : returns a newly created 'Server' struct.
+// NewServer returns a Server whose API functions are placeholders which accept nothing: a plugin or the application
+// is expected to replace them.
 func NewServer() *Server {
-	server := &Server{}
+	server := &Server{
+		plugins: []Plugin{},
+		Web:     web.NewServer(),
+		Worker:  worker.NewServer(),
+		API:     api.NewServer(),
+	}
 	server.ApplicationConfiguration.FileRequired = false
-	server.plugins = []Plugin{}
 
-	server.Web = web.NewServer()
-	server.Worker = worker.NewServer()
-
-	server.API = api.NewServer()
 	server.API.Functions.NewMessageFromQueueCache = func(message string) bool {
 		return true
 	}
@@ -71,4 +70,9 @@ func NewServer() *Server {
 	}
 
 	return server
+}
+
+// AddPlugin adds a plugin, which is configured when the server starts.
+func (s *Server) AddPlugin(p Plugin) {
+	s.plugins = append(s.plugins, p)
 }
