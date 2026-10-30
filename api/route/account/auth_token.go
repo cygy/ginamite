@@ -24,7 +24,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// LoginWithPassword : creates a token to log in an account.
+// LoginWithPassword creates a token to log in an account.
 func LoginWithPassword(c *gin.Context) {
 	if GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser == nil {
 		c.Error(errors.New("undefined function 'GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser'"))
@@ -40,7 +40,7 @@ func LoginWithPassword(c *gin.Context) {
 	}
 	request.DecodeBody(c, &jsonBody)
 
-	locale := ctxLocale.GetLocale(c)
+	locale := ctxLocale.Get(c)
 	t := localization.Translate(locale)
 
 	// Identifier is mandatory.
@@ -100,19 +100,19 @@ func LoginWithPassword(c *gin.Context) {
 	}
 }
 
-// LoginWithFacebook : creates a token to log in an account.
+// LoginWithFacebook creates a token to log in an account.
 func LoginWithFacebook(c *gin.Context) {
 	v := validator.NewFacebookTokenValidator(config.Main.Facebook.AppID, config.Main.Facebook.APIVersion, config.Main.Facebook.TimeOut, config.Main.Facebook.RetryCount, config.Main.IsDebugModeEnabled())
 	loginWithThirdParty(c, v)
 }
 
-// LoginWithGoogle : creates a token to log in an account.
+// LoginWithGoogle creates a token to log in an account.
 func LoginWithGoogle(c *gin.Context) {
 	v := validator.NewGoogleTokenValidator(config.Main.Google.ClientID, config.Main.Google.APIVersion, config.Main.Google.TimeOut, config.Main.Google.RetryCount, config.Main.IsDebugModeEnabled())
 	loginWithThirdParty(c, v)
 }
 
-// Logout : deletes the token and log out.
+// Logout deletes the token and log out.
 func Logout(c *gin.Context) {
 	if DeleteTokenByID == nil {
 		c.Error(errors.New("undefined function 'DeleteTokenByID'"))
@@ -120,7 +120,7 @@ func Logout(c *gin.Context) {
 		return
 	}
 
-	tokenID := ctxAuthToken.GetAuthTokenID(c)
+	tokenID := ctxAuthToken.GetID(c)
 
 	expirationDate := time.Now().Add(time.Duration(config.Main.JWT.TTL) * time.Second)
 	if GetTokenExpirationDate != nil {
@@ -143,7 +143,7 @@ func Logout(c *gin.Context) {
 	response.NoContent(c)
 }
 
-// GetAuthTokens : gets the tokens of an account.
+// GetAuthTokens gets the tokens of an account.
 func GetAuthTokens(c *gin.Context) {
 	if GetOwnedTokens == nil {
 		c.Error(errors.New("undefined function 'GetOwnedTokens'"))
@@ -151,7 +151,7 @@ func GetAuthTokens(c *gin.Context) {
 		return
 	}
 
-	userID := ctxUser.GetUserID(c)
+	userID := ctxUser.GetID(c)
 
 	tokens, err := GetOwnedTokens(c, userID)
 	if err != nil {
@@ -164,17 +164,17 @@ func GetAuthTokens(c *gin.Context) {
 	})
 }
 
-// DeleteAuthToken : revokes a token from an account.
+// DeleteAuthToken revokes a token from an account.
 func DeleteAuthToken(c *gin.Context) {
 	deleteAuthenticationToken(c, false)
 }
 
-// DeleteAuthTokenWithKey : revokes a token from an account with a key.
+// DeleteAuthTokenWithKey revokes a token from an account with a key.
 func DeleteAuthTokenWithKey(c *gin.Context) {
 	deleteAuthenticationToken(c, true)
 }
 
-// GetAuthToken : gets the token properties of an account.
+// GetAuthToken gets the token properties of an account.
 func GetAuthToken(c *gin.Context) {
 	if GetOwnedTokenByID == nil {
 		c.Error(errors.New("undefined function 'GetOwnedTokenByID'"))
@@ -190,7 +190,7 @@ func GetAuthToken(c *gin.Context) {
 		return
 	}
 
-	userID := ctxUser.GetUserID(c)
+	userID := ctxUser.GetID(c)
 	if tokenOwnerID != userID {
 		response.NotFound(c)
 		return
@@ -201,7 +201,7 @@ func GetAuthToken(c *gin.Context) {
 	})
 }
 
-// UpdateAuthToken : updates a token of an account.
+// UpdateAuthToken updates a token of an account.
 func UpdateAuthToken(c *gin.Context) {
 	if GetTokenDetailsByID == nil {
 		c.Error(errors.New("undefined function 'GetTokenDetailsByID'"))
@@ -215,7 +215,7 @@ func UpdateAuthToken(c *gin.Context) {
 		return
 	}
 
-	locale := ctxLocale.GetLocale(c)
+	locale := ctxLocale.Get(c)
 	t := localization.Translate(locale)
 
 	tokenID := c.Param("id")
@@ -256,7 +256,7 @@ func UpdateAuthToken(c *gin.Context) {
 		return
 	}
 
-	userID := ctxUser.GetUserID(c)
+	userID := ctxUser.GetID(c)
 	if token.UserID != userID {
 		response.NotFound(c)
 		return
@@ -270,13 +270,13 @@ func UpdateAuthToken(c *gin.Context) {
 	response.OkWithStatus(c, t("status.auth_token.updated"))
 }
 
-// RefreshAuthToken : refreshes a auth token.
+// RefreshAuthToken refreshes a auth token.
 func RefreshAuthToken(c *gin.Context) {
-	tokenID := ctxAuthToken.GetAuthTokenID(c)
+	tokenID := ctxAuthToken.GetID(c)
 
 	signedToken, err := authentication.RefreshAuthToken(c, config.Main.JWT.Secret, config.Main.JWT.SigningMethod, tokenID, time.Duration(config.Main.JWT.TTL))
 	if err != nil {
-		locale := ctxLocale.GetLocale(c)
+		locale := ctxLocale.Get(c)
 		t := localization.Translate(locale)
 
 		response.BadRequestWithError(c, res.Error{

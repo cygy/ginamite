@@ -11,7 +11,7 @@ import (
 	"github.com/cygy/ginamite/common/authentication"
 )
 
-// Server : definition of an API server.
+// Server defines an API server.
 type Server struct {
 	RoutesFile string
 	Functions  Handlers
@@ -19,13 +19,13 @@ type Server struct {
 	customRoutes []route.ConfigureCustomRoutes
 }
 
-// Handlers : list of the functions of an API.
+// Handlers lists the functions of an API.
 type Handlers struct {
 	RecurringTasks                                                func()
 	NewMessageFromQueueCache                                      func(message string) bool
-	MiddlewareIsValidAuthToken                                    ctxAuthToken.IsAuthTokenValidFunc
-	MiddlewareGetUserAndLocaleFromAuthToken                       ctxAuthToken.GetUserAndLocaleFromAuthTokenFunc
-	MiddlewareGetUserAbilities                                    rights.GetUserAbilitesFunc
+	MiddlewareIsValidAuthToken                                    ctxAuthToken.IsValidFunc
+	MiddlewareGetUserAndLocaleFromAuthToken                       ctxAuthToken.GetUserAndLocaleFunc
+	MiddlewareGetUserAbilities                                    rights.GetUserAbilitiesFunc
 	MiddlewareGetLatestVersionOfTermsAcceptedByUser               terms.GetLatestVersionOfTermsAcceptedByUserFunc
 	BuildTokenFromID                                              authentication.BuildTokenFunc
 	ExtraPropertiesForTokenWithID                                 authentication.ExtraPropertiesForTokenWithIDFunc

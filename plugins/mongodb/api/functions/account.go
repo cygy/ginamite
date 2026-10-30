@@ -61,7 +61,7 @@ func UpdateAccountPublicProfile(c *gin.Context) {
 	}
 	request.DecodeBody(c, &jsonBody)
 
-	locale := ctxLocale.GetLocale(c)
+	locale := ctxLocale.Get(c)
 	t := localization.Translate(locale)
 
 	// The locale must be present and supported.
@@ -108,7 +108,7 @@ func UpdateAccountPublicImage(c *gin.Context) {
 		return
 	}
 
-	userID := ctxUser.GetUserID(c)
+	userID := ctxUser.GetID(c)
 
 	// Save the uploaded file to a temp file.
 	rawFilename := fmt.Sprintf("%s_%d", userID, time.Now().Unix())
@@ -127,7 +127,7 @@ func UpdateAccountPublicImage(c *gin.Context) {
 		}
 	}()
 
-	locale := ctxLocale.GetLocale(c)
+	locale := ctxLocale.Get(c)
 
 	// Copy the different versions of the image.
 	destinationDirectory := model.UserImagePath
@@ -184,7 +184,7 @@ func UpdateAccountPublicImage(c *gin.Context) {
 	image.Delete(oldImages, destinationDirectory)
 
 	// The auth token is updated too with the updated image of the user.
-	ctxAuthToken.RefreshAuthToken(c)
+	ctxAuthToken.Refresh(c)
 
 	queue.CreateTask(pluginQueue.MessageTaskUpdateUserPublicImage, pluginQueue.TaskUpdateUserPublicImage{
 		UserID: user.ID.Hex(),
@@ -198,7 +198,7 @@ func UpdateAccountPublicImage(c *gin.Context) {
 
 // DeleteAccountPublicImage : deletes the image of the public profile.
 func DeleteAccountPublicImage(c *gin.Context) {
-	locale := ctxLocale.GetLocale(c)
+	locale := ctxLocale.Get(c)
 	user := context.GetFullUser(c)
 	mongoSession := session.Get(c)
 
@@ -223,7 +223,7 @@ func DeleteAccountPublicImage(c *gin.Context) {
 	image.Delete(oldImages, model.UserImagePath)
 
 	// The auth token is updated too with the updated image of the user.
-	ctxAuthToken.RefreshAuthToken(c)
+	ctxAuthToken.Refresh(c)
 
 	queue.CreateTask(pluginQueue.MessageTaskUpdateUserPublicImage, pluginQueue.TaskUpdateUserPublicImage{
 		UserID: user.ID.Hex(),

@@ -15,7 +15,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// UpdateSocialNetworks : updates the social network profiles of the user.
+// UpdateSocialNetworks updates the social network profiles of the user.
 func UpdateSocialNetworks(c *gin.Context) {
 	if UpdateUserSocialNetworks == nil {
 		c.Error(errors.New("undefined function 'UpdateUserSocialNetworks'"))
@@ -30,7 +30,7 @@ func UpdateSocialNetworks(c *gin.Context) {
 	}
 	request.DecodeBody(c, &jsonBody)
 
-	locale := ctxLocale.GetLocale(c)
+	locale := ctxLocale.Get(c)
 	t := localization.Translate(locale)
 
 	errorMessageKey := "error.account.social.update.message"
@@ -68,7 +68,7 @@ func UpdateSocialNetworks(c *gin.Context) {
 		return
 	}
 
-	userID := ctxUser.GetUserID(c)
+	userID := ctxUser.GetID(c)
 	if err := UpdateUserSocialNetworks(c, userID, facebook, twitter, instagram); err != nil {
 		response.InternalServerError(c)
 		return

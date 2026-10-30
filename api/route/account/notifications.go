@@ -15,7 +15,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// GetNotifications : returns the latest notifications received by the user.
+// GetNotifications returns the latest notifications received by the user.
 func GetNotifications(c *gin.Context) {
 	if NotificationsReceivedByUser == nil {
 		c.Error(errors.New("undefined function 'NotificationsReceivedByUser'"))
@@ -23,7 +23,7 @@ func GetNotifications(c *gin.Context) {
 		return
 	}
 
-	userID := ctxUser.GetUserID(c)
+	userID := ctxUser.GetID(c)
 
 	notifications, err := NotificationsReceivedByUser(c, userID)
 	if err != nil {
@@ -36,7 +36,7 @@ func GetNotifications(c *gin.Context) {
 	})
 }
 
-// GetNotification : returns a notification received by the user.
+// GetNotification returns a notification received by the user.
 func GetNotification(c *gin.Context) {
 	if NotificationReceivedByUser == nil {
 		c.Error(errors.New("undefined function 'NotificationReceivedByUser'"))
@@ -51,7 +51,7 @@ func GetNotification(c *gin.Context) {
 		return
 	}
 
-	userID := ctxUser.GetUserID(c)
+	userID := ctxUser.GetID(c)
 
 	notification, err := NotificationReceivedByUser(c, userID, notificationID)
 	if err != nil {
@@ -64,7 +64,7 @@ func GetNotification(c *gin.Context) {
 	})
 }
 
-// UpdateNotificationRead : updates a notification object.
+// UpdateNotificationRead updates a notification object.
 func UpdateNotificationRead(c *gin.Context) {
 	errorMessageKey := "error.account.notification.read.update.message"
 
@@ -77,7 +77,7 @@ func UpdateNotificationRead(c *gin.Context) {
 	if UpdateUserNotificationRead == nil {
 		err = c.Error(errors.New("undefined function 'UpdateUserNotificationRead'"))
 	} else {
-		userID := ctxUser.GetUserID(c)
+		userID := ctxUser.GetID(c)
 		err = UpdateUserNotificationRead(c, userID, notificationID)
 	}
 
@@ -87,13 +87,13 @@ func UpdateNotificationRead(c *gin.Context) {
 	}
 
 	// The auth token is updated too with the latest properties of the user.
-	ctxAuthToken.RefreshAuthToken(c)
+	ctxAuthToken.Refresh(c)
 
-	locale := ctxLocale.GetLocale(c)
+	locale := ctxLocale.Get(c)
 	response.OkWithStatus(c, localization.Translate(locale)("status.account.notification.read.updated"))
 }
 
-// UpdateNotificationNotified : updates a notification object.
+// UpdateNotificationNotified updates a notification object.
 func UpdateNotificationNotified(c *gin.Context) {
 	errorMessageKey := "error.account.notification.notified.update.message"
 
@@ -106,7 +106,7 @@ func UpdateNotificationNotified(c *gin.Context) {
 	if UpdateUserNotificationNotified == nil {
 		err = c.Error(errors.New("undefined function 'UpdateUserNotificationNotified'"))
 	} else {
-		userID := ctxUser.GetUserID(c)
+		userID := ctxUser.GetID(c)
 		err = UpdateUserNotificationNotified(c, userID, notificationID)
 	}
 
@@ -115,11 +115,11 @@ func UpdateNotificationNotified(c *gin.Context) {
 		return
 	}
 
-	locale := ctxLocale.GetLocale(c)
+	locale := ctxLocale.Get(c)
 	response.OkWithStatus(c, localization.Translate(locale)("status.account.notification.notified.updated"))
 }
 
-// DeleteNotification : deletes a notification object.
+// DeleteNotification deletes a notification object.
 func DeleteNotification(c *gin.Context) {
 	errorMessageKey := "error.account.notification.delete.message"
 
@@ -132,7 +132,7 @@ func DeleteNotification(c *gin.Context) {
 	if DeleteUserNotification == nil {
 		err = c.Error(errors.New("undefined function 'DeleteUserNotification'"))
 	} else {
-		userID := ctxUser.GetUserID(c)
+		userID := ctxUser.GetID(c)
 		err = DeleteUserNotification(c, userID, notificationID)
 	}
 
@@ -142,13 +142,13 @@ func DeleteNotification(c *gin.Context) {
 	}
 
 	// The auth token is updated too with the latest properties of the user.
-	ctxAuthToken.RefreshAuthToken(c)
+	ctxAuthToken.Refresh(c)
 
-	locale := ctxLocale.GetLocale(c)
+	locale := ctxLocale.Get(c)
 	response.OkWithStatus(c, localization.Translate(locale)("status.account.notification.deleted"))
 }
 
-// GetNotificationsSettings : returns all the notifications received or not by the user's devices.
+// GetNotificationsSettings returns all the notifications received or not by the user's devices.
 func GetNotificationsSettings(c *gin.Context) {
 	if NotificationsSubscribedByUser == nil {
 		c.Error(errors.New("undefined function 'NotificationsSubscribedByUser'"))
@@ -156,14 +156,14 @@ func GetNotificationsSettings(c *gin.Context) {
 		return
 	}
 
-	userID := ctxUser.GetUserID(c)
+	userID := ctxUser.GetID(c)
 	userNotifications := NotificationsSubscribedByUser(c, userID)
 	response.Ok(c, response.H{
 		"notifications": userNotifications,
 	})
 }
 
-// SaveNotificationsSettings : saves all the notifications received by the user's devices.
+// SaveNotificationsSettings saves all the notifications received by the user's devices.
 func SaveNotificationsSettings(c *gin.Context) {
 	if SubscribeNotificationsToUser == nil {
 		c.Error(errors.New("undefined function 'SubscribeNotificationsToUser'"))
@@ -176,7 +176,7 @@ func SaveNotificationsSettings(c *gin.Context) {
 	}
 	request.DecodeBody(c, &jsonBody)
 
-	locale := ctxLocale.GetLocale(c)
+	locale := ctxLocale.Get(c)
 	t := localization.Translate(locale)
 
 	notificationsToSave := jsonBody.Notifications
@@ -191,7 +191,7 @@ func SaveNotificationsSettings(c *gin.Context) {
 		}
 	}
 
-	userID := ctxUser.GetUserID(c)
+	userID := ctxUser.GetID(c)
 	if err := SubscribeNotificationsToUser(c, userID, notificationsToSave); err != nil {
 		response.InternalServerError(c)
 		return
@@ -200,9 +200,9 @@ func SaveNotificationsSettings(c *gin.Context) {
 	response.OkWithStatus(c, t("status.notifications.updated"))
 }
 
-// UnsubscribeNotificationByKey : unsubscribes from an encrypted key.
+// UnsubscribeNotificationByKey unsubscribes from an encrypted key.
 func UnsubscribeNotificationByKey(c *gin.Context) {
-	locale := ctxLocale.GetLocale(c)
+	locale := ctxLocale.Get(c)
 	t := localization.Translate(locale)
 
 	// The same error is always sent to avoid giving some clues.

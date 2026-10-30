@@ -5,11 +5,10 @@ import (
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common/localization"
-
 	"github.com/gin-gonic/gin"
 )
 
-// GetAvailability : returns true if the username is available.
+// GetAvailability returns true if the username is available.
 func GetAvailability(c *gin.Context) {
 	var jsonBody struct {
 		Username string `json:"username"`
@@ -22,7 +21,7 @@ func GetAvailability(c *gin.Context) {
 		return
 	}
 
-	locale := ctxLocale.GetLocale(c)
+	locale := ctxLocale.Get(c)
 	t := localization.Translate(locale)
 
 	if DoesAccountWithUsernameExist != nil {
@@ -39,4 +38,10 @@ func GetAvailability(c *gin.Context) {
 		Available: true,
 		Message:   t("status.username.available"),
 	})
+}
+
+// Availability describes the availability of a username.
+type Availability struct {
+	Available bool   `json:"available"`
+	Message   string `json:"message"`
 }

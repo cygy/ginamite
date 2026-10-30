@@ -1,3 +1,4 @@
+// Package route defines the routes of the API and the middlewares applied to them.
 package route
 
 import (
@@ -6,13 +7,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// ConfigureDefaultRoutes : function to configure the default routes of the API.
+// ConfigureDefaultRoutes is a function to configure the default routes of the API.
 type ConfigureDefaultRoutes func(routes *DefaultRoutes)
 
-// ConfigureCustomRoutes : function to add custom routes of the API.
+// ConfigureCustomRoutes is a function to add custom routes of the API.
 type ConfigureCustomRoutes func(group *gin.RouterGroup, handlers Middlewares, isProductionEnvironment bool, rights func(admin bool, abilities []string) gin.HandlerFunc)
 
-// Router : properties to define routes and their rights.
+// Router holds the properties to define routes and their rights.
 type Router struct {
 	Group                 *gin.RouterGroup
 	ProductionEnvironment bool
@@ -20,10 +21,10 @@ type Router struct {
 	Handlers              Middlewares
 
 	// private properties
-	getUserAbilities rights.GetUserAbilitesFunc
+	getUserAbilities rights.GetUserAbilitiesFunc
 }
 
-// Middlewares : collection of the built-in handlers.
+// Middlewares is the collection of the built-in handlers.
 type Middlewares struct {
 	CanBeAuthenticated                      gin.HandlerFunc
 	MustBeAuthenticated                     gin.HandlerFunc
@@ -34,13 +35,13 @@ type Middlewares struct {
 	MustHaveAcceptedTheLatestVersionOfTerms gin.HandlerFunc
 }
 
-// PathProperties : properties of a route.
+// PathProperties holds the properties of a route.
 type PathProperties struct {
 	Enabled bool
 	Path    string
 }
 
-// DefaultRoutes : definition of the built-in routes.
+// DefaultRoutes defines the built-in routes.
 type DefaultRoutes struct {
 	Status struct {
 		Enabled bool

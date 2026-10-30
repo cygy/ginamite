@@ -14,7 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// DeleteAccount : starts the delete processus and sends a mail to confirm.
+// DeleteAccount starts the delete processus and sends a mail to confirm.
 func DeleteAccount(c *gin.Context) {
 	if GetUserDetailsByID == nil {
 		c.Error(errors.New("undefined function 'GetUserDetailsByID'"))
@@ -28,10 +28,10 @@ func DeleteAccount(c *gin.Context) {
 		return
 	}
 
-	locale := ctxLocale.GetLocale(c)
+	locale := ctxLocale.Get(c)
 	t := localization.Translate(locale)
 
-	userID := ctxUser.GetUserID(c)
+	userID := ctxUser.GetID(c)
 	user, err := GetUserDetailsByID(c, userID)
 	if err != nil {
 		response.InternalServerError(c)
@@ -65,12 +65,12 @@ func DeleteAccount(c *gin.Context) {
 	response.OkWithStatus(c, t("status.delete_account.email_sent"))
 }
 
-// ValidateDeleteAccount : confirms the delete process.
+// ValidateDeleteAccount confirms the delete process.
 func ValidateDeleteAccount(c *gin.Context) {
 	validateOrCancelUpdateProperty(c, authentication.ProcessDeleteAccount, true)
 }
 
-// CancelDeleteAccount : cancels the delete process.
+// CancelDeleteAccount cancels the delete process.
 func CancelDeleteAccount(c *gin.Context) {
 	validateOrCancelUpdateProperty(c, authentication.ProcessDeleteAccount, false)
 }

@@ -19,8 +19,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// NewRouter : returns a new Router struct.
-func NewRouter(e *gin.Engine, version string, productionEnvironment bool, jwtTokenSecret, latestTermsVersion string, IsAuthTokenValid ctxAuthToken.IsAuthTokenValidFunc, getUserAndLocaleFromAuthToken ctxAuthToken.GetUserAndLocaleFromAuthTokenFunc, getUserAbilities rights.GetUserAbilitesFunc, getLatestVersionOfTermsAcceptedByUser terms.GetLatestVersionOfTermsAcceptedByUserFunc) *Router {
+// NewRouter returns a new Router struct.
+func NewRouter(e *gin.Engine, version string, productionEnvironment bool, jwtTokenSecret, latestTermsVersion string, IsAuthTokenValid ctxAuthToken.IsValidFunc, getUserAndLocaleFromAuthToken ctxAuthToken.GetUserAndLocaleFunc, getUserAbilities rights.GetUserAbilitiesFunc, getLatestVersionOfTermsAcceptedByUser terms.GetLatestVersionOfTermsAcceptedByUserFunc) *Router {
 	r := &Router{}
 
 	r.getUserAbilities = getUserAbilities
@@ -28,9 +28,9 @@ func NewRouter(e *gin.Engine, version string, productionEnvironment bool, jwtTok
 	r.Group = e.Group("/" + version)
 	r.ProductionEnvironment = productionEnvironment
 
-	r.Handlers.CanBeAuthenticated = ctxAuthToken.ParseAuthToken(jwtTokenSecret, getUserAndLocaleFromAuthToken, false)
-	r.Handlers.MustBeAuthenticated = ctxAuthToken.ParseAuthToken(jwtTokenSecret, getUserAndLocaleFromAuthToken, true)
-	r.Handlers.MustAuthenticationBeValid = ctxAuthToken.VerifyAuthToken(IsAuthTokenValid)
+	r.Handlers.CanBeAuthenticated = ctxAuthToken.Parse(jwtTokenSecret, getUserAndLocaleFromAuthToken, false)
+	r.Handlers.MustBeAuthenticated = ctxAuthToken.Parse(jwtTokenSecret, getUserAndLocaleFromAuthToken, true)
+	r.Handlers.MustAuthenticationBeValid = ctxAuthToken.Verify(IsAuthTokenValid)
 	r.Handlers.MustBeAdmin = r.Rights(true, []string{})
 	r.Handlers.AbleToManageUsers = r.Rights(false, []string{rights.AbilityToManageUsers})
 	r.Handlers.AbleToManageContacts = r.Rights(false, []string{rights.AbilityToManageContacts})
@@ -208,12 +208,12 @@ func NewRouter(e *gin.Engine, version string, productionEnvironment bool, jwtTok
 	return r
 }
 
-// Rights : returns the rights for a route.
+// Rights returns the rights for a route.
 func (r *Router) Rights(admin bool, abilities []string) gin.HandlerFunc {
-	return rights.CheckRights(admin, abilities, r.getUserAbilities)
+	return rights.Check(admin, abilities, r.getUserAbilities)
 }
 
-// LoadDefaultRoutes : load the default routes.
+// LoadDefaultRoutes load the default routes.
 func (r *Router) LoadDefaultRoutes() {
 	// Get the middlewares.
 	mustBeAdmin := r.Handlers.MustBeAdmin

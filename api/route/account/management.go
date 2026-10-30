@@ -15,7 +15,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// GetInfos : returns the details of an account.
+// GetInfos returns the details of an account.
 func GetInfos(c *gin.Context) {
 	if GetOwnedAccountDetails == nil {
 		c.Error(errors.New("undefined function 'GetOwnedAccountDetails'"))
@@ -23,7 +23,7 @@ func GetInfos(c *gin.Context) {
 		return
 	}
 
-	userID := ctxUser.GetUserID(c)
+	userID := ctxUser.GetID(c)
 	user := GetOwnedAccountDetails(c, userID)
 	if user == nil {
 		response.InternalServerError(c)
@@ -35,7 +35,7 @@ func GetInfos(c *gin.Context) {
 	})
 }
 
-// UpdateInfos : updated the details of an account.
+// UpdateInfos updated the details of an account.
 func UpdateInfos(c *gin.Context) {
 	if UpdatedAccountInfos == nil {
 		c.Error(errors.New("undefined function 'UpdatedAccountInfos'"))
@@ -49,7 +49,7 @@ func UpdateInfos(c *gin.Context) {
 	}
 	request.DecodeBody(c, &jsonBody)
 
-	locale := ctxLocale.GetLocale(c)
+	locale := ctxLocale.Get(c)
 	t := localization.Translate(locale)
 
 	errorMessageKey := "error.account.infos.update.unable.message"
@@ -77,19 +77,19 @@ func UpdateInfos(c *gin.Context) {
 	}
 
 	// Update the infos of the user.
-	userID := ctxUser.GetUserID(c)
+	userID := ctxUser.GetID(c)
 	if err := UpdatedAccountInfos(c, userID, firstName, lastName); err != nil {
 		response.InternalServerError(c)
 		return
 	}
 
 	// The auth token is updated too with the latest properties of the user.
-	ctxAuthToken.RefreshAuthToken(c)
+	ctxAuthToken.Refresh(c)
 
 	response.OkWithStatus(c, t("status.account.infos.updated"))
 }
 
-// UpdateSettings : updated the settings of an account.
+// UpdateSettings updated the settings of an account.
 func UpdateSettings(c *gin.Context) {
 	if UpdatedAccountSettings == nil {
 		c.Error(errors.New("undefined function 'UpdatedAccountSettings'"))
@@ -103,7 +103,7 @@ func UpdateSettings(c *gin.Context) {
 	}
 	request.DecodeBody(c, &jsonBody)
 
-	locale := ctxLocale.GetLocale(c)
+	locale := ctxLocale.Get(c)
 	t := localization.Translate(locale)
 
 	errorMessageKey := "error.account.settings.update.unable.message"
@@ -147,14 +147,14 @@ func UpdateSettings(c *gin.Context) {
 	}
 
 	// Update the settings of the user.
-	userID := ctxUser.GetUserID(c)
+	userID := ctxUser.GetID(c)
 	if err := UpdatedAccountSettings(c, userID, accountLocale, accountTimezone); err != nil {
 		response.InternalServerError(c)
 		return
 	}
 
 	// The auth token is updated too with the latest properties of the user.
-	ctxAuthToken.RefreshAuthToken(c)
+	ctxAuthToken.Refresh(c)
 
 	response.OkWithStatus(c, t("status.account.settings.updated"))
 }

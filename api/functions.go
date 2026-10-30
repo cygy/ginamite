@@ -1,3 +1,4 @@
+// Package api wires the HTTP API server: routes, middlewares and the functions provided by the application.
 package api
 
 import (
@@ -28,7 +29,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// CreateKafkaConsumers : returns an array of kafka consumers.
+// CreateKafkaConsumers returns an array of kafka consumers.
 func (s *Server) CreateKafkaConsumers() []kafka.MessageConsumer {
 	consumers := []kafka.MessageConsumer{}
 
@@ -64,7 +65,7 @@ func (s *Server) CreateKafkaConsumers() []kafka.MessageConsumer {
 	return consumers
 }
 
-// Start : starts the worker.
+// Start starts the worker.
 func (s *Server) Start() {
 	// Warn about the undefined functions.
 	s.warnUndefinedFunctions()
@@ -171,7 +172,7 @@ func (s *Server) Start() {
 	if config.Main.IsMongoDBDatabase() {
 		server.Use(mongo.Inject())
 	}
-	server.Use(ctxLocale.InjectLocale(config.Main.DefaultLocale, config.Main.SupportedLocales))
+	server.Use(ctxLocale.Inject(config.Main.DefaultLocale, config.Main.SupportedLocales))
 
 	// Load the templates.
 	html.LoadTemplatesWithDelimiters(config.Main.TemplatesPath+"/html", "[[", "]]", server)
@@ -215,12 +216,12 @@ func (s *Server) Start() {
 	}
 }
 
-// AddCustomRoutes : adds some suctom routes.
+// AddCustomRoutes adds some suctom routes.
 func (s *Server) AddCustomRoutes(configuration route.ConfigureCustomRoutes) {
 	s.customRoutes = append(s.customRoutes, configuration)
 }
 
-// NewServer : returns a new struct 'Server'.
+// NewServer returns a new struct 'Server'.
 func NewServer() *Server {
 	return &Server{
 		customRoutes: []route.ConfigureCustomRoutes{},

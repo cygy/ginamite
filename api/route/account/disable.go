@@ -14,7 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// DisableAccount : starts the disable processus and sends a mail to confirm.
+// DisableAccount starts the disable processus and sends a mail to confirm.
 func DisableAccount(c *gin.Context) {
 	if GetUserDetailsByID == nil {
 		c.Error(errors.New("undefined function 'GetUserDetailsByID'"))
@@ -28,10 +28,10 @@ func DisableAccount(c *gin.Context) {
 		return
 	}
 
-	locale := ctxLocale.GetLocale(c)
+	locale := ctxLocale.Get(c)
 	t := localization.Translate(locale)
 
-	userID := ctxUser.GetUserID(c)
+	userID := ctxUser.GetID(c)
 	user, err := GetUserDetailsByID(c, userID)
 	if err != nil {
 		response.InternalServerError(c)
@@ -65,12 +65,12 @@ func DisableAccount(c *gin.Context) {
 	response.OkWithStatus(c, t("status.disable_account.email_sent"))
 }
 
-// ValidateDisableAccount : confirms the disable process.
+// ValidateDisableAccount confirms the disable process.
 func ValidateDisableAccount(c *gin.Context) {
 	validateOrCancelUpdateProperty(c, authentication.ProcessDisableAccount, true)
 }
 
-// CancelDisableAccount : cancels the disable process.
+// CancelDisableAccount cancels the disable process.
 func CancelDisableAccount(c *gin.Context) {
 	validateOrCancelUpdateProperty(c, authentication.ProcessDisableAccount, false)
 }

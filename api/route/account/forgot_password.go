@@ -17,7 +17,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// ForgotPassword : sends a mail to reset the password.
+// ForgotPassword sends a mail to reset the password.
 func ForgotPassword(c *gin.Context) {
 	if GetUserDetailsByIdentifier == nil {
 		c.Error(errors.New("undefined function 'GetUserDetailsByIdentifier'"))
@@ -36,7 +36,7 @@ func ForgotPassword(c *gin.Context) {
 	}
 	request.DecodeBody(c, &jsonBody)
 
-	locale := ctxLocale.GetLocale(c)
+	locale := ctxLocale.Get(c)
 	t := localization.Translate(locale)
 
 	// Identifier is mandatory.
@@ -98,12 +98,12 @@ func ForgotPassword(c *gin.Context) {
 	response.OkWithStatus(c, t("status.forgot_password.email_sent"))
 }
 
-// ValidateForgotPassword : validates the reset password.
+// ValidateForgotPassword validates the reset password.
 func ValidateForgotPassword(c *gin.Context) {
 	validateOrCancelForgotPassword(c, true)
 }
 
-// CancelForgotPassword : cancels the reset password.
+// CancelForgotPassword cancels the reset password.
 func CancelForgotPassword(c *gin.Context) {
 	validateOrCancelForgotPassword(c, false)
 }

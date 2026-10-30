@@ -10,7 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// GetAdminContacts : returns the contact documents.
+// GetAdminContacts returns the contact documents.
 func GetAdminContacts(c *gin.Context) {
 	if GetContacts == nil {
 		c.Error(errors.New("undefined function 'GetContacts'"))
@@ -18,8 +18,8 @@ func GetAdminContacts(c *gin.Context) {
 		return
 	}
 
-	offset := request.GetOffsetFromRequest(c)
-	limit := request.GetLimitFromRequest(c)
+	offset := request.GetOffset(c)
+	limit := request.GetLimit(c)
 
 	contacts, err := GetContacts(c, offset, limit)
 	if err != nil {
@@ -32,7 +32,7 @@ func GetAdminContacts(c *gin.Context) {
 	})
 }
 
-// GetAdminContact : returns a contact document.
+// GetAdminContact returns a contact document.
 func GetAdminContact(c *gin.Context) {
 	if GetContact == nil {
 		c.Error(errors.New("undefined function 'GetContact'"))
@@ -53,7 +53,7 @@ func GetAdminContact(c *gin.Context) {
 	})
 }
 
-// Update : updates a contact document.
+// Update updates a contact document.
 func Update(c *gin.Context) {
 	if UpdateContact == nil {
 		c.Error(errors.New("undefined function 'UpdateContact'"))
@@ -74,7 +74,7 @@ func Update(c *gin.Context) {
 		return
 	}
 
-	locale := ctxLocale.GetLocale(c)
+	locale := ctxLocale.Get(c)
 	t := localization.Translate(locale)
 
 	response.OkWithStatus(c, t("status.admin.contact.updated"))

@@ -18,7 +18,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// UpdateEmailAddress : updates the email address and sends a mail to confirm.
+// UpdateEmailAddress updates the email address and sends a mail to confirm.
 func UpdateEmailAddress(c *gin.Context) {
 	if GetUserDetailsByID == nil {
 		c.Error(errors.New("undefined function 'GetUserDetailsByID'"))
@@ -37,7 +37,7 @@ func UpdateEmailAddress(c *gin.Context) {
 	}
 	request.DecodeBody(c, &jsonBody)
 
-	locale := ctxLocale.GetLocale(c)
+	locale := ctxLocale.Get(c)
 	t := localization.Translate(locale)
 
 	emailAddress := jsonBody.EmailAddress
@@ -47,7 +47,7 @@ func UpdateEmailAddress(c *gin.Context) {
 		return
 	}
 
-	userID := ctxUser.GetUserID(c)
+	userID := ctxUser.GetID(c)
 	user, err := GetUserDetailsByID(c, userID)
 	if err != nil {
 		response.InternalServerError(c)
@@ -91,22 +91,22 @@ func UpdateEmailAddress(c *gin.Context) {
 	response.OkWithStatus(c, t("status.update_email_address.email_sent"))
 }
 
-// ValidateUpdateEmailAddress : confirms the email address update.
+// ValidateUpdateEmailAddress confirms the email address update.
 func ValidateUpdateEmailAddress(c *gin.Context) {
 	validateOrCancelUpdateProperty(c, authentication.ProcessUpdateEmailAddress, true)
 }
 
-// CancelUpdateEmailAddress : cancels the email address update.
+// CancelUpdateEmailAddress cancels the email address update.
 func CancelUpdateEmailAddress(c *gin.Context) {
 	validateOrCancelUpdateProperty(c, authentication.ProcessUpdateEmailAddress, false)
 }
 
-// ValidateNewEmailAddress : valiadtes the new email address.
+// ValidateNewEmailAddress validates the new email address.
 func ValidateNewEmailAddress(c *gin.Context) {
 	validateOrCancelUpdateProperty(c, authentication.ProcessVerifyEmailAddress, true)
 }
 
-// ConfirmEmailAddress : validates the new email address.
+// ConfirmEmailAddress validates the new email address.
 func ConfirmEmailAddress(c *gin.Context) {
 	if GetUserDetailsByID == nil {
 		c.Error(errors.New("undefined function 'GetUserDetailsByID'"))
@@ -114,10 +114,10 @@ func ConfirmEmailAddress(c *gin.Context) {
 		return
 	}
 
-	locale := ctxLocale.GetLocale(c)
+	locale := ctxLocale.Get(c)
 	t := localization.Translate(locale)
 
-	userID := ctxUser.GetUserID(c)
+	userID := ctxUser.GetID(c)
 	user, err := GetUserDetailsByID(c, userID)
 	if err != nil {
 		response.InternalServerError(c)

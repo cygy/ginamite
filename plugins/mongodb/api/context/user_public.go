@@ -10,7 +10,7 @@ import (
 
 // GetUser : returns a cached user struct from the context.
 func GetUser(c *gin.Context) model.User {
-	return ctxUser.GetUser(c).(model.User)
+	return ctxUser.Get(c).(model.User)
 }
 
 // GetFullUser : returns the user from the dabatase.
@@ -22,7 +22,7 @@ func GetFullUser(c *gin.Context) *model.User {
 
 	// Get the user from the database.
 	mongoSession := session.Get(c)
-	userID := ctxUser.GetUserID(c)
+	userID := ctxUser.GetID(c)
 
 	user := &model.User{}
 	if err := user.GetByID(c, userID, mongoSession); err != nil || !user.IsSaved() {

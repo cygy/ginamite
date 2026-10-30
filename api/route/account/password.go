@@ -15,7 +15,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// UpdatePassword : updates the password and sends a mail to confirm.
+// UpdatePassword updates the password and sends a mail to confirm.
 func UpdatePassword(c *gin.Context) {
 	if GetUserDetailsByID == nil {
 		c.Error(errors.New("undefined function 'GetUserDetailsByID'"))
@@ -34,7 +34,7 @@ func UpdatePassword(c *gin.Context) {
 	}
 	request.DecodeBody(c, &jsonBody)
 
-	locale := ctxLocale.GetLocale(c)
+	locale := ctxLocale.Get(c)
 	t := localization.Translate(locale)
 
 	// Password is mandatory.
@@ -49,7 +49,7 @@ func UpdatePassword(c *gin.Context) {
 		return
 	}
 
-	userID := ctxUser.GetUserID(c)
+	userID := ctxUser.GetID(c)
 	user, err := GetUserDetailsByID(c, userID)
 	if err != nil {
 		response.InternalServerError(c)
@@ -83,12 +83,12 @@ func UpdatePassword(c *gin.Context) {
 	response.OkWithStatus(c, t("status.update_password.email_sent"))
 }
 
-// ValidateUpdatePassword : confirms the password update.
+// ValidateUpdatePassword confirms the password update.
 func ValidateUpdatePassword(c *gin.Context) {
 	validateOrCancelUpdateProperty(c, authentication.ProcessUpdatePassword, true)
 }
 
-// CancelUpdatePassword : cancels the password update.
+// CancelUpdatePassword cancels the password update.
 func CancelUpdatePassword(c *gin.Context) {
 	validateOrCancelUpdateProperty(c, authentication.ProcessUpdatePassword, false)
 }

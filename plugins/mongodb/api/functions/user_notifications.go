@@ -28,7 +28,7 @@ func NotificationsReceivedByUser(c *gin.Context, userID string) (any, error) {
 		return nil, err
 	}
 
-	locale := apiContextLocale.GetLocale(c)
+	locale := apiContextLocale.Get(c)
 
 	summarizedNotifications := make([]model.OwnSummarizedNotification, len(notifications))
 	for i, notification := range notifications {
@@ -45,7 +45,7 @@ func NotificationReceivedByUser(c *gin.Context, userID, notificationID string) (
 		return nil, err
 	}
 
-	locale := apiContextLocale.GetLocale(c)
+	locale := apiContextLocale.Get(c)
 
 	return model.NewOwnNotification(*notification, locale, config.Main.DefaultLocale), nil
 }

@@ -1,3 +1,4 @@
+// Package user provides the administration handlers to manage the users.
 package user
 
 import (
@@ -19,7 +20,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// GetAdminEnabledUsers : returns the enabled users.
+// GetAdminEnabledUsers returns the enabled users.
 func GetAdminEnabledUsers(c *gin.Context) {
 	if GetEnabledUsersForAdmin == nil {
 		c.Error(errors.New("undefined function 'GetEnabledUsersForAdmin'"))
@@ -38,7 +39,7 @@ func GetAdminEnabledUsers(c *gin.Context) {
 	})
 }
 
-// GetAdminDisabledUsers : returns the disabled users.
+// GetAdminDisabledUsers returns the disabled users.
 func GetAdminDisabledUsers(c *gin.Context) {
 	if GetDisabledUsersForAdmin == nil {
 		c.Error(errors.New("undefined function 'GetDisabledUsersForAdmin'"))
@@ -57,7 +58,7 @@ func GetAdminDisabledUsers(c *gin.Context) {
 	})
 }
 
-// AdminUpdatePassword : updates the password of a user.
+// AdminUpdatePassword updates the password of a user.
 func AdminUpdatePassword(c *gin.Context) {
 	errorMessageKey := "error.admin.user.password.update.message"
 
@@ -66,7 +67,7 @@ func AdminUpdatePassword(c *gin.Context) {
 	}
 	request.DecodeBody(c, &jsonBody)
 
-	locale := ctxLocale.GetLocale(c)
+	locale := ctxLocale.Get(c)
 	t := localization.Translate(locale)
 
 	// Password is mandatory.
@@ -95,7 +96,7 @@ func AdminUpdatePassword(c *gin.Context) {
 	response.OkWithStatus(c, t("status.admin.user.password.updated"))
 }
 
-// AdminUpdateInformations : updates the informations of a user.
+// AdminUpdateInformations updates the informations of a user.
 func AdminUpdateInformations(c *gin.Context) {
 	errorMessageKey := "error.admin.user.informations.update.message"
 
@@ -107,7 +108,7 @@ func AdminUpdateInformations(c *gin.Context) {
 	}
 	request.DecodeBody(c, &jsonBody)
 
-	locale := ctxLocale.GetLocale(c)
+	locale := ctxLocale.Get(c)
 	t := localization.Translate(locale)
 
 	// EmailAddress is mandatory.
@@ -146,7 +147,7 @@ func AdminUpdateInformations(c *gin.Context) {
 	response.OkWithStatus(c, t("status.admin.user.informations.updated"))
 }
 
-// AdminUpdateDescription : updates the description of a user.
+// AdminUpdateDescription updates the description of a user.
 func AdminUpdateDescription(c *gin.Context) {
 	errorMessageKey := "error.admin.user.description.update.message"
 
@@ -156,7 +157,7 @@ func AdminUpdateDescription(c *gin.Context) {
 	}
 	request.DecodeBody(c, &jsonBody)
 
-	locale := ctxLocale.GetLocale(c)
+	locale := ctxLocale.Get(c)
 	t := localization.Translate(locale)
 
 	// Locale is mandatory.
@@ -191,7 +192,7 @@ func AdminUpdateDescription(c *gin.Context) {
 	response.OkWithStatus(c, t("status.admin.user.description.updated"))
 }
 
-// AdminUpdateSocial : updates the social networks of a user.
+// AdminUpdateSocial updates the social networks of a user.
 func AdminUpdateSocial(c *gin.Context) {
 	errorMessageKey := "error.admin.user.social.update.message"
 
@@ -202,7 +203,7 @@ func AdminUpdateSocial(c *gin.Context) {
 	}
 	request.DecodeBody(c, &jsonBody)
 
-	locale := ctxLocale.GetLocale(c)
+	locale := ctxLocale.Get(c)
 	t := localization.Translate(locale)
 
 	// The facebook profile must begin with a valid url.
@@ -259,7 +260,7 @@ func AdminUpdateSocial(c *gin.Context) {
 	response.OkWithStatus(c, t("status.admin.user.social.updated"))
 }
 
-// AdminUpdateSettings : updates the settings of a user.
+// AdminUpdateSettings updates the settings of a user.
 func AdminUpdateSettings(c *gin.Context) {
 	errorMessageKey := "error.admin.user.settings.update.message"
 
@@ -269,7 +270,7 @@ func AdminUpdateSettings(c *gin.Context) {
 	}
 	request.DecodeBody(c, &jsonBody)
 
-	locale := ctxLocale.GetLocale(c)
+	locale := ctxLocale.Get(c)
 	t := localization.Translate(locale)
 
 	// Locale is mandatory.
@@ -324,7 +325,7 @@ func AdminUpdateSettings(c *gin.Context) {
 	response.OkWithStatus(c, t("status.admin.user.settings.updated"))
 }
 
-// AdminUpdateNotifications : updates the notifications of a user.
+// AdminUpdateNotifications updates the notifications of a user.
 func AdminUpdateNotifications(c *gin.Context) {
 	errorMessageKey := "error.admin.user.notifications.update.message"
 
@@ -333,7 +334,7 @@ func AdminUpdateNotifications(c *gin.Context) {
 	}
 	request.DecodeBody(c, &jsonBody)
 
-	locale := ctxLocale.GetLocale(c)
+	locale := ctxLocale.Get(c)
 	t := localization.Translate(locale)
 
 	notificationsToSave := jsonBody.Notifications
@@ -363,7 +364,7 @@ func AdminUpdateNotifications(c *gin.Context) {
 	response.OkWithStatus(c, t("status.admin.user.notifications.updated"))
 }
 
-// GetAdminUserTokens : returns the user's auth tokens.
+// GetAdminUserTokens returns the user's auth tokens.
 func GetAdminUserTokens(c *gin.Context) {
 	if GetTokensForAdmin == nil {
 		c.Error(errors.New("undefined function 'GetTokensForAdmin'"))
@@ -384,7 +385,7 @@ func GetAdminUserTokens(c *gin.Context) {
 	})
 }
 
-// AdminDeleteUserToken : deletes a user's auth token.
+// AdminDeleteUserToken deletes a user's auth token.
 func AdminDeleteUserToken(c *gin.Context) {
 	if DeleteTokenByIDByAdmin == nil {
 		c.Error(errors.New("undefined function 'DeleteTokenByIDByAdmin'"))
@@ -416,26 +417,26 @@ func AdminDeleteUserToken(c *gin.Context) {
 		queue.InvalidAuthToken(tokenID, token.ExpirationDate)
 	}
 
-	locale := ctxLocale.GetLocale(c)
+	locale := ctxLocale.Get(c)
 	response.OkWithStatus(c, localization.Translate(locale)("status.admin.user.token.deleted"))
 }
 
-// SetAbilities : set abilities to a user.
+// SetAbilities set abilities to a user.
 func SetAbilities(c *gin.Context) {
 	updateAbilities(c, "set")
 }
 
-// AddAbilities : add abilities to a user.
+// AddAbilities add abilities to a user.
 func AddAbilities(c *gin.Context) {
 	updateAbilities(c, "add")
 }
 
-// RemoveAbilities : remove abilities from a user.
+// RemoveAbilities remove abilities from a user.
 func RemoveAbilities(c *gin.Context) {
 	updateAbilities(c, "remove")
 }
 
-// AdminDelete : deletes a user.
+// AdminDelete deletes a user.
 func AdminDelete(c *gin.Context) {
 	// Get the userID from the request.
 	userID := getUserID(c)
@@ -464,13 +465,13 @@ func AdminDelete(c *gin.Context) {
 		Locale:       user.Locale,
 	})
 
-	locale := ctxLocale.GetLocale(c)
+	locale := ctxLocale.Get(c)
 	t := localization.Translate(locale)
 
 	response.OkWithStatus(c, t("status.admin.account.deleted"))
 }
 
-// AdminDisable : disables a user.
+// AdminDisable disables a user.
 func AdminDisable(c *gin.Context) {
 	// Get the userID from the request.
 	userID := getUserID(c)
@@ -493,13 +494,13 @@ func AdminDisable(c *gin.Context) {
 		Locale:       user.Locale,
 	})
 
-	locale := ctxLocale.GetLocale(c)
+	locale := ctxLocale.Get(c)
 	t := localization.Translate(locale)
 
 	response.OkWithStatus(c, t("status.admin.account.disabled"))
 }
 
-// AdminEnable : enables a user.
+// AdminEnable enables a user.
 func AdminEnable(c *gin.Context) {
 	// Get the userID from the request.
 	disabledUserID := getUserID(c)
@@ -522,7 +523,7 @@ func AdminEnable(c *gin.Context) {
 		Locale:       user.Locale,
 	})
 
-	locale := ctxLocale.GetLocale(c)
+	locale := ctxLocale.Get(c)
 	t := localization.Translate(locale)
 
 	response.OkWithStatus(c, t("status.admin.account.enabled"))
