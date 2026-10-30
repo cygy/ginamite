@@ -7,8 +7,7 @@ import (
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/document"
-
-	"go.mongodb.org/mongo-driver/v2/mongo"
+	"github.com/cygy/ginamite/common/mongo/store"
 )
 
 // User : properties of a user.
@@ -140,23 +139,23 @@ func (user *User) IsSaved() bool {
 }
 
 // Save : inserts the 'user' document in the collection, returns an error if needed.
-func (user *User) Save(ctx context.Context, db *mongo.Database) (string, error) {
+func (user *User) Save(ctx context.Context, db store.Database) (string, error) {
 	return document.SaveDocument(ctx, user, UserCollection, db)
 }
 
 // Update : updates the 'user' document, returns an error if needed.
-func (user *User) Update(ctx context.Context, update any, db *mongo.Database) error {
+func (user *User) Update(ctx context.Context, update any, db store.Database) error {
 	return document.UpdateDocument(ctx, user.ID, UserCollection, update, db)
 }
 
 // Delete : deletes the 'user' document from the collection, returns an error if needed.
-func (user *User) Delete(ctx context.Context, db *mongo.Database) error {
+func (user *User) Delete(ctx context.Context, db store.Database) error {
 	return document.DeleteDocument(ctx, user.ID, UserCollection, db)
 	// TODO: tasks to delete all the documents linked to the user.
 }
 
 // GetByID : initializes the 'User' struct from the 'user' document with the ID.
-func (user *User) GetByID(ctx context.Context, id string, db *mongo.Database) error {
+func (user *User) GetByID(ctx context.Context, id string, db store.Database) error {
 	return document.GetDocumentByID(ctx, user, UserCollection, id, db)
 }
 
@@ -177,7 +176,7 @@ func (user *User) SetID(id string) error {
 }
 
 // SetAdmin : !Only for testing
-func (user *User) SetAdmin(ctx context.Context, admin bool, db *mongo.Database) error {
+func (user *User) SetAdmin(ctx context.Context, admin bool, db store.Database) error {
 	if config.Main == nil || config.Main.IsTestEnvironment() {
 		return user.Update(ctx, bson.M{"$set": bson.M{"isAdmin": admin}}, db)
 	}

@@ -5,12 +5,12 @@ import (
 
 	"github.com/cygy/ginamite"
 	"github.com/cygy/ginamite/api/route"
+	"github.com/cygy/ginamite/common/mongo/store"
 	apiFunctions "github.com/cygy/ginamite/plugins/mongodb/api/functions"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
 	workerFunctions "github.com/cygy/ginamite/plugins/mongodb/worker/functions"
 
 	"github.com/gin-gonic/gin"
-	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 // Plugin : structure of the plugin.
@@ -27,22 +27,22 @@ type Plugin struct {
 	UserImageSmallVersion              bool
 	UserImageThumbVersion              bool
 
-	UpdateDocumentsReferencingToDeletedUser               func(ctx context.Context, userID string, mongoSession *mongo.Database)
-	UpdateDocumentsReferencingToDisabledUser              func(ctx context.Context, userID string, mongoSession *mongo.Database)
-	UpdateDocumentsReferencingToEnabledUser               func(ctx context.Context, userID string, mongoSession *mongo.Database)
-	UpdateDocumentsReferencingToUpdatedUserSocialNetworks func(ctx context.Context, userID string, mongoSession *mongo.Database)
-	SanitizeAccounts                                      func(mongoSession *mongo.Database) uint
+	UpdateDocumentsReferencingToDeletedUser               func(ctx context.Context, userID string, mongoSession store.Database)
+	UpdateDocumentsReferencingToDisabledUser              func(ctx context.Context, userID string, mongoSession store.Database)
+	UpdateDocumentsReferencingToEnabledUser               func(ctx context.Context, userID string, mongoSession store.Database)
+	UpdateDocumentsReferencingToUpdatedUserSocialNetworks func(ctx context.Context, userID string, mongoSession store.Database)
+	SanitizeAccounts                                      func(mongoSession store.Database) uint
 
 	CollectionsToRemove    func() []string
 	CollectionsToCreate    func() []workerFunctions.CollectionToCreate
 	IndexesToRemove        func() []workerFunctions.IndexToDelete
 	IndexesToCreate        func() []workerFunctions.IndexToCreate
-	CreateDefaultDocuments func(string, string, *mongo.Database)
-	RemoveDefaultDocuments func(string, string, *mongo.Database)
-	UpdateDefaultDocuments func(string, string, *mongo.Database)
+	CreateDefaultDocuments func(string, string, store.Database)
+	RemoveDefaultDocuments func(string, string, store.Database)
+	UpdateDefaultDocuments func(string, string, store.Database)
 	StartUpTasks           func()
 
-	IsUserEmpty func(context.Context, string, *mongo.Database) bool
+	IsUserEmpty func(context.Context, string, store.Database) bool
 }
 
 // NewPlugin : returns a new struct 'Plugin'.

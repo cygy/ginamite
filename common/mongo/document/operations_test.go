@@ -4,12 +4,15 @@ import (
 	"context"
 	"errors"
 	"os"
+	"reflect"
 	"testing"
 	"time"
 
 	commonErrors "github.com/cygy/ginamite/common/errors"
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/mongo/bson"
+	"github.com/cygy/ginamite/common/mongo/store"
+	"github.com/cygy/ginamite/common/mongo/store/mock"
 
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
@@ -30,12 +33,12 @@ type fakeDocument struct {
 	setIDErr error
 }
 
-func (d *fakeDocument) IsSaved() bool                                          { return d.ID != "" }
-func (d *fakeDocument) Save(context.Context, *mongo.Database) (string, error)  { return d.ID, nil }
-func (d *fakeDocument) Update(context.Context, any, *mongo.Database) error     { return nil }
-func (d *fakeDocument) Delete(context.Context, *mongo.Database) error          { return nil }
-func (d *fakeDocument) GetByID(context.Context, string, *mongo.Database) error { return nil }
-func (d *fakeDocument) GetID() string                                          { return d.ID }
+func (d *fakeDocument) IsSaved() bool                                         { return d.ID != "" }
+func (d *fakeDocument) Save(context.Context, store.Database) (string, error)  { return d.ID, nil }
+func (d *fakeDocument) Update(context.Context, any, store.Database) error     { return nil }
+func (d *fakeDocument) Delete(context.Context, store.Database) error          { return nil }
+func (d *fakeDocument) GetByID(context.Context, string, store.Database) error { return nil }
+func (d *fakeDocument) GetID() string                                         { return d.ID }
 
 func (d *fakeDocument) SetID(id string) error {
 	if d.setIDErr != nil {
@@ -47,7 +50,7 @@ func (d *fakeDocument) SetID(id string) error {
 }
 
 // offlineDB returns a database whose server can not be reached.
-func offlineDB(t *testing.T) *mongo.Database {
+func offlineDB(t *testing.T) store.Database {
 	t.Helper()
 
 	client, err := mongo.Connect(options.Client().
@@ -58,7 +61,7 @@ func offlineDB(t *testing.T) *mongo.Database {
 	}
 	t.Cleanup(func() { _ = client.Disconnect(context.Background()) })
 
-	return client.Database("test")
+	return store.NewDatabase(client.Database("test"))
 }
 
 func TestSaveDocument(t *testing.T) {
@@ -173,4 +176,350 @@ func TestGetDocumentsOptions(t *testing.T) {
 			t.Errorf("offset %d, limit %d: expected the connection error", bounds[0], bounds[1])
 		}
 	}
+}
+
+// The tests below use a stub database: they check the arguments sent to the driver and the results
+// of the operations, but not the evaluation of the selectors, which needs a MongoDB server.
+
+func TestSaveDocument_Insert(t *testing.T) {
+	db := mock.NewDatabase("app")
+	doc := &fakeDocument{}
+
+	id, err := SaveDocument(context.Background(), doc, "users", db)
+	if err != nil || id != doc.ID || id == "" {
+		t.Fatalf("got %q, %v", id, err)
+	}
+
+	call := db.Coll("users").LastCall()
+	if call.Method != "InsertOne" || call.Args[0] != doc {
+		t.Errorf("call = %+v", call)
+	}
+}
+
+func TestSaveDocument_InsertError(t *testing.T) {
+	db := mock.NewDatabase("app")
+	db.Coll("users").Err = errors.New("boom")
+
+	if _, err := SaveDocument(context.Background(), &fakeDocument{}, "users", db); err == nil {
+		t.Error("expected the insert error")
+	}
+}
+
+func TestUpdateDocument(t *testing.T) {
+	ctx := context.Background()
+	id := bson.NewObjectID()
+	update := bson.M{"$set": bson.M{"a": 1}}
+
+	t.Run("updates", func(t *testing.T) {
+		db := mock.NewDatabase("app")
+		if err := UpdateDocument(ctx, id, "users", update, db); err != nil {
+			t.Fatal(err)
+		}
+
+		call := db.Coll("users").LastCall()
+		if call.Method != "UpdateByID" || call.Args[0] != id {
+			t.Errorf("call = %+v", call)
+		}
+	})
+
+	t.Run("no match", func(t *testing.T) {
+		db := mock.NewDatabase("app")
+		db.Coll("users").UpdateResult = &mongo.UpdateResult{}
+
+		if err := UpdateDocument(ctx, id, "users", update, db); !errors.Is(err, mongo.ErrNoDocuments) {
+			t.Errorf("err = %v", err)
+		}
+	})
+
+	t.Run("error", func(t *testing.T) {
+		db := mock.NewDatabase("app")
+		db.Coll("users").Err = errors.New("boom")
+
+		if err := UpdateDocument(ctx, id, "users", update, db); err == nil {
+			t.Error("expected the update error")
+		}
+	})
+}
+
+func TestUpdateDocumentsBySelector(t *testing.T) {
+	ctx := context.Background()
+	db := mock.NewDatabase("app")
+	db.Coll("users").UpdateResult = &mongo.UpdateResult{MatchedCount: 3}
+
+	n, err := UpdateDocumentsBySelector(ctx, "users", bson.M{"a": 1}, bson.M{"$set": 1}, db)
+	if err != nil || n != 3 {
+		t.Errorf("got %d, %v", n, err)
+	}
+	if got := db.Coll("users").LastCall().Method; got != "UpdateMany" {
+		t.Errorf("method = %s", got)
+	}
+
+	db.Coll("users").Err = errors.New("boom")
+	if n, err := UpdateDocumentsBySelector(ctx, "users", nil, nil, db); err == nil || n != 0 {
+		t.Errorf("got %d, %v", n, err)
+	}
+}
+
+func TestUpsertDocumentBySelector(t *testing.T) {
+	ctx := context.Background()
+	db := mock.NewDatabase("app")
+	db.Coll("users").UpdateResult = &mongo.UpdateResult{MatchedCount: 1}
+
+	n, err := UpsertDocumentBySelector(ctx, "users", bson.M{"a": 1}, bson.M{"$set": 1}, db)
+	if err != nil || n != 1 {
+		t.Errorf("got %d, %v", n, err)
+	}
+
+	call := db.Coll("users").LastCall()
+	if call.Method != "UpdateOne" || !*mock.UpdateOneOptions(call.Opts).Upsert {
+		t.Errorf("call = %+v, the upsert option is required", call)
+	}
+
+	db.Coll("users").Err = errors.New("boom")
+	if n, err := UpsertDocumentBySelector(ctx, "users", nil, nil, db); err == nil || n != 0 {
+		t.Errorf("got %d, %v", n, err)
+	}
+}
+
+func TestDeleteDocument(t *testing.T) {
+	ctx := context.Background()
+	id := bson.NewObjectID()
+
+	t.Run("deletes", func(t *testing.T) {
+		db := mock.NewDatabase("app")
+		if err := DeleteDocument(ctx, id, "users", db); err != nil {
+			t.Fatal(err)
+		}
+		if call := db.Coll("users").LastCall(); call.Method != "DeleteOne" {
+			t.Errorf("call = %+v", call)
+		}
+	})
+
+	t.Run("no match", func(t *testing.T) {
+		db := mock.NewDatabase("app")
+		db.Coll("users").DeleteResult = &mongo.DeleteResult{}
+
+		if err := DeleteDocument(ctx, id, "users", db); !errors.Is(err, mongo.ErrNoDocuments) {
+			t.Errorf("err = %v", err)
+		}
+	})
+}
+
+func TestDeleteDocumentsBySelector(t *testing.T) {
+	ctx := context.Background()
+	db := mock.NewDatabase("app")
+	db.Coll("users").DeleteResult = &mongo.DeleteResult{DeletedCount: 4}
+
+	n, err := DeleteDocumentsBySelector(ctx, "users", bson.M{"a": 1}, db)
+	if err != nil || n != 4 {
+		t.Errorf("got %d, %v", n, err)
+	}
+
+	db.Coll("users").Err = errors.New("boom")
+	if n, err := DeleteDocumentsBySelector(ctx, "users", nil, db); err == nil || n != 0 {
+		t.Errorf("got %d, %v", n, err)
+	}
+}
+
+func TestGetDocumentByID_Stub(t *testing.T) {
+	ctx := context.Background()
+	id := bson.NewObjectID()
+
+	tests := []struct {
+		name         string
+		one          store.SingleResult
+		err          error
+		wantNotFound bool
+		wantID       string
+	}{
+		{"found", mock.Result{Value: bson.M{"id": "abc"}}, nil, false, "abc"},
+		{"no document", nil, nil, true, ""},
+		{"unsaved document", mock.Result{Value: bson.M{"other": 1}}, nil, true, ""},
+		{"query error", nil, errors.New("boom"), false, ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			db := mock.NewDatabase("app")
+			db.Coll("users").One = tt.one
+			db.Coll("users").Err = tt.err
+
+			doc := &fakeDocument{}
+			err := GetDocumentByID(ctx, doc, "users", id.Hex(), db)
+
+			switch {
+			case tt.wantNotFound && !commonErrors.IsNotFound(err):
+				t.Errorf("err = %v, want not found", err)
+			case tt.err != nil && (err == nil || commonErrors.IsNotFound(err)):
+				t.Errorf("err = %v, want the query error", err)
+			case !tt.wantNotFound && tt.err == nil && err != nil:
+				t.Errorf("err = %v", err)
+			}
+			if doc.ID != tt.wantID {
+				t.Errorf("ID = %q, want %q", doc.ID, tt.wantID)
+			}
+		})
+	}
+}
+
+func TestGetDocuments_Stub(t *testing.T) {
+	ctx := context.Background()
+	db := mock.NewDatabase("app")
+	db.Coll("users").Docs = []any{bson.M{"n": 1}, bson.M{"n": 2}}
+
+	var list []bson.M
+	err := GetDocumentsBySelectorAndSortWithFieldsOffsetAndLimit(ctx, &list, "users", bson.M{"a": 1}, bson.M{"n": 1}, []string{"-n", "a"}, 2, 5, db)
+	if err != nil || len(list) != 2 {
+		t.Fatalf("got %v, %v", list, err)
+	}
+
+	opts := mock.FindOptions(db.Coll("users").LastCall().Opts)
+	if *opts.Skip != 2 || *opts.Limit != 5 || opts.Projection == nil {
+		t.Errorf("options = %+v", opts)
+	}
+	if want := (bson.D{{Key: "n", Value: -1}, {Key: "a", Value: 1}}); !reflect.DeepEqual(opts.Sort, want) {
+		t.Errorf("sort = %v, want %v", opts.Sort, want)
+	}
+}
+
+func TestGetDocuments_StubDefaults(t *testing.T) {
+	ctx := context.Background()
+	db := mock.NewDatabase("app")
+
+	var list []bson.M
+	if err := GetDocuments(ctx, &list, "users", db); err != nil {
+		t.Fatal(err)
+	}
+
+	// A negative offset or limit, and empty sort and fields, must not be sent.
+	opts := mock.FindOptions(db.Coll("users").LastCall().Opts)
+	if opts.Skip != nil || opts.Limit != nil || opts.Sort != nil || opts.Projection != nil {
+		t.Errorf("options = %+v", opts)
+	}
+}
+
+func TestGetDocuments_StubErrors(t *testing.T) {
+	ctx := context.Background()
+	boom := errors.New("boom")
+
+	db := mock.NewDatabase("app")
+	db.Coll("users").Err = boom
+
+	var list []bson.M
+	if err := GetDocuments(ctx, &list, "users", db); !errors.Is(err, boom) {
+		t.Errorf("find err = %v", err)
+	}
+
+	// The documents can not be decoded into a map of the wrong type.
+	db = mock.NewDatabase("app")
+	db.Coll("users").Docs = []any{bson.M{"n": 1}}
+
+	var wrong []int
+	if err := GetDocuments(ctx, &wrong, "users", db); err == nil {
+		t.Error("expected the decoding error")
+	}
+}
+
+func TestGetDocumentBySelectorAndSort_Stub(t *testing.T) {
+	ctx := context.Background()
+	db := mock.NewDatabase("app")
+	db.Coll("users").One = mock.Result{Value: bson.M{"id": "xyz"}}
+
+	doc := &fakeDocument{}
+	if err := GetDocumentBySelectorAndSort(ctx, doc, "users", bson.M{"a": 1}, []string{"-a"}, db); err != nil || doc.ID != "xyz" {
+		t.Fatalf("got %+v, %v", doc, err)
+	}
+
+	call := db.Coll("users").LastCall()
+	if call.Method != "FindOne" || mock.FindOneOptions(call.Opts).Sort == nil {
+		t.Errorf("call = %+v, the sort is required", call)
+	}
+
+	if err := GetDocument(ctx, doc, "users", db); err != nil {
+		t.Fatal(err)
+	}
+	if mock.FindOneOptions(db.Coll("users").LastCall().Opts).Sort != nil {
+		t.Error("no sort must be sent for an empty sort")
+	}
+
+	db.Coll("users").One = nil
+	if err := GetDocumentBySelector(ctx, doc, "users", nil, db); !errors.Is(err, mongo.ErrNoDocuments) {
+		t.Errorf("err = %v", err)
+	}
+}
+
+func TestCount_Stub(t *testing.T) {
+	ctx := context.Background()
+	db := mock.NewDatabase("app")
+	db.Coll("users").Count = 12
+
+	if n, err := CountBySelector(ctx, "users", bson.M{"a": 1}, db); err != nil || n != 12 {
+		t.Errorf("got %d, %v", n, err)
+	}
+	if n, err := Count(ctx, "users", db); err != nil || n != 12 {
+		t.Errorf("got %d, %v", n, err)
+	}
+
+	db.Coll("users").Err = errors.New("boom")
+	if _, err := Count(ctx, "users", db); err == nil {
+		t.Error("expected the count error")
+	}
+}
+
+func TestPipeAll_Stub(t *testing.T) {
+	ctx := context.Background()
+	db := mock.NewDatabase("app")
+	db.Coll("users").Docs = []any{bson.M{"n": 1}}
+
+	var list []bson.M
+	if err := PipeAll(ctx, &list, "users", []bson.M{}, db); err != nil || len(list) != 1 {
+		t.Errorf("got %v, %v", list, err)
+	}
+
+	db.Coll("users").Err = errors.New("boom")
+	if err := PipeAll(ctx, &list, "users", []bson.M{}, db); err == nil {
+		t.Error("expected the aggregate error")
+	}
+}
+
+func TestPipeOne_Stub(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("first result", func(t *testing.T) {
+		db := mock.NewDatabase("app")
+		db.Coll("users").Docs = []any{bson.M{"n": 1}, bson.M{"n": 2}}
+
+		var one bson.M
+		if err := PipeOne(ctx, &one, "users", []bson.M{}, db); err != nil || one["n"] != int32(1) {
+			t.Errorf("got %v, %v", one, err)
+		}
+	})
+
+	t.Run("no result", func(t *testing.T) {
+		var one bson.M
+		if err := PipeOne(ctx, &one, "users", []bson.M{}, mock.NewDatabase("app")); !errors.Is(err, mongo.ErrNoDocuments) {
+			t.Errorf("err = %v", err)
+		}
+	})
+
+	t.Run("close error is only logged", func(t *testing.T) {
+		db := mock.NewDatabase("app")
+		db.Coll("users").Docs = []any{bson.M{"n": 1}}
+		db.Coll("users").CloseErr = errors.New("boom")
+
+		var one bson.M
+		if err := PipeOne(ctx, &one, "users", []bson.M{}, db); err != nil {
+			t.Errorf("err = %v", err)
+		}
+	})
+
+	t.Run("aggregate error", func(t *testing.T) {
+		db := mock.NewDatabase("app")
+		db.Coll("users").Err = errors.New("boom")
+
+		var one bson.M
+		if err := PipeOne(ctx, &one, "users", []bson.M{}, db); err == nil {
+			t.Error("expected the aggregate error")
+		}
+	})
 }

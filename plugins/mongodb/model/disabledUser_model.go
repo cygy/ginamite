@@ -6,8 +6,7 @@ import (
 
 	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/document"
-
-	"go.mongodb.org/mongo-driver/v2/mongo"
+	"github.com/cygy/ginamite/common/mongo/store"
 )
 
 // DisabledUser : properties of a disabled user.
@@ -61,22 +60,22 @@ func (user *DisabledUser) IsSaved() bool {
 }
 
 // Save : inserts the 'DisabledUser' document in the collection, returns an error if needed.
-func (user *DisabledUser) Save(ctx context.Context, db *mongo.Database) (string, error) {
+func (user *DisabledUser) Save(ctx context.Context, db store.Database) (string, error) {
 	return document.SaveDocument(ctx, user, DisabledUserCollection, db)
 }
 
 // Update : updates the 'DisabledUser' document, returns an error if needed.
-func (user *DisabledUser) Update(ctx context.Context, update any, db *mongo.Database) error {
+func (user *DisabledUser) Update(ctx context.Context, update any, db store.Database) error {
 	return document.UpdateDocument(ctx, user.ID, DisabledUserCollection, update, db)
 }
 
 // Delete : deletes the 'DisabledUser' document from the collection, returns an error if needed.
-func (user *DisabledUser) Delete(ctx context.Context, db *mongo.Database) error {
+func (user *DisabledUser) Delete(ctx context.Context, db store.Database) error {
 	return document.DeleteDocument(ctx, user.ID, DisabledUserCollection, db)
 }
 
 // GetByID : initializes the 'DisabledUser' struct from the 'DisabledUser' document with the ID.
-func (user *DisabledUser) GetByID(ctx context.Context, id string, db *mongo.Database) error {
+func (user *DisabledUser) GetByID(ctx context.Context, id string, db store.Database) error {
 	return document.GetDocumentByID(ctx, user, DisabledUserCollection, id, db)
 }
 

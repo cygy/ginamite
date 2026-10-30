@@ -8,15 +8,15 @@ import (
 
 	"github.com/cygy/ginamite/common/authentication"
 	"github.com/cygy/ginamite/common/config"
+	"github.com/cygy/ginamite/common/mongo/store"
 	"github.com/cygy/ginamite/common/notifications"
 	"github.com/cygy/ginamite/common/timezone"
 	"github.com/gosimple/slug"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
-	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
-func (user *User) saveThirdPartyInfos(ctx context.Context, source, token, userID, firstName, lastName, email string, createdAt, expiresAt time.Time, db *mongo.Database) error {
+func (user *User) saveThirdPartyInfos(ctx context.Context, source, token, userID, firstName, lastName, email string, createdAt, expiresAt time.Time, db store.Database) error {
 	infos := UserOAuthInfos{
 		UserID:    userID,
 		Token:     token,

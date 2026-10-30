@@ -5,17 +5,17 @@ import (
 	"context"
 	"strings"
 
+	"github.com/cygy/ginamite/common/mongo/store"
 	"go.mongodb.org/mongo-driver/v2/bson"
-	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 // Document is a MongoDB document, able to save, update, delete and load itself.
 type Document interface {
 	IsSaved() bool
-	Save(ctx context.Context, db *mongo.Database) (string, error)
-	Update(ctx context.Context, update any, db *mongo.Database) error
-	Delete(ctx context.Context, db *mongo.Database) error
-	GetByID(ctx context.Context, id string, db *mongo.Database) error
+	Save(ctx context.Context, db store.Database) (string, error)
+	Update(ctx context.Context, update any, db store.Database) error
+	Delete(ctx context.Context, db store.Database) error
+	GetByID(ctx context.Context, id string, db store.Database) error
 	SetID(id string) error
 	GetID() string
 }

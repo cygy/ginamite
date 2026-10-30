@@ -2,7 +2,7 @@ package functions
 
 import (
 	"github.com/cygy/ginamite/common/mongo/session"
-	"go.mongodb.org/mongo-driver/v2/mongo"
+	"github.com/cygy/ginamite/common/mongo/store"
 )
 
 // CreateAllDefaultDocuments : populates the database with the initial documents.
@@ -18,19 +18,19 @@ func UpdateAllDefaultDocuments(environment, version string) {
 }
 
 // CreateDefaultDocuments : populates the database with the initial documents.
-func CreateDefaultDocuments(environment, version string, f func(string, string, *mongo.Database)) {
+func CreateDefaultDocuments(environment, version string, f func(string, string, store.Database)) {
 	db := session.Database()
 	f(environment, version, db)
 }
 
 // RemoveDefaultDocuments : removes some unused documents from the database.
-func RemoveDefaultDocuments(environment, version string, f func(string, string, *mongo.Database)) {
+func RemoveDefaultDocuments(environment, version string, f func(string, string, store.Database)) {
 	db := session.Database()
 	f(environment, version, db)
 }
 
 // UpdateDefaultDocuments : updates some default documents from the database.
-func UpdateDefaultDocuments(environment, version string, f func(string, string, *mongo.Database)) {
+func UpdateDefaultDocuments(environment, version string, f func(string, string, store.Database)) {
 	db := session.Database()
 	f(environment, version, db)
 }

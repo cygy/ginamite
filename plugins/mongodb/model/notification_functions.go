@@ -5,12 +5,11 @@ import (
 
 	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/document"
-
-	"go.mongodb.org/mongo-driver/v2/mongo"
+	"github.com/cygy/ginamite/common/mongo/store"
 )
 
 // GetUserNotifications : returns the latest notifications received by a user.
-func GetUserNotifications(ctx context.Context, userID string, db *mongo.Database) ([]Notification, error) {
+func GetUserNotifications(ctx context.Context, userID string, db store.Database) ([]Notification, error) {
 	notifications := []Notification{}
 
 	objectID, err := bson.ObjectIDFromHex(userID)
@@ -23,7 +22,7 @@ func GetUserNotifications(ctx context.Context, userID string, db *mongo.Database
 }
 
 // GetCountOfUserNotifications : returns the count of notifications received by a user.
-func GetCountOfUserNotifications(ctx context.Context, userID string, db *mongo.Database) (int64, error) {
+func GetCountOfUserNotifications(ctx context.Context, userID string, db store.Database) (int64, error) {
 	objectID, err := bson.ObjectIDFromHex(userID)
 	if err != nil {
 		return 0, err
@@ -33,7 +32,7 @@ func GetCountOfUserNotifications(ctx context.Context, userID string, db *mongo.D
 }
 
 // GetCountOfUserUnreadNotifications : returns the count of unread notifications received by a user.
-func GetCountOfUserUnreadNotifications(ctx context.Context, userID string, db *mongo.Database) (int64, error) {
+func GetCountOfUserUnreadNotifications(ctx context.Context, userID string, db store.Database) (int64, error) {
 	objectID, err := bson.ObjectIDFromHex(userID)
 	if err != nil {
 		return 0, err
@@ -46,7 +45,7 @@ func GetCountOfUserUnreadNotifications(ctx context.Context, userID string, db *m
 }
 
 // GetOldestUserNotifications : returns the IDs of the oldest notifications received by a user.
-func GetOldestUserNotifications(ctx context.Context, userID string, offset int64, db *mongo.Database) ([]bson.ObjectID, error) {
+func GetOldestUserNotifications(ctx context.Context, userID string, offset int64, db store.Database) ([]bson.ObjectID, error) {
 	objectID, err := bson.ObjectIDFromHex(userID)
 	if err != nil {
 		return []bson.ObjectID{}, err
@@ -64,7 +63,7 @@ func GetOldestUserNotifications(ctx context.Context, userID string, offset int64
 }
 
 // DeleteUserNotifications : deletes some notifications received by a user.
-func DeleteUserNotifications(ctx context.Context, notificationsIDs []bson.ObjectID, db *mongo.Database) (int64, error) {
+func DeleteUserNotifications(ctx context.Context, notificationsIDs []bson.ObjectID, db store.Database) (int64, error) {
 	IDs := make([]bson.M, len(notificationsIDs))
 	for i, notificationsID := range notificationsIDs {
 		IDs[i] = bson.M{"_id": notificationsID}

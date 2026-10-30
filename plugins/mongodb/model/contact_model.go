@@ -6,8 +6,7 @@ import (
 
 	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/document"
-
-	"go.mongodb.org/mongo-driver/v2/mongo"
+	"github.com/cygy/ginamite/common/mongo/store"
 )
 
 // Contact : contact properties.
@@ -34,22 +33,22 @@ func (contact *Contact) IsSaved() bool {
 }
 
 // Save : inserts the 'Contact' document in the collection, returns an error if needed.
-func (contact *Contact) Save(ctx context.Context, db *mongo.Database) (string, error) {
+func (contact *Contact) Save(ctx context.Context, db store.Database) (string, error) {
 	return document.SaveDocument(ctx, contact, ContactCollection, db)
 }
 
 // Update : updates the 'Contact' document, returns an error if needed.
-func (contact *Contact) Update(ctx context.Context, update any, db *mongo.Database) error {
+func (contact *Contact) Update(ctx context.Context, update any, db store.Database) error {
 	return document.UpdateDocument(ctx, contact.ID, ContactCollection, update, db)
 }
 
 // Delete : deletes the 'Contact' document from the collection, returns an error if needed.
-func (contact *Contact) Delete(ctx context.Context, db *mongo.Database) error {
+func (contact *Contact) Delete(ctx context.Context, db store.Database) error {
 	return document.DeleteDocument(ctx, contact.ID, ContactCollection, db)
 }
 
 // GetByID : initializes the 'Contact' struct from the 'Contact' document with the ID.
-func (contact *Contact) GetByID(ctx context.Context, id string, db *mongo.Database) error {
+func (contact *Contact) GetByID(ctx context.Context, id string, db store.Database) error {
 	return document.GetDocumentByID(ctx, contact, ContactCollection, id, db)
 }
 

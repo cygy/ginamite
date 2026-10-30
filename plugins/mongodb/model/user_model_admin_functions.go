@@ -4,11 +4,11 @@ import (
 	"context"
 
 	"github.com/cygy/ginamite/common/mongo/document"
-	"go.mongodb.org/mongo-driver/v2/mongo"
+	"github.com/cygy/ginamite/common/mongo/store"
 )
 
 // GetEnabledUsersForAdmin : returns the enabled users for the admin.
-func GetEnabledUsersForAdmin(ctx context.Context, db *mongo.Database) ([]AdminUser, error) {
+func GetEnabledUsersForAdmin(ctx context.Context, db store.Database) ([]AdminUser, error) {
 	users := []AdminUser{}
 	err := document.GetDocumentsBySort(ctx, &users, UserCollection, []string{"username"}, db)
 

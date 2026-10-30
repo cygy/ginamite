@@ -4,11 +4,11 @@ import (
 	"context"
 
 	"github.com/cygy/ginamite/common/mongo/document"
-	"go.mongodb.org/mongo-driver/v2/mongo"
+	"github.com/cygy/ginamite/common/mongo/store"
 )
 
 // GetContactsForAdmin : returns all the contacts.
-func GetContactsForAdmin(ctx context.Context, offset, limit int64, db *mongo.Database) ([]AdminSummarizedContact, error) {
+func GetContactsForAdmin(ctx context.Context, offset, limit int64, db store.Database) ([]AdminSummarizedContact, error) {
 	contacts := []Contact{}
 	err := document.GetDocumentsBySortWithOffsetAndLimit(ctx, &contacts, ContactCollection, []string{"-createdAt"}, offset, limit, db)
 

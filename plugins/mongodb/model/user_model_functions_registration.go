@@ -7,13 +7,13 @@ import (
 	"github.com/cygy/ginamite/api/validator"
 	"github.com/cygy/ginamite/common/authentication"
 	"github.com/cygy/ginamite/common/log"
+	"github.com/cygy/ginamite/common/mongo/store"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
-	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 // RegisterByEmailAddress : register a new user with an email address.
-func (user *User) RegisterByEmailAddress(ctx context.Context, username, encryptedPassword, emailAddress, locale, termsVersion, registrationCode, privateKey, source, ip string, device authentication.Device, db *mongo.Database) error {
+func (user *User) RegisterByEmailAddress(ctx context.Context, username, encryptedPassword, emailAddress, locale, termsVersion, registrationCode, privateKey, source, ip string, device authentication.Device, db store.Database) error {
 	user.initializeFromRegistration(username, emailAddress, termsVersion, locale, registrationCode, privateKey, authentication.MethodPassword, source, ip, device)
 	user.IdentificationMethods.Password = encryptedPassword
 
@@ -22,7 +22,7 @@ func (user *User) RegisterByEmailAddress(ctx context.Context, username, encrypte
 }
 
 // ValidateRegistrationByEmailAddress : validate the registration by email address.
-func (user *User) ValidateRegistrationByEmailAddress(ctx context.Context, code string, db *mongo.Database) error {
+func (user *User) ValidateRegistrationByEmailAddress(ctx context.Context, code string, db store.Database) error {
 	// Wrong verification code.
 	if user.RegistrationInfos.Code != code {
 		if user.RegistrationInfos.CodeAttempts <= UserMaxValidateRegistrationAttemps {
@@ -43,7 +43,7 @@ func (user *User) ValidateRegistrationByEmailAddress(ctx context.Context, code s
 }
 
 // CancelRegistrationByEmailAddress : cancel the registration by email address.
-func (user *User) CancelRegistrationByEmailAddress(ctx context.Context, code string, db *mongo.Database) error {
+func (user *User) CancelRegistrationByEmailAddress(ctx context.Context, code string, db store.Database) error {
 	if user.RegistrationInfos.Code != code {
 		return errors.New("registration code is different")
 	}
@@ -52,7 +52,7 @@ func (user *User) CancelRegistrationByEmailAddress(ctx context.Context, code str
 }
 
 // RegisterByThirdPartyToken : register a new user with a third-party identification token.
-func (user *User) RegisterByThirdPartyToken(ctx context.Context, username string, tokenInfos validator.TokenInfos, tokenSource, locale, termsVersion, registrationCode, privateKey, source, ip string, device authentication.Device, db *mongo.Database) error {
+func (user *User) RegisterByThirdPartyToken(ctx context.Context, username string, tokenInfos validator.TokenInfos, tokenSource, locale, termsVersion, registrationCode, privateKey, source, ip string, device authentication.Device, db store.Database) error {
 	user.initializeFromRegistration(username, tokenInfos.Email, termsVersion, locale, registrationCode, privateKey, tokenSource, source, ip, device)
 
 	userOAuthInfos := UserOAuthInfos{}

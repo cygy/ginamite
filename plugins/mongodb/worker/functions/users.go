@@ -6,13 +6,13 @@ import (
 
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/mongo/session"
+	"github.com/cygy/ginamite/common/mongo/store"
 	"github.com/cygy/ginamite/common/notifications"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
-	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 // SanitizeAccounts : maintenance function to update/delete the data from a deleted user.
-func SanitizeAccounts(SanitizeAccounts func(mongoSession *mongo.Database) uint) func() uint {
+func SanitizeAccounts(SanitizeAccounts func(mongoSession store.Database) uint) func() uint {
 	return func() uint {
 		if SanitizeAccounts == nil {
 			return 0
@@ -23,7 +23,7 @@ func SanitizeAccounts(SanitizeAccounts func(mongoSession *mongo.Database) uint) 
 }
 
 // DeleteUserByID : deletes an user and all its bound documents.
-func DeleteUserByID(updateDocumentsReferencingToDeletedUser func(ctx context.Context, userID string, mongoSession *mongo.Database)) func(ctx context.Context, userID string) map[string]time.Time {
+func DeleteUserByID(updateDocumentsReferencingToDeletedUser func(ctx context.Context, userID string, mongoSession store.Database)) func(ctx context.Context, userID string) map[string]time.Time {
 	return func(ctx context.Context, userID string) map[string]time.Time {
 		db := session.Database()
 
@@ -55,7 +55,7 @@ func DeleteUserByID(updateDocumentsReferencingToDeletedUser func(ctx context.Con
 }
 
 // DisableUserByID : disables an user and all its bound documents.
-func DisableUserByID(updateDocumentsReferencingToDisabledUser func(ctx context.Context, userID string, mongoSession *mongo.Database)) func(ctx context.Context, userID string) map[string]time.Time {
+func DisableUserByID(updateDocumentsReferencingToDisabledUser func(ctx context.Context, userID string, mongoSession store.Database)) func(ctx context.Context, userID string) map[string]time.Time {
 	return func(ctx context.Context, userID string) map[string]time.Time {
 		db := session.Database()
 
@@ -84,7 +84,7 @@ func DisableUserByID(updateDocumentsReferencingToDisabledUser func(ctx context.C
 }
 
 // EnableUserByID : enables an user and all its bound documents.
-func EnableUserByID(updateDocumentsReferencingToEnabledUser func(ctx context.Context, userID string, mongoSession *mongo.Database)) func(ctx context.Context, userID string) {
+func EnableUserByID(updateDocumentsReferencingToEnabledUser func(ctx context.Context, userID string, mongoSession store.Database)) func(ctx context.Context, userID string) {
 	return func(ctx context.Context, userID string) {
 		db := session.Database()
 
@@ -99,7 +99,7 @@ func EnableUserByID(updateDocumentsReferencingToEnabledUser func(ctx context.Con
 }
 
 // UpdateUserSocialNetworksByID : updates the user's social networks to its bound documents.
-func UpdateUserSocialNetworksByID(UpdateDocumentsReferencingToUpdatedUserSocialNetworks func(ctx context.Context, userID string, mongoSession *mongo.Database)) func(ctx context.Context, userID string) {
+func UpdateUserSocialNetworksByID(UpdateDocumentsReferencingToUpdatedUserSocialNetworks func(ctx context.Context, userID string, mongoSession store.Database)) func(ctx context.Context, userID string) {
 	return func(ctx context.Context, userID string) {
 		if UpdateDocumentsReferencingToUpdatedUserSocialNetworks == nil {
 			return
@@ -159,7 +159,7 @@ func GetInactiveAccounts(ctx context.Context, intervalInMonths uint) []string {
 }
 
 // IsEmptyUser : returns true if the user has never done at least one action.
-func IsEmptyUser(isEmptyUser func(ctx context.Context, userId string, mongoSession *mongo.Database) bool) func(ctx context.Context, userID string) bool {
+func IsEmptyUser(isEmptyUser func(ctx context.Context, userId string, mongoSession store.Database) bool) func(ctx context.Context, userID string) bool {
 	return func(ctx context.Context, userID string) bool {
 		if isEmptyUser == nil {
 			return true

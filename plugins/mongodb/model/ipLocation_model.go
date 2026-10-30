@@ -5,8 +5,7 @@ import (
 
 	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/document"
-
-	"go.mongodb.org/mongo-driver/v2/mongo"
+	"github.com/cygy/ginamite/common/mongo/store"
 )
 
 // IPLocation : IP location properties.
@@ -35,22 +34,22 @@ func (IPLocation *IPLocation) IsSaved() bool {
 }
 
 // Save : inserts the 'IPLocation' document in the collection, returns an error if needed.
-func (IPLocation *IPLocation) Save(ctx context.Context, db *mongo.Database) (string, error) {
+func (IPLocation *IPLocation) Save(ctx context.Context, db store.Database) (string, error) {
 	return document.SaveDocument(ctx, IPLocation, IPLocationCollection, db)
 }
 
 // Update : updates the 'IPLocation' document, returns an error if needed.
-func (IPLocation *IPLocation) Update(ctx context.Context, update any, db *mongo.Database) error {
+func (IPLocation *IPLocation) Update(ctx context.Context, update any, db store.Database) error {
 	return document.UpdateDocument(ctx, IPLocation.ID, IPLocationCollection, update, db)
 }
 
 // Delete : deletes the 'IPLocation' document from the collection, returns an error if needed.
-func (IPLocation *IPLocation) Delete(ctx context.Context, db *mongo.Database) error {
+func (IPLocation *IPLocation) Delete(ctx context.Context, db store.Database) error {
 	return document.DeleteDocument(ctx, IPLocation.ID, IPLocationCollection, db)
 }
 
 // GetByID : initializes the 'IPLocation' struct from the 'IPLocation' document with the ID.
-func (IPLocation *IPLocation) GetByID(ctx context.Context, id string, db *mongo.Database) error {
+func (IPLocation *IPLocation) GetByID(ctx context.Context, id string, db store.Database) error {
 	return document.GetDocumentByID(ctx, IPLocation, IPLocationCollection, id, db)
 }
 

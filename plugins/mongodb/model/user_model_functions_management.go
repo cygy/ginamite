@@ -6,28 +6,28 @@ import (
 	"strings"
 
 	"github.com/cygy/ginamite/common/authentication"
+	"github.com/cygy/ginamite/common/mongo/store"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
-	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 // UpdateAllInformations : updates the infos of an account.
-func (user *User) UpdateAllInformations(ctx context.Context, firstName, lastName, emailAddress string, validEmailAddress bool, db *mongo.Database) error {
+func (user *User) UpdateAllInformations(ctx context.Context, firstName, lastName, emailAddress string, validEmailAddress bool, db store.Database) error {
 	return user.Update(ctx, bson.M{"$set": bson.M{"privateInfos.firstName": firstName, "privateInfos.lastName": lastName, "privateInfos.email": emailAddress, "privateInfos.isEmailValid": validEmailAddress}}, db)
 }
 
 // UpdateInfos : updates the infos of an account.
-func (user *User) UpdateInfos(ctx context.Context, firstName, lastName string, db *mongo.Database) error {
+func (user *User) UpdateInfos(ctx context.Context, firstName, lastName string, db store.Database) error {
 	return user.Update(ctx, bson.M{"$set": bson.M{"privateInfos.firstName": firstName, "privateInfos.lastName": lastName}}, db)
 }
 
 // UpdateSettings : updates the settings of an account.
-func (user *User) UpdateSettings(ctx context.Context, locale, timezone string, db *mongo.Database) error {
+func (user *User) UpdateSettings(ctx context.Context, locale, timezone string, db store.Database) error {
 	return user.Update(ctx, bson.M{"$set": bson.M{"settings.locale": strings.ToLower(locale), "settings.timezone": timezone}}, db)
 }
 
 // UpdatePassword : updates the password of a user.
-func (user *User) UpdatePassword(ctx context.Context, newPassword string, alreadyEncrypted bool, db *mongo.Database) error {
+func (user *User) UpdatePassword(ctx context.Context, newPassword string, alreadyEncrypted bool, db store.Database) error {
 	var encryptedPassword string
 
 	if !alreadyEncrypted {
@@ -44,17 +44,17 @@ func (user *User) UpdatePassword(ctx context.Context, newPassword string, alread
 }
 
 // UpdateEmailAddress : updates the email address of a user.
-func (user *User) UpdateEmailAddress(ctx context.Context, emailAddress string, db *mongo.Database) error {
+func (user *User) UpdateEmailAddress(ctx context.Context, emailAddress string, db store.Database) error {
 	return user.Update(ctx, bson.M{"$set": bson.M{"privateInfos.email": emailAddress, "privateInfos.isEmailValid": false}}, db)
 }
 
 // SetEmailAddressValid : updates the email address of a user.
-func (user *User) SetEmailAddressValid(ctx context.Context, db *mongo.Database) error {
+func (user *User) SetEmailAddressValid(ctx context.Context, db store.Database) error {
 	return user.Update(ctx, bson.M{"$set": bson.M{"privateInfos.isEmailValid": true}}, db)
 }
 
 // UpdateImage : updates the image of a user.
-func (user *User) UpdateImage(ctx context.Context, db *mongo.Database) error {
+func (user *User) UpdateImage(ctx context.Context, db store.Database) error {
 	return user.Update(ctx, bson.M{"$set": bson.M{
 		"publicInfos.image.full.size1x.path":  user.PublicInfos.Image.Full.Size1x.Path,
 		"publicInfos.image.full.size1x.url":   user.PublicInfos.Image.Full.Size1x.URL,
@@ -72,12 +72,12 @@ func (user *User) UpdateImage(ctx context.Context, db *mongo.Database) error {
 }
 
 // UpdatePublicProfile : updates the public profile of a user.
-func (user *User) UpdatePublicProfile(ctx context.Context, locale, description string, db *mongo.Database) error {
+func (user *User) UpdatePublicProfile(ctx context.Context, locale, description string, db store.Database) error {
 	return user.Update(ctx, bson.M{"$set": bson.M{fmt.Sprintf("publicInfos.description.%s", strings.ToLower(locale)): description}}, db)
 }
 
 // UpdateSocialNetworks : updates the social network profiles of a user.
-func (user *User) UpdateSocialNetworks(ctx context.Context, facebook, twitter, instagram string, db *mongo.Database) error {
+func (user *User) UpdateSocialNetworks(ctx context.Context, facebook, twitter, instagram string, db store.Database) error {
 	return user.Update(ctx, bson.M{"$set": bson.M{
 		"publicInfos.facebook":  facebook,
 		"publicInfos.twitter":   twitter,

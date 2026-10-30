@@ -6,8 +6,7 @@ import (
 
 	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/document"
-
-	"go.mongodb.org/mongo-driver/v2/mongo"
+	"github.com/cygy/ginamite/common/mongo/store"
 )
 
 // DeletedUser : deleted user properties.
@@ -35,22 +34,22 @@ func (deletedUser *DeletedUser) IsSaved() bool {
 }
 
 // Save : inserts the 'DeletedUser' document in the collection, returns an error if needed.
-func (deletedUser *DeletedUser) Save(ctx context.Context, db *mongo.Database) (string, error) {
+func (deletedUser *DeletedUser) Save(ctx context.Context, db store.Database) (string, error) {
 	return document.SaveDocument(ctx, deletedUser, DeletedUserCollection, db)
 }
 
 // Update : updates the 'DeletedUser' document, returns an error if needed.
-func (deletedUser *DeletedUser) Update(ctx context.Context, update any, db *mongo.Database) error {
+func (deletedUser *DeletedUser) Update(ctx context.Context, update any, db store.Database) error {
 	return document.UpdateDocument(ctx, deletedUser.ID, DeletedUserCollection, update, db)
 }
 
 // Delete : deletes the 'DeletedUser' document from the collection, returns an error if needed.
-func (deletedUser *DeletedUser) Delete(ctx context.Context, db *mongo.Database) error {
+func (deletedUser *DeletedUser) Delete(ctx context.Context, db store.Database) error {
 	return document.DeleteDocument(ctx, deletedUser.ID, DeletedUserCollection, db)
 }
 
 // GetByID : initializes the 'DeletedUser' struct from the 'DeletedUser' document with the ID.
-func (deletedUser *DeletedUser) GetByID(ctx context.Context, id string, db *mongo.Database) error {
+func (deletedUser *DeletedUser) GetByID(ctx context.Context, id string, db store.Database) error {
 	return document.GetDocumentByID(ctx, deletedUser, DeletedUserCollection, id, db)
 }
 

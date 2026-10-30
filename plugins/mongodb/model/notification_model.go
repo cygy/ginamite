@@ -6,8 +6,7 @@ import (
 
 	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/document"
-
-	"go.mongodb.org/mongo-driver/v2/mongo"
+	"github.com/cygy/ginamite/common/mongo/store"
 )
 
 // Notification : notification properties.
@@ -45,22 +44,22 @@ func (notification *Notification) IsSaved() bool {
 }
 
 // Save : inserts the 'Notification' document in the collection, returns an error if needed.
-func (notification *Notification) Save(ctx context.Context, db *mongo.Database) (string, error) {
+func (notification *Notification) Save(ctx context.Context, db store.Database) (string, error) {
 	return document.SaveDocument(ctx, notification, NotificationCollection, db)
 }
 
 // Update : updates the 'Notification' document, returns an error if needed.
-func (notification *Notification) Update(ctx context.Context, update any, db *mongo.Database) error {
+func (notification *Notification) Update(ctx context.Context, update any, db store.Database) error {
 	return document.UpdateDocument(ctx, notification.ID, NotificationCollection, update, db)
 }
 
 // Delete : deletes the 'Notification' document from the collection, returns an error if needed.
-func (notification *Notification) Delete(ctx context.Context, db *mongo.Database) error {
+func (notification *Notification) Delete(ctx context.Context, db store.Database) error {
 	return document.DeleteDocument(ctx, notification.ID, NotificationCollection, db)
 }
 
 // GetByID : initializes the 'Notification' struct from the 'Notification' document with the ID.
-func (notification *Notification) GetByID(ctx context.Context, id string, db *mongo.Database) error {
+func (notification *Notification) GetByID(ctx context.Context, id string, db store.Database) error {
 	return document.GetDocumentByID(ctx, notification, NotificationCollection, id, db)
 }
 

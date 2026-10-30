@@ -6,12 +6,12 @@ import (
 
 	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/document"
+	"github.com/cygy/ginamite/common/mongo/store"
 	jwt "github.com/golang-jwt/jwt/v5"
-	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 // GetAuthTokens : returns all the auth tokens of a user.
-func GetAuthTokens(ctx context.Context, userID string, db *mongo.Database) ([]AuthToken, error) {
+func GetAuthTokens(ctx context.Context, userID string, db store.Database) ([]AuthToken, error) {
 	tokens := []AuthToken{}
 
 	objectID, err := bson.ObjectIDFromHex(userID)
@@ -57,7 +57,7 @@ func UserFromAuthToken(token *jwt.Token) (*User, error) {
 }
 
 // DeleteAuthTokenByID : deletes the document with the ID.
-func DeleteAuthTokenByID(ctx context.Context, tokenID string, db *mongo.Database) error {
+func DeleteAuthTokenByID(ctx context.Context, tokenID string, db store.Database) error {
 	objectID, err := bson.ObjectIDFromHex(tokenID)
 	if err != nil {
 		return err
@@ -66,7 +66,7 @@ func DeleteAuthTokenByID(ctx context.Context, tokenID string, db *mongo.Database
 }
 
 // DeleteAuthTokensByUser : deletes the documents from the user.
-func DeleteAuthTokensByUser(ctx context.Context, userID string, db *mongo.Database) (int64, error) {
+func DeleteAuthTokensByUser(ctx context.Context, userID string, db store.Database) (int64, error) {
 	objectID, err := bson.ObjectIDFromHex(userID)
 	if err != nil {
 		return 0, err
@@ -75,12 +75,12 @@ func DeleteAuthTokensByUser(ctx context.Context, userID string, db *mongo.Databa
 }
 
 // DeleteExpiredAuthTokens : deletes the expired auth tokens.
-func DeleteExpiredAuthTokens(ctx context.Context, db *mongo.Database) (int64, error) {
+func DeleteExpiredAuthTokens(ctx context.Context, db store.Database) (int64, error) {
 	return document.DeleteDocumentsBySelector(ctx, AuthTokenCollection, bson.M{"expiresAt": bson.M{"$lt": time.Now()}}, db)
 }
 
 // IsValidAuthToken : checks that the auth token is valid (non-expired and non-revoked).
-func IsValidAuthToken(ctx context.Context, tokenID string, db *mongo.Database) (bool, error) {
+func IsValidAuthToken(ctx context.Context, tokenID string, db store.Database) (bool, error) {
 	objectID, err := bson.ObjectIDFromHex(tokenID)
 	if err != nil {
 		return false, err

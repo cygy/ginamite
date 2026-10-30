@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/cygy/ginamite/common/log"
+	"github.com/cygy/ginamite/common/mongo/store"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
@@ -96,8 +97,8 @@ func (session *Session) Close() {
 
 // Database returns the database of the session.
 // There is no need to copy the session or to close the database: the client manages a pool of connections.
-func (session *Session) Database() *mongo.Database {
-	return session.Client.Database(session.DatabaseName)
+func (session *Session) Database() store.Database {
+	return store.NewDatabase(session.Client.Database(session.DatabaseName))
 }
 
 // Inject returns a middleware saving the database of the session in the Gin context, see Get.
@@ -121,7 +122,7 @@ func Close() {
 }
 
 // Database returns the database of the main session.
-func Database() *mongo.Database {
+func Database() store.Database {
 	return Main.Database()
 }
 
@@ -131,10 +132,10 @@ func Inject() gin.HandlerFunc {
 }
 
 // Get returns the database saved in the Gin context by Inject, or nil if there is none.
-func Get(c *gin.Context) *mongo.Database {
+func Get(c *gin.Context) store.Database {
 	value, ok := c.Get(contextKey)
 	if ok {
-		return value.(*mongo.Database)
+		return value.(store.Database)
 	}
 
 	return nil

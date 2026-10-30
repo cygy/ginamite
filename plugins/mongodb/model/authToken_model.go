@@ -6,8 +6,7 @@ import (
 
 	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/document"
-
-	"go.mongodb.org/mongo-driver/v2/mongo"
+	"github.com/cygy/ginamite/common/mongo/store"
 )
 
 // AuthToken : authentication token properties.
@@ -36,22 +35,22 @@ func (token *AuthToken) IsSaved() bool {
 }
 
 // Save : inserts the 'AuthToken' document in the collection, returns an error if needed.
-func (token *AuthToken) Save(ctx context.Context, db *mongo.Database) (string, error) {
+func (token *AuthToken) Save(ctx context.Context, db store.Database) (string, error) {
 	return document.SaveDocument(ctx, token, AuthTokenCollection, db)
 }
 
 // Update : updates the 'AuthToken' document, returns an error if needed.
-func (token *AuthToken) Update(ctx context.Context, update any, db *mongo.Database) error {
+func (token *AuthToken) Update(ctx context.Context, update any, db store.Database) error {
 	return document.UpdateDocument(ctx, token.ID, AuthTokenCollection, update, db)
 }
 
 // Delete : deletes the 'AuthToken' document from the collection, returns an error if needed.
-func (token *AuthToken) Delete(ctx context.Context, db *mongo.Database) error {
+func (token *AuthToken) Delete(ctx context.Context, db store.Database) error {
 	return document.DeleteDocument(ctx, token.ID, AuthTokenCollection, db)
 }
 
 // GetByID : initializes the 'AuthToken' struct from the 'AuthToken' document with the ID.
-func (token *AuthToken) GetByID(ctx context.Context, id string, db *mongo.Database) error {
+func (token *AuthToken) GetByID(ctx context.Context, id string, db store.Database) error {
 	return document.GetDocumentByID(ctx, token, AuthTokenCollection, id, db)
 }
 

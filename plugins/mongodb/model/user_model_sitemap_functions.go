@@ -4,11 +4,11 @@ import (
 	"context"
 
 	"github.com/cygy/ginamite/common/mongo/document"
-	"go.mongodb.org/mongo-driver/v2/mongo"
+	"github.com/cygy/ginamite/common/mongo/store"
 )
 
 // GetSitemapUsers : returns users.
-func GetSitemapUsers(ctx context.Context, offset, limit int64, db *mongo.Database) ([]SitemapUser, error) {
+func GetSitemapUsers(ctx context.Context, offset, limit int64, db store.Database) ([]SitemapUser, error) {
 	users := []User{}
 	err := document.GetDocumentsBySortWithOffsetAndLimit(ctx, &users, UserCollection, []string{"registrationInfos.date"}, offset, limit, db)
 

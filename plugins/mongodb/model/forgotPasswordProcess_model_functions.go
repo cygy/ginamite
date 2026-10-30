@@ -5,12 +5,11 @@ import (
 
 	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/document"
-
-	"go.mongodb.org/mongo-driver/v2/mongo"
+	"github.com/cygy/ginamite/common/mongo/store"
 )
 
 // GetByUserID : returns a ForgotPasswordProcess struct with a user.
-func (fpp *ForgotPasswordProcess) GetByUserID(ctx context.Context, userID string, db *mongo.Database) error {
+func (fpp *ForgotPasswordProcess) GetByUserID(ctx context.Context, userID string, db store.Database) error {
 	objectID, err := bson.ObjectIDFromHex(userID)
 	if err != nil {
 		return err
@@ -19,6 +18,6 @@ func (fpp *ForgotPasswordProcess) GetByUserID(ctx context.Context, userID string
 }
 
 // Increment : increments the tries of a forgot password proccess document.
-func (fpp *ForgotPasswordProcess) Increment(ctx context.Context, db *mongo.Database) error {
+func (fpp *ForgotPasswordProcess) Increment(ctx context.Context, db store.Database) error {
 	return fpp.Update(ctx, bson.M{"$inc": bson.M{"tries": 1}}, db)
 }

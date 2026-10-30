@@ -4,13 +4,13 @@ import (
 	"context"
 
 	"github.com/cygy/ginamite/common/mongo/document"
+	"github.com/cygy/ginamite/common/mongo/store"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
-	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 // GetByIPAddress : initializes the 'IPLocation' struct from the 'IPLocation' document with the IP Address.
-func (location *IPLocation) GetByIPAddress(ctx context.Context, IPAddress string, db *mongo.Database) error {
+func (location *IPLocation) GetByIPAddress(ctx context.Context, IPAddress string, db store.Database) error {
 	return document.GetDocumentBySelector(ctx, location, IPLocationCollection, bson.M{"IP": IPAddress}, db)
 }
 

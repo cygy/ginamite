@@ -6,6 +6,7 @@ import (
 
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/mongo/bson"
+	"github.com/cygy/ginamite/common/mongo/store"
 	"github.com/cygy/ginamite/common/notifications"
 
 	"go.mongodb.org/mongo-driver/v2/mongo"
@@ -18,7 +19,7 @@ type UserNotificationTarget struct {
 }
 
 // GetUserNotificationTargetsByType : returns the targets of a given notification type of a user.
-func GetUserNotificationTargetsByType(ctx context.Context, userID, notificationType string, db *mongo.Database) ([]UserNotificationTarget, error) {
+func GetUserNotificationTargetsByType(ctx context.Context, userID, notificationType string, db store.Database) ([]UserNotificationTarget, error) {
 	targets := []UserNotificationTarget{}
 
 	var objectID bson.ObjectID

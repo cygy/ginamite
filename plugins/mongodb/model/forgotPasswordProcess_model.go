@@ -5,8 +5,7 @@ import (
 
 	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/document"
-
-	"go.mongodb.org/mongo-driver/v2/mongo"
+	"github.com/cygy/ginamite/common/mongo/store"
 )
 
 // ForgotPasswordProcess : details about the password to update.
@@ -36,22 +35,22 @@ func (fpp *ForgotPasswordProcess) IsSaved() bool {
 }
 
 // Save : inserts the 'ForgotPasswordProcess' document in the collection, returns an error if needed.
-func (fpp *ForgotPasswordProcess) Save(ctx context.Context, db *mongo.Database) (string, error) {
+func (fpp *ForgotPasswordProcess) Save(ctx context.Context, db store.Database) (string, error) {
 	return document.SaveDocument(ctx, fpp, ForgotPasswordProcessCollection, db)
 }
 
 // Update : updates the 'ForgotPasswordProcess' document, returns an error if needed.
-func (fpp *ForgotPasswordProcess) Update(ctx context.Context, update any, db *mongo.Database) error {
+func (fpp *ForgotPasswordProcess) Update(ctx context.Context, update any, db store.Database) error {
 	return document.UpdateDocument(ctx, fpp.ID, ForgotPasswordProcessCollection, update, db)
 }
 
 // Delete : deletes the 'ForgotPasswordProcess' document from the collection, returns an error if needed.
-func (fpp *ForgotPasswordProcess) Delete(ctx context.Context, db *mongo.Database) error {
+func (fpp *ForgotPasswordProcess) Delete(ctx context.Context, db store.Database) error {
 	return document.DeleteDocument(ctx, fpp.ID, ForgotPasswordProcessCollection, db)
 }
 
 // GetByID : initializes the 'ForgotPasswordProcess' struct from the 'user' document with the ID.
-func (fpp *ForgotPasswordProcess) GetByID(ctx context.Context, id string, db *mongo.Database) error {
+func (fpp *ForgotPasswordProcess) GetByID(ctx context.Context, id string, db store.Database) error {
 	return document.GetDocumentByID(ctx, fpp, ForgotPasswordProcessCollection, id, db)
 }
 

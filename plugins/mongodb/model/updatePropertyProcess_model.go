@@ -7,9 +7,8 @@ import (
 	"github.com/cygy/ginamite/common/authentication"
 	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/document"
+	"github.com/cygy/ginamite/common/mongo/store"
 	"github.com/cygy/ginamite/common/random"
-
-	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 // UpdatePropertyProcess : details about a property to update.
@@ -71,22 +70,22 @@ func (process *UpdatePropertyProcess) IsSaved() bool {
 }
 
 // Save : inserts the 'UpdatePropertyProcess' document in the collection, returns an error if needed.
-func (process *UpdatePropertyProcess) Save(ctx context.Context, db *mongo.Database) (string, error) {
+func (process *UpdatePropertyProcess) Save(ctx context.Context, db store.Database) (string, error) {
 	return document.SaveDocument(ctx, process, UpdatePropertyProcessCollection, db)
 }
 
 // Update : updates the 'UpdatePropertyProcess' document, returns an error if needed.
-func (process *UpdatePropertyProcess) Update(ctx context.Context, update any, db *mongo.Database) error {
+func (process *UpdatePropertyProcess) Update(ctx context.Context, update any, db store.Database) error {
 	return document.UpdateDocument(ctx, process.ID, UpdatePropertyProcessCollection, update, db)
 }
 
 // Delete : deletes the 'UpdatePropertyProcess' document from the collection, returns an error if needed.
-func (process *UpdatePropertyProcess) Delete(ctx context.Context, db *mongo.Database) error {
+func (process *UpdatePropertyProcess) Delete(ctx context.Context, db store.Database) error {
 	return document.DeleteDocument(ctx, process.ID, UpdatePropertyProcessCollection, db)
 }
 
 // GetByID : initializes the 'UpdatePropertyProcess' struct from the 'user' document with the ID.
-func (process *UpdatePropertyProcess) GetByID(ctx context.Context, id string, db *mongo.Database) error {
+func (process *UpdatePropertyProcess) GetByID(ctx context.Context, id string, db store.Database) error {
 	return document.GetDocumentByID(ctx, process, UpdatePropertyProcessCollection, id, db)
 }
 

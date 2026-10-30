@@ -5,24 +5,23 @@ import (
 
 	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/document"
-
-	"go.mongodb.org/mongo-driver/v2/mongo"
+	"github.com/cygy/ginamite/common/mongo/store"
 )
 
 // IsDisabledUserWithUsernameExisting : returns true if a disabled user with this username is already existing.
-func IsDisabledUserWithUsernameExisting(ctx context.Context, username string, db *mongo.Database) (bool, error) {
+func IsDisabledUserWithUsernameExisting(ctx context.Context, username string, db store.Database) (bool, error) {
 	count, err := document.CountBySelector(ctx, DisabledUserCollection, bson.M{"username": username}, db)
 	return count > 0, err
 }
 
 // IsDisabledUserWithEmailAddressExisting : returns true if a disabled user with this email address is already existing.
-func IsDisabledUserWithEmailAddressExisting(ctx context.Context, emailAddress string, db *mongo.Database) (bool, error) {
+func IsDisabledUserWithEmailAddressExisting(ctx context.Context, emailAddress string, db store.Database) (bool, error) {
 	count, err := document.CountBySelector(ctx, DisabledUserCollection, bson.M{"privateInfos.email": emailAddress}, db)
 	return count > 0, err
 }
 
 // IsDisabledUserWithFacebookUserIDExisting : returns true if a disabled user with this facebook user id is already existing.
-func IsDisabledUserWithFacebookUserIDExisting(ctx context.Context, userID string, db *mongo.Database) (bool, error) {
+func IsDisabledUserWithFacebookUserIDExisting(ctx context.Context, userID string, db store.Database) (bool, error) {
 	objectID, err := bson.ObjectIDFromHex(userID)
 	if err != nil {
 		return false, err
@@ -32,7 +31,7 @@ func IsDisabledUserWithFacebookUserIDExisting(ctx context.Context, userID string
 }
 
 // IsDisabledUserWithGoogleUserIDExisting : returns true if a disabled user with this google user id is already existing.
-func IsDisabledUserWithGoogleUserIDExisting(ctx context.Context, userID string, db *mongo.Database) (bool, error) {
+func IsDisabledUserWithGoogleUserIDExisting(ctx context.Context, userID string, db store.Database) (bool, error) {
 	objectID, err := bson.ObjectIDFromHex(userID)
 	if err != nil {
 		return false, err
@@ -42,13 +41,13 @@ func IsDisabledUserWithGoogleUserIDExisting(ctx context.Context, userID string, 
 }
 
 // IsDisabledUserWithValidEmailAddressExisting : returns true if a disabled user with this email address is already existing.
-func IsDisabledUserWithValidEmailAddressExisting(ctx context.Context, emailAddress string, db *mongo.Database) (bool, error) {
+func IsDisabledUserWithValidEmailAddressExisting(ctx context.Context, emailAddress string, db store.Database) (bool, error) {
 	count, err := document.CountBySelector(ctx, DisabledUserCollection, bson.M{"privateInfos.email": emailAddress, "privateInfos.isEmailValid": true}, db)
 	return count > 0, err
 }
 
 // DeleteDisabledUserByUserID : deletes the document with the ID.
-func DeleteDisabledUserByUserID(ctx context.Context, userID string, db *mongo.Database) error {
+func DeleteDisabledUserByUserID(ctx context.Context, userID string, db store.Database) error {
 	objectID, err := bson.ObjectIDFromHex(userID)
 	if err != nil {
 		return err
@@ -58,7 +57,7 @@ func DeleteDisabledUserByUserID(ctx context.Context, userID string, db *mongo.Da
 }
 
 // GetDisabledUsersForAdmin : returns the disabled users for the admin.
-func GetDisabledUsersForAdmin(ctx context.Context, db *mongo.Database) ([]AdminDisabledUser, error) {
+func GetDisabledUsersForAdmin(ctx context.Context, db store.Database) ([]AdminDisabledUser, error) {
 	users := []AdminDisabledUser{}
 	err := document.GetDocumentsBySort(ctx, &users, DisabledUserCollection, []string{"username"}, db)
 
