@@ -1,0 +1,222 @@
+package account
+
+import (
+	"context"
+	"errors"
+	"net/http"
+	"net/http/httptest"
+	"reflect"
+	"strings"
+	"testing"
+	"time"
+
+	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
+	ctxLocale "github.com/cygy/ginamite/api/context/locale"
+	"github.com/cygy/ginamite/api/internal/apitest"
+	"github.com/cygy/ginamite/api/validator"
+	"github.com/cygy/ginamite/common/authentication"
+	"github.com/cygy/ginamite/common/config"
+	"github.com/cygy/ginamite/common/config/environment"
+	"github.com/cygy/ginamite/common/kafka"
+	"github.com/cygy/ginamite/common/timezone"
+
+	"github.com/gin-gonic/gin"
+)
+
+var errBoom = errors.New("boom")
+
+const (
+	testSecret  = "test-secret"
+	testTokenID = "token-1"
+	testUserID  = "42"
+)
+
+var testUser = authentication.User{
+	ID:           testUserID,
+	Username:     "john",
+	EmailAddress: "john@example.com",
+	Locale:       "en",
+	PrivateKey:   "private-key",
+}
+
+// testCase is a scenario of a handler: the request, the injected functions and the expected HTTP status.
+type testCase struct {
+	name   string
+	id     string // value of the "id" path parameter.
+	key    string // value of the "key" path parameter.
+	body   string // JSON body.
+	userID string // if not empty, the request is authenticated as this user.
+	setup  func()
+	want   int
+	check  func(t *testing.T, body string)
+}
+
+// setup initializes the global dependencies of the handlers and resets every injected function at the end of the test.
+func setup(t *testing.T) {
+	t.Helper()
+
+	apitest.InitLocalization(t, map[string]string{"placeholder": "placeholder"})
+
+	config.Main = config.NewConfiguration()
+	config.Main.SupportedLocales = []string{"en"}
+	config.Main.JWT.Secret = testSecret
+	config.Main.Terms.Version = "v1"
+	config.Main.Environment = environment.Development
+	timezone.Main = timezone.NewConfiguration()
+	timezone.Main.Timezones = []string{"Europe/Paris"}
+	kafka.Main = kafka.NewClient()
+
+	authentication.BuildTokenFromID = func(context.Context, string) (*authentication.Token, error) {
+		return &authentication.Token{UserID: testUserID, ExpirationDate: time.Now().Add(time.Hour), CreationDate: time.Now()}, nil
+	}
+	authentication.ExtraPropertiesForTokenWithID = func(string) (map[string]string, error) { return nil, nil }
+	authentication.ExtendTokenExpirationDateFromID = func(context.Context, string, time.Duration) error { return nil }
+
+	originalValidator := newTokenValidator
+	t.Cleanup(func() {
+		newTokenValidator = originalValidator
+		resetFunctions()
+		authentication.BuildTokenFromID = nil
+		authentication.ExtraPropertiesForTokenWithID = nil
+		authentication.ExtendTokenExpirationDateFromID = nil
+	})
+}
+
+// resetFunctions sets to nil every function variable of the package.
+func resetFunctions() {
+	vars := []any{
+		&NotificationsReceivedByUser, &NotificationReceivedByUser, &UpdateUserNotificationRead, &UpdateUserNotificationNotified,
+		&DeleteUserNotification, &NotificationsSubscribedByUser, &SubscribeNotificationsToUser, &UnsubscribeNotificationFromUser,
+		&GetUserDetailsByIdentifier, &GetUserDetailsByID, &GetUserDetailsByFacebookUserID, &GetUserDetailsByGoogleUserID,
+		&GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser, &NewForgotPasswordProcessForUser,
+		&GetForgotPasswordProcessDetailsByID, &WrongAccessToForgotPasswordProcess, &UpdateUserPassword, &UpdateUserEmailAddress,
+		&UserEmailAddressIsVerified, &UpdateUserSocialNetworks, &DeleteForgotPasswordProcess, &ValidateUserRegistration,
+		&CancelUserRegistration, &GetRegistrationDetails, &SaveAuthenticationToken, &DoesAccountWithUsernameExist,
+		&DoesAccountWithEmailAddressExist, &RegisterByEmailAddress, &RegisterByThirdPartyToken, &DoesUserWithFacebookUserIDExist,
+		&DoesUserWithGoogleUserIDExist, &SaveFacebookUserTokenDetailsToUser, &SaveGoogleUserTokenDetailsToUser,
+		&GetTokenExpirationDate, &DeleteTokenByID, &GetTokenDetailsByID, &GetOwnedTokens, &GetOwnedTokenByID, &UpdateTokenByID,
+		&GetOwnedAccountDetails, &UpdatedAccountInfos, &UpdatedAccountSettings, &CreateNewDeleteAccountProcess,
+		&CreateNewDisableAccountProcess, &CreateNewUpdatePasswordProcess, &CreateNewUpdateEmailAddressProcess,
+		&CreateNewVerifyEmailAddressProcess, &VerifyProcess, &DeleteProcessByID, &DeleteUserByID, &DisableUserByID, &EnableUserByID,
+	}
+	for _, v := range vars {
+		rv := reflect.ValueOf(v).Elem()
+		rv.Set(reflect.Zero(rv.Type()))
+	}
+}
+
+// newRouter returns a router with the locale and the auth token middlewares, serving the handler on every path shape.
+func newRouter(handler gin.HandlerFunc) *gin.Engine {
+	router := gin.New()
+	router.Use(ctxLocale.Inject("en", []string{"en"}))
+	router.Use(ctxAuthToken.Parse(testSecret, nil, false))
+	router.Any("/", handler)
+	router.Any("/:id", handler)
+	router.Any("/:id/:key", handler)
+
+	return router
+}
+
+// do sends the request of the test case to the handler and returns the response.
+func do(t *testing.T, handler gin.HandlerFunc, tc testCase) *httptest.ResponseRecorder {
+	t.Helper()
+
+	target := "/"
+	if tc.id != "" {
+		target += tc.id
+		if tc.key != "" {
+			target += "/" + tc.key
+		}
+	}
+
+	req := httptest.NewRequest(http.MethodPost, target, strings.NewReader(tc.body))
+	if tc.userID != "" {
+		req.Header.Set("Authorization", "Bearer "+apitest.SignToken(t, testSecret, tc.userID, testTokenID, false))
+	}
+
+	return apitest.Serve(newRouter(handler), req)
+}
+
+// runCases runs the scenarios against the handler.
+func runCases(t *testing.T, handler gin.HandlerFunc, tests []testCase) {
+	t.Helper()
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			setup(t)
+			if tc.setup != nil {
+				tc.setup()
+			}
+
+			recorder := do(t, handler, tc)
+
+			if recorder.Code != tc.want {
+				t.Fatalf("status = %d, want %d (body: %s)", recorder.Code, tc.want, recorder.Body.String())
+			}
+			if tc.check != nil {
+				tc.check(t, recorder.Body.String())
+			}
+		})
+	}
+}
+
+// newContext returns a context carrying the "en" locale and the path parameters.
+func newContext(params gin.Params) (*gin.Context, *httptest.ResponseRecorder) {
+	c, recorder := apitest.NewContext(http.MethodPost, "/", nil)
+	c.Params = params
+	ctxLocale.Set(c, "en", "en")
+
+	return c, recorder
+}
+
+// all combines several setup functions.
+func all(fns ...func()) func() {
+	return func() {
+		for _, fn := range fns {
+			fn()
+		}
+	}
+}
+
+// inTestEnvironment switches the application to the test environment.
+func inTestEnvironment() { config.Main.Environment = environment.Test }
+
+// withUser defines GetUserDetailsByID.
+func withUser(user authentication.User, err error) func() {
+	return func() {
+		GetUserDetailsByID = func(*gin.Context, string) (authentication.User, error) { return user, err }
+	}
+}
+
+// contains returns a check verifying the body contains every string.
+func contains(values ...string) func(*testing.T, string) {
+	return func(t *testing.T, body string) {
+		t.Helper()
+
+		for _, v := range values {
+			if !strings.Contains(body, v) {
+				t.Errorf("body %q must contain %q", body, v)
+			}
+		}
+	}
+}
+
+// fakeValidator is a TokenValidator returning the configured token informations.
+type fakeValidator struct {
+	source string
+	infos  validator.TokenInfos
+	ok     bool
+}
+
+func (v fakeValidator) SourceName() string { return v.source }
+
+func (v fakeValidator) VerifyTokenAndExtractInfos(string) (validator.TokenInfos, bool) {
+	return v.infos, v.ok
+}
+
+// withValidator makes the handlers use the fake validator for every third-party method.
+func withValidator(v fakeValidator) func() {
+	return func() {
+		newTokenValidator = func(string) validator.TokenValidator { return v }
+	}
+}

@@ -10,7 +10,6 @@ import (
 	ctxUser "github.com/cygy/ginamite/api/context/user"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
-	"github.com/cygy/ginamite/api/validator"
 	"github.com/cygy/ginamite/common/authentication"
 	"github.com/cygy/ginamite/common/config"
 	commonErrors "github.com/cygy/ginamite/common/errors"
@@ -102,14 +101,12 @@ func LoginWithPassword(c *gin.Context) {
 
 // LoginWithFacebook creates a token to log in an account.
 func LoginWithFacebook(c *gin.Context) {
-	v := validator.NewFacebookTokenValidator(config.Main.Facebook.AppID, config.Main.Facebook.APIVersion, config.Main.Facebook.TimeOut, config.Main.Facebook.RetryCount, config.Main.IsDebugModeEnabled())
-	loginWithThirdParty(c, v)
+	loginWithThirdParty(c, newTokenValidator(authentication.MethodFacebook))
 }
 
 // LoginWithGoogle creates a token to log in an account.
 func LoginWithGoogle(c *gin.Context) {
-	v := validator.NewGoogleTokenValidator(config.Main.Google.ClientID, config.Main.Google.APIVersion, config.Main.Google.TimeOut, config.Main.Google.RetryCount, config.Main.IsDebugModeEnabled())
-	loginWithThirdParty(c, v)
+	loginWithThirdParty(c, newTokenValidator(authentication.MethodGoogle))
 }
 
 // Logout deletes the token and log out.
@@ -124,7 +121,7 @@ func Logout(c *gin.Context) {
 
 	expirationDate := time.Now().Add(time.Duration(config.Main.JWT.TTL) * time.Second)
 	if GetTokenExpirationDate != nil {
-		if date, err := GetTokenExpirationDate(c, tokenID); err != nil {
+		if date, err := GetTokenExpirationDate(c, tokenID); err == nil {
 			expirationDate = date
 		}
 	}

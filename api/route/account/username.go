@@ -26,11 +26,12 @@ func GetAvailability(c *gin.Context) {
 
 	if DoesAccountWithUsernameExist != nil {
 		exists, err := DoesAccountWithUsernameExist(c, username)
-		if !exists || err != nil {
+		if exists || err != nil {
 			response.Ok(c, Availability{
 				Available: false,
 				Message:   t("status.username.unavailable"),
 			})
+			return
 		}
 	}
 

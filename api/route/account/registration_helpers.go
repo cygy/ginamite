@@ -7,7 +7,6 @@ import (
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
-	"github.com/cygy/ginamite/api/validator"
 	"github.com/cygy/ginamite/common/authentication"
 	"github.com/cygy/ginamite/common/config"
 	registrationError "github.com/cygy/ginamite/common/errors/registration"
@@ -201,12 +200,7 @@ func register(c *gin.Context, method string) {
 	// Register with a third party service
 	if isThirdPartyTokenMethod {
 		// Create a validator to verify the token and extract informations about the user.
-		var tokenValidator validator.TokenValidator
-		if isFacebookMethod {
-			tokenValidator = validator.NewFacebookTokenValidator(config.Main.Facebook.AppID, config.Main.Facebook.APIVersion, config.Main.Facebook.TimeOut, config.Main.Facebook.RetryCount, config.Main.IsDebugModeEnabled())
-		} else if isGoogleMethod {
-			tokenValidator = validator.NewGoogleTokenValidator(config.Main.Google.ClientID, config.Main.Google.APIVersion, config.Main.Google.TimeOut, config.Main.Google.RetryCount, config.Main.IsDebugModeEnabled())
-		}
+		tokenValidator := newTokenValidator(method)
 
 		// First verify if the token is valid, invalid tokens are not accepted of course.
 		tokenInfos, ok := tokenValidator.VerifyTokenAndExtractInfos(token)

@@ -6,12 +6,27 @@ import (
 
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/response"
+	"github.com/cygy/ginamite/api/validator"
 	"github.com/cygy/ginamite/common/authentication"
+	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/queue"
 
 	"github.com/gin-gonic/gin"
 )
+
+// newTokenValidator returns the validator of the tokens issued by a third-party authentication method.
+// It is a variable so that the tests can replace it.
+var newTokenValidator = func(method string) validator.TokenValidator {
+	switch method {
+	case authentication.MethodFacebook:
+		return validator.NewFacebookTokenValidator(config.Main.Facebook.AppID, config.Main.Facebook.APIVersion, config.Main.Facebook.TimeOut, config.Main.Facebook.RetryCount, config.Main.IsDebugModeEnabled())
+	case authentication.MethodGoogle:
+		return validator.NewGoogleTokenValidator(config.Main.Google.ClientID, config.Main.Google.APIVersion, config.Main.Google.TimeOut, config.Main.Google.RetryCount, config.Main.IsDebugModeEnabled())
+	}
+
+	return nil
+}
 
 func validateOrCancelUpdateProperty(c *gin.Context, property string, validate bool) {
 	// Check the type of the process.
@@ -90,27 +105,25 @@ func validateOrCancelUpdateProperty(c *gin.Context, property string, validate bo
 	}
 
 	// Some functions must be verified.
-	functions := []any{GetUserDetailsByID, VerifyProcess, DeleteProcessByID}
+	undefined := GetUserDetailsByID == nil || VerifyProcess == nil || DeleteProcessByID == nil
 
 	if validate {
 		if isEmailAddressProcess {
-			functions = append(functions, UpdateUserEmailAddress)
+			undefined = undefined || UpdateUserEmailAddress == nil
 		} else if isPasswordProcess {
-			functions = append(functions, UpdateUserPassword)
+			undefined = undefined || UpdateUserPassword == nil
 		} else if isValidateEmailAddressProcess {
-			functions = append(functions, UserEmailAddressIsVerified)
+			undefined = undefined || UserEmailAddressIsVerified == nil
 		} else if isDeleteAccountProcess {
-			functions = append(functions, DeleteUserByID)
+			undefined = undefined || DeleteUserByID == nil
 		} else if isDisableAccountProcess {
-			functions = append(functions, DisableUserByID)
+			undefined = undefined || DisableUserByID == nil
 		}
 	}
 
-	for _, f := range functions {
-		if f == nil {
-			sendError(errors.New("a function in the package 'ginamite/api/route/account' must be defined"))
-			return
-		}
+	if undefined {
+		sendError(errors.New("a function in the package 'ginamite/api/route/account' must be defined"))
+		return
 	}
 
 	// Verify the process.
