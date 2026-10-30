@@ -16,8 +16,8 @@ func VerifyLimitAndOffset(defaultOffset, defaultLimit, maxLimit int) gin.Handler
 			return
 		}
 
-		c.Set(storedOffsetRequestParameterName, offset)
-		c.Set(storedLimitRequestParameterName, limit)
+		c.Set(storedOffsetRequestParameterName, int64(offset))
+		c.Set(storedLimitRequestParameterName, int64(limit))
 	}
 }
 

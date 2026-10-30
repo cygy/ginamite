@@ -179,7 +179,7 @@ func FileNotFound(c *gin.Context, locale, messageKey string) {
 	})
 }
 
-// MaxFileSizeExceeded returns a HTTP 500 error.
+// MaxFileSizeExceeded returns a HTTP 412 error.
 func MaxFileSizeExceeded(c *gin.Context, locale, messageKey string, maxSize uint64) {
 	t := localization.Translate(locale)
 	PreconditionFailedWithError(c, response.Error{
@@ -191,7 +191,7 @@ func MaxFileSizeExceeded(c *gin.Context, locale, messageKey string, maxSize uint
 	})
 }
 
-// InvalidMimeType returns a HTTP 500 error.
+// InvalidMimeType returns a HTTP 412 error.
 func InvalidMimeType(c *gin.Context, locale, messageKey string) {
 	t := localization.Translate(locale)
 	PreconditionFailedWithError(c, response.Error{
