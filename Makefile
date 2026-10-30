@@ -14,7 +14,7 @@ help: ## List the targets
 
 fmt: ## Format the code with gofumpt and goimports
 	gofumpt -w .
-	goimports -w -local github.com/cygy/ginamite .
+	goimports -w .
 
 fmt-check: ## Fail if a file is not formatted
 	@out="$$(gofumpt -l .)"; \
