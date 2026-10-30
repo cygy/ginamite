@@ -63,3 +63,29 @@ func TestParse(t *testing.T) {
 		})
 	}
 }
+
+func TestVerify(t *testing.T) {
+	apitest.InitLocalization(t, map[string]string{"placeholder": "placeholder"})
+
+	tests := []struct {
+		name       string
+		verify     IsValidFunc
+		wantStatus int
+	}{
+		{"no function", nil, http.StatusOK},
+		{"valid token", func(*gin.Context, string) (bool, error) { return true, nil }, http.StatusOK},
+		{"invalid token", func(*gin.Context, string) (bool, error) { return false, nil }, http.StatusUnauthorized},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c, recorder := apitest.NewContext("GET", "/", nil)
+			ctxLocale.Set(c, "", "en")
+			Verify(tt.verify)(c)
+			c.Writer.WriteHeaderNow()
+
+			if recorder.Code != tt.wantStatus {
+				t.Errorf("status = %d, want %d", recorder.Code, tt.wantStatus)
+			}
+		})
+	}
+}
