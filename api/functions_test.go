@@ -150,6 +150,9 @@ func TestServer_CreateConsumers(t *testing.T) {
 			if len(consumers) != 1 || consumers[0].Topic != queue.TopicCache {
 				t.Fatalf("consumers = %+v, want one consumer of the topic %q", consumers, queue.TopicCache)
 			}
+			if !consumers[0].Idempotent {
+				t.Error("the invalidation of the cache can be handled twice: no deduplication needed")
+			}
 			if other := s.CreateConsumers()[0]; !strings.HasPrefix(consumers[0].Group, queue.TopicCache+"_") || consumers[0].Group == other.Group {
 				t.Errorf("groups = %q, %q: each instance needs its own group", consumers[0].Group, other.Group)
 			}

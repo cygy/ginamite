@@ -84,6 +84,9 @@ func (f *Functions) CreateAllCollections(ctx context.Context) {
 			Name: model.IPLocationCollection,
 		},
 		{
+			Name: model.ProcessedMessageCollection,
+		},
+		{
 			Name: model.UpdatePropertyProcessCollection,
 		},
 		{

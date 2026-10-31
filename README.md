@@ -174,9 +174,14 @@ myapp -name dlq -conf-server server.yaml -dlq purge -dlq-topic mail
   partitions they go to the same one, so a worker handles them in the order they were sent. A payload can choose its
   key by implementing `queue.Keyed`. The messages without key go to any partition.
 - Each message carries an identifier in the `message-id` header, kept by the dead letters. A group ignores a message
-  it already handled (counted in `Stats().Duplicates`): `Client.Deduplicator` remembers the last 10 000 in memory, which
-  covers the redeliveries of a rebalance. A crash between the handling and the commit, or a restart, can still handle a
-  message twice: keep the handlers idempotent, or give `Client.Deduplicator` an implementation backed by a database.
+  it already handled (counted in `Stats().Duplicates`), through `Server.Deduplicator`: in memory by default (the last
+  10 000 messages, which covers the redeliveries of a rebalance), and in the `processedMessages` collection with the
+  MongoDB plugin, shared by the workers and kept after a restart (the documents expire after 7 days; the TTL index is
+  created by the worker at start up). A consumer whose handler gives the same result twice, such as the
+  invalidation of a cache, sets `Idempotent: true` and costs nothing.
+- A message is remembered once it is handled: a crash between the handling and this record handles it twice. The
+  handlers of the database (deleting, disabling, enabling a user, saving a location) are idempotent. The mails and the
+  notifications are not: a duplicate is possible after such a crash, which is preferred to losing the message.
 
 ### Using another broker
 

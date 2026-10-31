@@ -31,6 +31,7 @@ type Server struct {
 	// specialized servers and the plugins.
 	Config                   *config.Configuration
 	Broker                   broker.Broker           // The message broker, Kafka by default, started by Start. See UseBroker.
+	Deduplicator             broker.Deduplicator     // Remembers the messages handled, to ignore the ones delivered twice. In memory by default; a plugin may replace it.
 	Queue                    *queue.Queue            // Sends the messages to the other servers through the broker.
 	Localization             *localization.Engine    // The translations, loaded by Start.
 	Timezones                *timezone.Configuration // The timezones of the countries, loaded by Start for the API and the worker.
@@ -79,6 +80,7 @@ func NewServer() *Server {
 	server := &Server{
 		Config:       config.NewConfiguration(),
 		Broker:       kafkaClient,
+		Deduplicator: broker.NewMemoryDeduplicator(dedupSize),
 		Queue:        queue.New(kafkaClient),
 		Localization: localization.NewEngine(),
 		Timezones:    timezone.NewConfiguration(),

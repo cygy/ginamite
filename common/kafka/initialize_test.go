@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"slices"
-	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -244,10 +243,30 @@ func TestClient_Close_NotInitialized(t *testing.T) {
 	NewClient().Close()
 }
 
-func TestUniqueGroup(t *testing.T) {
-	a, b := broker.UniqueGroup("cache"), broker.UniqueGroup("cache")
+func TestClient_Initialize_Deduplicator(t *testing.T) {
+	handlers := make(chan groupHandler, 2)
+	useGroup(t, func(string) (sarama.ConsumerGroup, error) {
+		return newFakeGroup(func(ctx context.Context, handler sarama.ConsumerGroupHandler) error {
+			handlers <- handler.(groupHandler)
+			<-ctx.Done()
 
-	if !strings.HasPrefix(a, "cache_") || a == b {
-		t.Errorf("groups = %q, %q", a, b)
+			return nil
+		}), nil
+	})
+
+	dedup := broker.NewMemoryDeduplicator(1)
+	client := NewClient()
+	client.Deduplicator = dedup
+	client.Initialize("localhost", 9092, "app_", false, []broker.MessageConsumer{
+		{Topic: "mail", Action: func([]byte) error { return nil }},
+		{Topic: "cache", Idempotent: true, Action: func([]byte) error { return nil }},
+	})
+	t.Cleanup(client.Close)
+
+	for range 2 {
+		h := <-handlers
+		if wantDedup := h.topic == "app_mail"; (h.dedup != nil) != wantDedup {
+			t.Errorf("%s: dedup = %v, want one: %v", h.topic, h.dedup, wantDedup)
+		}
 	}
 }

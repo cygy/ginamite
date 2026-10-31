@@ -46,6 +46,9 @@ type MessageConsumer struct {
 	// the place of the dead letters depend on the broker. An error marked with Permanent is not retried. A panic is
 	// recovered and handled like an error.
 	Action func(value []byte) error
+	// Idempotent says Action gives the same result when a message is handled twice, such as the invalidation of a
+	// cache: the broker does not spend a Deduplicator on its messages.
+	Idempotent bool
 }
 
 // UniqueGroup returns the name of a group no other process uses, so its consumer receives every message of the topic:

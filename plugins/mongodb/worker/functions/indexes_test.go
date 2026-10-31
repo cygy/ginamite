@@ -51,7 +51,7 @@ func TestCreateAllIndexes(t *testing.T) {
 	fns.CreateAllIndexes(context.Background())
 
 	// Each collection of the plugin has indexes, and every index has keys.
-	for _, name := range []string{model.AuthTokenCollection, model.UserCollection, model.DisabledUserCollection, model.UpdatePropertyProcessCollection, model.ForgotPasswordProcessCollection, model.IPLocationCollection} {
+	for _, name := range []string{model.AuthTokenCollection, model.UserCollection, model.DisabledUserCollection, model.UpdatePropertyProcessCollection, model.ForgotPasswordProcessCollection, model.IPLocationCollection, model.ProcessedMessageCollection} {
 		view := db.Coll(name).IndexView
 		if view == nil || len(view.Created) == 0 {
 			t.Errorf("%s: no index created", name)

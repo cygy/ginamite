@@ -329,7 +329,7 @@ func TestGroupHandler_handle_Deduplicates(t *testing.T) {
 	calls := 0
 	counters := &stats{}
 	handler := groupHandler{
-		topic: "t", group: "g", attempts: 1, stats: counters, dedup: NewMemoryDeduplicator(10),
+		topic: "t", group: "g", attempts: 1, stats: counters, dedup: broker.NewMemoryDeduplicator(10),
 		action: func([]byte) error { calls++; return nil },
 		deadLetter: func(*sarama.ConsumerMessage, error, int) {
 			t.Error("unexpected dead letter")
@@ -360,7 +360,7 @@ func TestGroupHandler_handle_FailureIsNotRemembered(t *testing.T) {
 
 	fail := true
 	handler := groupHandler{
-		topic: "t", group: "g", attempts: 1, dedup: NewMemoryDeduplicator(10),
+		topic: "t", group: "g", attempts: 1, dedup: broker.NewMemoryDeduplicator(10),
 		action: func([]byte) error {
 			if fail {
 				return errors.New("failed")

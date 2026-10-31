@@ -116,6 +116,16 @@ func TestPlugin_Configure_IsValidID(t *testing.T) {
 	}
 }
 
+func TestPlugin_Configure_Deduplicator(t *testing.T) {
+	server := ginamite.NewServer()
+	memory := server.Deduplicator
+	NewPlugin().Configure(server)
+
+	if server.Deduplicator == nil || server.Deduplicator == memory {
+		t.Error("the messages must be remembered in the database")
+	}
+}
+
 func TestPlugin_Configure_Middlewares(t *testing.T) {
 	t.Run("without session", func(t *testing.T) {
 		server := ginamite.NewServer()

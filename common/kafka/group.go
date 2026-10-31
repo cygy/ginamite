@@ -29,7 +29,7 @@ type groupHandler struct {
 	stats *stats
 
 	// dedup remembers the messages handled. It may be nil.
-	dedup Deduplicator
+	dedup broker.Deduplicator
 }
 
 // Setup is called when a consumer joins the group.

@@ -210,6 +210,22 @@ func (f *Functions) CreateAllIndexes(ctx context.Context) {
 			},
 		},
 
+		// Index of the collection "processedMessages": the handled messages are forgotten after some days.
+		{
+			Collection: model.ProcessedMessageCollection,
+			Index: mongo.IndexModel{
+				Keys: bson.D{
+					{
+						Key:   "createdAt",
+						Value: 1,
+					},
+				},
+				Options: options.Index().
+					SetName("createdAt_1_1").
+					SetExpireAfterSeconds(model.ProcessedMessageTTL),
+			},
+		},
+
 		// Indexes of the collection "updateProperty".
 		{
 			Collection: model.UpdatePropertyProcessCollection,

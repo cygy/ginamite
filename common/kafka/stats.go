@@ -13,7 +13,7 @@ type Stats struct {
 	// attempts after a failure, and DeadLettered the number of messages which could not be handled.
 	Received, Handled, Retried, DeadLettered uint64
 
-	// Duplicates is the number of messages ignored because they were already handled, see Deduplicator.
+	// Duplicates is the number of messages ignored because they were already handled, see broker.Deduplicator.
 	Duplicates uint64
 
 	// Sent is the number of messages acknowledged by Kafka, SendErrors the number it refused, and Dropped the number

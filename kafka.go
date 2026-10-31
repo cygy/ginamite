@@ -100,7 +100,7 @@ func (s *Server) startBroker(consumers []broker.MessageConsumer) bool {
 	client.Host, client.Port = kafkaConf.Host, kafkaConf.Port
 	client.TopicsPrefix = s.Config.KafkaTopicsPrefix
 	client.Options = options
-	client.Deduplicator = kafka.NewMemoryDeduplicator(dedupSize)
+	client.Deduplicator = s.Deduplicator
 	client.MaxAttempts = max(s.Config.KafkaMaxAttempts, 1)
 	client.RetryDelay = time.Duration(s.Config.KafkaRetryDelay) * time.Millisecond
 	client.Start(consumers)

@@ -66,14 +66,15 @@ func (s *Server) Start() {
 		return
 	}
 
+	// The plugins are configured first: their functions and their deduplicator are ready when the first message comes.
+	for _, plugin := range s.plugins {
+		plugin.Configure(s)
+	}
+
 	if s.startBroker(specializedServer.CreateConsumers()) {
 		// Registered after the plugins are connected: the consumers stop, and the producer is flushed, before the
 		// plugins close their connections.
 		defer s.Broker.Close()
-	}
-
-	for _, plugin := range s.plugins {
-		plugin.Configure(s)
 	}
 
 	specializedServer.Start()

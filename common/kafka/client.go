@@ -42,7 +42,7 @@ type Client struct {
 
 	// Deduplicator remembers the messages handled, so that a message delivered twice, after a crash or a rebalance, is
 	// not handled twice. Nothing is remembered if it is nil.
-	Deduplicator Deduplicator
+	Deduplicator broker.Deduplicator
 
 	producerMu   sync.RWMutex
 	producerOnce sync.Once
@@ -339,7 +339,7 @@ func (client *Client) SendMessageToTopic(message, topic string) {
 // use the identifier of an entity, such as a user, as the key. A message without a key goes to any partition.
 //
 // Each message gets an identifier, in the header HeaderMessageID, which the consumers use to ignore a message
-// delivered twice, see Deduplicator.
+// delivered twice, see broker.Deduplicator.
 func (client *Client) SendKeyedMessageToTopic(key, message, topic string) {
 	if !client.HasProducer {
 		log.WithFields(logrus.Fields{
@@ -438,6 +438,10 @@ func (client *Client) consume(ctx context.Context, addresses []string, config *s
 	}()
 
 	// Consume returns when the group is rebalanced: it must be called again.
+	var dedup broker.Deduplicator
+	if !mc.Idempotent {
+		dedup = client.Deduplicator
+	}
 	handler := groupHandler{
 		topic:    topic,
 		group:    groupName,
@@ -445,7 +449,7 @@ func (client *Client) consume(ctx context.Context, addresses []string, config *s
 		attempts: client.MaxAttempts,
 		delay:    client.RetryDelay,
 		stats:    &client.stats,
-		dedup:    client.Deduplicator,
+		dedup:    dedup,
 		deadLetter: func(message *sarama.ConsumerMessage, err error, attempts int) {
 			client.sendDeadLetter(ctx, message, groupName, err, attempts)
 		},

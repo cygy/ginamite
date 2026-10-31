@@ -47,8 +47,9 @@ func (s *Server) CreateConsumers() []broker.MessageConsumer {
 	// Handle the messages of the cache. Every instance of the API must receive every message, so each one has its own
 	// group. A message which can not be decoded is dead-lettered.
 	consumers = append(consumers, broker.MessageConsumer{
-		Topic: queue.TopicCache,
-		Group: broker.UniqueGroup(queue.TopicCache),
+		Topic:      queue.TopicCache,
+		Group:      broker.UniqueGroup(queue.TopicCache),
+		Idempotent: true,
 		Action: func(value []byte) error {
 			msgType, payload, ok := queue.ParseMessageAndPayload(value, queue.TopicCache)
 			if !ok {
