@@ -2,6 +2,7 @@ package ginamite
 
 import (
 	"os"
+	"slices"
 
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/config/environment"
@@ -83,8 +84,8 @@ func (s *Server) connectPlugins() (closeAll func()) {
 	}
 
 	return func() {
-		for i := len(connected) - 1; i >= 0; i-- {
-			connected[i].Close()
+		for _, c := range slices.Backward(connected) {
+			c.Close()
 		}
 	}
 }
