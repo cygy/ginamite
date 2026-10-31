@@ -9,6 +9,7 @@ import (
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/ctxconfig"
 	"github.com/cygy/ginamite/common/ctxlocalization"
+	"github.com/cygy/ginamite/common/httpserver"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/log"
 	htmlTemplate "github.com/cygy/ginamite/common/template/html"
@@ -17,15 +18,14 @@ import (
 	"github.com/cygy/ginamite/web/response"
 	"github.com/cygy/ginamite/web/route"
 
-	"github.com/fvbock/endless"
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
 )
 
 // listenAndServe and listenAndServeTLS start the HTTP server; the tests replace them.
 var (
-	listenAndServe    = endless.ListenAndServe
-	listenAndServeTLS = endless.ListenAndServeTLS
+	listenAndServe    = httpserver.ListenAndServe
+	listenAndServeTLS = httpserver.ListenAndServeTLS
 )
 
 // Server is a web server.

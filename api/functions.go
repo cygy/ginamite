@@ -24,6 +24,7 @@ import (
 	"github.com/cygy/ginamite/common/ctxnotifications"
 	"github.com/cygy/ginamite/common/ctxqueue"
 	"github.com/cygy/ginamite/common/ctxtimezone"
+	"github.com/cygy/ginamite/common/httpserver"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/notifications"
@@ -31,7 +32,6 @@ import (
 	"github.com/cygy/ginamite/common/template/html"
 	"github.com/cygy/ginamite/common/timezone"
 
-	"github.com/fvbock/endless"
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
@@ -170,10 +170,10 @@ func (s *Server) Start() {
 	// Start the server.
 	address := fmt.Sprintf(":%d", s.Config.Server.Port)
 	if s.Config.Server.SSL.Enabled {
-		if err := endless.ListenAndServeTLS(address, s.Config.Server.SSL.CertPath, s.Config.Server.SSL.KeyPath, server); err != nil {
+		if err := httpserver.ListenAndServeTLS(address, s.Config.Server.SSL.CertPath, s.Config.Server.SSL.KeyPath, server); err != nil {
 			log.WithField("error", err).Error("the server stopped")
 		}
-	} else if err := endless.ListenAndServe(address, server); err != nil {
+	} else if err := httpserver.ListenAndServe(address, server); err != nil {
 		log.WithField("error", err).Error("the server stopped")
 	}
 }
