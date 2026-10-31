@@ -1,6 +1,9 @@
 package ginamite
 
 import (
+	"bytes"
+	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"slices"
@@ -115,4 +118,35 @@ func writeFile(t *testing.T, path, content string) string {
 	}
 
 	return path
+}
+
+// fakeCommander is a plugin which handles the command "run".
+type fakeCommander struct{ err error }
+
+func (fakeCommander) Configure(*Server) {}
+
+func (c fakeCommander) Command(f *flags.Flags, out io.Writer) (bool, error) {
+	if f.DLQ != "run" {
+		return false, nil
+	}
+	_, _ = io.WriteString(out, "ran")
+
+	return true, c.err
+}
+
+func TestServer_runCommand(t *testing.T) {
+	boom := errors.New("boom")
+
+	s := NewServer()
+	s.AddPlugin(&testPlugin{})
+	s.AddPlugin(fakeCommander{err: boom})
+
+	var out bytes.Buffer
+	if handled, err := s.runCommand(&flags.Flags{DLQ: "run"}, &out); !handled || !errors.Is(err, boom) || out.String() != "ran" {
+		t.Errorf("runCommand() = %v, %v, output %q", handled, err, out.String())
+	}
+
+	if handled, err := s.runCommand(&flags.Flags{}, &out); handled || err != nil {
+		t.Errorf("runCommand() = %v, %v, want a command nobody handles to be left to the caller", handled, err)
+	}
 }

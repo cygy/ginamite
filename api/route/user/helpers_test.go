@@ -19,9 +19,9 @@ import (
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/internal/apitest"
 	"github.com/cygy/ginamite/api/route/account"
+	"github.com/cygy/ginamite/common/broker"
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/ctxconfig"
-	"github.com/cygy/ginamite/common/kafka"
 	"github.com/cygy/ginamite/common/timezone"
 
 	"github.com/gin-gonic/gin"
@@ -35,7 +35,7 @@ var (
 	testTimezones = &timezone.Configuration{Timezones: []string{"Europe/Paris"}}
 
 	// testQueue is the queue of the handlers: it has no producer, the messages are only logged.
-	testQueue = queue.New(kafka.NewClient())
+	testQueue = queue.New(broker.NewMemory())
 
 	// testFunctions and testAccountFunctions are the functions of the handlers, reset at the end of each test.
 	testFunctions        Functions

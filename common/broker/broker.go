@@ -31,6 +31,12 @@ type Broker interface {
 	Close()
 }
 
+// DeduplicatorUser is implemented by the brokers which ignore the messages delivered twice: the server gives them its
+// Deduplicator before it starts them.
+type DeduplicatorUser interface {
+	UseDeduplicator(d Deduplicator)
+}
+
 // MessageConsumer consumes the messages of a topic and executes Action on each one.
 //
 // The consumers of the same Group share the messages of the topic: each message is handled by one of them, so the

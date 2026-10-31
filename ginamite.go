@@ -8,13 +8,14 @@ package ginamite
 
 import (
 	"context"
+	"io"
 	"time"
 
 	"github.com/cygy/ginamite/api"
 	"github.com/cygy/ginamite/common/authentication"
 	"github.com/cygy/ginamite/common/broker"
 	"github.com/cygy/ginamite/common/config"
-	"github.com/cygy/ginamite/common/kafka"
+	"github.com/cygy/ginamite/common/flags"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/notifications"
 	"github.com/cygy/ginamite/common/queue"
@@ -30,7 +31,7 @@ type Server struct {
 	// Config is the configuration of the application, loaded from the configuration file by Start and shared with the
 	// specialized servers and the plugins.
 	Config                   *config.Configuration
-	Broker                   broker.Broker           // The message broker, Kafka by default, started by Start. See UseBroker.
+	Broker                   broker.Broker           // The message broker, none by default: a plugin sets it, such as the one of Kafka, see UseBroker. Started by Start.
 	Deduplicator             broker.Deduplicator     // Remembers the messages handled, to ignore the ones delivered twice. In memory by default; a plugin may replace it.
 	Queue                    *queue.Queue            // Sends the messages to the other servers through the broker.
 	Localization             *localization.Engine    // The translations, loaded by Start.
@@ -50,8 +51,9 @@ type SpecializedServer interface {
 	Start()
 }
 
-// UseBroker replaces the message broker, Kafka by default, and the queue sending the messages through it, which the
-// API and the worker use. It must be called before Start, which starts the broker with the consumers of the server.
+// UseBroker sets the message broker, and the queue sending the messages through it, which the API and the worker use.
+// A plugin calls it when it is configured, or the application before Start, which starts the broker with the consumers
+// of the server. Without a broker, the messages are not sent and an error is logged for each.
 func (s *Server) UseBroker(b broker.Broker) {
 	s.Broker = b
 	s.Queue = queue.New(b)
@@ -61,6 +63,15 @@ func (s *Server) UseBroker(b broker.Broker) {
 // Plugin is a plugin which configures a server, such as the functions of the API and of the workers.
 type Plugin interface {
 	Configure(s *Server)
+}
+
+// Commander is a Plugin which runs a command given by the command line arguments, instead of a server.
+//
+// Start calls Command with the arguments, before it sets up a server. A command handled by a plugin is the last thing
+// Start does. The plugins are asked in the order they were added, until one handles the command.
+type Commander interface {
+	Plugin
+	Command(f *flags.Flags, out io.Writer) (handled bool, err error)
 }
 
 // Connector is a Plugin which holds a connection to a database, or to any other service the API and the worker need.
@@ -76,12 +87,10 @@ type Connector interface {
 // NewServer returns a Server whose API functions are placeholders which accept nothing: a plugin or the application
 // is expected to replace them.
 func NewServer() *Server {
-	kafkaClient := kafka.NewClient()
 	server := &Server{
 		Config:       config.NewConfiguration(),
-		Broker:       kafkaClient,
 		Deduplicator: broker.NewMemoryDeduplicator(dedupSize),
-		Queue:        queue.New(kafkaClient),
+		Queue:        queue.New(nil),
 		Localization: localization.NewEngine(),
 		Timezones:    timezone.NewConfiguration(),
 		plugins:      []Plugin{},

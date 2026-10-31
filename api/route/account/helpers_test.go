@@ -24,10 +24,10 @@ import (
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/validator"
 	"github.com/cygy/ginamite/common/authentication"
+	"github.com/cygy/ginamite/common/broker"
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/config/environment"
 	"github.com/cygy/ginamite/common/ctxconfig"
-	"github.com/cygy/ginamite/common/kafka"
 	"github.com/cygy/ginamite/common/queue"
 	"github.com/cygy/ginamite/common/timezone"
 
@@ -72,7 +72,7 @@ var testTimezones = &timezone.Configuration{Timezones: []string{"Europe/Paris"}}
 func testIDValidator(id string) bool { return len(id) == len(validNotificationID) }
 
 // testQueue is the queue of the handlers: it has no producer, the messages are only logged.
-var testQueue = queue.New(kafka.NewClient())
+var testQueue = queue.New(broker.NewMemory())
 
 // setup initializes the global dependencies of the handlers and resets every injected function at the end of the test.
 func setup(t *testing.T) {

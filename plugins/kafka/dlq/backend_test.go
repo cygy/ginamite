@@ -6,8 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cygy/ginamite/common/kafka"
-
 	"github.com/IBM/sarama"
 )
 
@@ -65,7 +63,7 @@ func openBackend(t *testing.T, broker *sarama.MockBroker) Backend {
 		portNumber = portNumber*10 + int(c-'0')
 	}
 
-	b, err := Open(host, portNumber, kafka.Options{Version: sarama.V2_8_0_0}, "tool")
+	b, err := Open(host, portNumber, saramaConfig(sarama.V2_8_0_0), "tool")
 	if err != nil {
 		t.Fatalf("Open() error = %v", err)
 	}
@@ -75,7 +73,7 @@ func openBackend(t *testing.T, broker *sarama.MockBroker) Backend {
 }
 
 func TestOpen_Failure(t *testing.T) {
-	if _, err := Open("127.0.0.1", 1, kafka.Options{}, "tool"); err == nil {
+	if _, err := Open("127.0.0.1", 1, saramaConfig(sarama.V2_8_0_0), "tool"); err == nil {
 		t.Error("Open() must fail without broker")
 	}
 }
@@ -193,4 +191,13 @@ func TestBackend_Timeout(t *testing.T) {
 	if err == nil {
 		t.Error("Read() must fail when no message comes")
 	}
+}
+
+// saramaConfig returns a configuration for the brokers of the version.
+func saramaConfig(version sarama.KafkaVersion) *sarama.Config {
+	config := sarama.NewConfig()
+	config.Version = version
+	config.Producer.Return.Successes = true
+
+	return config
 }

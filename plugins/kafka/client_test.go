@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cygy/ginamite/common/broker"
+
 	"github.com/IBM/sarama"
 	"github.com/sirupsen/logrus"
 	logtest "github.com/sirupsen/logrus/hooks/test"
@@ -491,5 +493,15 @@ func TestClient_SendKeyedMessageToTopic(t *testing.T) {
 	}
 	if len(ids) != 2 {
 		t.Error("each message must have its own identifier")
+	}
+}
+
+func TestClient_UseDeduplicator(t *testing.T) {
+	client := NewClient()
+	dedup := broker.NewMemoryDeduplicator(1)
+	client.UseDeduplicator(dedup)
+
+	if client.Deduplicator != dedup {
+		t.Error("the deduplicator is not set")
 	}
 }

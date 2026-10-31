@@ -15,7 +15,7 @@ plugin, so the core does not depend on a database.
 
 - Go 1.26 or later.
 - A database, through a plugin. The only plugin for now is `plugins/mongodb`.
-- Kafka, to send messages between the servers (optional).
+- A message broker, through a plugin, to send messages between the servers. The only plugin for now is `plugins/kafka`.
 
 ## Installation
 
@@ -32,12 +32,14 @@ package main
 
 import (
 	"github.com/cygy/ginamite"
+	"github.com/cygy/ginamite/plugins/kafka"
 	"github.com/cygy/ginamite/plugins/mongodb"
 )
 
 func main() {
 	server := ginamite.NewServer()
 	server.AddPlugin(mongodb.NewPlugin())
+	server.AddPlugin(kafka.NewPlugin())
 
 	// Customize the servers before starting: server.API, server.Worker and server.Web.
 
@@ -234,9 +236,13 @@ myapp -name dlq -conf-server server.yaml -dlq purge -dlq-topic mail
 
 The servers only depend on the interfaces of `common/broker`: a `Producer` (`SendMessageToTopic`, and
 `SendKeyedMessageToTopic` for the ordering), the `MessageConsumer`s of the topics, and `Broker` (`Start(consumers)`,
-`Close()`). Kafka (`common/kafka`) is the default implementation. To use another broker, implement `broker.Broker` and
-call `server.UseBroker(b)` before `Start`: the queue of the API and of the worker send through it, and `Start` runs it
-with the consumers of the chosen server. The retries, the dead letters and the duplicates are the business of the
+`Close()`). The plugin `plugins/kafka` is the implementation for Kafka: when it is configured, it sets the Kafka client as
+the broker, see `server.UseBroker`, if the configuration has the service `kafka`. Without a broker, the messages are not
+sent and an error is logged for each. To use another broker, implement `broker.Broker` and make a plugin, or the
+application before `Start`, call `server.UseBroker(b)`: the queue of the API and of the worker send through it, and
+`Start` runs it with the consumers of the chosen server. A broker which implements `broker.DeduplicatorUser` receives
+the deduplicator of the server before it starts. A plugin which implements `ginamite.Commander` can run a command of the
+command line instead of a server: `plugins/kafka` runs the one on the dead letters. The retries, the dead letters and the duplicates are the business of the
 broker: Kafka does them itself (see above), another one can rely on its own mechanisms. `broker.Permanent(err)` marks
 an error which must not be retried. `broker.NewMemory()` is a broker for the tests: it records the messages and
 delivers them to the consumers at once.
@@ -288,7 +294,7 @@ kafka:
 ### Shared services are injected
 
 There is no global service. `ginamite.Server` holds the configuration (`Config`), the translations (`Localization`),
-the Kafka client (`Kafka`) and the queue built on it (`Queue`), loads them in `Start`, and shares them with `Server.API`,
+the message broker (`Broker`, set by a plugin) and the queue built on it (`Queue`), loads them in `Start`, and shares them with `Server.API`,
 `Server.Worker`, `Server.Web` (their fields of the same names) and the plugins (`Connector.Connect` receives the
 configuration).
 
@@ -308,10 +314,10 @@ configuration).
 | --- | --- |
 | `.` | `Server`, `Plugin`, `Connector` and `Start`, which sets up the configuration and starts the chosen server. |
 | `api/` | The API server: routes, middlewares, request validation, responses, authentication cache. |
-| `worker/` | The worker server: Kafka consumers, notifications, mails, async and recurring tasks. |
+| `worker/` | The worker server: message consumers, notifications, mails, async and recurring tasks. |
 | `web/` | The web server: HTML routes, pages, cookies, calls to the API, `robots.txt`. |
-| `common/` | Shared packages: configuration, flags, logger, localization, templates, Kafka, JWT, timezones. |
-| `plugins/` | The database plugins. |
+| `common/` | Shared packages: configuration, flags, logger, localization, templates, broker interfaces, JWT, timezones. |
+| `plugins/` | The plugins: the database (`mongodb`) and the message broker (`kafka`). |
 
 ## Database plugins
 

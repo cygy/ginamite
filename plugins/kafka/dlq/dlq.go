@@ -1,5 +1,5 @@
 // Package dlq lists, replays and purges the dead letters: the messages the consumers of Kafka could not handle, see
-// broker.MessageConsumer, which are kept in the topic of the dead letters of their topic, see kafka.DeadLetterTopic.
+// broker.MessageConsumer, which are kept in the topic of the dead letters of their topic, see DeadLetterTopic of the package kafka.
 //
 // The position of the tool in a topic is saved in Kafka, in a consumer group of its own: a message replayed or
 // purged is never visited again, and List does not move it.

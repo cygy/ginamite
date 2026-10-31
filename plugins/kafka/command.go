@@ -1,4 +1,4 @@
-package ginamite
+package kafka
 
 import (
 	"context"
@@ -12,17 +12,26 @@ import (
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/config/environment"
 	"github.com/cygy/ginamite/common/flags"
-	"github.com/cygy/ginamite/common/kafka"
-	"github.com/cygy/ginamite/common/kafka/dlq"
 	"github.com/cygy/ginamite/common/log"
+	"github.com/cygy/ginamite/plugins/kafka/dlq"
 )
 
 // openDLQ connects to the topics of the dead letters; the tests replace it.
 var openDLQ = dlq.Open
 
-// runDLQ lists, replays or purges the dead letters of the topic of the arguments, and writes the report to out. No
-// server is started: it only needs the configuration of the server and of Kafka.
-func (s *Server) runDLQ(f *flags.Flags, out io.Writer) error {
+// Command lists, replays or purges the dead letters of the topic of the arguments, and writes the report to out, if the
+// arguments ask for it, see flags.Flags.DLQ. No server is started: it only needs the configuration of the server and of
+// Kafka. It makes the plugin a ginamite.Commander.
+func (p *Plugin) Command(f *flags.Flags, out io.Writer) (handled bool, err error) {
+	if f.DLQ == "" {
+		return false, nil
+	}
+
+	return true, runDLQ(f, out)
+}
+
+// runDLQ runs the command on the dead letters of the arguments.
+func runDLQ(f *flags.Flags, out io.Writer) error {
 	log.Initialize(f.ServerName, f.Environment == environment.Production)
 
 	configuration := config.NewConfiguration()
@@ -35,14 +44,14 @@ func (s *Server) runDLQ(f *flags.Flags, out io.Writer) error {
 		return errors.New("the configuration has no kafka service")
 	}
 
-	options, err := kafkaOptions(configuration)
+	options, err := optionsFrom(configuration)
 	if err != nil {
 		return err
 	}
 
-	topic := kafka.DeadLetterTopic(configuration.KafkaTopicsPrefix + f.DLQTopic)
+	topic := DeadLetterTopic(configuration.KafkaTopicsPrefix + f.DLQTopic)
 
-	backend, err := openDLQ(kafkaConf.Host, kafkaConf.Port, options, topic+"_tool")
+	backend, err := openDLQ(kafkaConf.Host, kafkaConf.Port, options.NewConfig(), topic+"_tool")
 	if err != nil {
 		return err
 	}

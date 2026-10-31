@@ -221,6 +221,12 @@ func (client *Client) attachProducer(producer sarama.AsyncProducer) {
 	}()
 }
 
+// UseDeduplicator sets the Deduplicator which makes the consumers ignore the messages already handled. It must be
+// called before Start. It makes the client a broker.DeduplicatorUser.
+func (client *Client) UseDeduplicator(d broker.Deduplicator) {
+	client.Deduplicator = d
+}
+
 // Stats returns the counters of the client.
 func (client *Client) Stats() Stats {
 	return client.stats.snapshot()

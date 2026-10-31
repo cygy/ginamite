@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/cygy/ginamite/common/kafka"
-
 	"github.com/IBM/sarama"
 )
 
@@ -23,10 +21,9 @@ type backend struct {
 	managers map[string]sarama.PartitionOffsetManager
 }
 
-// Open connects to Kafka. The position of the tool is saved in the consumer group named group, with the prefix of the
-// topics if needed.
-func Open(host string, port int, options kafka.Options, group string) (Backend, error) {
-	config := options.NewConfig()
+// Open connects to Kafka with the configuration, which it changes to read the topics from their beginning. The
+// position of the tool is saved in the consumer group named group, with the prefix of the topics if needed.
+func Open(host string, port int, config *sarama.Config, group string) (Backend, error) {
 	config.Consumer.Offsets.Initial = sarama.OffsetOldest
 
 	client, err := sarama.NewClient([]string{fmt.Sprintf("%s:%d", host, port)}, config)

@@ -1,6 +1,7 @@
 package ginamite
 
 import (
+	"io"
 	"os"
 	"slices"
 
@@ -27,11 +28,16 @@ func (s *Server) Start() {
 		return
 	}
 
-	if f.DLQ != "" {
-		if err := s.runDLQ(f, os.Stdout); err != nil {
-			log.WithField("error", err).Fatal("the command on the dead letters failed")
+	if handled, err := s.runCommand(f, os.Stdout); handled {
+		if err != nil {
+			log.WithField("error", err).Fatal("the command failed")
 		}
 
+		return
+	}
+
+	if f.DLQ != "" {
+		log.Fatal("no plugin handles the command on the dead letters: add the plugin of the message broker")
 		return
 	}
 
@@ -80,6 +86,19 @@ func (s *Server) Start() {
 	defer s.startMetrics()()
 
 	specializedServer.Start()
+}
+
+// runCommand asks the plugins which are Commanders to run the command of the arguments, and reports whether one did.
+func (s *Server) runCommand(f *flags.Flags, out io.Writer) (handled bool, err error) {
+	for _, plugin := range s.plugins {
+		if commander, ok := plugin.(Commander); ok {
+			if handled, err = commander.Command(f, out); handled {
+				return handled, err
+			}
+		}
+	}
+
+	return false, nil
 }
 
 // initializeConfiguration sets up the main logger, the server configuration and the translations, which are shared
