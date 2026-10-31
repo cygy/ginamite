@@ -20,9 +20,9 @@ func TestSaveIPAddressDetails(t *testing.T) {
 
 	details := &location.IPAddressDetails{Region: "IDF", City: "Paris", CountryCode: "FR", CountryName: "France"}
 	var asked []string
-	lookup := func(ip string) *location.IPAddressDetails {
+	lookup := func(ip string) (*location.IPAddressDetails, error) {
 		asked = append(asked, ip)
-		return details
+		return details, nil
 	}
 
 	newDB := func() (*Functions, *mock.Database) {
@@ -88,8 +88,17 @@ func TestSaveIPAddressDetails(t *testing.T) {
 
 		// The lookup of the location fails, or finds nothing.
 		fns, db = newDB()
-		if err := fns.SaveIPAddressDetails(ctx, "1.2.3.4", tokenID.Hex(), func(string) *location.IPAddressDetails { return nil }); err != nil {
+		if err := fns.SaveIPAddressDetails(ctx, "1.2.3.4", tokenID.Hex(), func(string) (*location.IPAddressDetails, error) { return nil, nil }); err != nil {
 			t.Errorf("error = %v", err)
+		}
+		if got := methods(db, model.AuthTokenCollection); len(got) != 1 {
+			t.Errorf("token calls = %v, want only the lookup", got)
+		}
+
+		// The API fails: the error is returned, to try again.
+		fns, db = newDB()
+		if err := fns.SaveIPAddressDetails(ctx, "1.2.3.4", tokenID.Hex(), func(string) (*location.IPAddressDetails, error) { return nil, errBoom }); !errors.Is(err, errBoom) {
+			t.Errorf("error = %v, want the error of the API", err)
 		}
 		if got := methods(db, model.AuthTokenCollection); len(got) != 1 {
 			t.Errorf("token calls = %v, want only the lookup", got)

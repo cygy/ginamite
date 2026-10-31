@@ -27,6 +27,10 @@ const (
 	maxResponseSize = 1 << 20
 )
 
+// DetailsFunc returns the location of an IP address. It returns nil details, and no error, if the location is
+// unknown and asking again would not change it, and an error if the API failed and asking again later can succeed.
+type DetailsFunc func(IPAddress string) (*IPAddressDetails, error)
+
 // IPAddressDetails is the location of an IP address.
 type IPAddressDetails struct {
 	Region      string `json:"region_name"`
@@ -37,9 +41,9 @@ type IPAddressDetails struct {
 
 // GetIPInfo decodes the payload of a location task and calls saveIPAddressDetailsFunc, which saves
 // the location returned by the function it receives, which uses the ipstack API of the configuration.
-// Nothing happens if the function is nil. It returns the error of the function, or a permanent error, see
-// broker.Permanent, if the payload can not be decoded.
-func GetIPInfo(payload []byte, ipStack config.IPStackConfiguration, saveIPAddressDetailsFunc func(ctx context.Context, IPAddress, tokenID string, getIPAddressDetailsFunc func(IPAddress string) *IPAddressDetails) error) error {
+// Nothing happens if the function is nil. It returns the error of the function, which includes the temporary
+// failures of the API, or a permanent error, see broker.Permanent, if the payload can not be decoded.
+func GetIPInfo(payload []byte, ipStack config.IPStackConfiguration, saveIPAddressDetailsFunc func(ctx context.Context, IPAddress, tokenID string, getIPAddressDetailsFunc DetailsFunc) error) error {
 	if saveIPAddressDetailsFunc == nil {
 		return nil
 	}
@@ -49,29 +53,29 @@ func GetIPInfo(payload []byte, ipStack config.IPStackConfiguration, saveIPAddres
 		return broker.Permanent(err)
 	}
 
-	return saveIPAddressDetailsFunc(context.Background(), p.IPAddress, p.TokenID, func(IPAddress string) *IPAddressDetails {
+	return saveIPAddressDetailsFunc(context.Background(), p.IPAddress, p.TokenID, func(IPAddress string) (*IPAddressDetails, error) {
 		return GetIPAddressDetails(ipStack, IPAddress)
 	})
 }
 
 // GetIPAddressDetails returns the location of an IP address from the ipstack API of the configuration.
-// It logs the error, and returns nil, if the API fails or does not know the location.
-func GetIPAddressDetails(ipStack config.IPStackConfiguration, IPAddress string) *IPAddressDetails {
+// A failure which can be temporary (the API is unreachable, answers too many requests or a server error, or its
+// response can not be read) is returned as an error, without the key of the API. A response which would not change
+// by asking again (unknown location, client error, invalid content) is logged and gives nil details and no error.
+func GetIPAddressDetails(ipStack config.IPStackConfiguration, IPAddress string) (*IPAddressDetails, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
 	defer cancel()
 
 	endpoint := fmt.Sprintf("%s/%s?access_key=%s", ipStack.Host, url.PathEscape(IPAddress), url.QueryEscape(ipStack.Key))
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
-		logError(IPAddress, err)
-		return nil
+		return nil, withoutURL(err)
 	}
 	request.Header.Set("Content-Type", "application/json")
 
 	response, err := http.DefaultClient.Do(request)
 	if err != nil {
-		logError(IPAddress, err)
-		return nil
+		return nil, withoutURL(err)
 	}
 
 	defer func() {
@@ -80,41 +84,47 @@ func GetIPAddressDetails(ipStack config.IPStackConfiguration, IPAddress string) 
 		}
 	}()
 
+	if response.StatusCode == http.StatusTooManyRequests || response.StatusCode >= http.StatusInternalServerError {
+		return nil, fmt.Errorf("unexpected status %d from the API", response.StatusCode)
+	}
 	if response.StatusCode != http.StatusOK {
 		logError(IPAddress, fmt.Errorf("unexpected status %d from the API", response.StatusCode))
-		return nil
+		return nil, nil
 	}
 
 	content, err := io.ReadAll(io.LimitReader(response.Body, maxResponseSize))
 	if err != nil {
-		logError(IPAddress, err)
-		return nil
+		return nil, withoutURL(err)
 	}
 
 	details := IPAddressDetails{}
 	if err := json.Unmarshal(content, &details); err != nil {
 		logError(IPAddress, err)
-		return nil
+		return nil, nil
 	}
 
 	if len(details.Region) == 0 && len(details.CountryName) == 0 && len(details.CountryCode) == 0 {
 		logError(IPAddress, errors.New("get no location from the API"))
-		return nil
+		return nil, nil
 	}
 
-	return &details
+	return &details, nil
 }
 
-// logError logs that the location of an IP address can not be retrieved.
-// The URL of a failed request is removed from the error: it contains the key of the API.
-func logError(IPAddress string, err error) {
+// withoutURL removes the URL of a failed request from the error: it contains the key of the API.
+func withoutURL(err error) error {
 	var urlErr *url.Error
 	if errors.As(err, &urlErr) {
-		err = urlErr.Err
+		return urlErr.Err
 	}
 
+	return err
+}
+
+// logError logs that the location of an IP address can not be retrieved, and will not be by trying again.
+func logError(IPAddress string, err error) {
 	log.WithFields(logrus.Fields{
 		"IP":    IPAddress,
-		"error": err.Error(),
+		"error": withoutURL(err).Error(),
 	}).Error("unable to get or save the location of the IP address")
 }

@@ -77,7 +77,7 @@ type Handlers struct {
 	GetNotificationTargetsByUserAndType notifications.GetNotificationTargetsByUserAndTypeFunc
 
 	// SaveIPAddressDetails saves the location of an IP address, returned by getIPAddressDetailsFunc, for an auth token.
-	SaveIPAddressDetails func(ctx context.Context, IPAddress, tokenID string, getIPAddressDetailsFunc func(IPAddress string) *location.IPAddressDetails) error
+	SaveIPAddressDetails func(ctx context.Context, IPAddress, tokenID string, getIPAddressDetailsFunc location.DetailsFunc) error
 
 	// StartUpTasks runs once when the worker starts, if the configuration asks for it.
 	StartUpTasks func(ctx context.Context, environment, version string)

@@ -27,9 +27,9 @@ func TestGetIPInfo(t *testing.T) {
 	t.Run("saves the location", func(t *testing.T) {
 		var gotIP, gotToken string
 		var gotCtx context.Context
-		var gotFunc func(string) *IPAddressDetails
+		var gotFunc DetailsFunc
 
-		err := GetIPInfo([]byte(`{"ip":"1.2.3.4","token_id":"tid"}`), config.IPStackConfiguration{}, func(ctx context.Context, IPAddress, tokenID string, get func(string) *IPAddressDetails) error {
+		err := GetIPInfo([]byte(`{"ip":"1.2.3.4","token_id":"tid"}`), config.IPStackConfiguration{}, func(ctx context.Context, IPAddress, tokenID string, get DetailsFunc) error {
 			gotCtx, gotIP, gotToken, gotFunc = ctx, IPAddress, tokenID, get
 
 			return nil
@@ -45,7 +45,7 @@ func TestGetIPInfo(t *testing.T) {
 
 	t.Run("the error of the function", func(t *testing.T) {
 		boom := errors.New("boom")
-		err := GetIPInfo([]byte(`{"ip":"1.2.3.4"}`), config.IPStackConfiguration{}, func(context.Context, string, string, func(string) *IPAddressDetails) error {
+		err := GetIPInfo([]byte(`{"ip":"1.2.3.4"}`), config.IPStackConfiguration{}, func(context.Context, string, string, DetailsFunc) error {
 			return boom
 		})
 		if !errors.Is(err, boom) || broker.IsPermanent(err) {
@@ -54,7 +54,7 @@ func TestGetIPInfo(t *testing.T) {
 	})
 
 	t.Run("invalid payload", func(t *testing.T) {
-		err := GetIPInfo([]byte("{"), config.IPStackConfiguration{}, func(context.Context, string, string, func(string) *IPAddressDetails) error {
+		err := GetIPInfo([]byte("{"), config.IPStackConfiguration{}, func(context.Context, string, string, DetailsFunc) error {
 			t.Error("the function must not be called")
 
 			return nil
@@ -79,7 +79,10 @@ func TestGetIPAddressDetails(t *testing.T) {
 			_, _ = w.Write([]byte(`{"region_name":"Occitanie","city":"Toulouse","country_code":"FR","country_name":"France"}`))
 		})
 
-		details := GetIPAddressDetails(ipStack, "1.2.3.4")
+		details, err := GetIPAddressDetails(ipStack, "1.2.3.4")
+		if err != nil {
+			t.Fatalf("error = %v", err)
+		}
 
 		want := IPAddressDetails{Region: "Occitanie", City: "Toulouse", CountryCode: "FR", CountryName: "France"}
 		if details == nil || *details != want {
@@ -95,9 +98,34 @@ func TestGetIPAddressDetails(t *testing.T) {
 		handler http.HandlerFunc
 		wantLog string
 	}{
-		{"unexpected status", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusBadGateway) }, "unexpected status 502"},
+		{"client error", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusForbidden) }, "unexpected status 403"},
 		{"invalid JSON", func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte("{")) }, "unexpected end of JSON input"},
 		{"no location", func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte(`{"city":"Toulouse"}`)) }, "get no location from the API"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			workertest.Hook.Reset()
+			ipStack := useAPI(t, tt.handler)
+
+			if details, err := GetIPAddressDetails(ipStack, "1.2.3.4"); details != nil || err != nil {
+				t.Errorf("details = %+v, error = %v, want neither: asking again would not help", details, err)
+			}
+
+			entry := workertest.Hook.LastEntry()
+			if entry == nil || !strings.Contains(entry.Data["error"].(string), tt.wantLog) || entry.Data["IP"] != "1.2.3.4" {
+				t.Errorf("log = %+v, want %q", entry, tt.wantLog)
+			}
+		})
+	}
+
+	temporary := []struct {
+		name    string
+		handler http.HandlerFunc
+		wantErr string
+	}{
+		{"server error", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusBadGateway) }, "unexpected status 502"},
+		{"too many requests", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusTooManyRequests) }, "unexpected status 429"},
 		{
 			"truncated body",
 			func(w http.ResponseWriter, _ *http.Request) {
@@ -108,49 +136,34 @@ func TestGetIPAddressDetails(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			workertest.Hook.Reset()
+	for _, tt := range temporary {
+		t.Run(tt.name+" is an error to retry", func(t *testing.T) {
 			ipStack := useAPI(t, tt.handler)
 
-			if details := GetIPAddressDetails(ipStack, "1.2.3.4"); details != nil {
-				t.Errorf("details = %+v, want nil", details)
-			}
-
-			entry := workertest.Hook.LastEntry()
-			if entry == nil || !strings.Contains(entry.Data["error"].(string), tt.wantLog) || entry.Data["IP"] != "1.2.3.4" {
-				t.Errorf("log = %+v, want %q", entry, tt.wantLog)
+			details, err := GetIPAddressDetails(ipStack, "1.2.3.4")
+			if details != nil || err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+				t.Errorf("details = %+v, error = %v, want %q", details, err, tt.wantErr)
 			}
 		})
 	}
 
-	t.Run("API unreachable, the key is not logged", func(t *testing.T) {
-		workertest.Hook.Reset()
+	t.Run("API unreachable, the key is not in the error", func(t *testing.T) {
 		ipStack := useAPI(t, func(http.ResponseWriter, *http.Request) {})
 		ipStack.Host = "http://127.0.0.1:1"
 
-		if details := GetIPAddressDetails(ipStack, "1.2.3.4"); details != nil {
-			t.Errorf("details = %+v, want nil", details)
-		}
-
-		entry := workertest.Hook.LastEntry()
-		if entry == nil || strings.Contains(entry.Data["error"].(string), "secret") {
-			t.Errorf("log = %+v", entry)
+		details, err := GetIPAddressDetails(ipStack, "1.2.3.4")
+		if details != nil || err == nil || strings.Contains(err.Error(), "secret") {
+			t.Errorf("details = %+v, error = %v", details, err)
 		}
 	})
 
-	t.Run("invalid URL, the key is not logged", func(t *testing.T) {
-		workertest.Hook.Reset()
+	t.Run("invalid URL, the key is not in the error", func(t *testing.T) {
 		ipStack := useAPI(t, func(http.ResponseWriter, *http.Request) {})
 		ipStack.Host = "http://[::1"
 
-		if details := GetIPAddressDetails(ipStack, "1.2.3.4"); details != nil {
-			t.Errorf("details = %+v, want nil", details)
-		}
-
-		entry := workertest.Hook.LastEntry()
-		if entry == nil || strings.Contains(entry.Data["error"].(string), "secret") {
-			t.Errorf("log = %+v", entry)
+		details, err := GetIPAddressDetails(ipStack, "1.2.3.4")
+		if details != nil || err == nil || strings.Contains(err.Error(), "secret") {
+			t.Errorf("details = %+v, error = %v", details, err)
 		}
 	})
 }

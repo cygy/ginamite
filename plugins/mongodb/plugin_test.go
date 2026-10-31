@@ -263,7 +263,7 @@ func TestPlugin_Configure_WorkerHooks(t *testing.T) {
 	p := NewPlugin()
 	p.session = &session.Session{Store: db}
 	p.SanitizeAccounts = func(store.Database) uint { sanitized = true; return 5 }
-	p.UpdateDocumentsReferencingToDeletedUser = func(context.Context, string, store.Database) { deleted = true }
+	p.UpdateDocumentsReferencingToDeletedUser = func(context.Context, string, store.Database) error { deleted = true; return nil }
 	p.IsUserEmpty = func(context.Context, string, store.Database) bool { empty = true; return false }
 
 	server := ginamite.NewServer()

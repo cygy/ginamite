@@ -72,7 +72,7 @@ func TestServer_warnUndefinedFunctions(t *testing.T) {
 	h.EnableUserByID = func(context.Context, string) error { return nil }
 	h.UpdateUserSocialNetworksByID = h.EnableUserByID
 	h.GetNotificationTargetsByUserAndType = func(context.Context, string, string) ([]notifications.Target, error) { return nil, nil }
-	h.SaveIPAddressDetails = func(context.Context, string, string, func(string) *location.IPAddressDetails) error { return nil }
+	h.SaveIPAddressDetails = func(context.Context, string, string, location.DetailsFunc) error { return nil }
 	h.SetFuncOfRecurringTasks = func(func(string, func(string))) {}
 	h.StartUpTasks = func(context.Context, string, string) {}
 	h.HandleTask = func(context.Context, string, []byte) (bool, error) { return true, nil }

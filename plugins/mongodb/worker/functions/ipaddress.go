@@ -10,9 +10,9 @@ import (
 
 // SaveIPAddressDetails saves the location of the IP address of an auth token, and updates the location of the token.
 // The location is read from the database if it is known, and from getIPAddressDetailsFunc otherwise. Nothing is
-// done if the token does not exist anymore or if the location is not found. It returns the error of the database, if
-// any: it can be called again.
-func (f *Functions) SaveIPAddressDetails(ctx context.Context, IPAddress, tokenID string, getIPAddressDetailsFunc func(IPAddress string) *location.IPAddressDetails) error {
+// done if the token does not exist anymore or if the location is unknown. It returns the error of the database or of
+// the API, if any: it can be called again.
+func (f *Functions) SaveIPAddressDetails(ctx context.Context, IPAddress, tokenID string, getIPAddressDetailsFunc location.DetailsFunc) error {
 	db := f.database()
 
 	// Verify that the token is still existing.
@@ -31,7 +31,10 @@ func (f *Functions) SaveIPAddressDetails(ctx context.Context, IPAddress, tokenID
 		return fmt.Errorf("unable to get the location of the IP address: %w", err)
 	}
 	if !location.IsSaved() {
-		details := getIPAddressDetailsFunc(IPAddress)
+		details, err := getIPAddressDetailsFunc(IPAddress)
+		if err != nil {
+			return fmt.Errorf("unable to get the location of the IP address: %w", err)
+		}
 		if details == nil {
 			return nil
 		}

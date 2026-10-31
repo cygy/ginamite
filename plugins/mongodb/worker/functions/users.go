@@ -20,6 +20,15 @@ func documentMissing(err error) bool {
 	return errors.Is(err, mongo.ErrNoDocuments) || errs.IsNotFound(err)
 }
 
+// wrapHook adds the context of the hooks to their error, and returns nil if there is none.
+func wrapHook(err error) error {
+	if err == nil {
+		return nil
+	}
+
+	return fmt.Errorf("unable to update the documents referencing the user: %w", err)
+}
+
 // SanitizeAccounts returns the maintenance function that runs sanitize, which updates or deletes the data left by
 // the deleted users, and returns the number of documents sanitized. It returns 0 if sanitize is nil.
 func (f *Functions) SanitizeAccounts(sanitize func(mongoSession store.Database) uint) func() uint {
@@ -36,12 +45,14 @@ func (f *Functions) SanitizeAccounts(sanitize func(mongoSession store.Database) 
 // user are updated by the given function, if any, then the user, its deletion record and its auth tokens are deleted.
 // The returned function gives the expiration date of each revoked auth token, by token ID, and the error of the
 // database, if any: it can be called again, a user already deleted is not an error.
-func (f *Functions) DeleteUserByID(updateDocumentsReferencingToDeletedUser func(ctx context.Context, userID string, mongoSession store.Database)) func(ctx context.Context, userID string) (map[string]time.Time, error) {
+func (f *Functions) DeleteUserByID(updateDocumentsReferencingToDeletedUser func(ctx context.Context, userID string, mongoSession store.Database) error) func(ctx context.Context, userID string) (map[string]time.Time, error) {
 	return func(ctx context.Context, userID string) (map[string]time.Time, error) {
 		db := f.database()
 
 		if updateDocumentsReferencingToDeletedUser != nil {
-			updateDocumentsReferencingToDeletedUser(ctx, userID, db)
+			if err := updateDocumentsReferencingToDeletedUser(ctx, userID, db); err != nil {
+				return nil, wrapHook(err)
+			}
 		}
 
 		if err := model.DeleteDeletedUserByUserID(ctx, userID, db); err != nil {
@@ -59,12 +70,14 @@ func (f *Functions) DeleteUserByID(updateDocumentsReferencingToDeletedUser func(
 // user are updated by the given function, if any, then the user and its auth tokens are deleted. The disabled user is
 // saved by the API. The returned function gives the expiration date of each revoked auth token, by token ID, and the
 // error of the database, if any: it can be called again, a user already deleted is not an error.
-func (f *Functions) DisableUserByID(updateDocumentsReferencingToDisabledUser func(ctx context.Context, userID string, mongoSession store.Database)) func(ctx context.Context, userID string) (map[string]time.Time, error) {
+func (f *Functions) DisableUserByID(updateDocumentsReferencingToDisabledUser func(ctx context.Context, userID string, mongoSession store.Database) error) func(ctx context.Context, userID string) (map[string]time.Time, error) {
 	return func(ctx context.Context, userID string) (map[string]time.Time, error) {
 		db := f.database()
 
 		if updateDocumentsReferencingToDisabledUser != nil {
-			updateDocumentsReferencingToDisabledUser(ctx, userID, db)
+			if err := updateDocumentsReferencingToDisabledUser(ctx, userID, db); err != nil {
+				return nil, wrapHook(err)
+			}
 		}
 
 		if err := model.DeleteUserByUserID(ctx, userID, db); err != nil && !documentMissing(err) {
@@ -78,12 +91,14 @@ func (f *Functions) DisableUserByID(updateDocumentsReferencingToDisabledUser fun
 // EnableUserByID returns the function that enables a user and all its bound documents: the documents referencing the
 // user are updated by the given function, if any, then the disabled user is deleted. The enabled user is saved by the
 // API. The returned function gives the error of the database, if any.
-func (f *Functions) EnableUserByID(updateDocumentsReferencingToEnabledUser func(ctx context.Context, userID string, mongoSession store.Database)) func(ctx context.Context, userID string) error {
+func (f *Functions) EnableUserByID(updateDocumentsReferencingToEnabledUser func(ctx context.Context, userID string, mongoSession store.Database) error) func(ctx context.Context, userID string) error {
 	return func(ctx context.Context, userID string) error {
 		db := f.database()
 
 		if updateDocumentsReferencingToEnabledUser != nil {
-			updateDocumentsReferencingToEnabledUser(ctx, userID, db)
+			if err := updateDocumentsReferencingToEnabledUser(ctx, userID, db); err != nil {
+				return wrapHook(err)
+			}
 		}
 
 		if err := model.DeleteDisabledUserByUserID(ctx, userID, db); err != nil {
@@ -96,15 +111,13 @@ func (f *Functions) EnableUserByID(updateDocumentsReferencingToEnabledUser func(
 
 // UpdateUserSocialNetworksByID returns the function that runs the given update of the documents referencing the
 // social networks of a user. It does nothing if the update is nil.
-func (f *Functions) UpdateUserSocialNetworksByID(updateDocumentsReferencingToUpdatedUserSocialNetworks func(ctx context.Context, userID string, mongoSession store.Database)) func(ctx context.Context, userID string) error {
+func (f *Functions) UpdateUserSocialNetworksByID(updateDocumentsReferencingToUpdatedUserSocialNetworks func(ctx context.Context, userID string, mongoSession store.Database) error) func(ctx context.Context, userID string) error {
 	return func(ctx context.Context, userID string) error {
 		if updateDocumentsReferencingToUpdatedUserSocialNetworks == nil {
 			return nil
 		}
 
-		updateDocumentsReferencingToUpdatedUserSocialNetworks(ctx, userID, f.database())
-
-		return nil
+		return wrapHook(updateDocumentsReferencingToUpdatedUserSocialNetworks(ctx, userID, f.database()))
 	}
 }
 

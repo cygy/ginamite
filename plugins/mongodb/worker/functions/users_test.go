@@ -56,11 +56,13 @@ func TestDeleteUserByID(t *testing.T) {
 	ids := userTokens(db, expires, expires.Add(time.Hour))
 
 	var updated string
-	revoked, err := fns.DeleteUserByID(func(_ context.Context, id string, got store.Database) {
+	revoked, err := fns.DeleteUserByID(func(_ context.Context, id string, got store.Database) error {
 		updated = id
 		if got != store.Database(db) {
 			t.Errorf("database = %v", got)
 		}
+
+		return nil
 	})(ctx, userID.Hex())
 	if err != nil {
 		t.Fatalf("error = %v", err)
@@ -150,7 +152,7 @@ func TestDisableUserByID(t *testing.T) {
 	ids := userTokens(db, expires)
 
 	var updated string
-	revoked, err := fns.DisableUserByID(func(_ context.Context, id string, _ store.Database) { updated = id })(ctx, userID.Hex())
+	revoked, err := fns.DisableUserByID(func(_ context.Context, id string, _ store.Database) error { updated = id; return nil })(ctx, userID.Hex())
 
 	if err != nil || updated != userID.Hex() || len(revoked) != 1 || !revoked[ids[0].Hex()].Equal(expires) {
 		t.Errorf("updated = %q, revoked = %v, error = %v", updated, revoked, err)
@@ -182,7 +184,7 @@ func TestEnableUserByID(t *testing.T) {
 
 	fns, db := withMainSession(t)
 	var updated string
-	if err := fns.EnableUserByID(func(_ context.Context, id string, _ store.Database) { updated = id })(ctx, userID.Hex()); err != nil {
+	if err := fns.EnableUserByID(func(_ context.Context, id string, _ store.Database) error { updated = id; return nil })(ctx, userID.Hex()); err != nil {
 		t.Errorf("error = %v", err)
 	}
 
@@ -204,7 +206,7 @@ func TestUpdateUserSocialNetworksByID(t *testing.T) {
 	fns, _ := withMainSession(t)
 
 	var updated string
-	if err := fns.UpdateUserSocialNetworksByID(func(_ context.Context, id string, _ store.Database) { updated = id })(context.Background(), "user-1"); err != nil {
+	if err := fns.UpdateUserSocialNetworksByID(func(_ context.Context, id string, _ store.Database) error { updated = id; return nil })(context.Background(), "user-1"); err != nil {
 		t.Errorf("error = %v", err)
 	}
 	if updated != "user-1" {
@@ -319,5 +321,25 @@ func TestIsEmptyUser(t *testing.T) {
 
 	if !fns.IsEmptyUser(nil)(context.Background(), "anyone") {
 		t.Error("every user is empty without function")
+	}
+}
+
+func TestUsers_HookErrors(t *testing.T) {
+	fns, _ := withMainSession(t)
+	ctx := context.Background()
+	userID := bson.NewObjectID().Hex()
+	failing := func(context.Context, string, store.Database) error { return errBoom }
+
+	if revoked, err := fns.DeleteUserByID(failing)(ctx, userID); !errors.Is(err, errBoom) || revoked != nil {
+		t.Errorf("DeleteUserByID() = %v, %v", revoked, err)
+	}
+	if revoked, err := fns.DisableUserByID(failing)(ctx, userID); !errors.Is(err, errBoom) || revoked != nil {
+		t.Errorf("DisableUserByID() = %v, %v", revoked, err)
+	}
+	if err := fns.EnableUserByID(failing)(ctx, userID); !errors.Is(err, errBoom) {
+		t.Errorf("EnableUserByID() = %v", err)
+	}
+	if err := fns.UpdateUserSocialNetworksByID(failing)(ctx, userID); !errors.Is(err, errBoom) {
+		t.Errorf("UpdateUserSocialNetworksByID() = %v", err)
 	}
 }

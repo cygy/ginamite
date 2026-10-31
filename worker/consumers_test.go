@@ -149,7 +149,7 @@ func TestServer_handleTask(t *testing.T) {
 	}
 
 	s := &Server{Config: config.NewConfiguration(), Functions: Handlers{
-		SaveIPAddressDetails: func(_ context.Context, IPAddress, tokenID string, _ func(string) *location.IPAddressDetails) error {
+		SaveIPAddressDetails: func(_ context.Context, IPAddress, tokenID string, _ location.DetailsFunc) error {
 			calls = append(calls, "ip:"+IPAddress+":"+tokenID)
 			return nil
 		},
@@ -234,7 +234,7 @@ func TestServer_handleTask_Errors(t *testing.T) {
 		payload     any
 		functions   Handlers
 	}{
-		{"IP location", queue.MessageTaskIPLocation, queue.TaskIPLocation{IPAddress: "1.2.3.4"}, Handlers{SaveIPAddressDetails: func(context.Context, string, string, func(string) *location.IPAddressDetails) error { return boom }}},
+		{"IP location", queue.MessageTaskIPLocation, queue.TaskIPLocation{IPAddress: "1.2.3.4"}, Handlers{SaveIPAddressDetails: func(context.Context, string, string, location.DetailsFunc) error { return boom }}},
 		{"delete user", queue.MessageTaskDeleteUser, queue.TaskDeleteUser{UserID: "u"}, Handlers{DeleteUserByID: func(context.Context, string) (map[string]time.Time, error) { return nil, boom }}},
 		{"disable user", queue.MessageTaskDisableUser, queue.TaskDisableUser{UserID: "u"}, Handlers{DisableUserByID: func(context.Context, string) (map[string]time.Time, error) { return nil, boom }}},
 		{"enable user", queue.MessageTaskEnableUser, queue.TaskEnableUser{UserID: "u"}, Handlers{EnableUserByID: fail}},
