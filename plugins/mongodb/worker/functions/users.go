@@ -2,13 +2,23 @@ package functions
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"time"
 
+	errs "github.com/cygy/ginamite/common/errors"
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/mongo/store"
 	"github.com/cygy/ginamite/common/notifications"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
+
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
+
+// documentMissing reports whether err says a document does not exist.
+func documentMissing(err error) bool {
+	return errors.Is(err, mongo.ErrNoDocuments) || errs.IsNotFound(err)
+}
 
 // SanitizeAccounts returns the maintenance function that runs sanitize, which updates or deletes the data left by
 // the deleted users, and returns the number of documents sanitized. It returns 0 if sanitize is nil.
@@ -24,9 +34,10 @@ func (f *Functions) SanitizeAccounts(sanitize func(mongoSession store.Database) 
 
 // DeleteUserByID returns the function that deletes a user and all its bound documents: the documents referencing the
 // user are updated by the given function, if any, then the user, its deletion record and its auth tokens are deleted.
-// The returned function gives the expiration date of each revoked auth token, by token ID.
-func (f *Functions) DeleteUserByID(updateDocumentsReferencingToDeletedUser func(ctx context.Context, userID string, mongoSession store.Database)) func(ctx context.Context, userID string) map[string]time.Time {
-	return func(ctx context.Context, userID string) map[string]time.Time {
+// The returned function gives the expiration date of each revoked auth token, by token ID, and the error of the
+// database, if any: it can be called again, a user already deleted is not an error.
+func (f *Functions) DeleteUserByID(updateDocumentsReferencingToDeletedUser func(ctx context.Context, userID string, mongoSession store.Database)) func(ctx context.Context, userID string) (map[string]time.Time, error) {
+	return func(ctx context.Context, userID string) (map[string]time.Time, error) {
 		db := f.database()
 
 		if updateDocumentsReferencingToDeletedUser != nil {
@@ -34,10 +45,10 @@ func (f *Functions) DeleteUserByID(updateDocumentsReferencingToDeletedUser func(
 		}
 
 		if err := model.DeleteDeletedUserByUserID(ctx, userID, db); err != nil {
-			log.WithField("error", err).Error("unable to delete the deleted user")
+			return nil, fmt.Errorf("unable to delete the deleted user: %w", err)
 		}
-		if err := model.DeleteUserByUserID(ctx, userID, db); err != nil {
-			log.WithField("error", err).Error("unable to delete the user")
+		if err := model.DeleteUserByUserID(ctx, userID, db); err != nil && !documentMissing(err) {
+			return nil, fmt.Errorf("unable to delete the user: %w", err)
 		}
 
 		return revokeAuthTokens(ctx, userID, db)
@@ -46,17 +57,18 @@ func (f *Functions) DeleteUserByID(updateDocumentsReferencingToDeletedUser func(
 
 // DisableUserByID returns the function that disables a user and all its bound documents: the documents referencing the
 // user are updated by the given function, if any, then the user and its auth tokens are deleted. The disabled user is
-// saved by the API. The returned function gives the expiration date of each revoked auth token, by token ID.
-func (f *Functions) DisableUserByID(updateDocumentsReferencingToDisabledUser func(ctx context.Context, userID string, mongoSession store.Database)) func(ctx context.Context, userID string) map[string]time.Time {
-	return func(ctx context.Context, userID string) map[string]time.Time {
+// saved by the API. The returned function gives the expiration date of each revoked auth token, by token ID, and the
+// error of the database, if any: it can be called again, a user already deleted is not an error.
+func (f *Functions) DisableUserByID(updateDocumentsReferencingToDisabledUser func(ctx context.Context, userID string, mongoSession store.Database)) func(ctx context.Context, userID string) (map[string]time.Time, error) {
+	return func(ctx context.Context, userID string) (map[string]time.Time, error) {
 		db := f.database()
 
 		if updateDocumentsReferencingToDisabledUser != nil {
 			updateDocumentsReferencingToDisabledUser(ctx, userID, db)
 		}
 
-		if err := model.DeleteUserByUserID(ctx, userID, db); err != nil {
-			log.WithField("error", err).Error("unable to delete the user")
+		if err := model.DeleteUserByUserID(ctx, userID, db); err != nil && !documentMissing(err) {
+			return nil, fmt.Errorf("unable to delete the user: %w", err)
 		}
 
 		return revokeAuthTokens(ctx, userID, db)
@@ -65,9 +77,9 @@ func (f *Functions) DisableUserByID(updateDocumentsReferencingToDisabledUser fun
 
 // EnableUserByID returns the function that enables a user and all its bound documents: the documents referencing the
 // user are updated by the given function, if any, then the disabled user is deleted. The enabled user is saved by the
-// API.
-func (f *Functions) EnableUserByID(updateDocumentsReferencingToEnabledUser func(ctx context.Context, userID string, mongoSession store.Database)) func(ctx context.Context, userID string) {
-	return func(ctx context.Context, userID string) {
+// API. The returned function gives the error of the database, if any.
+func (f *Functions) EnableUserByID(updateDocumentsReferencingToEnabledUser func(ctx context.Context, userID string, mongoSession store.Database)) func(ctx context.Context, userID string) error {
+	return func(ctx context.Context, userID string) error {
 		db := f.database()
 
 		if updateDocumentsReferencingToEnabledUser != nil {
@@ -75,20 +87,24 @@ func (f *Functions) EnableUserByID(updateDocumentsReferencingToEnabledUser func(
 		}
 
 		if err := model.DeleteDisabledUserByUserID(ctx, userID, db); err != nil {
-			log.WithField("error", err).Error("unable to delete the disabled user")
+			return fmt.Errorf("unable to delete the disabled user: %w", err)
 		}
+
+		return nil
 	}
 }
 
 // UpdateUserSocialNetworksByID returns the function that runs the given update of the documents referencing the
 // social networks of a user. It does nothing if the update is nil.
-func (f *Functions) UpdateUserSocialNetworksByID(updateDocumentsReferencingToUpdatedUserSocialNetworks func(ctx context.Context, userID string, mongoSession store.Database)) func(ctx context.Context, userID string) {
-	return func(ctx context.Context, userID string) {
+func (f *Functions) UpdateUserSocialNetworksByID(updateDocumentsReferencingToUpdatedUserSocialNetworks func(ctx context.Context, userID string, mongoSession store.Database)) func(ctx context.Context, userID string) error {
+	return func(ctx context.Context, userID string) error {
 		if updateDocumentsReferencingToUpdatedUserSocialNetworks == nil {
-			return
+			return nil
 		}
 
 		updateDocumentsReferencingToUpdatedUserSocialNetworks(ctx, userID, f.database())
+
+		return nil
 	}
 }
 
@@ -166,19 +182,22 @@ func (f *Functions) IsEmptyUser(isEmptyUser func(ctx context.Context, userID str
 	}
 }
 
-// revokeAuthTokens deletes the auth tokens of the user and returns the expiration date of each, by token ID.
-func revokeAuthTokens(ctx context.Context, userID string, db store.Database) map[string]time.Time {
+// revokeAuthTokens deletes the auth tokens of the user and returns the expiration date of each, by token ID. The
+// tokens are not deleted if they can not be listed, since their revocation could not be told to the other servers.
+func revokeAuthTokens(ctx context.Context, userID string, db store.Database) (map[string]time.Time, error) {
 	authTokens, err := model.GetAuthTokens(ctx, userID, db)
+	if err != nil {
+		return nil, fmt.Errorf("unable to get the auth tokens of the user: %w", err)
+	}
+
 	revokedAuthTokens := make(map[string]time.Time, len(authTokens))
-	if err == nil {
-		for _, authToken := range authTokens {
-			revokedAuthTokens[authToken.ID.Hex()] = authToken.ExpiresAt
-		}
+	for _, authToken := range authTokens {
+		revokedAuthTokens[authToken.ID.Hex()] = authToken.ExpiresAt
 	}
 
 	if _, err := model.DeleteAuthTokensByUser(ctx, userID, db); err != nil {
-		log.WithField("error", err).Error("unable to delete the auth tokens of the user")
+		return nil, fmt.Errorf("unable to delete the auth tokens of the user: %w", err)
 	}
 
-	return revokedAuthTokens
+	return revokedAuthTokens, nil
 }

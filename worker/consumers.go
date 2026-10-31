@@ -20,8 +20,8 @@ import (
 var errUndecodable = kafka.Permanent(errors.New("undecodable message"))
 
 // CreateKafkaConsumers returns the consumers of the topics of the tasks, of the group notifications,
-// of the user notifications and of the mails. A message which can not be decoded, or whose email can not be sent, is
-// dead-lettered, after some attempts for the second case. A panic is handled like an error.
+// of the user notifications and of the mails. A message which can not be decoded is dead-lettered, and so is a message
+// whose handling failed, after some attempts. A panic is handled like an error.
 //
 // A worker consumes all the topics, unless the configuration lists the ones it consumes, with their consumer group:
 // the workers of the same group share the messages of the topic, so several workers can handle the same topic, and
@@ -62,24 +62,28 @@ func (s *Server) handleTask(value []byte) error {
 
 	switch msgType {
 	case queue.MessageTaskIPLocation:
-		location.GetIPInfo(payload, s.Config.IPStack, s.Functions.SaveIPAddressDetails)
+		return location.GetIPInfo(payload, s.Config.IPStack, s.Functions.SaveIPAddressDetails)
 	case queue.MessageTaskDeleteUser:
-		user.DeleteByID(payload, s.Queue, s.Functions.DeleteUserByID)
+		return user.DeleteByID(payload, s.Queue, s.Functions.DeleteUserByID)
 	case queue.MessageTaskDisableUser:
-		user.DisableByID(payload, s.Queue, s.Functions.DisableUserByID)
+		return user.DisableByID(payload, s.Queue, s.Functions.DisableUserByID)
 	case queue.MessageTaskEnableUser:
-		user.EnableByID(payload, s.Functions.EnableUserByID)
+		return user.EnableByID(payload, s.Functions.EnableUserByID)
 	case queue.MessageTaskUpdateUserSocialNetworks:
-		user.UpdateSocialNetworksByID(payload, s.Functions.UpdateUserSocialNetworksByID)
+		return user.UpdateSocialNetworksByID(payload, s.Functions.UpdateUserSocialNetworksByID)
 	case queue.MessageTaskRegistrationDone:
-		user.RegistrationDone(payload, s.Functions.RegistrationDone)
+		return user.RegistrationDone(payload, s.Functions.RegistrationDone)
 	case queue.MessageTaskRegistrationValidated:
-		user.RegistrationValidated(payload, s.Functions.RegistrationValidated)
-	default:
-		if s.Functions.HandleTask == nil || !s.Functions.HandleTask(context.Background(), msgType, payload) {
-			warnUnknownMessage(queue.TopicTasks, msgType)
+		return user.RegistrationValidated(payload, s.Functions.RegistrationValidated)
+	}
+
+	if s.Functions.HandleTask != nil {
+		handled, err := s.Functions.HandleTask(context.Background(), msgType, payload)
+		if handled {
+			return err
 		}
 	}
+	warnUnknownMessage(queue.TopicTasks, msgType)
 
 	return nil
 }
@@ -96,9 +100,13 @@ func (s *Server) handleGroupNotification(value []byte) error {
 		return errUndecodable
 	}
 
-	if s.Functions.HandleNotificationForUsersWithAbility == nil || !s.Functions.HandleNotificationForUsersWithAbility(context.Background(), ability, msgType, payload) {
-		warnUnknownMessage(queue.TopicGroupNotification, msgType)
+	if s.Functions.HandleNotificationForUsersWithAbility != nil {
+		handled, err := s.Functions.HandleNotificationForUsersWithAbility(context.Background(), ability, msgType, payload)
+		if handled {
+			return err
+		}
 	}
+	warnUnknownMessage(queue.TopicGroupNotification, msgType)
 
 	return nil
 }
@@ -110,14 +118,17 @@ func (s *Server) handleUserNotification(value []byte) error {
 		return errUndecodable
 	}
 
-	switch msgType {
-	case notifications.TypeNewLogin:
-		notification.NewLogin(context.Background(), s.Queue, payload, s.Functions.GetNotificationTargetsByUserAndType)
-	default:
-		if s.Functions.HandleUserNotification == nil || !s.Functions.HandleUserNotification(context.Background(), msgType, payload, s.Functions.GetNotificationTargetsByUserAndType) {
-			warnUnknownMessage(queue.TopicUserNotification, msgType)
+	if msgType == notifications.TypeNewLogin {
+		return notification.NewLogin(context.Background(), s.Queue, payload, s.Functions.GetNotificationTargetsByUserAndType)
+	}
+
+	if s.Functions.HandleUserNotification != nil {
+		handled, err := s.Functions.HandleUserNotification(context.Background(), msgType, payload, s.Functions.GetNotificationTargetsByUserAndType)
+		if handled {
+			return err
 		}
 	}
+	warnUnknownMessage(queue.TopicUserNotification, msgType)
 
 	return nil
 }
@@ -133,9 +144,13 @@ func (s *Server) handleMail(value []byte) error {
 		return err
 	}
 
-	if s.Functions.HandleMail == nil || !s.Functions.HandleMail(context.Background(), msgType, payload, s.Functions.IsEmailAddressValid) {
-		warnUnknownMessage(queue.TopicMail, msgType)
+	if s.Functions.HandleMail != nil {
+		handled, err := s.Functions.HandleMail(context.Background(), msgType, payload, s.Functions.IsEmailAddressValid)
+		if handled {
+			return err
+		}
 	}
+	warnUnknownMessage(queue.TopicMail, msgType)
 
 	return nil
 }

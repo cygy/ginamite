@@ -2,12 +2,14 @@ package location
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
 	"github.com/cygy/ginamite/common/config"
+	"github.com/cygy/ginamite/common/kafka"
 	"github.com/cygy/ginamite/worker/internal/workertest"
 )
 
@@ -27,23 +29,45 @@ func TestGetIPInfo(t *testing.T) {
 		var gotCtx context.Context
 		var gotFunc func(string) *IPAddressDetails
 
-		GetIPInfo([]byte(`{"ip":"1.2.3.4","token_id":"tid"}`), config.IPStackConfiguration{}, func(ctx context.Context, IPAddress, tokenID string, get func(string) *IPAddressDetails) {
+		err := GetIPInfo([]byte(`{"ip":"1.2.3.4","token_id":"tid"}`), config.IPStackConfiguration{}, func(ctx context.Context, IPAddress, tokenID string, get func(string) *IPAddressDetails) error {
 			gotCtx, gotIP, gotToken, gotFunc = ctx, IPAddress, tokenID, get
+
+			return nil
 		})
+		if err != nil {
+			t.Errorf("GetIPInfo() error = %v", err)
+		}
 
 		if gotCtx == nil || gotIP != "1.2.3.4" || gotToken != "tid" || gotFunc == nil {
 			t.Errorf("got %v, %q, %q, func defined: %v", gotCtx, gotIP, gotToken, gotFunc != nil)
 		}
 	})
 
-	t.Run("invalid payload", func(t *testing.T) {
-		GetIPInfo([]byte("{"), config.IPStackConfiguration{}, func(context.Context, string, string, func(string) *IPAddressDetails) {
-			t.Error("the function must not be called")
+	t.Run("the error of the function", func(t *testing.T) {
+		boom := errors.New("boom")
+		err := GetIPInfo([]byte(`{"ip":"1.2.3.4"}`), config.IPStackConfiguration{}, func(context.Context, string, string, func(string) *IPAddressDetails) error {
+			return boom
 		})
+		if !errors.Is(err, boom) || kafka.IsPermanent(err) {
+			t.Errorf("GetIPInfo() error = %v, want the error of the function, which a retry can fix", err)
+		}
+	})
+
+	t.Run("invalid payload", func(t *testing.T) {
+		err := GetIPInfo([]byte("{"), config.IPStackConfiguration{}, func(context.Context, string, string, func(string) *IPAddressDetails) error {
+			t.Error("the function must not be called")
+
+			return nil
+		})
+		if !kafka.IsPermanent(err) {
+			t.Errorf("GetIPInfo() error = %v, want a permanent error", err)
+		}
 	})
 
 	t.Run("undefined function", func(t *testing.T) {
-		GetIPInfo([]byte(`{"ip":"1.2.3.4"}`), config.IPStackConfiguration{}, nil)
+		if err := GetIPInfo([]byte(`{"ip":"1.2.3.4"}`), config.IPStackConfiguration{}, nil); err != nil {
+			t.Errorf("GetIPInfo() error = %v", err)
+		}
 	})
 }
 

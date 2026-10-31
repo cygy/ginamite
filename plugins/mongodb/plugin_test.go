@@ -262,7 +262,10 @@ func TestPlugin_Configure_WorkerHooks(t *testing.T) {
 	if got := server.Worker.Functions.SanitizeAccounts(); got != 5 || !sanitized {
 		t.Errorf("SanitizeAccounts() = %d", got)
 	}
-	server.Worker.Functions.DeleteUserByID(context.Background(), "user-1")
+	// The ID is not an ObjectID: the deletion fails, after the hook ran.
+	if _, err := server.Worker.Functions.DeleteUserByID(context.Background(), "user-1"); err == nil {
+		t.Error("an invalid user ID must fail")
+	}
 	if !deleted {
 		t.Error("the hook that updates the documents of a deleted user is not called")
 	}

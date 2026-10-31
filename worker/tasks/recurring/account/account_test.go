@@ -2,6 +2,7 @@ package account
 
 import (
 	"context"
+	"errors"
 	"slices"
 	"testing"
 	"time"
@@ -12,15 +13,19 @@ import (
 
 var revoked = map[string]time.Time{"token": time.Unix(1700000000, 0)}
 
-// deleter returns a function deleting a user, which records the users and revokes tokens.
-func deleter(deleted *[]string) func(context.Context, string) map[string]time.Time {
-	return func(_ context.Context, userID string) map[string]time.Time {
+// deleter returns a function deleting a user, which records the users and revokes tokens. The user "bad" can not be
+// deleted.
+func deleter(deleted *[]string) func(context.Context, string) (map[string]time.Time, error) {
+	return func(_ context.Context, userID string) (map[string]time.Time, error) {
 		*deleted = append(*deleted, userID)
+		if userID == "bad" {
+			return nil, errors.New("boom")
+		}
 		if userID == "u1" {
-			return revoked
+			return revoked, nil
 		}
 
-		return nil
+		return nil, nil
 	}
 }
 
@@ -97,6 +102,51 @@ func TestDeleteNeverUsed(t *testing.T) {
 	}
 	checkDeletion(t, q, "u1", "u3")
 	checkCount(t, 2)
+}
+
+func TestDeleteNeverUsed_Failure(t *testing.T) {
+	q := workertest.CaptureQueue(t)
+	workertest.Hook.Reset()
+
+	var deleted []string
+	DeleteNeverUsed(context.Background(), q.Sender, "task", 10,
+		func(context.Context, uint) []string { return []string{"bad", "u1"} },
+		func(context.Context, string) bool { return true },
+		deleter(&deleted),
+	)
+
+	// The failure is logged, nothing is sent for the user, and the other users are deleted.
+	checkDeletion(t, q, "u1")
+	checkCount(t, 1)
+	checkDeleteError(t, "bad")
+}
+
+// checkDeleteError checks that the failure to delete the user is logged.
+func checkDeleteError(t *testing.T, userID string) {
+	t.Helper()
+
+	for _, entry := range workertest.Hook.AllEntries() {
+		if entry.Message == "unable to delete the user" && entry.Data["user"] == userID && entry.Data["error"] == "boom" {
+			return
+		}
+	}
+
+	t.Errorf("the failure to delete %q is not logged", userID)
+}
+
+func TestDeleteInactive_Failure(t *testing.T) {
+	q := workertest.CaptureQueue(t)
+	workertest.Hook.Reset()
+
+	var deleted []string
+	DeleteInactive(context.Background(), q.Sender, "task", 48,
+		func(context.Context, uint) []string { return []string{"bad", "u1"} },
+		deleter(&deleted),
+	)
+
+	checkDeletion(t, q, "u1")
+	checkCount(t, 1)
+	checkDeleteError(t, "bad")
 }
 
 func TestDeleteInactive(t *testing.T) {

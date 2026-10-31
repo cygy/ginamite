@@ -2,9 +2,11 @@ package user
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
+	"github.com/cygy/ginamite/common/kafka"
 	"github.com/cygy/ginamite/common/queue"
 	"github.com/cygy/ginamite/worker/internal/workertest"
 )
@@ -46,20 +48,39 @@ func TestDeleteByID(t *testing.T) {
 			q := workertest.CaptureQueue(t)
 
 			got := ""
-			DeleteByID([]byte(tt.payload), q.Sender, func(_ context.Context, userID string) map[string]time.Time {
+			err := DeleteByID([]byte(tt.payload), q.Sender, func(_ context.Context, userID string) (map[string]time.Time, error) {
 				got = userID
-				return tt.revoked
+				return tt.revoked, nil
 			})
 
 			if got != tt.want {
 				t.Errorf("user = %q, want %q", got, tt.want)
+			}
+			if (err != nil) != (tt.want == "") || (err != nil && !kafka.IsPermanent(err)) {
+				t.Errorf("error = %v, want a permanent error for an invalid payload only", err)
 			}
 			checkTokens(t, q, got != "" && tt.revoked != nil)
 		})
 	}
 
 	t.Run("undefined function", func(t *testing.T) {
-		DeleteByID([]byte(`{"user_id":"u"}`), nil, nil)
+		if err := DeleteByID([]byte(`{"user_id":"u"}`), nil, nil); err != nil {
+			t.Errorf("error = %v", err)
+		}
+	})
+
+	t.Run("failure", func(t *testing.T) {
+		q := workertest.CaptureQueue(t)
+
+		boom := errors.New("boom")
+		err := DeleteByID([]byte(`{"user_id":"u"}`), q.Sender, func(context.Context, string) (map[string]time.Time, error) {
+			return tokens, boom
+		})
+
+		if !errors.Is(err, boom) || kafka.IsPermanent(err) {
+			t.Errorf("error = %v, want the error of the function, which a retry can fix", err)
+		}
+		checkTokens(t, q, false)
 	})
 }
 
@@ -80,27 +101,46 @@ func TestDisableByID(t *testing.T) {
 			q := workertest.CaptureQueue(t)
 
 			got := ""
-			DisableByID([]byte(tt.payload), q.Sender, func(_ context.Context, userID string) map[string]time.Time {
+			err := DisableByID([]byte(tt.payload), q.Sender, func(_ context.Context, userID string) (map[string]time.Time, error) {
 				got = userID
-				return tt.revoked
+				return tt.revoked, nil
 			})
 
 			if got != tt.want {
 				t.Errorf("user = %q, want %q", got, tt.want)
+			}
+			if (err != nil) != (tt.want == "") || (err != nil && !kafka.IsPermanent(err)) {
+				t.Errorf("error = %v, want a permanent error for an invalid payload only", err)
 			}
 			checkTokens(t, q, got != "" && tt.revoked != nil)
 		})
 	}
 
 	t.Run("undefined function", func(t *testing.T) {
-		DisableByID([]byte(`{"user_id":"u"}`), nil, nil)
+		if err := DisableByID([]byte(`{"user_id":"u"}`), nil, nil); err != nil {
+			t.Errorf("error = %v", err)
+		}
+	})
+
+	t.Run("failure", func(t *testing.T) {
+		q := workertest.CaptureQueue(t)
+
+		boom := errors.New("boom")
+		err := DisableByID([]byte(`{"user_id":"u"}`), q.Sender, func(context.Context, string) (map[string]time.Time, error) {
+			return tokens, boom
+		})
+
+		if !errors.Is(err, boom) || kafka.IsPermanent(err) {
+			t.Errorf("error = %v, want the error of the function, which a retry can fix", err)
+		}
+		checkTokens(t, q, false)
 	})
 }
 
 func TestUserTasks(t *testing.T) {
 	tests := []struct {
 		name string
-		run  func(payload []byte, f func(ctx context.Context, userID string))
+		run  func(payload []byte, f func(ctx context.Context, userID string) error) error
 	}{
 		{"EnableByID", EnableByID},
 		{"UpdateSocialNetworksByID", UpdateSocialNetworksByID},
@@ -111,19 +151,24 @@ func TestUserTasks(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, calls := "", 0
-			record := func(_ context.Context, userID string) { got, calls = userID, calls+1 }
+			record := func(_ context.Context, userID string) error { got, calls = userID, calls+1; return nil }
 
-			tt.run([]byte(`{"user_id":"u1"}`), record)
-			if got != "u1" || calls != 1 {
-				t.Errorf("user = %q, calls = %d", got, calls)
+			if err := tt.run([]byte(`{"user_id":"u1"}`), record); err != nil || got != "u1" || calls != 1 {
+				t.Errorf("user = %q, calls = %d, error = %v", got, calls, err)
 			}
 
-			tt.run([]byte(`{`), record)
-			if calls != 1 {
-				t.Error("the function must not be called for an invalid payload")
+			if err := tt.run([]byte(`{`), record); !kafka.IsPermanent(err) || calls != 1 {
+				t.Errorf("calls = %d, error = %v: the function must not be called for an invalid payload", calls, err)
 			}
 
-			tt.run([]byte(`{"user_id":"u1"}`), nil)
+			if err := tt.run([]byte(`{"user_id":"u1"}`), nil); err != nil {
+				t.Errorf("error = %v for an undefined function", err)
+			}
+
+			boom := errors.New("boom")
+			if err := tt.run([]byte(`{"user_id":"u1"}`), func(context.Context, string) error { return boom }); !errors.Is(err, boom) || kafka.IsPermanent(err) {
+				t.Errorf("error = %v, want the error of the function, which a retry can fix", err)
+			}
 		})
 	}
 }

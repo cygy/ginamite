@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/cygy/ginamite/common/config"
+	"github.com/cygy/ginamite/common/kafka"
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/queue"
 
@@ -36,18 +37,19 @@ type IPAddressDetails struct {
 
 // GetIPInfo decodes the payload of a location task and calls saveIPAddressDetailsFunc, which saves
 // the location returned by the function it receives, which uses the ipstack API of the configuration.
-// Nothing happens if the function is nil.
-func GetIPInfo(payload []byte, ipStack config.IPStackConfiguration, saveIPAddressDetailsFunc func(ctx context.Context, IPAddress, tokenID string, getIPAddressDetailsFunc func(IPAddress string) *IPAddressDetails)) {
+// Nothing happens if the function is nil. It returns the error of the function, or a permanent error, see
+// kafka.Permanent, if the payload can not be decoded.
+func GetIPInfo(payload []byte, ipStack config.IPStackConfiguration, saveIPAddressDetailsFunc func(ctx context.Context, IPAddress, tokenID string, getIPAddressDetailsFunc func(IPAddress string) *IPAddressDetails) error) error {
 	if saveIPAddressDetailsFunc == nil {
-		return
+		return nil
 	}
 
 	p := queue.TaskIPLocation{}
 	if err := queue.UnmarshalPayload(payload, &p); err != nil {
-		return
+		return kafka.Permanent(err)
 	}
 
-	saveIPAddressDetailsFunc(context.Background(), p.IPAddress, p.TokenID, func(IPAddress string) *IPAddressDetails {
+	return saveIPAddressDetailsFunc(context.Background(), p.IPAddress, p.TokenID, func(IPAddress string) *IPAddressDetails {
 		return GetIPAddressDetails(ipStack, IPAddress)
 	})
 }

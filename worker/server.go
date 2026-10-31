@@ -51,29 +51,33 @@ type Handlers struct {
 	// SanitizeAccounts deletes, or updates, the data associated to the deleted accounts and returns their count.
 	SanitizeAccounts func() uint
 
+	// The functions handling a message of Kafka return an error if they failed: the message is then handled again,
+	// then dead-lettered if the error persists, see kafka.MessageConsumer. An error marked with kafka.Permanent is not
+	// retried. The functions must tolerate a message handled twice.
+
 	// DeleteUserByID deletes a user and returns the auth tokens revoked, with their expiration date, by ID.
-	DeleteUserByID func(ctx context.Context, userID string) map[string]time.Time
+	DeleteUserByID func(ctx context.Context, userID string) (map[string]time.Time, error)
 
 	// DisableUserByID disables a user and returns the auth tokens revoked, with their expiration date, by ID.
-	DisableUserByID func(ctx context.Context, userID string) map[string]time.Time
+	DisableUserByID func(ctx context.Context, userID string) (map[string]time.Time, error)
 
 	// EnableUserByID enables a user.
-	EnableUserByID func(ctx context.Context, userID string)
+	EnableUserByID func(ctx context.Context, userID string) error
 
 	// UpdateUserSocialNetworksByID updates the documents referencing the social networks of a user.
-	UpdateUserSocialNetworksByID func(ctx context.Context, userID string)
+	UpdateUserSocialNetworksByID func(ctx context.Context, userID string) error
 
 	// RegistrationDone handles a user who registered.
-	RegistrationDone func(ctx context.Context, userID string)
+	RegistrationDone func(ctx context.Context, userID string) error
 
 	// RegistrationValidated handles a user who validated their registration.
-	RegistrationValidated func(ctx context.Context, userID string)
+	RegistrationValidated func(ctx context.Context, userID string) error
 
 	// GetNotificationTargetsByUserAndType returns the targets of a user for a type of notification.
 	GetNotificationTargetsByUserAndType notifications.GetNotificationTargetsByUserAndTypeFunc
 
 	// SaveIPAddressDetails saves the location of an IP address, returned by getIPAddressDetailsFunc, for an auth token.
-	SaveIPAddressDetails func(ctx context.Context, IPAddress, tokenID string, getIPAddressDetailsFunc func(IPAddress string) *location.IPAddressDetails)
+	SaveIPAddressDetails func(ctx context.Context, IPAddress, tokenID string, getIPAddressDetailsFunc func(IPAddress string) *location.IPAddressDetails) error
 
 	// StartUpTasks runs once when the worker starts, if the configuration asks for it.
 	StartUpTasks func(ctx context.Context, environment, version string)
@@ -81,17 +85,19 @@ type Handlers struct {
 	// SetFuncOfRecurringTasks sets the functions of the custom recurring tasks with the function it receives.
 	SetFuncOfRecurringTasks func(registerTaskFunc func(taskName string, task func(string)))
 
-	// HandleTask handles the custom messages of the topic of the tasks and reports whether it did.
-	HandleTask func(ctx context.Context, messageType string, payload []byte) bool
+	// HandleTask handles the custom messages of the topic of the tasks and reports whether it did, and its error.
+	HandleTask func(ctx context.Context, messageType string, payload []byte) (bool, error)
 
-	// HandleUserNotification handles the custom messages of the topic of the user notifications and reports whether it did.
-	HandleUserNotification func(ctx context.Context, messageType string, payload []byte, getNotificationTargetsByUserAndTypeFunc notifications.GetNotificationTargetsByUserAndTypeFunc) bool
+	// HandleUserNotification handles the custom messages of the topic of the user notifications and reports whether it
+	// did, and its error.
+	HandleUserNotification func(ctx context.Context, messageType string, payload []byte, getNotificationTargetsByUserAndTypeFunc notifications.GetNotificationTargetsByUserAndTypeFunc) (bool, error)
 
-	// HandleMail handles the custom messages of the topic of the mails and reports whether it did.
-	HandleMail func(ctx context.Context, messageType string, payload []byte, isEmailAddressValidFunc mail.IsEmailAddressValidFunc) bool
+	// HandleMail handles the custom messages of the topic of the mails and reports whether it did, and its error.
+	HandleMail func(ctx context.Context, messageType string, payload []byte, isEmailAddressValidFunc mail.IsEmailAddressValidFunc) (bool, error)
 
-	// HandleNotificationForUsersWithAbility handles the messages of the topic of the group notifications and reports whether it did.
-	HandleNotificationForUsersWithAbility func(ctx context.Context, ability, messageType string, payload []byte) bool
+	// HandleNotificationForUsersWithAbility handles the messages of the topic of the group notifications and reports
+	// whether it did, and its error.
+	HandleNotificationForUsersWithAbility func(ctx context.Context, ability, messageType string, payload []byte) (bool, error)
 
 	// IsEmailAddressValid reports whether an email can be sent to an email address.
 	IsEmailAddressValid mail.IsEmailAddressValidFunc

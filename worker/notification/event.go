@@ -3,6 +3,7 @@ package notification
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/notifications"
@@ -28,16 +29,17 @@ type Event struct {
 }
 
 // Dispatch sends a message to each target of the user for the type of the event.
-// Nothing is sent if the targets can not be retrieved, and the error is logged.
-func (event Event) Dispatch(ctx context.Context) {
+// Nothing is sent if the targets can not be retrieved: the error is logged and returned.
+func (event Event) Dispatch(ctx context.Context) error {
 	if event.GetNotificationTargetsFunc == nil {
-		return
+		return nil
 	}
 
 	targets, err := event.GetNotificationTargetsFunc(ctx, event.UserID, event.Type)
 	if err != nil {
 		log.WithField("error", err.Error()).Error("unable to get the notification targets of the user")
-		return
+
+		return fmt.Errorf("unable to get the notification targets of the user: %w", err)
 	}
 
 	senders := map[string]struct {
@@ -58,4 +60,6 @@ func (event Event) Dispatch(ctx context.Context) {
 			sender.send(messageType, payload)
 		}
 	}
+
+	return nil
 }

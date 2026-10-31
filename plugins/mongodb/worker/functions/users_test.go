@@ -2,6 +2,7 @@ package functions
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -10,6 +11,8 @@ import (
 	"github.com/cygy/ginamite/common/mongo/store/mock"
 	"github.com/cygy/ginamite/common/notifications"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
+
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 func TestSanitizeAccounts(t *testing.T) {
@@ -53,13 +56,15 @@ func TestDeleteUserByID(t *testing.T) {
 	ids := userTokens(db, expires, expires.Add(time.Hour))
 
 	var updated string
-	revoked := fns.DeleteUserByID(func(_ context.Context, id string, got store.Database) {
+	revoked, err := fns.DeleteUserByID(func(_ context.Context, id string, got store.Database) {
 		updated = id
 		if got != store.Database(db) {
 			t.Errorf("database = %v", got)
 		}
 	})(ctx, userID.Hex())
-
+	if err != nil {
+		t.Fatalf("error = %v", err)
+	}
 	if updated != userID.Hex() {
 		t.Errorf("the documents referencing the user were updated for %q", updated)
 	}
@@ -76,33 +81,64 @@ func TestDeleteUserByID(t *testing.T) {
 		}
 	}
 
-	// Without function to update the documents, and with failing queries, everything else is done.
+	// A user already deleted is not a failure: the function can be called again.
 	fns, db = withMainSession(t)
-	db.Coll(model.DeletedUserCollection).Err = errBoom
-	db.Coll(model.UserCollection).Err = errBoom
-	db.Coll(model.AuthTokenCollection).Errs = map[string]error{"DeleteMany": errBoom}
+	db.Coll(model.UserCollection).Errs = map[string]error{"DeleteOne": mongo.ErrNoDocuments}
 	userTokens(db, expires)
 
-	if revoked := fns.DeleteUserByID(nil)(ctx, userID.Hex()); len(revoked) != 1 {
-		t.Errorf("revoked = %v", revoked)
-	}
-	if got := methods(db, model.AuthTokenCollection); len(got) != 2 {
-		t.Errorf("auth token calls = %v", got)
+	if revoked, err := fns.DeleteUserByID(nil)(ctx, userID.Hex()); err != nil || len(revoked) != 1 {
+		t.Errorf("revoked = %v, error = %v", revoked, err)
 	}
 }
 
-func TestDeleteUserByID_TokensNotRead(t *testing.T) {
-	// Failing to read the auth tokens gives no revoked token, but the tokens are still deleted.
-	fns, db := withMainSession(t)
-	db.Coll(model.AuthTokenCollection).Errs = map[string]error{"Find": errBoom}
+func TestDeleteUserByID_Failures(t *testing.T) {
+	ctx := context.Background()
+	userID := bson.NewObjectID().Hex()
+	expires := time.Now().Add(time.Hour)
 
-	revoked := fns.DeleteUserByID(nil)(context.Background(), bson.NewObjectID().Hex())
-	if revoked == nil || len(revoked) != 0 {
-		t.Errorf("revoked = %v", revoked)
+	tests := []struct {
+		name    string
+		prepare func(db *mock.Database)
+		stopped string // The collection which must not be touched after the failure.
+	}{
+		{"deletion record", func(db *mock.Database) { db.Coll(model.DeletedUserCollection).Err = errBoom }, model.UserCollection},
+		{"user", func(db *mock.Database) { db.Coll(model.UserCollection).Err = errBoom }, model.AuthTokenCollection},
+		{"read of the auth tokens", func(db *mock.Database) { db.Coll(model.AuthTokenCollection).Errs = map[string]error{"Find": errBoom} }, ""},
+		{"deletion of the auth tokens", func(db *mock.Database) {
+			db.Coll(model.AuthTokenCollection).Errs = map[string]error{"DeleteMany": errBoom}
+		}, ""},
 	}
-	if got := methods(db, model.AuthTokenCollection); len(got) != 2 || got[1] != "DeleteMany" {
-		t.Errorf("auth token calls = %v", got)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fns, db := withMainSession(t)
+			userTokens(db, expires)
+			tt.prepare(db)
+
+			revoked, err := fns.DeleteUserByID(nil)(ctx, userID)
+
+			if !errors.Is(err, errBoom) || revoked != nil {
+				t.Errorf("revoked = %v, error = %v, want the error of the database", revoked, err)
+			}
+			if tt.stopped != "" && len(db.Coll(tt.stopped).Calls()) != 0 {
+				t.Errorf("%s was touched after the failure: %v", tt.stopped, methods(db, tt.stopped))
+			}
+		})
 	}
+
+	t.Run("tokens not read are not deleted", func(t *testing.T) {
+		// Their revocation could not be told to the other servers: the deletion is tried again.
+		fns, db := withMainSession(t)
+		db.Coll(model.AuthTokenCollection).Errs = map[string]error{"Find": errBoom}
+
+		if _, err := fns.DeleteUserByID(nil)(ctx, userID); err == nil {
+			t.Fatal("error = nil")
+		}
+		for _, method := range methods(db, model.AuthTokenCollection) {
+			if method == "DeleteMany" {
+				t.Error("the auth tokens must not be deleted")
+			}
+		}
+	})
 }
 
 func TestDisableUserByID(t *testing.T) {
@@ -114,10 +150,10 @@ func TestDisableUserByID(t *testing.T) {
 	ids := userTokens(db, expires)
 
 	var updated string
-	revoked := fns.DisableUserByID(func(_ context.Context, id string, _ store.Database) { updated = id })(ctx, userID.Hex())
+	revoked, err := fns.DisableUserByID(func(_ context.Context, id string, _ store.Database) { updated = id })(ctx, userID.Hex())
 
-	if updated != userID.Hex() || len(revoked) != 1 || !revoked[ids[0].Hex()].Equal(expires) {
-		t.Errorf("updated = %q, revoked = %v", updated, revoked)
+	if err != nil || updated != userID.Hex() || len(revoked) != 1 || !revoked[ids[0].Hex()].Equal(expires) {
+		t.Errorf("updated = %q, revoked = %v, error = %v", updated, revoked, err)
 	}
 	if call := db.Coll(model.UserCollection).LastCall(); call.Method != "DeleteOne" {
 		t.Errorf("user call = %+v", call)
@@ -128,8 +164,15 @@ func TestDisableUserByID(t *testing.T) {
 
 	fns, db = withMainSession(t)
 	db.Coll(model.UserCollection).Err = errBoom
-	if revoked := fns.DisableUserByID(nil)(ctx, userID.Hex()); len(revoked) != 0 {
-		t.Errorf("revoked = %v", revoked)
+	if revoked, err := fns.DisableUserByID(nil)(ctx, userID.Hex()); !errors.Is(err, errBoom) || len(revoked) != 0 {
+		t.Errorf("revoked = %v, error = %v", revoked, err)
+	}
+
+	// A user already deleted is not a failure.
+	fns, db = withMainSession(t)
+	db.Coll(model.UserCollection).Errs = map[string]error{"DeleteOne": mongo.ErrNoDocuments}
+	if _, err := fns.DisableUserByID(nil)(ctx, userID.Hex()); err != nil {
+		t.Errorf("error = %v", err)
 	}
 }
 
@@ -139,7 +182,9 @@ func TestEnableUserByID(t *testing.T) {
 
 	fns, db := withMainSession(t)
 	var updated string
-	fns.EnableUserByID(func(_ context.Context, id string, _ store.Database) { updated = id })(ctx, userID.Hex())
+	if err := fns.EnableUserByID(func(_ context.Context, id string, _ store.Database) { updated = id })(ctx, userID.Hex()); err != nil {
+		t.Errorf("error = %v", err)
+	}
 
 	if updated != userID.Hex() {
 		t.Errorf("updated = %q", updated)
@@ -148,23 +193,28 @@ func TestEnableUserByID(t *testing.T) {
 		t.Errorf("disabled user call = %+v", call)
 	}
 
-	// Failures are only logged.
 	fns, db = withMainSession(t)
 	db.Coll(model.DisabledUserCollection).Err = errBoom
-	fns.EnableUserByID(nil)(ctx, userID.Hex())
+	if err := fns.EnableUserByID(nil)(ctx, userID.Hex()); !errors.Is(err, errBoom) {
+		t.Errorf("error = %v", err)
+	}
 }
 
 func TestUpdateUserSocialNetworksByID(t *testing.T) {
 	fns, _ := withMainSession(t)
 
 	var updated string
-	fns.UpdateUserSocialNetworksByID(func(_ context.Context, id string, _ store.Database) { updated = id })(context.Background(), "user-1")
+	if err := fns.UpdateUserSocialNetworksByID(func(_ context.Context, id string, _ store.Database) { updated = id })(context.Background(), "user-1"); err != nil {
+		t.Errorf("error = %v", err)
+	}
 	if updated != "user-1" {
 		t.Errorf("updated = %q", updated)
 	}
 
 	// Nothing to do without function.
-	fns.UpdateUserSocialNetworksByID(nil)(context.Background(), "user-1")
+	if err := fns.UpdateUserSocialNetworksByID(nil)(context.Background(), "user-1"); err != nil {
+		t.Errorf("error = %v", err)
+	}
 }
 
 func TestGetNotificationTargetsByUserAndType(t *testing.T) {

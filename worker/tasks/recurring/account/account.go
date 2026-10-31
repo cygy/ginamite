@@ -5,6 +5,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/queue"
 	"github.com/cygy/ginamite/worker/tasks"
 
@@ -13,13 +14,12 @@ import (
 
 // DeleteNeverUsed deletes the empty accounts which never logged in for intervalInDays days.
 // The auth tokens revoked by the deletion are invalidated and the deletion is sent to the workers.
-func DeleteNeverUsed(ctx context.Context, q *queue.Queue, taskName string, intervalInDays uint, getNeverUsedAccounts func(context.Context, uint) []string, isUserEmpty func(context.Context, string) bool, deleteUser func(context.Context, string) map[string]time.Time) {
+func DeleteNeverUsed(ctx context.Context, q *queue.Queue, taskName string, intervalInDays uint, getNeverUsedAccounts func(context.Context, uint) []string, isUserEmpty func(context.Context, string) bool, deleteUser func(context.Context, string) (map[string]time.Time, error)) {
 	userIDs := getNeverUsedAccounts(ctx, intervalInDays)
 	countOfDeletedUsers := 0
 
 	for _, userID := range userIDs {
-		if isUserEmpty(ctx, userID) {
-			deleteAndNotify(ctx, q, userID, deleteUser)
+		if isUserEmpty(ctx, userID) && deleteAndNotify(ctx, q, userID, deleteUser) {
 			countOfDeletedUsers++
 		}
 	}
@@ -31,15 +31,18 @@ func DeleteNeverUsed(ctx context.Context, q *queue.Queue, taskName string, inter
 
 // DeleteInactive deletes the accounts inactive for intervalInMonths months.
 // The auth tokens revoked by the deletion are invalidated and the deletion is sent to the workers.
-func DeleteInactive(ctx context.Context, q *queue.Queue, taskName string, intervalInMonths uint, getInactiveAccounts func(context.Context, uint) []string, deleteUser func(context.Context, string) map[string]time.Time) {
+func DeleteInactive(ctx context.Context, q *queue.Queue, taskName string, intervalInMonths uint, getInactiveAccounts func(context.Context, uint) []string, deleteUser func(context.Context, string) (map[string]time.Time, error)) {
 	userIDs := getInactiveAccounts(ctx, intervalInMonths)
 
+	countOfDeletedUsers := 0
 	for _, userID := range userIDs {
-		deleteAndNotify(ctx, q, userID, deleteUser)
+		if deleteAndNotify(ctx, q, userID, deleteUser) {
+			countOfDeletedUsers++
+		}
 	}
 
 	tasks.LogDone(taskName, &logrus.Fields{
-		"count": len(userIDs),
+		"count": countOfDeletedUsers,
 	})
 }
 
@@ -52,13 +55,23 @@ func Sanitize(taskName string, sanitizeAccounts func() uint) {
 	})
 }
 
-// deleteAndNotify deletes a user, invalidates the auth tokens revoked and asks the workers to delete the user.
-func deleteAndNotify(ctx context.Context, q *queue.Queue, userID string, deleteUser func(context.Context, string) map[string]time.Time) {
-	if revokedAuthTokens := deleteUser(ctx, userID); len(revokedAuthTokens) > 0 {
+// deleteAndNotify deletes a user, invalidates the auth tokens revoked and asks the workers to delete the user. It
+// logs the error, and reports false, if the user can not be deleted: the next run tries again.
+func deleteAndNotify(ctx context.Context, q *queue.Queue, userID string, deleteUser func(context.Context, string) (map[string]time.Time, error)) bool {
+	revokedAuthTokens, err := deleteUser(ctx, userID)
+	if err != nil {
+		log.WithFields(logrus.Fields{"user": userID, "error": err.Error()}).Error("unable to delete the user")
+
+		return false
+	}
+
+	if len(revokedAuthTokens) > 0 {
 		q.InvalidAuthTokens(revokedAuthTokens)
 	}
 
 	q.DeleteUser(queue.TaskDeleteUser{
 		UserID: userID,
 	})
+
+	return true
 }

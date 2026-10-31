@@ -6,6 +6,8 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/cygy/ginamite/common/kafka"
+
 	"github.com/cygy/ginamite/common/notifications"
 	"github.com/cygy/ginamite/common/queue"
 	"github.com/cygy/ginamite/worker/internal/workertest"
@@ -25,6 +27,15 @@ func targets(targets ...string) notifications.GetNotificationTargetsByUserAndTyp
 		}
 
 		return result, nil
+	}
+}
+
+// dispatch dispatches the event, which must not fail.
+func dispatch(t *testing.T, e Event) {
+	t.Helper()
+
+	if err := e.Dispatch(context.Background()); err != nil {
+		t.Errorf("Dispatch() error = %v", err)
 	}
 }
 
@@ -59,7 +70,7 @@ func TestEvent_Dispatch(t *testing.T) {
 			e := event
 			e.Queue = q.Sender
 			e.GetNotificationTargetsFunc = targets(tt.target)
-			e.Dispatch(context.Background())
+			dispatch(t, e)
 
 			m, ok := q.Next()
 			if !ok || m.Topic != tt.topic || m.Type != tt.target || m.Payload["k"] != tt.target {
@@ -75,7 +86,7 @@ func TestEvent_Dispatch(t *testing.T) {
 		e := event
 		e.Queue = q.Sender
 		e.GetNotificationTargetsFunc = targets(notifications.TargetEmail, notifications.TargetIOS, notifications.TargetAndroid)
-		e.Dispatch(context.Background())
+		dispatch(t, e)
 
 		var got []string
 		for {
@@ -97,7 +108,7 @@ func TestEvent_Dispatch(t *testing.T) {
 		q := workertest.CaptureQueue(t)
 
 		e := Event{Queue: q.Sender, UserID: "u1", Type: "type", GetNotificationTargetsFunc: targets(notifications.TargetEmail, "unknown")}
-		e.Dispatch(context.Background())
+		dispatch(t, e)
 
 		q.Empty()
 	})
@@ -108,7 +119,7 @@ func TestEvent_Dispatch(t *testing.T) {
 			gotUser, gotType = userID, notificationType
 			return nil, nil
 		}}
-		e.Dispatch(context.Background())
+		dispatch(t, e)
 
 		if gotUser != "u1" || gotType != "type" {
 			t.Errorf("targets requested for %q, %q", gotUser, gotType)
@@ -121,10 +132,13 @@ func TestEvent_Dispatch(t *testing.T) {
 
 		e := event
 		e.Queue = q.Sender
+		boom := errors.New("boom")
 		e.GetNotificationTargetsFunc = func(context.Context, string, string) ([]notifications.Target, error) {
-			return []notifications.Target{{Target: notifications.TargetEmail}}, errors.New("boom")
+			return []notifications.Target{{Target: notifications.TargetEmail}}, boom
 		}
-		e.Dispatch(context.Background())
+		if err := e.Dispatch(context.Background()); !errors.Is(err, boom) || kafka.IsPermanent(err) {
+			t.Errorf("Dispatch() error = %v, want the error of the targets, which a retry can fix", err)
+		}
 
 		q.Empty()
 		if entry := workertest.Hook.LastEntry(); entry == nil || entry.Data["error"] != "boom" {
@@ -133,6 +147,6 @@ func TestEvent_Dispatch(t *testing.T) {
 	})
 
 	t.Run("undefined function", func(t *testing.T) {
-		Event{UserID: "u1"}.Dispatch(context.Background())
+		dispatch(t, Event{UserID: "u1"})
 	})
 }

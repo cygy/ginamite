@@ -23,7 +23,7 @@ func allHandlers() Handlers {
 	return Handlers{
 		DeleteExpiredTokens: func(context.Context) int64 { return 3 },
 		SanitizeAccounts:    func() uint { return 4 },
-		DeleteUserByID:      func(context.Context, string) map[string]time.Time { return nil },
+		DeleteUserByID:      func(context.Context, string) (map[string]time.Time, error) { return nil, nil },
 		GetNeverUsedAccounts: func(_ context.Context, days uint) []string {
 			return []string{"never-used"}
 		},
@@ -69,18 +69,18 @@ func TestServer_warnUndefinedFunctions(t *testing.T) {
 
 	h := allHandlers()
 	h.DisableUserByID = h.DeleteUserByID
-	h.EnableUserByID = func(context.Context, string) {}
+	h.EnableUserByID = func(context.Context, string) error { return nil }
 	h.UpdateUserSocialNetworksByID = h.EnableUserByID
 	h.GetNotificationTargetsByUserAndType = func(context.Context, string, string) ([]notifications.Target, error) { return nil, nil }
-	h.SaveIPAddressDetails = func(context.Context, string, string, func(string) *location.IPAddressDetails) {}
+	h.SaveIPAddressDetails = func(context.Context, string, string, func(string) *location.IPAddressDetails) error { return nil }
 	h.SetFuncOfRecurringTasks = func(func(string, func(string))) {}
 	h.StartUpTasks = func(context.Context, string, string) {}
-	h.HandleTask = func(context.Context, string, []byte) bool { return true }
-	h.HandleUserNotification = func(context.Context, string, []byte, notifications.GetNotificationTargetsByUserAndTypeFunc) bool {
-		return true
+	h.HandleTask = func(context.Context, string, []byte) (bool, error) { return true, nil }
+	h.HandleUserNotification = func(context.Context, string, []byte, notifications.GetNotificationTargetsByUserAndTypeFunc) (bool, error) {
+		return true, nil
 	}
-	h.HandleMail = func(context.Context, string, []byte, mail.IsEmailAddressValidFunc) bool { return true }
-	h.HandleNotificationForUsersWithAbility = func(context.Context, string, string, []byte) bool { return true }
+	h.HandleMail = func(context.Context, string, []byte, mail.IsEmailAddressValidFunc) (bool, error) { return true, nil }
+	h.HandleNotificationForUsersWithAbility = func(context.Context, string, string, []byte) (bool, error) { return true, nil }
 	h.IsEmailAddressValid = func(context.Context, string) (bool, error) { return true, nil }
 
 	if got := undefined(&Server{Functions: h}); len(got) != 0 {

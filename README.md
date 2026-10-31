@@ -127,10 +127,14 @@ A message whose handling fails is handled again, then sent to a **dead-letter to
   to their topic once the cause is fixed.
 - A message which can not be decoded is dead-lettered at once, since no retry can fix it. A panic is recovered and
   counts as a failure. A message of an unknown type is only logged.
-- Today the failures reported are the undecodable messages, the panics and the emails which can not be sent (SMTP
-  error). The functions of `worker.Handlers` do not return errors, so the failures they log are not retried. A
-  handler of your own (`kafka.MessageConsumer.Action`) returns an error, and `kafka.Permanent(err)` marks the one which
-  must not be retried.
+- The functions of `worker.Handlers` handling a message (`DeleteUserByID`, `SaveIPAddressDetails`, `HandleMail`, etc.)
+  return an error, and the custom ones return `(handled bool, err error)`; the plugin `plugins/mongodb` returns the
+  errors of its database. An email which can not be sent (SMTP error) fails the same way. The functions must tolerate
+  being called again for the same message, and `kafka.Permanent(err)` marks the error which must not be retried. A
+  handler of your own (`kafka.MessageConsumer.Action`) follows the same rule.
+- Not covered: the functions the plugin lets you plug in to update the documents referencing a user
+  (`UpdateDocumentsReferencingTo...`) have no error to return, and a failing lookup of the location of an IP address
+  (the ipstack API) is logged but not retried.
 - If the producer is not connected, the failed message is dropped and logged as an error.
 
 #### Shutdown and logs
