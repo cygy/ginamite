@@ -26,6 +26,9 @@ type groupHandler struct {
 
 	// stats counts the messages. It may be nil.
 	stats *stats
+
+	// dedup remembers the messages handled. It may be nil.
+	dedup Deduplicator
 }
 
 // Setup is called when a consumer joins the group.
@@ -72,10 +75,21 @@ func (h groupHandler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sa
 func (h groupHandler) handle(ctx context.Context, message *sarama.ConsumerMessage) bool {
 	var err error
 
+	id := messageID(message)
+	if id != "" && h.dedup != nil && h.dedup.Handled(h.group, id) {
+		h.stats.countDuplicate()
+		log.WithFields(logrus.Fields{"topic": h.topic, "group": h.group, "message_id": id}).Warn("kafka message already handled, ignored")
+
+		return true
+	}
+
 	attempt := 1
 	for ; ; attempt++ {
 		if err = h.try(message.Value); err == nil {
 			h.stats.countHandled()
+			if id != "" && h.dedup != nil {
+				h.dedup.MarkHandled(h.group, id)
+			}
 
 			return true
 		}

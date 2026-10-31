@@ -13,6 +13,9 @@ type Stats struct {
 	// attempts after a failure, and DeadLettered the number of messages which could not be handled.
 	Received, Handled, Retried, DeadLettered uint64
 
+	// Duplicates is the number of messages ignored because they were already handled, see Deduplicator.
+	Duplicates uint64
+
 	// Sent is the number of messages acknowledged by Kafka, SendErrors the number it refused, and Dropped the number
 	// lost because the client is closed or the queue of the messages to send is full.
 	Sent, SendErrors, Dropped uint64
@@ -25,7 +28,7 @@ type Stats struct {
 // stats holds the counters. The methods accept a nil receiver.
 type stats struct {
 	received, handled, retried, deadLettered atomic.Uint64
-	sent, sendErrors, dropped                atomic.Uint64
+	sent, sendErrors, dropped, duplicates    atomic.Uint64
 
 	mu  sync.Mutex
 	lag map[string]int64
@@ -55,6 +58,12 @@ func (s *stats) countDeadLettered() {
 	}
 }
 
+func (s *stats) countDuplicate() {
+	if s != nil {
+		s.duplicates.Add(1)
+	}
+}
+
 func (s *stats) setLag(topic string, partition int32, lag int64) {
 	if s == nil {
 		return
@@ -78,6 +87,7 @@ func (s *stats) snapshot() Stats {
 		Handled:      s.handled.Load(),
 		Retried:      s.retried.Load(),
 		DeadLettered: s.deadLettered.Load(),
+		Duplicates:   s.duplicates.Load(),
 		Sent:         s.sent.Load(),
 		SendErrors:   s.sendErrors.Load(),
 		Dropped:      s.dropped.Load(),

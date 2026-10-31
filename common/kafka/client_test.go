@@ -463,3 +463,33 @@ func TestClient_UseProducer(t *testing.T) {
 		t.Error("the producer of the caller must receive the messages")
 	}
 }
+
+func TestClient_SendKeyedMessageToTopic(t *testing.T) {
+	useHook(t)
+	client, producer := producerClient(t)
+
+	client.SendKeyedMessageToTopic("user-1", "keyed", "users")
+	client.SendMessageToTopic("plain", "users")
+
+	keyed := producer.next(t)
+	key, err := keyed.Key.Encode()
+	if err != nil || string(key) != "user-1" {
+		t.Errorf("key = %q, %v", key, err)
+	}
+
+	plain := producer.next(t)
+	if plain.Key != nil {
+		t.Errorf("a message without key must have none, got %v", plain.Key)
+	}
+
+	ids := map[string]bool{}
+	for _, m := range []*sarama.ProducerMessage{keyed, plain} {
+		if len(m.Headers) != 1 || string(m.Headers[0].Key) != HeaderMessageID || len(m.Headers[0].Value) != messageIDLength {
+			t.Fatalf("headers = %+v", m.Headers)
+		}
+		ids[string(m.Headers[0].Value)] = true
+	}
+	if len(ids) != 2 {
+		t.Error("each message must have its own identifier")
+	}
+}

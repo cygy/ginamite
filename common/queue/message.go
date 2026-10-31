@@ -2,6 +2,8 @@ package queue
 
 import (
 	"encoding/json"
+	"reflect"
+	"strings"
 
 	"github.com/cygy/ginamite/common/log"
 
@@ -104,5 +106,36 @@ func (q *Queue) sendMessage(messageType string, payload any, topic string) {
 		return
 	}
 
-	q.send(string(bytes), topic)
+	q.send(partitionKey(payload), string(bytes), topic)
+}
+
+// partitionKeyFields are the JSON names of the fields identifying the entity a payload is about, by priority.
+var partitionKeyFields = []string{"user_id", "email"}
+
+// partitionKey returns the key of the message of the payload, so the messages about the same entity are consumed in the
+// order they are sent. It is the PartitionKey of a Keyed payload, else the value of the first field of a struct
+// payload named user_id or email in its JSON tag. It is empty if the payload has no key.
+func partitionKey(payload any) string {
+	if keyed, ok := payload.(Keyed); ok {
+		return keyed.PartitionKey()
+	}
+
+	value := reflect.ValueOf(payload)
+	if value.Kind() == reflect.Pointer {
+		value = value.Elem()
+	}
+	if value.Kind() != reflect.Struct {
+		return ""
+	}
+
+	for _, name := range partitionKeyFields {
+		for i := range value.NumField() {
+			tag, _, _ := strings.Cut(value.Type().Field(i).Tag.Get("json"), ",")
+			if field := value.Field(i); tag == name && field.Kind() == reflect.String && field.String() != "" {
+				return field.String()
+			}
+		}
+	}
+
+	return ""
 }

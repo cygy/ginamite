@@ -8,11 +8,15 @@ import (
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/config/environment"
 	"github.com/cygy/ginamite/common/flags"
+	"github.com/cygy/ginamite/common/kafka"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/timezone"
 	"github.com/cygy/ginamite/web/robots"
 )
+
+// dedupSize is the number of messages the consumers remember to ignore the ones delivered twice.
+const dedupSize = 10000
 
 // Start parses the command line arguments, sets up the configuration, the translations and the services needed by the
 // chosen server, configures the plugins, then starts the API, worker or web server. It exits the process if the
@@ -74,6 +78,7 @@ func (s *Server) Start() {
 		createKafkaTopics(s.Config, kafkaConf.Host, kafkaConf.Port, options)
 
 		s.Kafka.Options = options
+		s.Kafka.Deduplicator = kafka.NewMemoryDeduplicator(dedupSize)
 		s.Kafka.MaxAttempts = max(s.Config.KafkaMaxAttempts, 1)
 		s.Kafka.RetryDelay = time.Duration(s.Config.KafkaRetryDelay) * time.Millisecond
 		s.Kafka.Initialize(kafkaConf.Host, kafkaConf.Port, s.Config.KafkaTopicsPrefix, true, specializedServer.CreateKafkaConsumers())

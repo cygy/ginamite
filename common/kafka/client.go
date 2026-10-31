@@ -35,6 +35,10 @@ type Client struct {
 	// RetryDelay is the delay before the second attempt. It doubles at each attempt, up to a minute.
 	RetryDelay time.Duration
 
+	// Deduplicator remembers the messages handled, so that a message delivered twice, after a crash or a rebalance, is
+	// not handled twice. Nothing is remembered if it is nil.
+	Deduplicator Deduplicator
+
 	producerMu   sync.RWMutex
 	producerOnce sync.Once
 
@@ -59,6 +63,9 @@ const (
 
 	// maxRetryDelay is the longest delay between two attempts.
 	maxRetryDelay = time.Minute
+
+	// messageIDLength is the length of the identifier of a message.
+	messageIDLength = 24
 
 	// deadLetterSuffix is appended to the name of a topic to get the topic of its dead-lettered messages.
 	deadLetterSuffix = "_dlq"
@@ -242,6 +249,7 @@ func (client *Client) logStats(ctx context.Context, interval time.Duration) {
 				"received":      stats.Received,
 				"handled":       stats.Handled,
 				"retried":       stats.Retried,
+				"duplicates":    stats.Duplicates,
 				"dead_lettered": stats.DeadLettered,
 				"sent":          stats.Sent,
 				"send_errors":   stats.SendErrors,
@@ -328,10 +336,21 @@ func (client *Client) closeProducer() {
 	})
 }
 
-// SendMessageToTopic sends a message to the topic, asynchronously. The messages are sent in the order of the calls,
-// as soon as the producer is connected. It logs an error and does nothing if the client has no producer, if it is
-// closed or if too many messages wait for the producer.
+// SendMessageToTopic sends a message to the topic, asynchronously, without a key: see SendKeyedMessageToTopic.
 func (client *Client) SendMessageToTopic(message, topic string) {
+	client.SendKeyedMessageToTopic("", message, topic)
+}
+
+// SendKeyedMessageToTopic sends a message to the topic, asynchronously. The messages are sent in the order of the
+// calls, as soon as the producer is connected. It logs an error and does nothing if the client has no producer, if it
+// is closed or if too many messages wait for the producer.
+//
+// The messages with the same key go to the same partition, so a consumer handles them in the order they are sent:
+// use the identifier of an entity, such as a user, as the key. A message without a key goes to any partition.
+//
+// Each message gets an identifier, in the header HeaderMessageID, which the consumers use to ignore a message
+// delivered twice, see Deduplicator.
+func (client *Client) SendKeyedMessageToTopic(key, message, topic string) {
 	if !client.HasProducer {
 		log.WithFields(logrus.Fields{
 			"error": "not a producer",
@@ -341,8 +360,12 @@ func (client *Client) SendMessageToTopic(message, topic string) {
 
 	fullTopicName := client.fullTopicName(topic)
 	producerMessage := &sarama.ProducerMessage{
-		Topic: fullTopicName,
-		Value: sarama.StringEncoder(message),
+		Topic:   fullTopicName,
+		Value:   sarama.StringEncoder(message),
+		Headers: []sarama.RecordHeader{{Key: []byte(HeaderMessageID), Value: []byte(random.String(messageIDLength))}},
+	}
+	if key != "" {
+		producerMessage.Key = sarama.StringEncoder(key)
 	}
 
 	client.outboxMu.RLock()
@@ -432,6 +455,7 @@ func (client *Client) consume(ctx context.Context, addresses []string, config *s
 		attempts: client.MaxAttempts,
 		delay:    client.RetryDelay,
 		stats:    &client.stats,
+		dedup:    client.Deduplicator,
 		deadLetter: func(message *sarama.ConsumerMessage, err error, attempts int) {
 			client.sendDeadLetter(ctx, message, groupName, err, attempts)
 		},
@@ -499,6 +523,11 @@ func (client *Client) sendDeadLetter(ctx context.Context, message *sarama.Consum
 		Topic: DeadLetterTopic(message.Topic),
 		Key:   sarama.ByteEncoder(message.Key),
 		Value: sarama.ByteEncoder(message.Value),
+	}
+	for _, header := range message.Headers {
+		if string(header.Key) == HeaderMessageID {
+			headers[HeaderMessageID] = string(header.Value)
+		}
 	}
 	for name, value := range headers {
 		deadLetter.Headers = append(deadLetter.Headers, sarama.RecordHeader{Key: []byte(name), Value: []byte(value)})

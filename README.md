@@ -168,6 +168,16 @@ myapp -name dlq -conf-server server.yaml -dlq purge -dlq-topic mail
 - The logs give the topic, the partition, the offset and the size of the messages, never their body, which holds the
   keys of the confirmation links: it is logged at the debug level only.
 
+#### Ordering and duplicates
+
+- The messages about a same user (`user_id` in the payload, else `email`) are sent with that key: with several
+  partitions they go to the same one, so a worker handles them in the order they were sent. A payload can choose its
+  key by implementing `queue.Keyed`. The messages without key go to any partition.
+- Each message carries an identifier in the `message-id` header, kept by the dead letters. A group ignores a message
+  it already handled (counted in `Stats().Duplicates`): `Client.Deduplicator` remembers the last 10 000 in memory, which
+  covers the redeliveries of a rebalance. A crash between the handling and the commit, or a restart, can still handle a
+  message twice: keep the handlers idempotent, or give `Client.Deduplicator` an implementation backed by a database.
+
 ### Kafka connection and topics
 
 The address of the broker is the service `kafka`. The other settings are in the section `kafka` of the configuration

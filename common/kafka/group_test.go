@@ -321,3 +321,60 @@ func TestGroupHandler_SetupAndCleanup(t *testing.T) {
 		t.Errorf("Cleanup() error = %v", err)
 	}
 }
+
+func TestGroupHandler_handle_Deduplicates(t *testing.T) {
+	useHook(t)
+
+	calls := 0
+	counters := &stats{}
+	handler := groupHandler{
+		topic: "t", group: "g", attempts: 1, stats: counters, dedup: NewMemoryDeduplicator(10),
+		action: func([]byte) error { calls++; return nil },
+		deadLetter: func(*sarama.ConsumerMessage, error, int) {
+			t.Error("unexpected dead letter")
+		},
+	}
+	message := &sarama.ConsumerMessage{Value: []byte("a"), Headers: []*sarama.RecordHeader{{Key: []byte(HeaderMessageID), Value: []byte("id-1")}}}
+
+	for range 2 {
+		if !handler.handle(context.Background(), message) {
+			t.Fatal("handle() = false")
+		}
+	}
+	if calls != 1 || counters.snapshot().Duplicates != 1 || counters.snapshot().Handled != 1 {
+		t.Errorf("calls = %d, stats = %+v", calls, counters.snapshot())
+	}
+
+	// A message without identifier is always handled.
+	plain := &sarama.ConsumerMessage{Value: []byte("b")}
+	handler.handle(context.Background(), plain)
+	handler.handle(context.Background(), plain)
+	if calls != 3 {
+		t.Errorf("calls = %d, want 3", calls)
+	}
+}
+
+func TestGroupHandler_handle_FailureIsNotRemembered(t *testing.T) {
+	useHook(t)
+
+	fail := true
+	handler := groupHandler{
+		topic: "t", group: "g", attempts: 1, dedup: NewMemoryDeduplicator(10),
+		action: func([]byte) error {
+			if fail {
+				return errors.New("failed")
+			}
+
+			return nil
+		},
+		deadLetter: func(*sarama.ConsumerMessage, error, int) {},
+	}
+	message := &sarama.ConsumerMessage{Headers: []*sarama.RecordHeader{{Key: []byte(HeaderMessageID), Value: []byte("id-1")}}}
+
+	handler.handle(context.Background(), message)
+	fail = false
+	handler.handle(context.Background(), message)
+	if !handler.dedup.Handled("g", "id-1") {
+		t.Error("the message handled at the second delivery must be remembered")
+	}
+}
