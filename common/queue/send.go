@@ -2,44 +2,44 @@ package queue
 
 import "time"
 
-// CreateTask sends a new task to the tasks topic, for the workers.
+// CreateTask sends a new custom task to the tasks topic, for the workers.
 func (q *Queue) CreateTask(taskName string, payload any) {
 	q.sendMessage(taskName, payload, TopicTasks)
 }
 
 // GetIPLocation asks the workers to retrieve the location of an IP address.
 func (q *Queue) GetIPLocation(payload TaskIPLocation) {
-	q.CreateTask(MessageTaskIPLocation, payload)
+	q.sendMessage(MessageTaskIPLocation, payload, TopicTaskLocation)
 }
 
 // DeleteUser asks the workers to delete the data of a user.
 func (q *Queue) DeleteUser(payload TaskDeleteUser) {
-	q.CreateTask(MessageTaskDeleteUser, payload)
+	q.sendMessage(MessageTaskDeleteUser, payload, TopicTaskUser)
 }
 
 // DisableUser asks the workers to disable the data of a user.
 func (q *Queue) DisableUser(payload TaskDisableUser) {
-	q.CreateTask(MessageTaskDisableUser, payload)
+	q.sendMessage(MessageTaskDisableUser, payload, TopicTaskUser)
 }
 
 // EnableUser asks the workers to enable the data of a user.
 func (q *Queue) EnableUser(payload TaskEnableUser) {
-	q.CreateTask(MessageTaskEnableUser, payload)
+	q.sendMessage(MessageTaskEnableUser, payload, TopicTaskUser)
 }
 
 // UpdateUserSocialNetworks asks the workers to update the social networks of a user.
 func (q *Queue) UpdateUserSocialNetworks(payload TaskUpdateUserSocialNetworks) {
-	q.CreateTask(MessageTaskUpdateUserSocialNetworks, payload)
+	q.sendMessage(MessageTaskUpdateUserSocialNetworks, payload, TopicTaskUser)
 }
 
 // RegistrationDone informs the workers that a new user is registered.
 func (q *Queue) RegistrationDone(payload TaskRegistrationDone) {
-	q.CreateTask(MessageTaskRegistrationDone, payload)
+	q.sendMessage(MessageTaskRegistrationDone, payload, TopicTaskRegistration)
 }
 
 // RegistrationValidated informs the workers that a new user is validated.
 func (q *Queue) RegistrationValidated(payload TaskRegistrationValidated) {
-	q.CreateTask(MessageTaskRegistrationValidated, payload)
+	q.sendMessage(MessageTaskRegistrationValidated, payload, TopicTaskRegistration)
 }
 
 // InvalidateCache sends a cache message to the cache topic.

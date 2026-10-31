@@ -4,13 +4,25 @@ package queue
 
 // Topics returns all the topics of the messages.
 func Topics() []string {
-	return []string{TopicTasks, TopicCache, TopicMail, TopicUserNotification, TopicGroupNotification, TopicIOS, TopicAndroid, TopicSafari, TopicFirefox, TopicChrome}
+	return []string{TopicTasks, TopicTaskLocation, TopicTaskUser, TopicTaskRegistration, TopicCache, TopicMail, TopicUserNotification, TopicGroupNotification, TopicIOS, TopicAndroid, TopicSafari, TopicFirefox, TopicChrome}
 }
 
 // Topics of the messages.
 const (
-	// TopicTasks is the name of the topic for the various tasks.
+	// TopicTasks is the name of the topic for the custom tasks, see Queue.CreateTask. It also still carries the built-in
+	// tasks sent before they had their own topics, which the workers keep handling.
 	TopicTasks = "task"
+
+	// TopicTaskLocation is the name of the topic for the location of the IP addresses: slow tasks, which depend on an
+	// external service.
+	TopicTaskLocation = "task_location"
+
+	// TopicTaskUser is the name of the topic for the tasks on the data of the users (deleting, disabling, enabling,
+	// social networks), ordered by user.
+	TopicTaskUser = "task_user"
+
+	// TopicTaskRegistration is the name of the topic for the events of the registration of the users.
+	TopicTaskRegistration = "task_registration"
 
 	// TopicCache is the name of the topic for the various caches.
 	TopicCache = "cache"

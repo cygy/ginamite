@@ -133,14 +133,19 @@ stopped in the middle of a message does not lose it (the message is handled agai
 - The workers of the **same group** share the messages of a topic: each message is handled by one worker. Run several
   identical workers to share the load.
 - The workers of **different groups** each receive every message.
-- A worker consumes all the topics (`task`, `group_notification`, `user_notification`, `mail`) unless `worker_consumers`
-  lists the ones it consumes. The group is the topic by default, so two workers listing the same topic share it:
+- A worker consumes all the topics (`task`, `task_location`, `task_user`, `task_registration`, `group_notification`,
+  `user_notification`, `mail`) unless `worker_consumers` lists the ones it consumes. The group is the topic by default,
+  so two workers listing the same topic share it. The tasks have a topic per kind: `task_location` (the location of the
+  IP addresses, slow because of ipstack), `task_user` (deleting, disabling, enabling a user, social networks, ordered by
+  user), `task_registration`, and `task` for your own tasks (`Queue.CreateTask`). All of them handle the built-in
+  tasks, so the ones still waiting in `task` after an upgrade are handled. A worker which only runs the location can
+  list only `task_location`:
 
 ```yaml
-# worker 1: the mails, shared with the worker 2, and the tasks
+# worker 1: the mails, shared with the worker 2, and the users
 worker_consumers:
   - topic: mail
-  - topic: task
+  - topic: task_user
 ```
 
 ```yaml

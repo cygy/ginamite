@@ -89,7 +89,10 @@ func TestServer_CreateConsumers(t *testing.T) {
 		topics = append(topics, c.Topic)
 	}
 
-	want := []string{queue.TopicTasks, queue.TopicGroupNotification, queue.TopicUserNotification, queue.TopicMail}
+	want := []string{
+		queue.TopicTasks, queue.TopicTaskLocation, queue.TopicTaskUser, queue.TopicTaskRegistration,
+		queue.TopicGroupNotification, queue.TopicUserNotification, queue.TopicMail,
+	}
 	if !slices.Equal(topics, want) {
 		t.Errorf("topics = %v, want %v", topics, want)
 	}
@@ -128,8 +131,8 @@ func TestServer_CreateConsumers_Configured(t *testing.T) {
 }
 
 func TestServer_CreateConsumers_WithoutConfiguration(t *testing.T) {
-	if consumers := (&Server{}).CreateConsumers(); len(consumers) != 4 {
-		t.Errorf("consumers = %+v, want the 4 topics", consumers)
+	if consumers := (&Server{}).CreateConsumers(); len(consumers) != 7 {
+		t.Errorf("consumers = %+v, want the 7 topics", consumers)
 	}
 }
 
@@ -180,6 +183,28 @@ func TestServer_handleTask(t *testing.T) {
 		t.Run(tt.messageType, func(t *testing.T) {
 			calls = nil
 			action(message(t, tt.messageType, tt.payload))
+
+			if !slices.Equal(calls, []string{tt.want}) {
+				t.Errorf("calls = %v, want [%s]", calls, tt.want)
+			}
+		})
+	}
+
+	// The built-in tasks are handled by the topic of their type, and by the legacy topic "task".
+	for _, tt := range tests {
+		topic := map[string]string{
+			queue.MessageTaskIPLocation:               queue.TopicTaskLocation,
+			queue.MessageTaskDeleteUser:               queue.TopicTaskUser,
+			queue.MessageTaskDisableUser:              queue.TopicTaskUser,
+			queue.MessageTaskEnableUser:               queue.TopicTaskUser,
+			queue.MessageTaskUpdateUserSocialNetworks: queue.TopicTaskUser,
+			queue.MessageTaskRegistrationDone:         queue.TopicTaskRegistration,
+			queue.MessageTaskRegistrationValidated:    queue.TopicTaskRegistration,
+		}[tt.messageType]
+
+		t.Run(tt.messageType+" on "+topic, func(t *testing.T) {
+			calls = nil
+			consumer(t, s, topic)(message(t, tt.messageType, tt.payload))
 
 			if !slices.Equal(calls, []string{tt.want}) {
 				t.Errorf("calls = %v, want [%s]", calls, tt.want)

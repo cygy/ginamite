@@ -19,7 +19,7 @@ import (
 // errUndecodable is the error of a message which can not be decoded: it is dead-lettered without being tried again.
 var errUndecodable = broker.Permanent(errors.New("undecodable message"))
 
-// CreateConsumers returns the consumers of the topics of the tasks, of the group notifications,
+// CreateConsumers returns the consumers of the topics of the tasks (custom, location, user and registration), of the group notifications,
 // of the user notifications and of the mails. A message which can not be decoded is dead-lettered, and so is a message
 // whose handling failed, after some attempts. A panic is handled like an error.
 //
@@ -28,7 +28,10 @@ var errUndecodable = broker.Permanent(errors.New("undecodable message"))
 // each handle different ones.
 func (s *Server) CreateConsumers() []broker.MessageConsumer {
 	all := []broker.MessageConsumer{
-		{Topic: queue.TopicTasks, Action: s.handleTask},
+		{Topic: queue.TopicTasks, Action: s.handleTask(queue.TopicTasks)},
+		{Topic: queue.TopicTaskLocation, Action: s.handleTask(queue.TopicTaskLocation)},
+		{Topic: queue.TopicTaskUser, Action: s.handleTask(queue.TopicTaskUser)},
+		{Topic: queue.TopicTaskRegistration, Action: s.handleTask(queue.TopicTaskRegistration)},
 		{Topic: queue.TopicGroupNotification, Action: s.handleGroupNotification},
 		{Topic: queue.TopicUserNotification, Action: s.handleUserNotification},
 		{Topic: queue.TopicMail, Action: s.handleMail},
@@ -53,9 +56,17 @@ func (s *Server) CreateConsumers() []broker.MessageConsumer {
 	return consumers
 }
 
-// handleTask handles a message of the topic of the tasks.
-func (s *Server) handleTask(value []byte) error {
-	msgType, payload, ok := queue.ParseMessageAndPayload(value, queue.TopicTasks)
+// handleTask returns the handler of the messages of a topic of the tasks. All the topics handle the built-in tasks,
+// so the ones sent to the topic "task" before they had their own topic are still handled, then the custom tasks.
+func (s *Server) handleTask(topic string) func(value []byte) error {
+	return func(value []byte) error {
+		return s.handleTaskMessage(topic, value)
+	}
+}
+
+// handleTaskMessage handles a message of the topic of tasks.
+func (s *Server) handleTaskMessage(topic string, value []byte) error {
+	msgType, payload, ok := queue.ParseMessageAndPayload(value, topic)
 	if !ok {
 		return errUndecodable
 	}
@@ -83,7 +94,7 @@ func (s *Server) handleTask(value []byte) error {
 			return err
 		}
 	}
-	warnUnknownMessage(queue.TopicTasks, msgType)
+	warnUnknownMessage(topic, msgType)
 
 	return nil
 }
