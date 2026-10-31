@@ -19,11 +19,13 @@ import (
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/ctxconfig"
 	"github.com/cygy/ginamite/common/ctxlocalization"
+	"github.com/cygy/ginamite/common/ctxnotifications"
 	"github.com/cygy/ginamite/common/ctxqueue"
 	"github.com/cygy/ginamite/common/ctxtimezone"
 	"github.com/cygy/ginamite/common/kafka"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/log"
+	"github.com/cygy/ginamite/common/notifications"
 	"github.com/cygy/ginamite/common/queue"
 	"github.com/cygy/ginamite/common/template/html"
 	"github.com/cygy/ginamite/common/timezone"
@@ -102,7 +104,7 @@ func (s *Server) Start() {
 	accountFunctions, userFunctions, contactFunctions, termsFunctions := s.routeFunctions()
 
 	// Load the middlewares.
-	server.Use(ctxconfig.Inject(s.Config), ctxqueue.Inject(s.Queue), ctxlocalization.Inject(s.Localization), ctxtimezone.Inject(s.Timezones))
+	server.Use(ctxconfig.Inject(s.Config), ctxqueue.Inject(s.Queue), ctxlocalization.Inject(s.Localization), ctxtimezone.Inject(s.Timezones), ctxnotifications.Inject(s.Notifications))
 	server.Use(s.Middlewares...)
 	server.Use(s.idValidator())
 	server.Use(ctxAuthToken.InjectRevoked(s.RevokedTokens.IsRevoked))
@@ -133,6 +135,7 @@ func (s *Server) Start() {
 	if s.Functions.RouterConfigureDefaultRoutes != nil {
 		s.Functions.RouterConfigureDefaultRoutes(&router.DefaultRoutes)
 	}
+	router.Notifications = s.Notifications
 	router.LoadDefaultRoutes()
 	for _, customRoute := range s.customRoutes {
 		customRoute(router.Group, router.Handlers, router.ProductionEnvironment, router.Rights)
@@ -168,6 +171,7 @@ func NewServer() *Server {
 		Config:        config.NewConfiguration(),
 		Localization:  localization.NewEngine(),
 		Timezones:     timezone.NewConfiguration(),
+		Notifications: notifications.NewRegistry(),
 		Queue:         queue.New(nil),
 		RevokedTokens: tokencache.NewRevoked(),
 		customRoutes:  []route.ConfigureCustomRoutes{},

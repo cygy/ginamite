@@ -6,111 +6,101 @@ import (
 	"testing"
 )
 
-// resetNotifications restores the supported notifications after the test.
-func resetNotifications(t *testing.T) {
-	t.Helper()
-
-	saved := append([]notificationType(nil), supportedNotifications...)
-	t.Cleanup(func() { supportedNotifications = saved })
-}
-
-func TestIsNotificationSupported(t *testing.T) {
-	resetNotifications(t)
-
+func TestRegistry_IsSupported(t *testing.T) {
 	tests := []struct {
 		name         string
 		notification string
-		prepare      func()
+		prepare      func(r *Registry)
 		want         bool
 	}{
-		{"default notification", TypeNewLogin, func() {}, true},
-		{"unknown notification", "unknown", func() {}, false},
-		{"disabled notification", TypeNewLogin, func() { DisableNotification(TypeNewLogin) }, false},
+		{"default notification", TypeNewLogin, func(*Registry) {}, true},
+		{"unknown notification", "unknown", func(*Registry) {}, false},
+		{"disabled notification", TypeNewLogin, func(r *Registry) { r.Disable(TypeNewLogin) }, false},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resetNotifications(t)
-			tt.prepare()
+			r := NewRegistry()
+			tt.prepare(r)
 
-			if got := IsNotificationSupported(tt.notification); got != tt.want {
-				t.Errorf("IsNotificationSupported(%q) = %v, want %v", tt.notification, got, tt.want)
+			if got := r.IsSupported(tt.notification); got != tt.want {
+				t.Errorf("r.IsSupported(%q) = %v, want %v", tt.notification, got, tt.want)
 			}
 		})
 	}
 }
 
-func TestAddNotification(t *testing.T) {
+func TestRegistry_Add(t *testing.T) {
 	t.Run("new", func(t *testing.T) {
-		resetNotifications(t)
-		AddNotification("news", true)
+		r := NewRegistry()
+		r.Add("news", true)
 
-		if !IsNotificationSupported("news") || !reflect.DeepEqual(DefaultNotifications(), []string{TypeNewLogin, "news"}) {
-			t.Errorf("supported = %v, default = %v", SupportedNotifications(), DefaultNotifications())
+		if !r.IsSupported("news") || !reflect.DeepEqual(r.Defaults(), []string{TypeNewLogin, "news"}) {
+			t.Errorf("supported = %v, default = %v", r.Supported(), r.Defaults())
 		}
 	})
 
 	t.Run("existing is enabled again and updated", func(t *testing.T) {
-		resetNotifications(t)
-		DisableNotification(TypeCommercialPartners)
-		AddNotification(TypeCommercialPartners, true)
+		r := NewRegistry()
+		r.Disable(TypeCommercialPartners)
+		r.Add(TypeCommercialPartners, true)
 
-		if !IsNotificationSupported(TypeCommercialPartners) {
+		if !r.IsSupported(TypeCommercialPartners) {
 			t.Error("the notification must be enabled again")
 		}
-		if !reflect.DeepEqual(DefaultNotifications(), []string{TypeNewLogin, TypeCommercialPartners}) {
-			t.Errorf("default = %v", DefaultNotifications())
+		if !reflect.DeepEqual(r.Defaults(), []string{TypeNewLogin, TypeCommercialPartners}) {
+			t.Errorf("default = %v", r.Defaults())
 		}
-		if len(supportedNotifications) != 2 {
-			t.Errorf("the notification must not be duplicated: %v", supportedNotifications)
+		if len(r.supported) != 2 {
+			t.Errorf("the notification must not be duplicated: %v", r.supported)
 		}
 	})
 }
 
-func TestEnableAndDisableNotification(t *testing.T) {
-	resetNotifications(t)
+func TestRegistry_EnableAndDisable(t *testing.T) {
+	r := NewRegistry()
 
-	if !DisableNotification(TypeNewLogin) || IsNotificationSupported(TypeNewLogin) {
-		t.Error("DisableNotification() must disable a known notification")
+	if !r.Disable(TypeNewLogin) || r.IsSupported(TypeNewLogin) {
+		t.Error("Disable() must disable a known notification")
 	}
-	if !EnableNotification(TypeNewLogin) || !IsNotificationSupported(TypeNewLogin) {
-		t.Error("EnableNotification() must enable a known notification")
+	if !r.Enable(TypeNewLogin) || !r.IsSupported(TypeNewLogin) {
+		t.Error("Enable() must enable a known notification")
 	}
-	if EnableNotification("unknown") || DisableNotification("unknown") {
+	if r.Enable("unknown") || r.Disable("unknown") {
 		t.Error("an unknown notification must be reported")
 	}
 }
 
-func TestSetNotificationDefault(t *testing.T) {
-	resetNotifications(t)
+func TestRegistry_SetDefault(t *testing.T) {
+	r := NewRegistry()
 
-	if !SetNotificationDefault(TypeNewLogin, false) || len(DefaultNotifications()) != 0 {
-		t.Errorf("default = %v", DefaultNotifications())
+	if !r.SetDefault(TypeNewLogin, false) || len(r.Defaults()) != 0 {
+		t.Errorf("default = %v", r.Defaults())
 	}
-	if !SetNotificationDefault(TypeCommercialPartners, true) || !reflect.DeepEqual(DefaultNotifications(), []string{TypeCommercialPartners}) {
-		t.Errorf("default = %v", DefaultNotifications())
+	if !r.SetDefault(TypeCommercialPartners, true) || !reflect.DeepEqual(r.Defaults(), []string{TypeCommercialPartners}) {
+		t.Errorf("default = %v", r.Defaults())
 	}
-	if SetNotificationDefault("unknown", true) {
+	if r.SetDefault("unknown", true) {
 		t.Error("an unknown notification must be reported")
 	}
 }
 
-func TestSupportedAndDefaultNotifications(t *testing.T) {
-	resetNotifications(t)
+func TestRegistry_SupportedAndDefaults(t *testing.T) {
+	r := NewRegistry()
 
-	if got := SupportedNotifications(); !reflect.DeepEqual(got, []string{TypeNewLogin, TypeCommercialPartners}) {
-		t.Errorf("SupportedNotifications() = %v", got)
+	if got := r.Supported(); !reflect.DeepEqual(got, []string{TypeNewLogin, TypeCommercialPartners}) {
+		t.Errorf("Supported() = %v", got)
 	}
-	if got := DefaultNotifications(); !reflect.DeepEqual(got, []string{TypeNewLogin}) {
-		t.Errorf("DefaultNotifications() = %v", got)
+	if got := r.Defaults(); !reflect.DeepEqual(got, []string{TypeNewLogin}) {
+		t.Errorf("Defaults() = %v", got)
 	}
 
-	DisableNotification(TypeNewLogin)
-	if got := SupportedNotifications(); !reflect.DeepEqual(got, []string{TypeCommercialPartners}) {
-		t.Errorf("SupportedNotifications() = %v", got)
+	r.Disable(TypeNewLogin)
+	if got := r.Supported(); !reflect.DeepEqual(got, []string{TypeCommercialPartners}) {
+		t.Errorf("Supported() = %v", got)
 	}
-	if got := DefaultNotifications(); got == nil || len(got) != 0 {
-		t.Errorf("DefaultNotifications() = %#v, want an empty slice", got)
+	if got := r.Defaults(); got == nil || len(got) != 0 {
+		t.Errorf("Defaults() = %#v, want an empty slice", got)
 	}
 }
 

@@ -3,6 +3,7 @@ package route
 
 import (
 	"github.com/cygy/ginamite/api/rights"
+	"github.com/cygy/ginamite/common/notifications"
 
 	"github.com/gin-gonic/gin"
 )
@@ -19,6 +20,9 @@ type Router struct {
 	ProductionEnvironment bool
 	DefaultRoutes         DefaultRoutes
 	Handlers              Middlewares
+
+	// Notifications is the registry of the notifications the users can subscribe to.
+	Notifications *notifications.Registry
 
 	// private properties
 	getUserAbilities rights.GetUserAbilitiesFunc

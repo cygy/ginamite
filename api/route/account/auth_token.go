@@ -5,6 +5,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cygy/ginamite/common/ctxnotifications"
+
 	"github.com/cygy/ginamite/common/ctxlocalization"
 
 	"github.com/cygy/ginamite/common/ctxqueue"
@@ -19,7 +21,6 @@ import (
 	commonErrors "github.com/cygy/ginamite/common/errors"
 	authError "github.com/cygy/ginamite/common/errors/auth"
 	"github.com/cygy/ginamite/common/localization"
-	"github.com/cygy/ginamite/common/notifications"
 	req "github.com/cygy/ginamite/common/request"
 	res "github.com/cygy/ginamite/common/response"
 
@@ -240,10 +241,10 @@ func UpdateAuthToken(c *gin.Context) {
 
 	subscribedNotifications := jsonBody.Notifications
 	for _, notification := range subscribedNotifications {
-		if !notifications.IsNotificationSupported(notification) {
+		if !ctxnotifications.Get(c).IsSupported(notification) {
 			message := t("error.auth_token.update.unable.message")
 			reason := t("error.auth_token.update.notifications.invalid.reason", localization.H{"Value": notification})
-			recovery := t("error.auth_token.update.notifications.invalid.recovery", localization.H{"Value": strings.Join(notifications.SupportedNotifications(), ",")})
+			recovery := t("error.auth_token.update.notifications.invalid.recovery", localization.H{"Value": strings.Join(ctxnotifications.Get(c).Supported(), ",")})
 
 			response.InvalidParameterValue(c, "notifications", message, reason, recovery)
 			return

@@ -3,6 +3,7 @@ package functions
 import (
 	"errors"
 
+	"github.com/cygy/ginamite/common/ctxnotifications"
 	"github.com/cygy/ginamite/common/ctxtimezone"
 
 	"github.com/cygy/ginamite/common/ctxqueue"
@@ -19,23 +20,26 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// registrationTimezone returns the timezone of the user who registers with the locale.
-func registrationTimezone(c *gin.Context, locale string) string {
-	return model.RegistrationTimezone(locale, ctxtimezone.Get(c), ctxconfig.Get(c).DefaultTimezone)
+// registrationDefaults returns the values given to the user who registers with the locale.
+func registrationDefaults(c *gin.Context, locale string) model.RegistrationDefaults {
+	return model.RegistrationDefaults{
+		Timezone:      model.RegistrationTimezone(locale, ctxtimezone.Get(c), ctxconfig.Get(c).DefaultTimezone),
+		Notifications: ctxnotifications.Get(c).Defaults(),
+	}
 }
 
 // RegisterByEmailAddress saves the registration details of a user.
 func RegisterByEmailAddress(c *gin.Context, username, encryptedPassword, emailAddress, locale, termsVersion, registrationCode, privateKey, source, ip string, device authentication.Device) error {
 	mongoSession := session.Get(c)
 	user := model.NewUser()
-	return user.RegisterByEmailAddress(c, username, encryptedPassword, emailAddress, locale, termsVersion, registrationCode, privateKey, source, ip, device, registrationTimezone(c, locale), mongoSession)
+	return user.RegisterByEmailAddress(c, username, encryptedPassword, emailAddress, locale, termsVersion, registrationCode, privateKey, source, ip, device, registrationDefaults(c, locale), mongoSession)
 }
 
 // RegisterByThirdPartyToken saves the registration details of a user.
 func RegisterByThirdPartyToken(c *gin.Context, username string, tokenInfos validator.TokenInfos, tokenSource, locale, termsVersion, registrationCode, privateKey, source, ip string, device authentication.Device) error {
 	mongoSession := session.Get(c)
 	user := model.NewUser()
-	return user.RegisterByThirdPartyToken(c, username, tokenInfos, tokenSource, locale, termsVersion, registrationCode, privateKey, source, ip, device, registrationTimezone(c, locale), mongoSession)
+	return user.RegisterByThirdPartyToken(c, username, tokenInfos, tokenSource, locale, termsVersion, registrationCode, privateKey, source, ip, device, registrationDefaults(c, locale), mongoSession)
 }
 
 // ValidateUserRegistration validates the registration of a user.

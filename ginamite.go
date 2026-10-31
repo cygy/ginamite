@@ -15,6 +15,7 @@ import (
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/kafka"
 	"github.com/cygy/ginamite/common/localization"
+	"github.com/cygy/ginamite/common/notifications"
 	"github.com/cygy/ginamite/common/queue"
 	"github.com/cygy/ginamite/common/timezone"
 	"github.com/cygy/ginamite/web"
@@ -78,6 +79,9 @@ func NewServer() *Server {
 		API:          api.NewServer(),
 	}
 	server.API.Queue, server.Worker.Queue = server.Queue, server.Queue
+
+	server.ApplicationConfiguration.Notifications = notifications.NewRegistry()
+	server.API.Notifications = server.ApplicationConfiguration.Notifications
 	server.ApplicationConfiguration.FileRequired = false
 
 	server.API.Functions.NewMessageFromQueueCache = func(message string) bool {

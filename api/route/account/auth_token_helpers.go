@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/cygy/ginamite/common/ctxnotifications"
+
 	"github.com/cygy/ginamite/common/ctxlocalization"
 
 	"github.com/cygy/ginamite/common/ctxqueue"
@@ -106,7 +108,7 @@ func createAuthenticationToken(c *gin.Context, user authentication.User, IPAddre
 	}
 
 	// Create the details of the authentication to save.
-	device.NotificationSettings.Notifications = notifications.DefaultNotifications()
+	device.NotificationSettings.Notifications = ctxnotifications.Get(c).Defaults()
 	device.SetUpNameAndDetails()
 
 	authDetails := authentication.Details{

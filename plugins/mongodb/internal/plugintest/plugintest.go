@@ -12,6 +12,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cygy/ginamite/common/ctxnotifications"
+	"github.com/cygy/ginamite/common/notifications"
+
 	"github.com/cygy/ginamite/common/ctxtimezone"
 	"github.com/cygy/ginamite/common/timezone"
 
@@ -58,6 +61,7 @@ func NewContext(db *mock.Database, method, target string, body io.Reader) (*gin.
 	ctxAuthToken.SetHooks(c, authentication.Hooks{})
 	ctxqueue.Set(c, senderInUse)
 	ctxtimezone.Set(c, timezone.NewConfiguration())
+	ctxnotifications.Set(c, notifications.NewRegistry())
 	if Localization != nil {
 		ctxlocalization.Set(c, Localization)
 	}

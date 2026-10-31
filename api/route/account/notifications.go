@@ -4,6 +4,8 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/cygy/ginamite/common/ctxnotifications"
+
 	"github.com/cygy/ginamite/common/ctxlocalization"
 
 	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
@@ -12,7 +14,6 @@ import (
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common/localization"
-	"github.com/cygy/ginamite/common/notifications"
 
 	"github.com/gin-gonic/gin"
 )
@@ -183,10 +184,10 @@ func SaveNotificationsSettings(c *gin.Context) {
 
 	notificationsToSave := jsonBody.Notifications
 	for _, notification := range notificationsToSave {
-		if !notifications.IsNotificationSupported(notification) {
+		if !ctxnotifications.Get(c).IsSupported(notification) {
 			message := t("error.notifications.update.unable.message")
 			reason := t("error.notifications.update.invalid.reason", localization.H{"Value": notification})
-			recovery := t("error.notifications.update.invalid.recovery", localization.H{"Value": strings.Join(notifications.SupportedNotifications(), ",")})
+			recovery := t("error.notifications.update.invalid.recovery", localization.H{"Value": strings.Join(ctxnotifications.Get(c).Supported(), ",")})
 
 			response.InvalidParameterValue(c, "notifications", message, reason, recovery)
 			return
@@ -240,7 +241,7 @@ func UnsubscribeNotificationByKey(c *gin.Context) {
 
 	// Verify that the notification is supported.
 	notification := parts[1]
-	if !notifications.IsNotificationSupported(notification) {
+	if !ctxnotifications.Get(c).IsSupported(notification) {
 		sendError()
 		return
 	}

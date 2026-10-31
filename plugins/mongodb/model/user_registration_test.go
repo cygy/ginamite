@@ -24,7 +24,7 @@ func TestUser_RegisterByEmailAddress(t *testing.T) {
 	user := NewUser()
 	device := authentication.Device{Name: "phone", Type: "mobile"}
 
-	err := user.RegisterByEmailAddress(ctx, "John Doe", "hash", "j@example.com", "fr-fr", "v2", "code", "key", "web", "1.2.3.4", device, "Europe/Paris", db)
+	err := user.RegisterByEmailAddress(ctx, "John Doe", "hash", "j@example.com", "fr-fr", "v2", "code", "key", "web", "1.2.3.4", device, RegistrationDefaults{Timezone: "Europe/Paris", Notifications: []string{"new_login"}}, db)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -32,6 +32,9 @@ func TestUser_RegisterByEmailAddress(t *testing.T) {
 	if user.Username != "John Doe" || user.Slug != "john-doe" || user.IdentificationMethods.Password != "hash" || user.PrivateInfos.Email != "j@example.com" || user.PrivateInfos.IsEmailValid ||
 		user.Verified || user.VersionOfTermsAccepted != "v2" || user.PrivateKey != "key" {
 		t.Errorf("user = %+v", user)
+	}
+	if !slices.Equal(user.Notifications, []string{"new_login"}) {
+		t.Errorf("notifications = %v", user.Notifications)
 	}
 	if user.Settings.Locale != "fr-fr" || user.Settings.Timezone != "Europe/Paris" {
 		t.Errorf("settings = %+v", user.Settings)
@@ -51,7 +54,7 @@ func TestUser_RegisterByEmailAddress(t *testing.T) {
 	}
 
 	db.Coll(UserCollection).Err = errBoom
-	if err := NewUser().RegisterByEmailAddress(ctx, "a", "h", "e", "fr", "v", "c", "k", "s", "ip", device, "", db); !errors.Is(err, errBoom) {
+	if err := NewUser().RegisterByEmailAddress(ctx, "a", "h", "e", "fr", "v", "c", "k", "s", "ip", device, RegistrationDefaults{}, db); !errors.Is(err, errBoom) {
 		t.Errorf("err = %v", err)
 	}
 }
@@ -199,7 +202,7 @@ func TestUser_RegisterByThirdPartyToken(t *testing.T) {
 			db := mock.NewDatabase("app")
 			user := NewUser()
 
-			if err := user.RegisterByThirdPartyToken(ctx, "john", infos, tt.method, "fr", "v2", "code", "key", "web", "1.2.3.4", authentication.Device{}, "", db); err != nil {
+			if err := user.RegisterByThirdPartyToken(ctx, "john", infos, tt.method, "fr", "v2", "code", "key", "web", "1.2.3.4", authentication.Device{}, RegistrationDefaults{}, db); err != nil {
 				t.Fatal(err)
 			}
 
@@ -220,7 +223,7 @@ func TestUser_RegisterByThirdPartyToken(t *testing.T) {
 
 	t.Run("unknown method", func(t *testing.T) {
 		user := NewUser()
-		if err := user.RegisterByThirdPartyToken(ctx, "john", infos, "twitter", "fr", "v", "c", "k", "s", "ip", authentication.Device{}, "", mock.NewDatabase("app")); err != nil {
+		if err := user.RegisterByThirdPartyToken(ctx, "john", infos, "twitter", "fr", "v", "c", "k", "s", "ip", authentication.Device{}, RegistrationDefaults{}, mock.NewDatabase("app")); err != nil {
 			t.Fatal(err)
 		}
 		if user.IdentificationMethods.Facebook.UserID != "" || user.IdentificationMethods.Google.UserID != "" {
@@ -231,7 +234,7 @@ func TestUser_RegisterByThirdPartyToken(t *testing.T) {
 	t.Run("error", func(t *testing.T) {
 		db := mock.NewDatabase("app")
 		db.Coll(UserCollection).Err = errBoom
-		if err := NewUser().RegisterByThirdPartyToken(ctx, "john", infos, authentication.MethodGoogle, "fr", "v", "c", "k", "s", "ip", authentication.Device{}, "", db); !errors.Is(err, errBoom) {
+		if err := NewUser().RegisterByThirdPartyToken(ctx, "john", infos, authentication.MethodGoogle, "fr", "v", "c", "k", "s", "ip", authentication.Device{}, RegistrationDefaults{}, db); !errors.Is(err, errBoom) {
 			t.Errorf("err = %v", err)
 		}
 	})

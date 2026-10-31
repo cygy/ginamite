@@ -12,6 +12,7 @@ import (
 	"github.com/cygy/ginamite/common/authentication"
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/localization"
+	"github.com/cygy/ginamite/common/notifications"
 	"github.com/cygy/ginamite/common/queue"
 	"github.com/cygy/ginamite/common/timezone"
 
@@ -28,7 +29,10 @@ type Server struct {
 	Localization *localization.Engine
 	// Timezones are the timezones of the countries, set by the main server before it starts.
 	Timezones *timezone.Configuration
-	Functions Handlers
+	// Notifications is the registry of the notifications the users can subscribe to, set by the main server before it
+	// starts.
+	Notifications *notifications.Registry
+	Functions     Handlers
 
 	// RevokedTokens are the auth tokens revoked, which are rejected until they expire. The cache messages of the queue
 	// add tokens to it.

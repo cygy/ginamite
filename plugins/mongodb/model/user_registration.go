@@ -13,7 +13,6 @@ import (
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/store"
-	"github.com/cygy/ginamite/common/notifications"
 	"github.com/cygy/ginamite/common/timezone"
 
 	"github.com/gosimple/slug"
@@ -37,10 +36,15 @@ func RegistrationTimezone(locale string, timezones *timezone.Configuration, defa
 	return defaultTimezone
 }
 
-// RegisterByEmailAddress registers a new user with an email address. The user timezone is the one returned by
-// RegistrationTimezone.
-func (user *User) RegisterByEmailAddress(ctx context.Context, username, encryptedPassword, emailAddress, locale, termsVersion, registrationCode, privateKey, source, ip string, device authentication.Device, userTimezone string, db store.Database) error {
-	user.initializeFromRegistration(username, emailAddress, termsVersion, locale, registrationCode, privateKey, authentication.MethodPassword, source, ip, userTimezone, device)
+// RegistrationDefaults are the values given to a new user.
+type RegistrationDefaults struct {
+	Timezone      string   // See RegistrationTimezone.
+	Notifications []string // The notifications the user is subscribed to.
+}
+
+// RegisterByEmailAddress registers a new user with an email address, with the defaults.
+func (user *User) RegisterByEmailAddress(ctx context.Context, username, encryptedPassword, emailAddress, locale, termsVersion, registrationCode, privateKey, source, ip string, device authentication.Device, defaults RegistrationDefaults, db store.Database) error {
+	user.initializeFromRegistration(username, emailAddress, termsVersion, locale, registrationCode, privateKey, authentication.MethodPassword, source, ip, defaults, device)
 	user.IdentificationMethods.Password = encryptedPassword
 
 	_, err := user.Save(ctx, db)
@@ -78,10 +82,9 @@ func (user *User) CancelRegistrationByEmailAddress(ctx context.Context, code str
 	return user.Delete(ctx, db)
 }
 
-// RegisterByThirdPartyToken registers a new user with a third-party identification token. The user timezone is the one
-// returned by RegistrationTimezone.
-func (user *User) RegisterByThirdPartyToken(ctx context.Context, username string, tokenInfos validator.TokenInfos, tokenSource, locale, termsVersion, registrationCode, privateKey, source, ip string, device authentication.Device, userTimezone string, db store.Database) error {
-	user.initializeFromRegistration(username, tokenInfos.Email, termsVersion, locale, registrationCode, privateKey, tokenSource, source, ip, userTimezone, device)
+// RegisterByThirdPartyToken registers a new user with a third-party identification token, with the defaults.
+func (user *User) RegisterByThirdPartyToken(ctx context.Context, username string, tokenInfos validator.TokenInfos, tokenSource, locale, termsVersion, registrationCode, privateKey, source, ip string, device authentication.Device, defaults RegistrationDefaults, db store.Database) error {
+	user.initializeFromRegistration(username, tokenInfos.Email, termsVersion, locale, registrationCode, privateKey, tokenSource, source, ip, defaults, device)
 
 	userOAuthInfos := UserOAuthInfos{}
 	userOAuthInfos.FromSocialNetworkOAuthInfos(tokenInfos)
@@ -131,8 +134,8 @@ func (user *User) saveThirdPartyInfos(ctx context.Context, source, token, userID
 	return user.Update(ctx, bson.M{"$set": updatedFields}, db)
 }
 
-func (user *User) initializeFromRegistration(username, emailAddress, termsVersion, locale, registrationCode, privateKey, method, source, ip, userTimezone string, device authentication.Device) {
-	user.Settings.Timezone = userTimezone
+func (user *User) initializeFromRegistration(username, emailAddress, termsVersion, locale, registrationCode, privateKey, method, source, ip string, defaults RegistrationDefaults, device authentication.Device) {
+	user.Settings.Timezone = defaults.Timezone
 
 	userDevice := Device{}
 	userDevice.FromDevice(device)
@@ -140,7 +143,7 @@ func (user *User) initializeFromRegistration(username, emailAddress, termsVersio
 	user.Username = username
 	user.Slug = slug.Make(username)
 	user.Abilities = slices.Clone(DefaultUserAbilities)
-	user.Notifications = notifications.DefaultNotifications()
+	user.Notifications = defaults.Notifications
 	user.PrivateInfos.Email = emailAddress
 	user.PrivateInfos.IsEmailValid = false
 	user.RegistrationInfos.Date = time.Now()

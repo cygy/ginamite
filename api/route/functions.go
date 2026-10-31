@@ -21,7 +21,7 @@ import (
 
 // NewRouter returns a new Router struct.
 func NewRouter(e *gin.Engine, version string, productionEnvironment bool, jwtTokenSecret, latestTermsVersion string, IsAuthTokenValid ctxAuthToken.IsValidFunc, getUserAndLocaleFromAuthToken ctxAuthToken.GetUserAndLocaleFunc, getUserAbilities rights.GetUserAbilitiesFunc, getLatestVersionOfTermsAcceptedByUser terms.GetLatestVersionOfTermsAcceptedByUserFunc) *Router {
-	r := &Router{}
+	r := &Router{Notifications: notificationsSettings.NewRegistry()}
 
 	r.getUserAbilities = getUserAbilities
 
@@ -300,7 +300,7 @@ func (r *Router) LoadDefaultRoutes() {
 	// ----- Notifications.
 	if r.DefaultRoutes.Notifications.Enabled {
 		if r.DefaultRoutes.Notifications.Paths.Get.Enabled {
-			supportedNotifications := notificationsSettings.SupportedNotifications()
+			supportedNotifications := r.Notifications.Supported()
 			v.GET(r.DefaultRoutes.Notifications.Paths.Get.Path, notifications.GetNotifications(supportedNotifications))
 		}
 	}

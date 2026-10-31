@@ -9,6 +9,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cygy/ginamite/common/ctxnotifications"
+	"github.com/cygy/ginamite/common/notifications"
+
 	"github.com/cygy/ginamite/common/ctxtimezone"
 
 	"github.com/cygy/ginamite/common/ctxlocalization"
@@ -109,7 +112,7 @@ func resetFunctions() { testFunctions = Functions{} }
 // newRouter returns a router with the locale and the auth token middlewares, serving the handler on every path shape.
 func newRouter(handler gin.HandlerFunc) *gin.Engine {
 	router := gin.New()
-	router.Use(ctxconfig.Inject(testConfig), ctxqueue.Inject(testQueue), request.InjectIDValidator(testIDValidator), ctxtimezone.Inject(testTimezones), Inject(&testFunctions), ctxAuthToken.InjectHooks(testHooks), ctxlocalization.Inject(apitest.Localization), ctxLocale.Inject("en", []string{"en"}))
+	router.Use(ctxconfig.Inject(testConfig), ctxqueue.Inject(testQueue), request.InjectIDValidator(testIDValidator), ctxtimezone.Inject(testTimezones), ctxnotifications.Inject(notifications.NewRegistry()), Inject(&testFunctions), ctxAuthToken.InjectHooks(testHooks), ctxlocalization.Inject(apitest.Localization), ctxLocale.Inject("en", []string{"en"}))
 	router.Use(ctxAuthToken.Parse(testSecret, nil, false))
 	router.Any("/", handler)
 	router.Any("/:id", handler)
@@ -169,6 +172,7 @@ func newContext(params gin.Params) (*gin.Context, *httptest.ResponseRecorder) {
 	ctxqueue.Set(c, testQueue)
 	request.SetIDValidator(c, testIDValidator)
 	ctxtimezone.Set(c, testTimezones)
+	ctxnotifications.Set(c, notifications.NewRegistry())
 	SetFunctions(c, &testFunctions)
 	ctxAuthToken.SetHooks(c, testHooks)
 	ctxLocale.Set(c, "en", "en")

@@ -23,23 +23,31 @@ type Target struct {
 // GetNotificationTargetsByUserAndTypeFunc returns the targets of a user for a type of notification.
 type GetNotificationTargetsByUserAndTypeFunc func(ctx context.Context, userID, notificationType string) ([]Target, error)
 
-// all the notifications that can be subscribed by a user.
-var supportedNotifications = []notificationType{
-	{
-		Name:    TypeNewLogin,
-		Default: true,
-		Enabled: true,
-	},
-	{
-		Name:    TypeCommercialPartners,
-		Default: false,
-		Enabled: true,
-	},
+// Registry is the list of the notifications a user can subscribe to. Create it with NewRegistry, and configure it
+// before the servers start: it is not safe for concurrent use.
+type Registry struct {
+	supported []notificationType
 }
 
-// IsNotificationSupported reports whether the notification is supported and enabled.
-func IsNotificationSupported(notification string) bool {
-	for _, supportedNotification := range supportedNotifications {
+// NewRegistry returns a registry with the built-in notifications.
+func NewRegistry() *Registry {
+	return &Registry{supported: []notificationType{
+		{
+			Name:    TypeNewLogin,
+			Default: true,
+			Enabled: true,
+		},
+		{
+			Name:    TypeCommercialPartners,
+			Default: false,
+			Enabled: true,
+		},
+	}}
+}
+
+// IsSupported reports whether the notification is supported and enabled.
+func (r *Registry) IsSupported(notification string) bool {
+	for _, supportedNotification := range r.supported {
 		if notification == supportedNotification.Name {
 			return supportedNotification.Enabled
 		}
@@ -48,43 +56,43 @@ func IsNotificationSupported(notification string) bool {
 	return false
 }
 
-// AddNotification adds a notification type to the supported list.
+// Add adds a notification type to the supported list.
 // An existing notification is enabled again and its default flag is updated.
-func AddNotification(notification string, isDefault bool) {
+func (r *Registry) Add(notification string, isDefault bool) {
 	// If the notification is supported already, it is enabled and set as default if needed.
-	for i, supportedNotification := range supportedNotifications {
+	for i, supportedNotification := range r.supported {
 		if notification == supportedNotification.Name {
 			supportedNotification.Enabled = true
 			supportedNotification.Default = isDefault
-			supportedNotifications[i] = supportedNotification
+			r.supported[i] = supportedNotification
 			return
 		}
 	}
 
-	supportedNotifications = append(supportedNotifications, notificationType{
+	r.supported = append(r.supported, notificationType{
 		Name:    notification,
 		Default: isDefault,
 		Enabled: true,
 	})
 }
 
-// EnableNotification enables a notification and reports whether it is in the supported list.
-func EnableNotification(notification string) bool {
-	return enableOrDisableNotification(notification, true)
+// Enable enables a notification and reports whether it is in the supported list.
+func (r *Registry) Enable(notification string) bool {
+	return r.enableOrDisable(notification, true)
 }
 
-// DisableNotification disables a notification and reports whether it is in the supported list.
-func DisableNotification(notification string) bool {
-	return enableOrDisableNotification(notification, false)
+// Disable disables a notification and reports whether it is in the supported list.
+func (r *Registry) Disable(notification string) bool {
+	return r.enableOrDisable(notification, false)
 }
 
-// SetNotificationDefault sets whether a notification is subscribed by default
+// SetDefault sets whether a notification is subscribed by default
 // and reports whether it is in the supported list.
-func SetNotificationDefault(notification string, isDefault bool) bool {
-	for i, supportedNotification := range supportedNotifications {
+func (r *Registry) SetDefault(notification string, isDefault bool) bool {
+	for i, supportedNotification := range r.supported {
 		if notification == supportedNotification.Name {
 			supportedNotification.Default = isDefault
-			supportedNotifications[i] = supportedNotification
+			r.supported[i] = supportedNotification
 			return true
 		}
 	}
@@ -92,10 +100,10 @@ func SetNotificationDefault(notification string, isDefault bool) bool {
 	return false
 }
 
-// SupportedNotifications returns the supported and enabled notifications.
-func SupportedNotifications() []string {
+// Supported returns the supported and enabled notifications.
+func (r *Registry) Supported() []string {
 	notifications := []string{}
-	for _, supportedNotification := range supportedNotifications {
+	for _, supportedNotification := range r.supported {
 		if supportedNotification.Enabled {
 			notifications = append(notifications, supportedNotification.Name)
 		}
@@ -104,10 +112,10 @@ func SupportedNotifications() []string {
 	return notifications
 }
 
-// DefaultNotifications returns the supported and enabled default notifications.
-func DefaultNotifications() []string {
+// Defaults returns the supported and enabled default notifications.
+func (r *Registry) Defaults() []string {
 	notifications := []string{}
-	for _, supportedNotification := range supportedNotifications {
+	for _, supportedNotification := range r.supported {
 		if supportedNotification.Enabled && supportedNotification.Default {
 			notifications = append(notifications, supportedNotification.Name)
 		}
@@ -127,11 +135,11 @@ func GenerateUnsubscribeKey(userID, privateKey, notificationType string) string 
 	return fmt.Sprintf("%s.%s.%s", userID, notificationType, fmt.Sprintf("%x", encodedKey))
 }
 
-func enableOrDisableNotification(notification string, enabled bool) bool {
-	for i, supportedNotification := range supportedNotifications {
+func (r *Registry) enableOrDisable(notification string, enabled bool) bool {
+	for i, supportedNotification := range r.supported {
 		if notification == supportedNotification.Name {
 			supportedNotification.Enabled = enabled
-			supportedNotifications[i] = supportedNotification
+			r.supported[i] = supportedNotification
 			return true
 		}
 	}

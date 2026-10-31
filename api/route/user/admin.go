@@ -5,6 +5,8 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/cygy/ginamite/common/ctxnotifications"
+
 	"github.com/cygy/ginamite/common/ctxtimezone"
 
 	"github.com/cygy/ginamite/common/ctxlocalization"
@@ -19,7 +21,6 @@ import (
 	"github.com/cygy/ginamite/common/ctxconfig"
 	commonErrors "github.com/cygy/ginamite/common/errors"
 	"github.com/cygy/ginamite/common/localization"
-	"github.com/cygy/ginamite/common/notifications"
 	"github.com/cygy/ginamite/common/queue"
 
 	"github.com/gin-gonic/gin"
@@ -344,11 +345,11 @@ func AdminUpdateNotifications(c *gin.Context) {
 
 	notificationsToSave := jsonBody.Notifications
 	for _, notification := range notificationsToSave {
-		if !notifications.IsNotificationSupported(notification) {
+		if !ctxnotifications.Get(c).IsSupported(notification) {
 			response.InvalidParameterValue(c, "notifications",
 				t(errorMessageKey),
 				t("error.admin.user.notifications.update.invalid.reason", localization.H{"Value": notification}),
-				t("error.admin.user.notifications.update.invalid.recovery", localization.H{"Value": strings.Join(notifications.SupportedNotifications(), ",")}))
+				t("error.admin.user.notifications.update.invalid.recovery", localization.H{"Value": strings.Join(ctxnotifications.Get(c).Supported(), ",")}))
 			return
 		}
 	}

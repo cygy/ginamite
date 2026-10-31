@@ -6,6 +6,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/cygy/ginamite/common/ctxnotifications"
+	"github.com/cygy/ginamite/common/notifications"
+
 	"github.com/cygy/ginamite/common/ctxtimezone"
 
 	"github.com/cygy/ginamite/common/ctxlocalization"
@@ -57,7 +60,7 @@ func setup(t *testing.T) {
 // serve sends a request with the given JSON body to the handler, mounted on "/:id", and returns the HTTP status.
 func serve(handler gin.HandlerFunc, body string) int {
 	router := gin.New()
-	router.Use(ctxconfig.Inject(testConfig), ctxqueue.Inject(testQueue), ctxtimezone.Inject(testTimezones), Inject(&testFunctions), account.Inject(&testAccountFunctions), ctxlocalization.Inject(apitest.Localization), ctxLocale.Inject("en", []string{"en"}))
+	router.Use(ctxconfig.Inject(testConfig), ctxqueue.Inject(testQueue), ctxtimezone.Inject(testTimezones), ctxnotifications.Inject(notifications.NewRegistry()), Inject(&testFunctions), account.Inject(&testAccountFunctions), ctxlocalization.Inject(apitest.Localization), ctxLocale.Inject("en", []string{"en"}))
 	router.Any("/:id", handler)
 
 	req, _ := http.NewRequest(http.MethodPost, "/42", strings.NewReader(body))
@@ -71,6 +74,7 @@ func newTestContext(body string) (*gin.Context, *httptest.ResponseRecorder) {
 	ctxconfig.Set(c, testConfig)
 	ctxqueue.Set(c, testQueue)
 	ctxtimezone.Set(c, testTimezones)
+	ctxnotifications.Set(c, notifications.NewRegistry())
 	SetFunctions(c, &testFunctions)
 	account.SetFunctions(c, &testAccountFunctions)
 	ctxLocale.Set(c, "en", "en")
