@@ -59,27 +59,18 @@ func newConfiguration(service string) *config.Configuration {
 	return configuration
 }
 
-// setMainSession replaces the main session for the duration of the test.
-func setMainSession(t *testing.T, s *session.Session) {
-	t.Helper()
-
-	old := session.Main
-	t.Cleanup(func() { session.Main = old })
-	session.Main = s
-}
-
 func TestPlugin_Connect_OtherService(t *testing.T) {
-	setMainSession(t, nil)
+	p := NewPlugin()
 
-	NewPlugin().Connect(newConfiguration("postgresql"))
+	p.Connect(newConfiguration("postgresql"))
 
-	if session.Main != nil {
+	if p.session != nil {
 		t.Error("the plugin must not connect to MongoDB when the service is another one")
 	}
 }
 
 func TestPlugin_Connect_Unreachable(t *testing.T) {
-	setMainSession(t, nil)
+	p := NewPlugin()
 	configuration := newConfiguration(database.MongoDB)
 	configuration.Database.Host = "127.0.0.1"
 	configuration.Database.Port = 1
@@ -89,25 +80,24 @@ func TestPlugin_Connect_Unreachable(t *testing.T) {
 		if recover() == nil {
 			t.Error("Connect() must panic when the server is unreachable")
 		}
-		if session.Main == nil || session.Main.DatabaseName != configuration.Database.Database {
-			t.Errorf("the main session must be created with the database of the configuration: %+v", session.Main)
+		if p.session == nil || p.session.DatabaseName != configuration.Database.Database {
+			t.Errorf("the session must be created with the database of the configuration: %+v", p.session)
 		}
 	}()
 
-	NewPlugin().Connect(configuration)
+	p.Connect(configuration)
 }
 
 func TestPlugin_Close(t *testing.T) {
 	t.Run("without session", func(t *testing.T) {
-		setMainSession(t, nil)
-
 		NewPlugin().Close()
 	})
 
 	t.Run("with a session which is not connected", func(t *testing.T) {
-		setMainSession(t, session.NewSession())
+		p := NewPlugin()
+		p.session = session.NewSession()
 
-		NewPlugin().Close()
+		p.Close()
 	})
 }
 
@@ -147,8 +137,6 @@ func TestPlugin_Configure_Middlewares(t *testing.T) {
 	saveModelSettings(t)
 
 	t.Run("without session", func(t *testing.T) {
-		setMainSession(t, nil)
-
 		server := ginamite.NewServer()
 		NewPlugin().Configure(server)
 
@@ -159,10 +147,11 @@ func TestPlugin_Configure_Middlewares(t *testing.T) {
 
 	t.Run("with a session", func(t *testing.T) {
 		db := mock.NewDatabase("app")
-		setMainSession(t, &session.Session{Store: db})
+		p := NewPlugin()
+		p.session = &session.Session{Store: db}
 
 		server := ginamite.NewServer()
-		NewPlugin().Configure(server)
+		p.Configure(server)
 
 		if len(server.API.Middlewares) != 1 {
 			t.Fatalf("len(Middlewares) = %d, want 1", len(server.API.Middlewares))
@@ -217,35 +206,37 @@ func TestPlugin_Configure_Functions(t *testing.T) {
 
 	api, worker := server.API.Functions, server.Worker.Functions
 
-	// The functions without parameters of the plugin are set as they are.
+	// The functions which do not need the database are set as they are.
 	for name, pair := range map[string][2]any{
-		"BuildTokenFromID":                    {api.BuildTokenFromID, apiFunctions.BuildTokenFromID},
-		"MiddlewareIsValidAuthToken":          {api.MiddlewareIsValidAuthToken, apiFunctions.IsValidAuthToken},
-		"GetUserDetailsByID":                  {api.GetUserDetailsByID, apiFunctions.GetUserDetailsByID},
-		"RegisterByEmailAddress":              {api.RegisterByEmailAddress, apiFunctions.RegisterByEmailAddress},
-		"CreateContact":                       {api.CreateContact, apiFunctions.CreateContact},
-		"GetContacts":                         {api.GetContacts, apiFunctions.GetContactsForAdmin},
-		"GetOwnedAccountDetails":              {api.GetOwnedAccountDetails, apiFunctions.GetOwnedAccountDetails},
-		"worker.DeleteExpiredTokens":          {worker.DeleteExpiredTokens, workerFunctions.DeleteExpiredTokens},
-		"worker.GetNeverUsedAccounts":         {worker.GetNeverUsedAccounts, workerFunctions.GetNeverUsedAccounts},
-		"worker.SaveIPAddressDetails":         {worker.SaveIPAddressDetails, workerFunctions.SaveIPAddressDetails},
-		"worker.IsEmailAddressValid":          {worker.IsEmailAddressValid, workerFunctions.IsEmailAddressValid},
-		"worker.GetNotificationTargetsByUser": {worker.GetNotificationTargetsByUserAndType, workerFunctions.GetNotificationTargetsByUserAndType},
+		"MiddlewareIsValidAuthToken": {api.MiddlewareIsValidAuthToken, apiFunctions.IsValidAuthToken},
+		"GetUserDetailsByID":         {api.GetUserDetailsByID, apiFunctions.GetUserDetailsByID},
+		"RegisterByEmailAddress":     {api.RegisterByEmailAddress, apiFunctions.RegisterByEmailAddress},
+		"CreateContact":              {api.CreateContact, apiFunctions.CreateContact},
+		"GetContacts":                {api.GetContacts, apiFunctions.GetContactsForAdmin},
+		"GetOwnedAccountDetails":     {api.GetOwnedAccountDetails, apiFunctions.GetOwnedAccountDetails},
 	} {
 		if pair[0] == nil || !sameFunction(pair[0], pair[1]) {
 			t.Errorf("%s is not the function of the plugin", name)
 		}
 	}
 
-	// The functions built from the hooks of the plugin are defined too.
+	// The functions working on the database, and the ones built from the hooks of the plugin, are defined too.
 	for name, defined := range map[string]bool{
-		"IsUserEmpty":                  worker.IsUserEmpty != nil,
-		"SanitizeAccounts":             worker.SanitizeAccounts != nil,
-		"DeleteUserByID":               worker.DeleteUserByID != nil,
-		"DisableUserByID":              worker.DisableUserByID != nil,
-		"EnableUserByID":               worker.EnableUserByID != nil,
-		"UpdateUserSocialNetworksByID": worker.UpdateUserSocialNetworksByID != nil,
-		"StartUpTasks":                 worker.StartUpTasks != nil,
+		"BuildTokenFromID":                    api.BuildTokenFromID != nil,
+		"ExtendTokenExpirationDateFromID":     api.ExtendTokenExpirationDateFromID != nil,
+		"DeleteExpiredTokens":                 worker.DeleteExpiredTokens != nil,
+		"GetNeverUsedAccounts":                worker.GetNeverUsedAccounts != nil,
+		"GetInactiveAccounts":                 worker.GetInactiveAccounts != nil,
+		"SaveIPAddressDetails":                worker.SaveIPAddressDetails != nil,
+		"IsEmailAddressValid":                 worker.IsEmailAddressValid != nil,
+		"GetNotificationTargetsByUserAndType": worker.GetNotificationTargetsByUserAndType != nil,
+		"IsUserEmpty":                         worker.IsUserEmpty != nil,
+		"SanitizeAccounts":                    worker.SanitizeAccounts != nil,
+		"DeleteUserByID":                      worker.DeleteUserByID != nil,
+		"DisableUserByID":                     worker.DisableUserByID != nil,
+		"EnableUserByID":                      worker.EnableUserByID != nil,
+		"UpdateUserSocialNetworksByID":        worker.UpdateUserSocialNetworksByID != nil,
+		"StartUpTasks":                        worker.StartUpTasks != nil,
 	} {
 		if !defined {
 			t.Errorf("worker.%s is not defined", name)
@@ -257,12 +248,10 @@ func TestPlugin_Configure_WorkerHooks(t *testing.T) {
 	saveModelSettings(t)
 
 	db := mock.NewDatabase("app")
-	old := session.Main
-	t.Cleanup(func() { session.Main = old })
-	session.Main = &session.Session{Store: db}
 
 	var sanitized, deleted, empty bool
 	p := NewPlugin()
+	p.session = &session.Session{Store: db}
 	p.SanitizeAccounts = func(store.Database) uint { sanitized = true; return 5 }
 	p.UpdateDocumentsReferencingToDeletedUser = func(context.Context, string, store.Database) { deleted = true }
 	p.IsUserEmpty = func(context.Context, string, store.Database) bool { empty = true; return false }
@@ -284,12 +273,11 @@ func TestPlugin_Configure_WorkerHooks(t *testing.T) {
 
 func TestPlugin_startUpTasks(t *testing.T) {
 	db := mock.NewDatabase("app")
-	old := session.Main
-	t.Cleanup(func() { session.Main = old })
-	session.Main = &session.Session{Store: db}
 
 	t.Run("without hooks", func(t *testing.T) {
-		NewPlugin().startUpTasks(context.Background(), "test", "1.0")
+		p := NewPlugin()
+		p.session = &session.Session{Store: db}
+		p.startUpTasks(context.Background(), "test", "1.0")
 
 		for _, name := range []string{model.UserCollection, model.AuthTokenCollection} {
 			if !slices.Contains(db.Created(), name) {
@@ -303,7 +291,6 @@ func TestPlugin_startUpTasks(t *testing.T) {
 
 	t.Run("hooks run after the default tasks, in order", func(t *testing.T) {
 		db = mock.NewDatabase("app")
-		session.Main = &session.Session{Store: db}
 
 		var steps []string
 		step := func(name string) { steps = append(steps, name) }
@@ -317,6 +304,7 @@ func TestPlugin_startUpTasks(t *testing.T) {
 		}
 
 		p := NewPlugin()
+		p.session = &session.Session{Store: db}
 		p.CollectionsToRemove = func() []string { step("remove collections"); return []string{"old"} }
 		p.CollectionsToCreate = func() []workerFunctions.CollectionToCreate {
 			step("create collections")

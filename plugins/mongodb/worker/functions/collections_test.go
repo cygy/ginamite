@@ -11,10 +11,10 @@ import (
 )
 
 func TestCreateCollections(t *testing.T) {
-	db := withMainSession(t)
+	fns, db := withMainSession(t)
 	withOptions := options.CreateCollection().SetCapped(true)
 
-	CreateCollections(context.Background(), []CollectionToCreate{{Name: "plain"}, {Name: "configured", Options: withOptions}})
+	fns.CreateCollections(context.Background(), []CollectionToCreate{{Name: "plain"}, {Name: "configured", Options: withOptions}})
 
 	if got := db.Created(); len(got) != 2 || got[0] != "plain" || got[1] != "configured" {
 		t.Fatalf("created = %v", got)
@@ -29,7 +29,7 @@ func TestCreateCollections(t *testing.T) {
 
 	// A failure is only logged: the other collections are created.
 	db.CreateCollectionErr = errBoom
-	CreateCollections(context.Background(), []CollectionToCreate{{Name: "a"}, {Name: "b"}})
+	fns.CreateCollections(context.Background(), []CollectionToCreate{{Name: "a"}, {Name: "b"}})
 	if got := db.Created(); len(got) != 4 {
 		t.Errorf("created = %v", got)
 	}
@@ -39,8 +39,8 @@ func TestRemoveCollections(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("drops the indexes and the collection", func(t *testing.T) {
-		db := withMainSession(t)
-		RemoveCollections(ctx, []string{"a", "b"})
+		fns, db := withMainSession(t)
+		fns.RemoveCollections(ctx, []string{"a", "b"})
 
 		for _, name := range []string{"a", "b"} {
 			if got := methods(db, name); len(got) != 1 || got[0] != "Drop" {
@@ -53,22 +53,22 @@ func TestRemoveCollections(t *testing.T) {
 	})
 
 	t.Run("a collection that does not exist is not an error", func(t *testing.T) {
-		db := withMainSession(t)
+		fns, db := withMainSession(t)
 		db.Coll("a").Err = mongo.CommandError{Code: 26, Message: "ns not found"}
 		db.Coll("b").Err = errBoom
 
-		RemoveCollections(ctx, []string{"a", "b"})
+		fns.RemoveCollections(ctx, []string{"a", "b"})
 		if len(methods(db, "a")) != 1 || len(methods(db, "b")) != 1 {
 			t.Error("every collection must be processed")
 		}
 	})
 
 	t.Run("failures to drop the indexes are only logged", func(t *testing.T) {
-		db := withMainSession(t)
+		fns, db := withMainSession(t)
 		db.Coll("a").Indexes()
 		db.Coll("a").IndexView.Err = errBoom
 
-		RemoveCollections(ctx, []string{"a"})
+		fns.RemoveCollections(ctx, []string{"a"})
 		if got := methods(db, "a"); len(got) != 1 {
 			t.Errorf("calls = %v", got)
 		}
@@ -76,8 +76,8 @@ func TestRemoveCollections(t *testing.T) {
 }
 
 func TestRemoveUnusedCollections(t *testing.T) {
-	db := withMainSession(t)
-	RemoveUnusedCollections(context.Background())
+	fns, db := withMainSession(t)
+	fns.RemoveUnusedCollections(context.Background())
 
 	if len(db.Created()) != 0 {
 		t.Errorf("created = %v", db.Created())
@@ -85,8 +85,8 @@ func TestRemoveUnusedCollections(t *testing.T) {
 }
 
 func TestCreateAllCollections(t *testing.T) {
-	db := withMainSession(t)
-	CreateAllCollections(context.Background())
+	fns, db := withMainSession(t)
+	fns.CreateAllCollections(context.Background())
 
 	want := []string{
 		model.AuthTokenCollection, model.DeletedUserCollection, model.DisabledUserCollection, model.ForgotPasswordProcessCollection,

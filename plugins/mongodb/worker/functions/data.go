@@ -1,7 +1,6 @@
 package functions
 
 import (
-	"github.com/cygy/ginamite/common/mongo/session"
 	"github.com/cygy/ginamite/common/mongo/store"
 )
 
@@ -20,20 +19,17 @@ func RemoveUnusedDefaultDocuments(environment, version string) {
 func UpdateAllDefaultDocuments(environment, version string) {
 }
 
-// CreateDefaultDocuments calls f, which populates the database with the initial documents, with the main database.
-func CreateDefaultDocuments(environment, version string, f func(string, string, store.Database)) {
-	db := session.Database()
-	f(environment, version, db)
+// CreateDefaultDocuments calls hook, which populates the database with the initial documents, with the main database.
+func (f *Functions) CreateDefaultDocuments(environment, version string, hook func(string, string, store.Database)) {
+	hook(environment, version, f.database())
 }
 
-// RemoveDefaultDocuments calls f, which removes the unused documents, with the main database.
-func RemoveDefaultDocuments(environment, version string, f func(string, string, store.Database)) {
-	db := session.Database()
-	f(environment, version, db)
+// RemoveDefaultDocuments calls hook, which removes the unused documents, with the main database.
+func (f *Functions) RemoveDefaultDocuments(environment, version string, hook func(string, string, store.Database)) {
+	hook(environment, version, f.database())
 }
 
-// UpdateDefaultDocuments calls f, which updates the default documents, with the main database.
-func UpdateDefaultDocuments(environment, version string, f func(string, string, store.Database)) {
-	db := session.Database()
-	f(environment, version, db)
+// UpdateDefaultDocuments calls hook, which updates the default documents, with the main database.
+func (f *Functions) UpdateDefaultDocuments(environment, version string, hook func(string, string, store.Database)) {
+	hook(environment, version, f.database())
 }

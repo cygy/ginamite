@@ -102,40 +102,6 @@ func TestSession_InjectAndGet(t *testing.T) {
 	}
 }
 
-func TestMainSession(t *testing.T) {
-	defer func(old *Session) { Main = old }(Main)
-
-	Main = offline(t)
-
-	if Database().Name() != "app" {
-		t.Errorf("Database().Name() = %q", Database().Name())
-	}
-
-	gin.SetMode(gin.TestMode)
-	c, _ := gin.CreateTestContext(httptest.NewRecorder())
-	c.Request = httptest.NewRequest(http.MethodGet, "/", nil)
-	Inject()(c)
-	if db := Get(c); db == nil || db.Name() != "app" {
-		t.Errorf("Get() = %v", db)
-	}
-
-	Close()
-}
-
-func TestInitialize_Unreachable(t *testing.T) {
-	defer func(old *Session) { Main = old }(Main)
-	defer func() {
-		if recover() == nil {
-			t.Error("Initialize() must panic after logging the error")
-		}
-		if Main == nil {
-			t.Error("Main must be created before connecting")
-		}
-	}()
-
-	Initialize("127.0.0.1:1", "app", "", "", 1)
-}
-
 func TestSession_Store(t *testing.T) {
 	stub := mock.NewDatabase("stub")
 

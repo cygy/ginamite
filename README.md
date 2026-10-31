@@ -122,7 +122,9 @@ A plugin for another database implements the same extension points. `plugins/mon
 
 ### MongoDB
 
-`plugins/mongodb` stores the users, their auth tokens, their notifications and the contacts. Create it with
+`plugins/mongodb` opens its own MongoDB session in `Connect`, with no global state: the functions of the API and of the
+worker work on the database of the plugin, and the middleware of the plugin saves it in the context of the requests.
+It stores the users, their auth tokens, their notifications and the contacts. Create it with
 `mongodb.NewPlugin()`, set the properties that differ from the defaults (abilities, size of the images, etc.), then
 register it. Its hooks let the application add its own collections, indexes and default documents, and update the
 documents which reference the users.

@@ -5,22 +5,19 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/cygy/ginamite/common/mongo/session"
+	"github.com/cygy/ginamite/common/mongo/store"
 	"github.com/cygy/ginamite/common/mongo/store/mock"
 )
 
 var errBoom = errors.New("boom")
 
-// withMainSession sets the main session, used by the functions of the workers, for the duration of the test.
-func withMainSession(t *testing.T) *mock.Database {
+// withMainSession returns the functions of the workers working on a stub database, and the database.
+func withMainSession(t *testing.T) (*Functions, *mock.Database) {
 	t.Helper()
 
 	db := mock.NewDatabase("app")
-	old := session.Main
-	t.Cleanup(func() { session.Main = old })
-	session.Main = &session.Session{Store: db}
 
-	return db
+	return New(func() store.Database { return db }), db
 }
 
 // methods returns the methods of the calls received by the collection.

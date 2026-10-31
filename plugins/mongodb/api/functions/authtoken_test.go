@@ -18,6 +18,7 @@ func tokenDocument(id, userID bson.ObjectID, expiresAt time.Time) bson.M {
 }
 
 func TestBuildTokenFromID(t *testing.T) {
+	var tokens *Tokens
 	id, userID := bson.NewObjectID(), bson.NewObjectID()
 	expires := time.Now().Add(time.Hour).Truncate(time.Millisecond)
 
@@ -28,9 +29,9 @@ func TestBuildTokenFromID(t *testing.T) {
 		"publicInfos":        bson.M{"image": bson.M{"thumb": bson.M{"size1x": bson.M{"url": "thumb1"}, "size2x": bson.M{"url": "thumb2"}}}},
 		"notificationsStats": bson.M{"unread": 3},
 	}}
-	withMainSession(t, db)
+	tokens = tokensOn(db)
 
-	token, err := BuildTokenFromID(context.Background(), id.Hex())
+	token, err := tokens.BuildTokenFromID(context.Background(), id.Hex())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -45,20 +46,21 @@ func TestBuildTokenFromID(t *testing.T) {
 	}
 
 	// Errors: the token, then the user, are not found.
-	withMainSession(t, mock.NewDatabase("app"))
-	if _, err := BuildTokenFromID(context.Background(), id.Hex()); err == nil {
+	tokens = tokensOn(mock.NewDatabase("app"))
+	if _, err := tokens.BuildTokenFromID(context.Background(), id.Hex()); err == nil {
 		t.Error("an unknown token must be reported")
 	}
 
 	db = mock.NewDatabase("app")
 	db.Coll(model.AuthTokenCollection).One = mock.Result{Value: tokenDocument(id, userID, expires)}
-	withMainSession(t, db)
-	if _, err := BuildTokenFromID(context.Background(), id.Hex()); err == nil {
+	tokens = tokensOn(db)
+	if _, err := tokens.BuildTokenFromID(context.Background(), id.Hex()); err == nil {
 		t.Error("an unknown user must be reported")
 	}
 }
 
 func TestExtendTokenExpirationDateFromID(t *testing.T) {
+	var tokens *Tokens
 	id, userID := bson.NewObjectID(), bson.NewObjectID()
 	const ttl = 3600 // in seconds
 
@@ -74,9 +76,9 @@ func TestExtendTokenExpirationDateFromID(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			db := mock.NewDatabase("app")
 			db.Coll(model.AuthTokenCollection).One = mock.Result{Value: tokenDocument(id, userID, time.Now().Add(tt.expiresIn))}
-			withMainSession(t, db)
+			tokens = tokensOn(db)
 
-			if err := ExtendTokenExpirationDateFromID(context.Background(), id.Hex(), ttl); err != nil {
+			if err := tokens.ExtendTokenExpirationDateFromID(context.Background(), id.Hex(), ttl); err != nil {
 				t.Fatal(err)
 			}
 
@@ -100,16 +102,16 @@ func TestExtendTokenExpirationDateFromID(t *testing.T) {
 	}
 
 	t.Run("errors", func(t *testing.T) {
-		withMainSession(t, mock.NewDatabase("app"))
-		if err := ExtendTokenExpirationDateFromID(context.Background(), id.Hex(), ttl); err == nil {
+		tokens = tokensOn(mock.NewDatabase("app"))
+		if err := tokens.ExtendTokenExpirationDateFromID(context.Background(), id.Hex(), ttl); err == nil {
 			t.Error("an unknown token must be reported")
 		}
 
 		db := mock.NewDatabase("app")
 		db.Coll(model.AuthTokenCollection).One = mock.Result{Value: tokenDocument(id, userID, time.Now())}
 		db.Coll(model.AuthTokenCollection).Errs = map[string]error{"UpdateByID": errBoom}
-		withMainSession(t, db)
-		if err := ExtendTokenExpirationDateFromID(context.Background(), id.Hex(), ttl); err == nil {
+		tokens = tokensOn(db)
+		if err := tokens.ExtendTokenExpirationDateFromID(context.Background(), id.Hex(), ttl); err == nil {
 			t.Error("a failure to extend the token must be reported")
 		}
 
@@ -117,8 +119,8 @@ func TestExtendTokenExpirationDateFromID(t *testing.T) {
 		db = mock.NewDatabase("app")
 		db.Coll(model.AuthTokenCollection).One = mock.Result{Value: tokenDocument(id, userID, time.Now().Add(time.Hour))}
 		db.Coll(model.UserCollection).Err = errBoom
-		withMainSession(t, db)
-		if err := ExtendTokenExpirationDateFromID(context.Background(), id.Hex(), ttl); err != nil {
+		tokens = tokensOn(db)
+		if err := tokens.ExtendTokenExpirationDateFromID(context.Background(), id.Hex(), ttl); err != nil {
 			t.Errorf("err = %v", err)
 		}
 	})

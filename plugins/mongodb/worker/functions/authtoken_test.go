@@ -10,16 +10,16 @@ import (
 )
 
 func TestDeleteExpiredTokens(t *testing.T) {
-	db := withMainSession(t)
+	fns, db := withMainSession(t)
 	db.Coll(model.AuthTokenCollection).DeleteResult = &mongo.DeleteResult{DeletedCount: 4}
 
-	if got := DeleteExpiredTokens(context.Background()); got != 4 {
+	if got := fns.DeleteExpiredTokens(context.Background()); got != 4 {
 		t.Errorf("count = %d", got)
 	}
 
 	// A failure is only logged.
 	db.Coll(model.AuthTokenCollection).Err = errBoom
-	if got := DeleteExpiredTokens(context.Background()); got != 0 {
+	if got := fns.DeleteExpiredTokens(context.Background()); got != 0 {
 		t.Errorf("count = %d", got)
 	}
 }

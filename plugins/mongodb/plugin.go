@@ -56,6 +56,8 @@ type Plugin struct {
 	StartUpTasks           func()
 
 	IsUserEmpty func(context.Context, string, store.Database) bool
+
+	session *session.Session // The session of the database, opened by Connect.
 }
 
 // NewPlugin returns a Plugin with the default settings of the model package.
@@ -76,7 +78,7 @@ func NewPlugin() *Plugin {
 
 var _ ginamite.Connector = (*Plugin)(nil)
 
-// Connect opens the main MongoDB session with the database settings of the main configuration. It does nothing if
+// Connect opens the MongoDB session with the database settings of the main configuration. It does nothing if
 // the database service of the configuration is not MongoDB. The server calls it before Configure, if it is the API
 // or the worker. If the server is not reachable, it panics after logging the error.
 func (p *Plugin) Connect(configuration *config.Configuration) {
@@ -85,17 +87,18 @@ func (p *Plugin) Connect(configuration *config.Configuration) {
 	}
 
 	database := configuration.Database
-	session.Initialize(database.Host+":"+strconv.Itoa(database.Port),
+	p.session = session.NewSession()
+	p.session.Initialize(database.Host+":"+strconv.Itoa(database.Port),
 		database.Database,
 		database.Username,
 		database.Password,
 		time.Duration(database.TimeOut))
 }
 
-// Close closes the main MongoDB session, if it is open.
+// Close closes the MongoDB session, if it is open.
 func (p *Plugin) Close() {
-	if session.Main != nil {
-		session.Close()
+	if p.session != nil {
+		p.session.Close()
 	}
 }
 
@@ -105,6 +108,16 @@ func (p *Plugin) Configure(server *ginamite.Server) {
 	p.applySettings()
 	p.configureWorker(server.Worker)
 	p.configureAPI(server.API)
+}
+
+// database returns the database of the session of the plugin.
+func (p *Plugin) database() store.Database {
+	return p.session.Database()
+}
+
+// workers returns the functions of the workers working on the database of the plugin.
+func (p *Plugin) workers() *workerFunctions.Functions {
+	return workerFunctions.New(p.database)
 }
 
 // isValidID reports whether id is the hexadecimal representation of a MongoDB ObjectID.
@@ -130,61 +143,65 @@ func (p *Plugin) applySettings() {
 
 // configureWorker sets the functions of the worker.
 func (p *Plugin) configureWorker(w *worker.Server) {
-	w.Functions.DeleteExpiredTokens = workerFunctions.DeleteExpiredTokens
-	w.Functions.GetNeverUsedAccounts = workerFunctions.GetNeverUsedAccounts
-	w.Functions.GetInactiveAccounts = workerFunctions.GetInactiveAccounts
-	w.Functions.IsUserEmpty = workerFunctions.IsEmptyUser(p.IsUserEmpty)
-	w.Functions.SanitizeAccounts = workerFunctions.SanitizeAccounts(p.SanitizeAccounts)
-	w.Functions.DeleteUserByID = workerFunctions.DeleteUserByID(p.UpdateDocumentsReferencingToDeletedUser)
-	w.Functions.DisableUserByID = workerFunctions.DisableUserByID(p.UpdateDocumentsReferencingToDisabledUser)
-	w.Functions.EnableUserByID = workerFunctions.EnableUserByID(p.UpdateDocumentsReferencingToEnabledUser)
-	w.Functions.UpdateUserSocialNetworksByID = workerFunctions.UpdateUserSocialNetworksByID(p.UpdateDocumentsReferencingToUpdatedUserSocialNetworks)
-	w.Functions.SaveIPAddressDetails = workerFunctions.SaveIPAddressDetails
-	w.Functions.GetNotificationTargetsByUserAndType = workerFunctions.GetNotificationTargetsByUserAndType
-	w.Functions.IsEmailAddressValid = workerFunctions.IsEmailAddressValid
+	workers := p.workers()
+
+	w.Functions.DeleteExpiredTokens = workers.DeleteExpiredTokens
+	w.Functions.GetNeverUsedAccounts = workers.GetNeverUsedAccounts
+	w.Functions.GetInactiveAccounts = workers.GetInactiveAccounts
+	w.Functions.IsUserEmpty = workers.IsEmptyUser(p.IsUserEmpty)
+	w.Functions.SanitizeAccounts = workers.SanitizeAccounts(p.SanitizeAccounts)
+	w.Functions.DeleteUserByID = workers.DeleteUserByID(p.UpdateDocumentsReferencingToDeletedUser)
+	w.Functions.DisableUserByID = workers.DisableUserByID(p.UpdateDocumentsReferencingToDisabledUser)
+	w.Functions.EnableUserByID = workers.EnableUserByID(p.UpdateDocumentsReferencingToEnabledUser)
+	w.Functions.UpdateUserSocialNetworksByID = workers.UpdateUserSocialNetworksByID(p.UpdateDocumentsReferencingToUpdatedUserSocialNetworks)
+	w.Functions.SaveIPAddressDetails = workers.SaveIPAddressDetails
+	w.Functions.GetNotificationTargetsByUserAndType = workers.GetNotificationTargetsByUserAndType
+	w.Functions.IsEmailAddressValid = workers.IsEmailAddressValid
 	w.Functions.StartUpTasks = p.startUpTasks
 }
 
 // startUpTasks creates and cleans the collections, the indexes and the default documents, when the worker starts.
 // The hooks of the plugin run after the default ones.
 func (p *Plugin) startUpTasks(ctx context.Context, environment, version string) {
-	workerFunctions.RemoveUnusedCollections(ctx)
+	workers := p.workers()
+
+	workers.RemoveUnusedCollections(ctx)
 	if p.CollectionsToRemove != nil {
 		collections := p.CollectionsToRemove()
-		workerFunctions.RemoveCollections(ctx, collections)
+		workers.RemoveCollections(ctx, collections)
 	}
 
-	workerFunctions.CreateAllCollections(ctx)
+	workers.CreateAllCollections(ctx)
 	if p.CollectionsToCreate != nil {
 		collections := p.CollectionsToCreate()
-		workerFunctions.CreateCollections(ctx, collections)
+		workers.CreateCollections(ctx, collections)
 	}
 
-	workerFunctions.RemoveUnusedIndexes(ctx)
+	workers.RemoveUnusedIndexes(ctx)
 	if p.IndexesToRemove != nil {
 		indexes := p.IndexesToRemove()
-		workerFunctions.RemoveIndexes(ctx, indexes)
+		workers.RemoveIndexes(ctx, indexes)
 	}
 
-	workerFunctions.CreateAllIndexes(ctx)
+	workers.CreateAllIndexes(ctx)
 	if p.IndexesToCreate != nil {
 		indexes := p.IndexesToCreate()
-		workerFunctions.CreateIndexes(ctx, indexes)
+		workers.CreateIndexes(ctx, indexes)
 	}
 
 	workerFunctions.RemoveUnusedDefaultDocuments(environment, version)
 	if p.RemoveDefaultDocuments != nil {
-		workerFunctions.RemoveDefaultDocuments(environment, version, p.RemoveDefaultDocuments)
+		workers.RemoveDefaultDocuments(environment, version, p.RemoveDefaultDocuments)
 	}
 
 	workerFunctions.CreateAllDefaultDocuments(environment, version)
 	if p.CreateDefaultDocuments != nil {
-		workerFunctions.CreateDefaultDocuments(environment, version, p.CreateDefaultDocuments)
+		workers.CreateDefaultDocuments(environment, version, p.CreateDefaultDocuments)
 	}
 
 	workerFunctions.UpdateAllDefaultDocuments(environment, version)
 	if p.UpdateDefaultDocuments != nil {
-		workerFunctions.UpdateDefaultDocuments(environment, version, p.UpdateDefaultDocuments)
+		workers.UpdateDefaultDocuments(environment, version, p.UpdateDefaultDocuments)
 	}
 
 	if p.StartUpTasks != nil {
@@ -196,12 +213,13 @@ func (p *Plugin) startUpTasks(ctx context.Context, environment, version string) 
 // database in the context of the requests, if the session is open, and adds its routes.
 func (p *Plugin) configureAPI(a *api.Server) {
 	a.Functions.IsValidID = isValidID
-	if session.Main != nil {
-		a.Middlewares = append(a.Middlewares, session.Inject())
+	if p.session != nil {
+		a.Middlewares = append(a.Middlewares, p.session.Inject())
 	}
 
-	a.Functions.BuildTokenFromID = apiFunctions.BuildTokenFromID
-	a.Functions.ExtendTokenExpirationDateFromID = apiFunctions.ExtendTokenExpirationDateFromID
+	tokens := apiFunctions.NewTokens(p.database)
+	a.Functions.BuildTokenFromID = tokens.BuildTokenFromID
+	a.Functions.ExtendTokenExpirationDateFromID = tokens.ExtendTokenExpirationDateFromID
 
 	a.Functions.MiddlewareIsValidAuthToken = apiFunctions.IsValidAuthToken
 	a.Functions.MiddlewareGetUserAndLocaleFromAuthToken = apiFunctions.GetUserAndLocaleFromAuthToken

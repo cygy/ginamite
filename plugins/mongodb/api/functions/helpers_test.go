@@ -6,20 +6,15 @@ import (
 	"testing"
 
 	"github.com/cygy/ginamite/common/mongo/bson"
-	"github.com/cygy/ginamite/common/mongo/session"
+	"github.com/cygy/ginamite/common/mongo/store"
 	"github.com/cygy/ginamite/common/mongo/store/mock"
 )
 
 var errBoom = errors.New("boom")
 
-// withMainSession sets the main session, used by the functions that have no gin context, for the duration of the test.
-func withMainSession(t *testing.T, db *mock.Database) {
-	t.Helper()
-
-	old := session.Main
-	t.Cleanup(func() { session.Main = old })
-
-	session.Main = &session.Session{Store: db}
+// tokensOn returns the functions of the auth tokens working on the database.
+func tokensOn(db store.Database) *Tokens {
+	return NewTokens(func() store.Database { return db })
 }
 
 // checkCall checks the method and the first arguments of the last call received by the collection.

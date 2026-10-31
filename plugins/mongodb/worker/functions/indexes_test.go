@@ -11,10 +11,10 @@ import (
 )
 
 func TestCreateIndexes(t *testing.T) {
-	db := withMainSession(t)
+	fns, db := withMainSession(t)
 	index := mongo.IndexModel{Keys: bson.D{{Key: "a", Value: 1}}}
 
-	CreateIndexes(context.Background(), []IndexToCreate{{Collection: "one", Index: index}, {Collection: "two", Index: index}})
+	fns.CreateIndexes(context.Background(), []IndexToCreate{{Collection: "one", Index: index}, {Collection: "two", Index: index}})
 	for _, name := range []string{"one", "two"} {
 		if view := db.Coll(name).IndexView; view == nil || len(view.Created) != 1 {
 			t.Errorf("%s: the index must be created", name)
@@ -23,16 +23,16 @@ func TestCreateIndexes(t *testing.T) {
 
 	// A failure is only logged.
 	db.Coll("one").IndexView.Err = errBoom
-	CreateIndexes(context.Background(), []IndexToCreate{{Collection: "one", Index: index}})
+	fns.CreateIndexes(context.Background(), []IndexToCreate{{Collection: "one", Index: index}})
 	if len(db.Coll("one").IndexView.Created) != 2 {
 		t.Error("the index must be created again")
 	}
 }
 
 func TestRemoveIndexes(t *testing.T) {
-	db := withMainSession(t)
+	fns, db := withMainSession(t)
 
-	RemoveIndexes(context.Background(), []IndexToDelete{{Collection: "one", IndexName: "a_1"}, {Collection: "two", IndexName: "b_1"}})
+	fns.RemoveIndexes(context.Background(), []IndexToDelete{{Collection: "one", IndexName: "a_1"}, {Collection: "two", IndexName: "b_1"}})
 	if got := db.Coll("one").IndexView.Dropped; len(got) != 1 || got[0] != "a_1" {
 		t.Errorf("dropped = %v", got)
 	}
@@ -40,15 +40,15 @@ func TestRemoveIndexes(t *testing.T) {
 	// An index that does not exist is not an error, the others are only logged.
 	db.Coll("one").IndexView.Err = mongo.CommandError{Code: 27, Message: "index not found"}
 	db.Coll("two").IndexView.Err = errBoom
-	RemoveIndexes(context.Background(), []IndexToDelete{{Collection: "one", IndexName: "a_1"}, {Collection: "two", IndexName: "b_1"}})
+	fns.RemoveIndexes(context.Background(), []IndexToDelete{{Collection: "one", IndexName: "a_1"}, {Collection: "two", IndexName: "b_1"}})
 	if len(db.Coll("one").IndexView.Dropped) != 2 || len(db.Coll("two").IndexView.Dropped) != 2 {
 		t.Error("every index must be processed")
 	}
 }
 
 func TestCreateAllIndexes(t *testing.T) {
-	db := withMainSession(t)
-	CreateAllIndexes(context.Background())
+	fns, db := withMainSession(t)
+	fns.CreateAllIndexes(context.Background())
 
 	// Each collection of the plugin has indexes, and every index has keys.
 	for _, name := range []string{model.AuthTokenCollection, model.UserCollection, model.DisabledUserCollection, model.UpdatePropertyProcessCollection, model.ForgotPasswordProcessCollection, model.IPLocationCollection} {
@@ -67,8 +67,8 @@ func TestCreateAllIndexes(t *testing.T) {
 }
 
 func TestRemoveUnusedIndexes(t *testing.T) {
-	db := withMainSession(t)
-	RemoveUnusedIndexes(context.Background())
+	fns, db := withMainSession(t)
+	fns.RemoveUnusedIndexes(context.Background())
 
 	if db.Coll(model.UserCollection).IndexView == nil || len(db.Coll(model.UserCollection).IndexView.Dropped) == 0 {
 		t.Error("the unused indexes of the users must be dropped")

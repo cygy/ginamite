@@ -10,13 +10,25 @@ import (
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/session"
+	"github.com/cygy/ginamite/common/mongo/store"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
 	"github.com/gin-gonic/gin"
 )
 
+// Tokens builds and extends the auth tokens stored in a database. Create it with NewTokens.
+type Tokens struct {
+	database func() store.Database
+}
+
+// NewTokens returns the functions of the auth tokens working on the database returned by the function, which is called
+// each time a function needs the database.
+func NewTokens(database func() store.Database) *Tokens {
+	return &Tokens{database: database}
+}
+
 // BuildTokenFromID builds the authentication.Token of an auth token, with the details of its user.
-func BuildTokenFromID(ctx context.Context, tokenID string) (*authentication.Token, error) {
-	db := session.Database()
+func (t *Tokens) BuildTokenFromID(ctx context.Context, tokenID string) (*authentication.Token, error) {
+	db := t.database()
 
 	// Get the token.
 	authToken := &model.AuthToken{}
@@ -49,8 +61,8 @@ func BuildTokenFromID(ctx context.Context, tokenID string) (*authentication.Toke
 
 // ExtendTokenExpirationDateFromID extends the validity of an auth token by ttl seconds, if less than half of the
 // ttl is left, and updates the last login date of its user.
-func ExtendTokenExpirationDateFromID(ctx context.Context, tokenID string, ttl time.Duration) error {
-	db := session.Database()
+func (t *Tokens) ExtendTokenExpirationDateFromID(ctx context.Context, tokenID string, ttl time.Duration) error {
+	db := t.database()
 
 	// Get the token.
 	authToken := &model.AuthToken{}

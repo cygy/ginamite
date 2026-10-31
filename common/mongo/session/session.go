@@ -32,9 +32,6 @@ func NewSession() (session *Session) {
 	return
 }
 
-// Main is the main MongoDB session of the application, set by Initialize.
-var Main *Session
-
 const contextKey = "_mgo"
 
 // Initialize connects the session to the database and checks that the server is reachable.
@@ -115,28 +112,6 @@ func (session *Session) Inject() gin.HandlerFunc {
 		c.Set(contextKey, session.Database())
 		c.Next()
 	}
-}
-
-// Initialize creates the main session Main and connects it.
-// See Session.Initialize.
-func Initialize(address, database, username, password string, timeout time.Duration) {
-	Main = NewSession()
-	Main.Initialize(address, database, username, password, timeout)
-}
-
-// Close disconnects the main session.
-func Close() {
-	Main.Close()
-}
-
-// Database returns the database of the main session.
-func Database() store.Database {
-	return Main.Database()
-}
-
-// Inject returns a middleware saving the database of the main session in the Gin context.
-func Inject() gin.HandlerFunc {
-	return Main.Inject()
 }
 
 // Set saves the database in the Gin context, like Inject does. It is meant for the tests, to use a stub.

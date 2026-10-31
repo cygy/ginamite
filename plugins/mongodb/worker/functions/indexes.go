@@ -6,7 +6,6 @@ import (
 
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/mongo/bson"
-	"github.com/cygy/ginamite/common/mongo/session"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
 	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/v2/mongo"
@@ -14,8 +13,8 @@ import (
 )
 
 // CreateIndexes creates the indexes of the collections.
-func CreateIndexes(ctx context.Context, indexes []IndexToCreate) {
-	db := session.Database()
+func (f *Functions) CreateIndexes(ctx context.Context, indexes []IndexToCreate) {
+	db := f.database()
 
 	for _, index := range indexes {
 		_, err := db.Collection(index.Collection).Indexes().CreateOne(ctx, index.Index)
@@ -29,8 +28,8 @@ func CreateIndexes(ctx context.Context, indexes []IndexToCreate) {
 }
 
 // RemoveIndexes removes indexes from the collections.
-func RemoveIndexes(ctx context.Context, indexes []IndexToDelete) {
-	db := session.Database()
+func (f *Functions) RemoveIndexes(ctx context.Context, indexes []IndexToDelete) {
+	db := f.database()
 
 	for _, index := range indexes {
 		err := db.Collection(index.Collection).Indexes().DropOne(ctx, index.IndexName)
@@ -45,7 +44,7 @@ func RemoveIndexes(ctx context.Context, indexes []IndexToDelete) {
 }
 
 // CreateAllIndexes checks the indexes of the collections.
-func CreateAllIndexes(ctx context.Context) {
+func (f *Functions) CreateAllIndexes(ctx context.Context) {
 	indexes := []IndexToCreate{
 		// Indexes of the collection "authTokens".
 		{
@@ -440,11 +439,11 @@ func CreateAllIndexes(ctx context.Context) {
 		},
 	}
 
-	CreateIndexes(ctx, indexes)
+	f.CreateIndexes(ctx, indexes)
 }
 
 // RemoveUnusedIndexes removes some indexes from the collections.
-func RemoveUnusedIndexes(ctx context.Context) {
+func (f *Functions) RemoveUnusedIndexes(ctx context.Context) {
 	indexes := []IndexToDelete{
 		// Indexes of the collection "authTokens".
 		{
@@ -551,5 +550,5 @@ func RemoveUnusedIndexes(ctx context.Context) {
 		},
 	}
 
-	RemoveIndexes(ctx, indexes)
+	f.RemoveIndexes(ctx, indexes)
 }

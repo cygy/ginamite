@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/cygy/ginamite/common/log"
-	"github.com/cygy/ginamite/common/mongo/session"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
 	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/v2/mongo"
@@ -14,8 +13,8 @@ import (
 )
 
 // CreateCollections creates the collections.
-func CreateCollections(ctx context.Context, collections []CollectionToCreate) {
-	db := session.Database()
+func (f *Functions) CreateCollections(ctx context.Context, collections []CollectionToCreate) {
+	db := f.database()
 
 	for _, collection := range collections {
 		// A nil builder must not be given to the driver: it would panic when listing its options.
@@ -34,8 +33,8 @@ func CreateCollections(ctx context.Context, collections []CollectionToCreate) {
 }
 
 // RemoveCollections removes the collections.
-func RemoveCollections(ctx context.Context, collections []string) {
-	db := session.Database()
+func (f *Functions) RemoveCollections(ctx context.Context, collections []string) {
+	db := f.database()
 
 	for _, collection := range collections {
 		if err := db.Collection(collection).Indexes().DropAll(ctx); err != nil {
@@ -52,13 +51,13 @@ func RemoveCollections(ctx context.Context, collections []string) {
 }
 
 // RemoveUnusedCollections removes the unused collections.
-func RemoveUnusedCollections(ctx context.Context) {
+func (f *Functions) RemoveUnusedCollections(ctx context.Context) {
 	collectionsToRemove := []string{}
-	RemoveCollections(ctx, collectionsToRemove)
+	f.RemoveCollections(ctx, collectionsToRemove)
 }
 
 // CreateAllCollections creates the collections.
-func CreateAllCollections(ctx context.Context) {
+func (f *Functions) CreateAllCollections(ctx context.Context) {
 	collectionOptions := options.CreateCollection().
 		SetCollation(&options.Collation{
 			Locale:          "fr",
@@ -93,7 +92,7 @@ func CreateAllCollections(ctx context.Context) {
 		},
 	}
 
-	CreateCollections(ctx, collections)
+	f.CreateCollections(ctx, collections)
 }
 
 const (

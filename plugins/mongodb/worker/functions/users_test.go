@@ -13,9 +13,9 @@ import (
 )
 
 func TestSanitizeAccounts(t *testing.T) {
-	db := withMainSession(t)
+	fns, db := withMainSession(t)
 
-	sanitize := SanitizeAccounts(func(got store.Database) uint {
+	sanitize := fns.SanitizeAccounts(func(got store.Database) uint {
 		if got != store.Database(db) {
 			t.Errorf("database = %v", got)
 		}
@@ -26,7 +26,7 @@ func TestSanitizeAccounts(t *testing.T) {
 		t.Errorf("sanitize() = %d", got)
 	}
 
-	if got := SanitizeAccounts(nil)(); got != 0 {
+	if got := fns.SanitizeAccounts(nil)(); got != 0 {
 		t.Errorf("sanitize() = %d without function", got)
 	}
 }
@@ -49,11 +49,11 @@ func TestDeleteUserByID(t *testing.T) {
 	userID := bson.NewObjectID()
 	expires := time.Now().Add(time.Hour).Truncate(time.Millisecond)
 
-	db := withMainSession(t)
+	fns, db := withMainSession(t)
 	ids := userTokens(db, expires, expires.Add(time.Hour))
 
 	var updated string
-	revoked := DeleteUserByID(func(_ context.Context, id string, got store.Database) {
+	revoked := fns.DeleteUserByID(func(_ context.Context, id string, got store.Database) {
 		updated = id
 		if got != store.Database(db) {
 			t.Errorf("database = %v", got)
@@ -77,13 +77,13 @@ func TestDeleteUserByID(t *testing.T) {
 	}
 
 	// Without function to update the documents, and with failing queries, everything else is done.
-	db = withMainSession(t)
+	fns, db = withMainSession(t)
 	db.Coll(model.DeletedUserCollection).Err = errBoom
 	db.Coll(model.UserCollection).Err = errBoom
 	db.Coll(model.AuthTokenCollection).Errs = map[string]error{"DeleteMany": errBoom}
 	userTokens(db, expires)
 
-	if revoked := DeleteUserByID(nil)(ctx, userID.Hex()); len(revoked) != 1 {
+	if revoked := fns.DeleteUserByID(nil)(ctx, userID.Hex()); len(revoked) != 1 {
 		t.Errorf("revoked = %v", revoked)
 	}
 	if got := methods(db, model.AuthTokenCollection); len(got) != 2 {
@@ -93,10 +93,10 @@ func TestDeleteUserByID(t *testing.T) {
 
 func TestDeleteUserByID_TokensNotRead(t *testing.T) {
 	// Failing to read the auth tokens gives no revoked token, but the tokens are still deleted.
-	db := withMainSession(t)
+	fns, db := withMainSession(t)
 	db.Coll(model.AuthTokenCollection).Errs = map[string]error{"Find": errBoom}
 
-	revoked := DeleteUserByID(nil)(context.Background(), bson.NewObjectID().Hex())
+	revoked := fns.DeleteUserByID(nil)(context.Background(), bson.NewObjectID().Hex())
 	if revoked == nil || len(revoked) != 0 {
 		t.Errorf("revoked = %v", revoked)
 	}
@@ -110,11 +110,11 @@ func TestDisableUserByID(t *testing.T) {
 	userID := bson.NewObjectID()
 	expires := time.Now().Add(time.Hour).Truncate(time.Millisecond)
 
-	db := withMainSession(t)
+	fns, db := withMainSession(t)
 	ids := userTokens(db, expires)
 
 	var updated string
-	revoked := DisableUserByID(func(_ context.Context, id string, _ store.Database) { updated = id })(ctx, userID.Hex())
+	revoked := fns.DisableUserByID(func(_ context.Context, id string, _ store.Database) { updated = id })(ctx, userID.Hex())
 
 	if updated != userID.Hex() || len(revoked) != 1 || !revoked[ids[0].Hex()].Equal(expires) {
 		t.Errorf("updated = %q, revoked = %v", updated, revoked)
@@ -126,9 +126,9 @@ func TestDisableUserByID(t *testing.T) {
 		t.Errorf("the deletion must not be recorded for a disabled user: %v", got)
 	}
 
-	db = withMainSession(t)
+	fns, db = withMainSession(t)
 	db.Coll(model.UserCollection).Err = errBoom
-	if revoked := DisableUserByID(nil)(ctx, userID.Hex()); len(revoked) != 0 {
+	if revoked := fns.DisableUserByID(nil)(ctx, userID.Hex()); len(revoked) != 0 {
 		t.Errorf("revoked = %v", revoked)
 	}
 }
@@ -137,9 +137,9 @@ func TestEnableUserByID(t *testing.T) {
 	ctx := context.Background()
 	userID := bson.NewObjectID()
 
-	db := withMainSession(t)
+	fns, db := withMainSession(t)
 	var updated string
-	EnableUserByID(func(_ context.Context, id string, _ store.Database) { updated = id })(ctx, userID.Hex())
+	fns.EnableUserByID(func(_ context.Context, id string, _ store.Database) { updated = id })(ctx, userID.Hex())
 
 	if updated != userID.Hex() {
 		t.Errorf("updated = %q", updated)
@@ -149,39 +149,39 @@ func TestEnableUserByID(t *testing.T) {
 	}
 
 	// Failures are only logged.
-	db = withMainSession(t)
+	fns, db = withMainSession(t)
 	db.Coll(model.DisabledUserCollection).Err = errBoom
-	EnableUserByID(nil)(ctx, userID.Hex())
+	fns.EnableUserByID(nil)(ctx, userID.Hex())
 }
 
 func TestUpdateUserSocialNetworksByID(t *testing.T) {
-	withMainSession(t)
+	fns, _ := withMainSession(t)
 
 	var updated string
-	UpdateUserSocialNetworksByID(func(_ context.Context, id string, _ store.Database) { updated = id })(context.Background(), "user-1")
+	fns.UpdateUserSocialNetworksByID(func(_ context.Context, id string, _ store.Database) { updated = id })(context.Background(), "user-1")
 	if updated != "user-1" {
 		t.Errorf("updated = %q", updated)
 	}
 
 	// Nothing to do without function.
-	UpdateUserSocialNetworksByID(nil)(context.Background(), "user-1")
+	fns.UpdateUserSocialNetworksByID(nil)(context.Background(), "user-1")
 }
 
 func TestGetNotificationTargetsByUserAndType(t *testing.T) {
 	ctx := context.Background()
 	userID := bson.NewObjectID()
 
-	db := withMainSession(t)
+	fns, db := withMainSession(t)
 	db.Coll(model.AuthTokenCollection).Docs = []any{bson.M{"type": "ios", "token": "token-1"}}
 	db.Coll(model.UserCollection).One = mock.Result{Value: bson.M{"_id": userID, "privateInfos": bson.M{"email": "j@example.com", "isEmailValid": true}}}
 
-	targets, err := GetNotificationTargetsByUserAndType(ctx, userID.Hex(), "news")
+	targets, err := fns.GetNotificationTargetsByUserAndType(ctx, userID.Hex(), "news")
 	want := []notifications.Target{{Target: "ios", Value: "token-1"}, {Target: notifications.TargetEmail, Value: "j@example.com"}}
 	if err != nil || len(targets) != 2 || targets[0] != want[0] || targets[1] != want[1] {
 		t.Errorf("got %+v, %v", targets, err)
 	}
 
-	if targets, err := GetNotificationTargetsByUserAndType(ctx, "nope", "news"); err == nil || targets == nil || len(targets) != 0 {
+	if targets, err := fns.GetNotificationTargetsByUserAndType(ctx, "nope", "news"); err == nil || targets == nil || len(targets) != 0 {
 		t.Errorf("an invalid user ID must fail with an empty list: %+v, %v", targets, err)
 	}
 }
@@ -201,20 +201,20 @@ func TestIsEmailAddressValid(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			db := withMainSession(t)
+			fns, db := withMainSession(t)
 			db.Coll(tt.collection).Count = tt.count
 
-			if got, err := IsEmailAddressValid(ctx, "j@example.com"); err != nil || got != tt.want {
+			if got, err := fns.IsEmailAddressValid(ctx, "j@example.com"); err != nil || got != tt.want {
 				t.Errorf("got %v, %v", got, err)
 			}
 		})
 	}
 
 	for _, collection := range []string{model.UserCollection, model.DisabledUserCollection} {
-		db := withMainSession(t)
+		fns, db := withMainSession(t)
 		db.Coll(collection).Err = errBoom
 
-		if got, err := IsEmailAddressValid(ctx, "j@example.com"); err == nil || got {
+		if got, err := fns.IsEmailAddressValid(ctx, "j@example.com"); err == nil || got {
 			t.Errorf("%s failing: got %v, %v", collection, got, err)
 		}
 	}
@@ -224,7 +224,7 @@ func TestGetAccounts(t *testing.T) {
 	ctx := context.Background()
 	first, second := bson.NewObjectID(), bson.NewObjectID()
 
-	db := withMainSession(t)
+	fns, db := withMainSession(t)
 	db.Coll(model.UserCollection).Docs = []any{model.User{ID: first}, model.User{ID: second}}
 
 	// The inactive accounts come last: the following checks are about the last query.
@@ -232,8 +232,8 @@ func TestGetAccounts(t *testing.T) {
 		name string
 		get  func() []string
 	}{
-		{"never used", func() []string { return GetNeverUsedAccounts(ctx, 30) }},
-		{"inactive", func() []string { return GetInactiveAccounts(ctx, 6) }},
+		{"never used", func() []string { return fns.GetNeverUsedAccounts(ctx, 30) }},
+		{"inactive", func() []string { return fns.GetInactiveAccounts(ctx, 6) }},
 	} {
 		if ids := tt.get(); len(ids) != 2 || ids[0] != first.Hex() || ids[1] != second.Hex() {
 			t.Errorf("%s: ids = %v", tt.name, ids)
@@ -249,25 +249,25 @@ func TestGetAccounts(t *testing.T) {
 
 	// A failing query is logged and gives no account.
 	db.Coll(model.UserCollection).Err = errBoom
-	if ids := GetNeverUsedAccounts(ctx, 30); len(ids) != 0 {
+	if ids := fns.GetNeverUsedAccounts(ctx, 30); len(ids) != 0 {
 		t.Errorf("ids = %v", ids)
 	}
-	if ids := GetInactiveAccounts(ctx, 6); len(ids) != 0 {
+	if ids := fns.GetInactiveAccounts(ctx, 6); len(ids) != 0 {
 		t.Errorf("ids = %v", ids)
 	}
 }
 
 func TestIsEmptyUser(t *testing.T) {
-	db := withMainSession(t)
+	fns, db := withMainSession(t)
 
-	isEmpty := IsEmptyUser(func(_ context.Context, id string, got store.Database) bool {
+	isEmpty := fns.IsEmptyUser(func(_ context.Context, id string, got store.Database) bool {
 		return id == "empty" && got == store.Database(db)
 	})
 	if !isEmpty(context.Background(), "empty") || isEmpty(context.Background(), "used") {
-		t.Error("IsEmptyUser() does not follow the function")
+		t.Error("fns.IsEmptyUser() does not follow the function")
 	}
 
-	if !IsEmptyUser(nil)(context.Background(), "anyone") {
+	if !fns.IsEmptyUser(nil)(context.Background(), "anyone") {
 		t.Error("every user is empty without function")
 	}
 }
