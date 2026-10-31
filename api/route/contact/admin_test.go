@@ -18,7 +18,7 @@ func TestGetAdminContacts(t *testing.T) {
 	}
 
 	var gotOffset, gotLimit int64
-	GetContacts = func(_ *gin.Context, offset, limit int64) (any, error) {
+	testFunctions.GetContacts = func(_ *gin.Context, offset, limit int64) (any, error) {
 		gotOffset, gotLimit = offset, limit
 		return []string{"c"}, nil
 	}
@@ -29,7 +29,7 @@ func TestGetAdminContacts(t *testing.T) {
 		t.Errorf("offset, limit = %d, %d, want 2, 5", gotOffset, gotLimit)
 	}
 
-	GetContacts = func(*gin.Context, int64, int64) (any, error) { return nil, errors.New("boom") }
+	testFunctions.GetContacts = func(*gin.Context, int64, int64) (any, error) { return nil, errors.New("boom") }
 	if got := serve(GetAdminContacts, http.MethodGet, "/", ""); got != http.StatusInternalServerError {
 		t.Errorf("failing function: status = %d, want %d", got, http.StatusInternalServerError)
 	}
@@ -43,7 +43,7 @@ func TestGetAdminContact(t *testing.T) {
 	}
 
 	var gotID string
-	GetContact = func(_ *gin.Context, id string) (any, error) {
+	testFunctions.GetContact = func(_ *gin.Context, id string) (any, error) {
 		gotID = id
 		return "c", nil
 	}
@@ -51,7 +51,7 @@ func TestGetAdminContact(t *testing.T) {
 		t.Errorf("status = %d, id = %q, want 200 and abc", got, gotID)
 	}
 
-	GetContact = func(*gin.Context, string) (any, error) { return nil, errors.New("boom") }
+	testFunctions.GetContact = func(*gin.Context, string) (any, error) { return nil, errors.New("boom") }
 	if got := serve(GetAdminContact, http.MethodGet, "/abc", ""); got != http.StatusInternalServerError {
 		t.Errorf("failing function: status = %d, want %d", got, http.StatusInternalServerError)
 	}
@@ -66,7 +66,7 @@ func TestUpdate(t *testing.T) {
 
 	var gotID string
 	var gotDone bool
-	UpdateContact = func(_ *gin.Context, id string, done bool) error {
+	testFunctions.UpdateContact = func(_ *gin.Context, id string, done bool) error {
 		gotID, gotDone = id, done
 		return nil
 	}
@@ -74,7 +74,7 @@ func TestUpdate(t *testing.T) {
 		t.Errorf("status = %d, id = %q, done = %v, want 200, abc, true", got, gotID, gotDone)
 	}
 
-	UpdateContact = func(*gin.Context, string, bool) error { return errors.New("boom") }
+	testFunctions.UpdateContact = func(*gin.Context, string, bool) error { return errors.New("boom") }
 	if got := serve(Update, http.MethodPut, "/abc", `{"done":true}`); got != http.StatusInternalServerError {
 		t.Errorf("failing function: status = %d, want %d", got, http.StatusInternalServerError)
 	}

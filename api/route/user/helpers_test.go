@@ -6,20 +6,25 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cygy/ginamite/common/ctxconfig"
-
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/internal/apitest"
 	"github.com/cygy/ginamite/api/route/account"
 	"github.com/cygy/ginamite/common/config"
+	"github.com/cygy/ginamite/common/ctxconfig"
 	"github.com/cygy/ginamite/common/kafka"
 	"github.com/cygy/ginamite/common/timezone"
 
 	"github.com/gin-gonic/gin"
 )
 
-// testConfig is the configuration of the handlers, replaced by setup.
-var testConfig *config.Configuration
+var (
+	// testConfig is the configuration of the handlers, replaced by setup.
+	testConfig *config.Configuration
+
+	// testFunctions and testAccountFunctions are the functions of the handlers, reset at the end of each test.
+	testFunctions        Functions
+	testAccountFunctions account.Functions
+)
 
 // setup initializes the global dependencies of the handlers and resets the injected functions at the end of the test.
 func setup(t *testing.T) {
@@ -34,20 +39,15 @@ func setup(t *testing.T) {
 	kafka.Main = kafka.NewClient()
 
 	t.Cleanup(func() {
-		GetEnabledUsersForAdmin, GetDisabledUsersForAdmin = nil, nil
-		UpdatePasswordByAdmin, UpdateInformationsByAdmin, UpdateDescriptionByAdmin = nil, nil, nil
-		UpdateSocialByAdmin, UpdateSettingsByAdmin, UpdateNotificationsByAdmin = nil, nil, nil
-		GetTokensForAdmin, DeleteTokenByIDByAdmin = nil, nil
-		SetAbilitiesToUser, AddAbilitiesToUser, RemoveAbilitiesFromUser = nil, nil, nil
-		account.GetTokenDetailsByID, account.GetUserDetailsByID = nil, nil
-		account.DeleteUserByID, account.DisableUserByID, account.EnableUserByID = nil, nil, nil
+		testFunctions = Functions{}
+		testAccountFunctions = account.Functions{}
 	})
 }
 
 // serve sends a request with the given JSON body to the handler, mounted on "/:id", and returns the HTTP status.
 func serve(handler gin.HandlerFunc, body string) int {
 	router := gin.New()
-	router.Use(ctxconfig.Inject(testConfig), ctxLocale.Inject("en", []string{"en"}))
+	router.Use(ctxconfig.Inject(testConfig), Inject(&testFunctions), account.Inject(&testAccountFunctions), ctxLocale.Inject("en", []string{"en"}))
 	router.Any("/:id", handler)
 
 	req, _ := http.NewRequest(http.MethodPost, "/42", strings.NewReader(body))
@@ -59,6 +59,8 @@ func serve(handler gin.HandlerFunc, body string) int {
 func newTestContext(body string) (*gin.Context, *httptest.ResponseRecorder) {
 	c, recorder := apitest.NewContext(http.MethodPost, "/42", strings.NewReader(body))
 	ctxconfig.Set(c, testConfig)
+	SetFunctions(c, &testFunctions)
+	account.SetFunctions(c, &testAccountFunctions)
 	ctxLocale.Set(c, "en", "en")
 
 	return c, recorder

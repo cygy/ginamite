@@ -17,7 +17,7 @@ import (
 
 // GetNotifications returns the latest notifications received by the user.
 func GetNotifications(c *gin.Context) {
-	if NotificationsReceivedByUser == nil {
+	if FunctionsOf(c).NotificationsReceivedByUser == nil {
 		c.Error(errors.New("undefined function 'NotificationsReceivedByUser'"))
 		response.InternalServerError(c)
 		return
@@ -25,7 +25,7 @@ func GetNotifications(c *gin.Context) {
 
 	userID := ctxUser.GetID(c)
 
-	notifications, err := NotificationsReceivedByUser(c, userID)
+	notifications, err := FunctionsOf(c).NotificationsReceivedByUser(c, userID)
 	if err != nil {
 		response.InternalServerError(c)
 		return
@@ -38,7 +38,7 @@ func GetNotifications(c *gin.Context) {
 
 // GetNotification returns a notification received by the user.
 func GetNotification(c *gin.Context) {
-	if NotificationReceivedByUser == nil {
+	if FunctionsOf(c).NotificationReceivedByUser == nil {
 		c.Error(errors.New("undefined function 'NotificationReceivedByUser'"))
 		response.InternalServerError(c)
 		return
@@ -53,7 +53,7 @@ func GetNotification(c *gin.Context) {
 
 	userID := ctxUser.GetID(c)
 
-	notification, err := NotificationReceivedByUser(c, userID, notificationID)
+	notification, err := FunctionsOf(c).NotificationReceivedByUser(c, userID, notificationID)
 	if err != nil {
 		response.InternalServerError(c)
 		return
@@ -74,11 +74,11 @@ func UpdateNotificationRead(c *gin.Context) {
 	}
 
 	var err error
-	if UpdateUserNotificationRead == nil {
+	if FunctionsOf(c).UpdateUserNotificationRead == nil {
 		err = c.Error(errors.New("undefined function 'UpdateUserNotificationRead'"))
 	} else {
 		userID := ctxUser.GetID(c)
-		err = UpdateUserNotificationRead(c, userID, notificationID)
+		err = FunctionsOf(c).UpdateUserNotificationRead(c, userID, notificationID)
 	}
 
 	if err != nil {
@@ -103,11 +103,11 @@ func UpdateNotificationNotified(c *gin.Context) {
 	}
 
 	var err error
-	if UpdateUserNotificationNotified == nil {
+	if FunctionsOf(c).UpdateUserNotificationNotified == nil {
 		err = c.Error(errors.New("undefined function 'UpdateUserNotificationNotified'"))
 	} else {
 		userID := ctxUser.GetID(c)
-		err = UpdateUserNotificationNotified(c, userID, notificationID)
+		err = FunctionsOf(c).UpdateUserNotificationNotified(c, userID, notificationID)
 	}
 
 	if err != nil {
@@ -129,11 +129,11 @@ func DeleteNotification(c *gin.Context) {
 	}
 
 	var err error
-	if DeleteUserNotification == nil {
+	if FunctionsOf(c).DeleteUserNotification == nil {
 		err = c.Error(errors.New("undefined function 'DeleteUserNotification'"))
 	} else {
 		userID := ctxUser.GetID(c)
-		err = DeleteUserNotification(c, userID, notificationID)
+		err = FunctionsOf(c).DeleteUserNotification(c, userID, notificationID)
 	}
 
 	if err != nil {
@@ -150,14 +150,14 @@ func DeleteNotification(c *gin.Context) {
 
 // GetNotificationsSettings returns all the notifications received or not by the user's devices.
 func GetNotificationsSettings(c *gin.Context) {
-	if NotificationsSubscribedByUser == nil {
+	if FunctionsOf(c).NotificationsSubscribedByUser == nil {
 		c.Error(errors.New("undefined function 'NotificationsSubscribedByUser'"))
 		response.InternalServerError(c)
 		return
 	}
 
 	userID := ctxUser.GetID(c)
-	userNotifications := NotificationsSubscribedByUser(c, userID)
+	userNotifications := FunctionsOf(c).NotificationsSubscribedByUser(c, userID)
 	response.Ok(c, response.H{
 		"notifications": userNotifications,
 	})
@@ -165,7 +165,7 @@ func GetNotificationsSettings(c *gin.Context) {
 
 // SaveNotificationsSettings saves all the notifications received by the user's devices.
 func SaveNotificationsSettings(c *gin.Context) {
-	if SubscribeNotificationsToUser == nil {
+	if FunctionsOf(c).SubscribeNotificationsToUser == nil {
 		c.Error(errors.New("undefined function 'SubscribeNotificationsToUser'"))
 		response.InternalServerError(c)
 		return
@@ -192,7 +192,7 @@ func SaveNotificationsSettings(c *gin.Context) {
 	}
 
 	userID := ctxUser.GetID(c)
-	if err := SubscribeNotificationsToUser(c, userID, notificationsToSave); err != nil {
+	if err := FunctionsOf(c).SubscribeNotificationsToUser(c, userID, notificationsToSave); err != nil {
 		response.InternalServerError(c)
 		return
 	}
@@ -213,7 +213,7 @@ func UnsubscribeNotificationByKey(c *gin.Context) {
 		response.InvalidRequestParameterWithDetails(c, message, reason, recovery)
 	}
 
-	if UnsubscribeNotificationFromUser == nil {
+	if FunctionsOf(c).UnsubscribeNotificationFromUser == nil {
 		c.Error(errors.New("undefined function 'UnsubscribeNotificationFromUser'"))
 		sendError()
 		return
@@ -243,7 +243,7 @@ func UnsubscribeNotificationByKey(c *gin.Context) {
 		return
 	}
 
-	if err := UnsubscribeNotificationFromUser(c, userID, notification, key); err != nil {
+	if err := FunctionsOf(c).UnsubscribeNotificationFromUser(c, userID, notification, key); err != nil {
 		sendError()
 		return
 	}

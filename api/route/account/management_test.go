@@ -9,7 +9,7 @@ import (
 
 func TestGetInfos(t *testing.T) {
 	details := func(v any) func() {
-		return func() { GetOwnedAccountDetails = func(*gin.Context, string) any { return v } }
+		return func() { testFunctions.GetOwnedAccountDetails = func(*gin.Context, string) any { return v } }
 	}
 
 	runCases(t, GetInfos, []testCase{
@@ -22,7 +22,9 @@ func TestGetInfos(t *testing.T) {
 func TestUpdateInfos(t *testing.T) {
 	const body = `{"first_name":"John","last_name":"Doe"}`
 	update := func(err error) func() {
-		return func() { UpdatedAccountInfos = func(*gin.Context, string, string, string) error { return err } }
+		return func() {
+			testFunctions.UpdatedAccountInfos = func(*gin.Context, string, string, string) error { return err }
+		}
 	}
 
 	runCases(t, UpdateInfos, []testCase{
@@ -37,7 +39,9 @@ func TestUpdateInfos(t *testing.T) {
 func TestUpdateSettings(t *testing.T) {
 	const body = `{"locale":"en","timezone":"Europe/Paris"}`
 	update := func(err error) func() {
-		return func() { UpdatedAccountSettings = func(*gin.Context, string, string, string) error { return err } }
+		return func() {
+			testFunctions.UpdatedAccountSettings = func(*gin.Context, string, string, string) error { return err }
+		}
 	}
 
 	runCases(t, UpdateSettings, []testCase{

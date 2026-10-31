@@ -3,13 +3,12 @@ package account
 import (
 	"errors"
 
-	"github.com/cygy/ginamite/common/ctxconfig"
-
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	ctxUser "github.com/cygy/ginamite/api/context/user"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common/authentication"
+	"github.com/cygy/ginamite/common/ctxconfig"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/queue"
 
@@ -18,13 +17,13 @@ import (
 
 // UpdatePassword updates the password and sends a mail to confirm.
 func UpdatePassword(c *gin.Context) {
-	if GetUserDetailsByID == nil {
+	if FunctionsOf(c).GetUserDetailsByID == nil {
 		c.Error(errors.New("undefined function 'GetUserDetailsByID'"))
 		response.InternalServerError(c)
 		return
 	}
 
-	if CreateNewUpdatePasswordProcess == nil {
+	if FunctionsOf(c).CreateNewUpdatePasswordProcess == nil {
 		c.Error(errors.New("undefined function 'CreateNewUpdatePasswordProcess'"))
 		response.InternalServerError(c)
 		return
@@ -51,13 +50,13 @@ func UpdatePassword(c *gin.Context) {
 	}
 
 	userID := ctxUser.GetID(c)
-	user, err := GetUserDetailsByID(c, userID)
+	user, err := FunctionsOf(c).GetUserDetailsByID(c, userID)
 	if err != nil {
 		response.InternalServerError(c)
 		return
 	}
 
-	processID, processKey, err := CreateNewUpdatePasswordProcess(c, userID, encryptedPassword)
+	processID, processKey, err := FunctionsOf(c).CreateNewUpdatePasswordProcess(c, userID, encryptedPassword)
 	if err != nil {
 		response.InternalServerError(c)
 		return

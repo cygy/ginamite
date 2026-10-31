@@ -1,6 +1,13 @@
 package user
 
-var (
+import "github.com/gin-gonic/gin"
+
+// functionsKey is the key of the functions in the Gin context.
+const functionsKey = "_user_functions"
+
+// Functions are the functions provided by the application, such as the ones of the storage plugin, used by the
+// handlers of the package. A missing function disables the feature relying on it.
+type Functions struct {
 	// GetEnabledUsersForAdmin is a function to return the list of the users to display in the admin panel.
 	GetEnabledUsersForAdmin GetUsersForAdminFunc
 
@@ -39,4 +46,28 @@ var (
 
 	// RemoveAbilitiesFromUser remove some abilities from a user.
 	RemoveAbilitiesFromUser RemoveAbilitiesFromUserFunc
-)
+}
+
+// Inject returns a middleware saving the functions in the Gin context, see FunctionsOf.
+func Inject(functions *Functions) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		SetFunctions(c, functions)
+		c.Next()
+	}
+}
+
+// SetFunctions saves the functions in the Gin context, like Inject does. It is meant for the tests.
+func SetFunctions(c *gin.Context, functions *Functions) {
+	c.Set(functionsKey, functions)
+}
+
+// FunctionsOf returns the functions saved in the Gin context by Inject.
+// It panics if there are none: the handlers can not work without them.
+func FunctionsOf(c *gin.Context) *Functions {
+	value, ok := c.Get(functionsKey)
+	if !ok {
+		panic("user: no functions in the context, add the middleware Inject")
+	}
+
+	return value.(*Functions)
+}

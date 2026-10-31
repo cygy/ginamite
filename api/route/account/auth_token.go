@@ -5,14 +5,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cygy/ginamite/common/ctxconfig"
-
 	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	ctxUser "github.com/cygy/ginamite/api/context/user"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common/authentication"
+	"github.com/cygy/ginamite/common/ctxconfig"
 	commonErrors "github.com/cygy/ginamite/common/errors"
 	authError "github.com/cygy/ginamite/common/errors/auth"
 	"github.com/cygy/ginamite/common/localization"
@@ -26,7 +25,7 @@ import (
 
 // LoginWithPassword creates a token to log in an account.
 func LoginWithPassword(c *gin.Context) {
-	if GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser == nil {
+	if FunctionsOf(c).GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser == nil {
 		c.Error(errors.New("undefined function 'GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser'"))
 		response.InternalServerError(c)
 		return
@@ -87,7 +86,7 @@ func LoginWithPassword(c *gin.Context) {
 		return
 	}
 
-	user, encryptedPassword, err := GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser(c, identifier)
+	user, encryptedPassword, err := FunctionsOf(c).GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser(c, identifier)
 	if err != nil || !authentication.ComparePassword(password, encryptedPassword) {
 		canNotLoginError(c, err)
 		return
@@ -112,7 +111,7 @@ func LoginWithGoogle(c *gin.Context) {
 
 // Logout deletes the token and log out.
 func Logout(c *gin.Context) {
-	if DeleteTokenByID == nil {
+	if FunctionsOf(c).DeleteTokenByID == nil {
 		c.Error(errors.New("undefined function 'DeleteTokenByID'"))
 		response.InternalServerError(c)
 		return
@@ -121,13 +120,13 @@ func Logout(c *gin.Context) {
 	tokenID := ctxAuthToken.GetID(c)
 
 	expirationDate := time.Now().Add(time.Duration(ctxconfig.Get(c).JWT.TTL) * time.Second)
-	if GetTokenExpirationDate != nil {
-		if date, err := GetTokenExpirationDate(c, tokenID); err == nil {
+	if FunctionsOf(c).GetTokenExpirationDate != nil {
+		if date, err := FunctionsOf(c).GetTokenExpirationDate(c, tokenID); err == nil {
 			expirationDate = date
 		}
 	}
 
-	if err := DeleteTokenByID(c, tokenID); err != nil {
+	if err := FunctionsOf(c).DeleteTokenByID(c, tokenID); err != nil {
 		if commonErrors.IsNotFound(err) {
 			response.NoContent(c)
 		} else {
@@ -143,7 +142,7 @@ func Logout(c *gin.Context) {
 
 // GetAuthTokens gets the tokens of an account.
 func GetAuthTokens(c *gin.Context) {
-	if GetOwnedTokens == nil {
+	if FunctionsOf(c).GetOwnedTokens == nil {
 		c.Error(errors.New("undefined function 'GetOwnedTokens'"))
 		response.InternalServerError(c)
 		return
@@ -151,7 +150,7 @@ func GetAuthTokens(c *gin.Context) {
 
 	userID := ctxUser.GetID(c)
 
-	tokens, err := GetOwnedTokens(c, userID)
+	tokens, err := FunctionsOf(c).GetOwnedTokens(c, userID)
 	if err != nil {
 		response.SendError(c, err)
 		return
@@ -174,7 +173,7 @@ func DeleteAuthTokenWithKey(c *gin.Context) {
 
 // GetAuthToken gets the token properties of an account.
 func GetAuthToken(c *gin.Context) {
-	if GetOwnedTokenByID == nil {
+	if FunctionsOf(c).GetOwnedTokenByID == nil {
 		c.Error(errors.New("undefined function 'GetOwnedTokenByID'"))
 		response.InternalServerError(c)
 		return
@@ -182,7 +181,7 @@ func GetAuthToken(c *gin.Context) {
 
 	tokenID := c.Param("id")
 
-	token, tokenOwnerID, err := GetOwnedTokenByID(c, tokenID)
+	token, tokenOwnerID, err := FunctionsOf(c).GetOwnedTokenByID(c, tokenID)
 	if err != nil {
 		response.SendError(c, err)
 		return
@@ -201,13 +200,13 @@ func GetAuthToken(c *gin.Context) {
 
 // UpdateAuthToken updates a token of an account.
 func UpdateAuthToken(c *gin.Context) {
-	if GetTokenDetailsByID == nil {
+	if FunctionsOf(c).GetTokenDetailsByID == nil {
 		c.Error(errors.New("undefined function 'GetTokenDetailsByID'"))
 		response.InternalServerError(c)
 		return
 	}
 
-	if UpdateTokenByID == nil {
+	if FunctionsOf(c).UpdateTokenByID == nil {
 		c.Error(errors.New("undefined function 'UpdateTokenByID'"))
 		response.InternalServerError(c)
 		return
@@ -248,7 +247,7 @@ func UpdateAuthToken(c *gin.Context) {
 		}
 	}
 
-	token, err := GetTokenDetailsByID(c, tokenID)
+	token, err := FunctionsOf(c).GetTokenDetailsByID(c, tokenID)
 	if err != nil {
 		response.SendError(c, err)
 		return
@@ -260,7 +259,7 @@ func UpdateAuthToken(c *gin.Context) {
 		return
 	}
 
-	if err := UpdateTokenByID(c, tokenID, name, jsonBody.EnableNotification, subscribedNotifications); err != nil {
+	if err := FunctionsOf(c).UpdateTokenByID(c, tokenID, name, jsonBody.EnableNotification, subscribedNotifications); err != nil {
 		response.InternalServerError(c)
 		return
 	}

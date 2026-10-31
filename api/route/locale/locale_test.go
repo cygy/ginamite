@@ -6,10 +6,9 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/cygy/ginamite/common/ctxconfig"
-
 	"github.com/cygy/ginamite/api/internal/apitest"
 	"github.com/cygy/ginamite/common/config"
+	"github.com/cygy/ginamite/common/ctxconfig"
 )
 
 func TestGetLocales(t *testing.T) {

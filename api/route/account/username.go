@@ -24,8 +24,8 @@ func GetAvailability(c *gin.Context) {
 	locale := ctxLocale.Get(c)
 	t := localization.Translate(locale)
 
-	if DoesAccountWithUsernameExist != nil {
-		exists, err := DoesAccountWithUsernameExist(c, username)
+	if FunctionsOf(c).DoesAccountWithUsernameExist != nil {
+		exists, err := FunctionsOf(c).DoesAccountWithUsernameExist(c, username)
 		if exists || err != nil {
 			response.Ok(c, Availability{
 				Available: false,

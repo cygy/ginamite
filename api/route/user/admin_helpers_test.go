@@ -28,9 +28,9 @@ func TestUpdateAbilities(t *testing.T) {
 		handler gin.HandlerFunc
 		inject  func(fn func(c *gin.Context, abilities []string, userID string) error)
 	}{
-		{"SetAbilities", SetAbilities, func(fn func(*gin.Context, []string, string) error) { SetAbilitiesToUser = fn }},
-		{"AddAbilities", AddAbilities, func(fn func(*gin.Context, []string, string) error) { AddAbilitiesToUser = fn }},
-		{"RemoveAbilities", RemoveAbilities, func(fn func(*gin.Context, []string, string) error) { RemoveAbilitiesFromUser = fn }},
+		{"SetAbilities", SetAbilities, func(fn func(*gin.Context, []string, string) error) { testFunctions.SetAbilitiesToUser = fn }},
+		{"AddAbilities", AddAbilities, func(fn func(*gin.Context, []string, string) error) { testFunctions.AddAbilitiesToUser = fn }},
+		{"RemoveAbilities", RemoveAbilities, func(fn func(*gin.Context, []string, string) error) { testFunctions.RemoveAbilitiesFromUser = fn }},
 	}
 	tests := []struct {
 		name    string

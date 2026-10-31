@@ -12,7 +12,7 @@ import (
 func TestGetNotifications(t *testing.T) {
 	list := func(err error) func() {
 		return func() {
-			NotificationsReceivedByUser = func(*gin.Context, string) (any, error) { return []string{"n1"}, err }
+			testFunctions.NotificationsReceivedByUser = func(*gin.Context, string) (any, error) { return []string{"n1"}, err }
 		}
 	}
 
@@ -26,7 +26,7 @@ func TestGetNotifications(t *testing.T) {
 func TestGetNotification(t *testing.T) {
 	get := func(err error) func() {
 		return func() {
-			NotificationReceivedByUser = func(*gin.Context, string, string) (any, error) { return "n1", err }
+			testFunctions.NotificationReceivedByUser = func(*gin.Context, string, string) (any, error) { return "n1", err }
 		}
 	}
 
@@ -52,19 +52,23 @@ func notificationUpdateCases(inject func(err error) func()) []testCase {
 
 func TestUpdateNotificationRead(t *testing.T) {
 	runCases(t, UpdateNotificationRead, notificationUpdateCases(func(err error) func() {
-		return func() { UpdateUserNotificationRead = func(*gin.Context, string, string) error { return err } }
+		return func() {
+			testFunctions.UpdateUserNotificationRead = func(*gin.Context, string, string) error { return err }
+		}
 	}))
 }
 
 func TestUpdateNotificationNotified(t *testing.T) {
 	runCases(t, UpdateNotificationNotified, notificationUpdateCases(func(err error) func() {
-		return func() { UpdateUserNotificationNotified = func(*gin.Context, string, string) error { return err } }
+		return func() {
+			testFunctions.UpdateUserNotificationNotified = func(*gin.Context, string, string) error { return err }
+		}
 	}))
 }
 
 func TestDeleteNotification(t *testing.T) {
 	runCases(t, DeleteNotification, notificationUpdateCases(func(err error) func() {
-		return func() { DeleteUserNotification = func(*gin.Context, string, string) error { return err } }
+		return func() { testFunctions.DeleteUserNotification = func(*gin.Context, string, string) error { return err } }
 	}))
 }
 
@@ -72,7 +76,7 @@ func TestGetNotificationsSettings(t *testing.T) {
 	runCases(t, GetNotificationsSettings, []testCase{
 		{name: "function not defined", userID: testUserID, want: http.StatusInternalServerError},
 		{name: "success", userID: testUserID, want: http.StatusOK, check: contains("n1"), setup: func() {
-			NotificationsSubscribedByUser = func(*gin.Context, string) []string { return []string{"n1"} }
+			testFunctions.NotificationsSubscribedByUser = func(*gin.Context, string) []string { return []string{"n1"} }
 		}},
 	})
 }
@@ -80,7 +84,9 @@ func TestGetNotificationsSettings(t *testing.T) {
 func TestSaveNotificationsSettings(t *testing.T) {
 	body := `{"notifications":["` + notifications.TypeNewLogin + `"]}`
 	save := func(err error) func() {
-		return func() { SubscribeNotificationsToUser = func(*gin.Context, string, []string) error { return err } }
+		return func() {
+			testFunctions.SubscribeNotificationsToUser = func(*gin.Context, string, []string) error { return err }
+		}
 	}
 
 	runCases(t, SaveNotificationsSettings, []testCase{
@@ -94,7 +100,7 @@ func TestSaveNotificationsSettings(t *testing.T) {
 func TestUnsubscribeNotificationByKey(t *testing.T) {
 	unsubscribe := func(err error) func() {
 		return func() {
-			UnsubscribeNotificationFromUser = func(*gin.Context, string, string, string) error { return err }
+			testFunctions.UnsubscribeNotificationFromUser = func(*gin.Context, string, string, string) error { return err }
 		}
 	}
 	validKey := "user." + notifications.TypeNewLogin + ".signature"

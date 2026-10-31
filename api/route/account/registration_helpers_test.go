@@ -31,29 +31,29 @@ type registerStubs struct {
 }
 
 func (r registerStubs) install() {
-	DoesAccountWithUsernameExist = func(*gin.Context, string) (bool, error) { return r.usernameExists, r.usernameErr }
-	DoesAccountWithEmailAddressExist = func(*gin.Context, string) (bool, error) { return r.emailExists, r.emailErr }
-	DoesUserWithFacebookUserIDExist = func(*gin.Context, string) (bool, error) { return r.socialExists, r.socialErr }
-	DoesUserWithGoogleUserIDExist = func(*gin.Context, string) (bool, error) { return r.socialExists, r.socialErr }
-	GetUserDetailsByIdentifier = func(*gin.Context, string) (authentication.User, error) { return testUser, r.identifierErr }
-	RegisterByEmailAddress = func(*gin.Context, string, string, string, string, string, string, string, string, string, authentication.Device) error {
+	testFunctions.DoesAccountWithUsernameExist = func(*gin.Context, string) (bool, error) { return r.usernameExists, r.usernameErr }
+	testFunctions.DoesAccountWithEmailAddressExist = func(*gin.Context, string) (bool, error) { return r.emailExists, r.emailErr }
+	testFunctions.DoesUserWithFacebookUserIDExist = func(*gin.Context, string) (bool, error) { return r.socialExists, r.socialErr }
+	testFunctions.DoesUserWithGoogleUserIDExist = func(*gin.Context, string) (bool, error) { return r.socialExists, r.socialErr }
+	testFunctions.GetUserDetailsByIdentifier = func(*gin.Context, string) (authentication.User, error) { return testUser, r.identifierErr }
+	testFunctions.RegisterByEmailAddress = func(*gin.Context, string, string, string, string, string, string, string, string, string, authentication.Device) error {
 		return r.registerErr
 	}
-	RegisterByThirdPartyToken = func(*gin.Context, string, validator.TokenInfos, string, string, string, string, string, string, string, authentication.Device) error {
+	testFunctions.RegisterByThirdPartyToken = func(*gin.Context, string, validator.TokenInfos, string, string, string, string, string, string, string, authentication.Device) error {
 		return r.registerErr
 	}
 
 	switch r.missing {
 	case "GetUserDetailsByIdentifier":
-		GetUserDetailsByIdentifier = nil
+		testFunctions.GetUserDetailsByIdentifier = nil
 	case "RegisterByEmailAddress":
-		RegisterByEmailAddress = nil
+		testFunctions.RegisterByEmailAddress = nil
 	case "RegisterByThirdPartyToken":
-		RegisterByThirdPartyToken = nil
+		testFunctions.RegisterByThirdPartyToken = nil
 	case "DoesAccountWithUsernameExist":
-		DoesAccountWithUsernameExist = nil
+		testFunctions.DoesAccountWithUsernameExist = nil
 	case "DoesAccountWithEmailAddressExist":
-		DoesAccountWithEmailAddressExist = nil
+		testFunctions.DoesAccountWithEmailAddressExist = nil
 	}
 }
 
@@ -127,7 +127,7 @@ func TestRegister_ThirdParty(t *testing.T) {
 					want: http.StatusOK,
 				},
 				{name: "social lookup function not defined", body: body, setup: all(registerStubs{}.install, valid, func() {
-					DoesUserWithFacebookUserIDExist, DoesUserWithGoogleUserIDExist = nil, nil
+					testFunctions.DoesUserWithFacebookUserIDExist, testFunctions.DoesUserWithGoogleUserIDExist = nil, nil
 				}), want: http.StatusCreated},
 			})
 		})
@@ -154,22 +154,22 @@ type registrationValidationStubs struct {
 }
 
 func (r registrationValidationStubs) install() {
-	GetUserDetailsByID = func(*gin.Context, string) (authentication.User, error) { return testUser, r.userErr }
-	GetRegistrationDetails = func(*gin.Context, string) (*authentication.Details, error) {
+	testFunctions.GetUserDetailsByID = func(*gin.Context, string) (authentication.User, error) { return testUser, r.userErr }
+	testFunctions.GetRegistrationDetails = func(*gin.Context, string) (*authentication.Details, error) {
 		return &authentication.Details{Source: "web", Method: authentication.MethodPassword, Device: authentication.Device{Type: "mobile", Name: "iPhone"}}, r.detailsErr
 	}
-	ValidateUserRegistration = func(*gin.Context, string, string) error { return r.validateErr }
-	CancelUserRegistration = func(*gin.Context, string, string) error { return r.cancelErr }
+	testFunctions.ValidateUserRegistration = func(*gin.Context, string, string) error { return r.validateErr }
+	testFunctions.CancelUserRegistration = func(*gin.Context, string, string) error { return r.cancelErr }
 
 	switch r.missing {
 	case "GetUserDetailsByID":
-		GetUserDetailsByID = nil
+		testFunctions.GetUserDetailsByID = nil
 	case "GetRegistrationDetails":
-		GetRegistrationDetails = nil
+		testFunctions.GetRegistrationDetails = nil
 	case "ValidateUserRegistration":
-		ValidateUserRegistration = nil
+		testFunctions.ValidateUserRegistration = nil
 	case "CancelUserRegistration":
-		CancelUserRegistration = nil
+		testFunctions.CancelUserRegistration = nil
 	}
 }
 

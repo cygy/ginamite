@@ -13,7 +13,6 @@ import (
 	"testing"
 
 	"github.com/cygy/ginamite/common/ctxconfig"
-
 	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/store/mock"
 	"github.com/cygy/ginamite/plugins/mongodb/internal/plugintest"

@@ -4,10 +4,9 @@ package authtoken
 import (
 	"time"
 
-	"github.com/cygy/ginamite/common/ctxconfig"
-
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common/authentication"
+	"github.com/cygy/ginamite/common/ctxconfig"
 
 	"github.com/gin-gonic/gin"
 	jwt "github.com/golang-jwt/jwt/v5"

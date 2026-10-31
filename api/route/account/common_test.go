@@ -16,27 +16,27 @@ type processStubs struct {
 }
 
 func (p processStubs) install() {
-	VerifyProcess = func(*gin.Context, string, string) (string, string, error) { return testUserID, "value", p.verifyErr }
-	GetUserDetailsByID = func(*gin.Context, string) (authentication.User, error) { return testUser, p.userErr }
-	DeleteProcessByID = func(*gin.Context, string) error { return p.deleteProcessErr }
-	UpdateUserEmailAddress = func(*gin.Context, string, string) error { return p.updateErr }
-	UpdateUserPassword = func(*gin.Context, string, string, bool) error { return p.updateErr }
-	UserEmailAddressIsVerified = func(*gin.Context, string) error { return p.updateErr }
-	DeleteUserByID = func(*gin.Context, string) error { return p.updateErr }
-	DisableUserByID = func(*gin.Context, string) (authentication.User, error) { return testUser, p.updateErr }
-	CreateNewVerifyEmailAddressProcess = func(*gin.Context, string) (string, string, error) { return "id", "key", nil }
+	testFunctions.VerifyProcess = func(*gin.Context, string, string) (string, string, error) { return testUserID, "value", p.verifyErr }
+	testFunctions.GetUserDetailsByID = func(*gin.Context, string) (authentication.User, error) { return testUser, p.userErr }
+	testFunctions.DeleteProcessByID = func(*gin.Context, string) error { return p.deleteProcessErr }
+	testFunctions.UpdateUserEmailAddress = func(*gin.Context, string, string) error { return p.updateErr }
+	testFunctions.UpdateUserPassword = func(*gin.Context, string, string, bool) error { return p.updateErr }
+	testFunctions.UserEmailAddressIsVerified = func(*gin.Context, string) error { return p.updateErr }
+	testFunctions.DeleteUserByID = func(*gin.Context, string) error { return p.updateErr }
+	testFunctions.DisableUserByID = func(*gin.Context, string) (authentication.User, error) { return testUser, p.updateErr }
+	testFunctions.CreateNewVerifyEmailAddressProcess = func(*gin.Context, string) (string, string, error) { return "id", "key", nil }
 
 	switch p.missing {
 	case "GetUserDetailsByID":
-		GetUserDetailsByID = nil
+		testFunctions.GetUserDetailsByID = nil
 	case "VerifyProcess":
-		VerifyProcess = nil
+		testFunctions.VerifyProcess = nil
 	case "DeleteProcessByID":
-		DeleteProcessByID = nil
+		testFunctions.DeleteProcessByID = nil
 	case "update":
-		UpdateUserEmailAddress, UpdateUserPassword, UserEmailAddressIsVerified, DeleteUserByID, DisableUserByID = nil, nil, nil, nil, nil
+		testFunctions.UpdateUserEmailAddress, testFunctions.UpdateUserPassword, testFunctions.UserEmailAddressIsVerified, testFunctions.DeleteUserByID, testFunctions.DisableUserByID = nil, nil, nil, nil, nil
 	case "CreateNewVerifyEmailAddressProcess":
-		CreateNewVerifyEmailAddressProcess = nil
+		testFunctions.CreateNewVerifyEmailAddressProcess = nil
 	}
 }
 

@@ -3,9 +3,8 @@ package functions
 import (
 	"testing"
 
-	"github.com/cygy/ginamite/common/ctxconfig"
-
 	apiContextLocale "github.com/cygy/ginamite/api/context/locale"
+	"github.com/cygy/ginamite/common/ctxconfig"
 	commonErrors "github.com/cygy/ginamite/common/errors"
 	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/store/mock"

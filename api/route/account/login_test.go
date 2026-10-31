@@ -21,24 +21,24 @@ func TestLoginWithThirdParty(t *testing.T) {
 			return func() {
 				fn := func(*gin.Context, string) (authentication.User, error) { return user, err }
 				if method == authentication.MethodFacebook {
-					GetUserDetailsByFacebookUserID = fn
+					testFunctions.GetUserDetailsByFacebookUserID = fn
 				} else {
-					GetUserDetailsByGoogleUserID = fn
+					testFunctions.GetUserDetailsByGoogleUserID = fn
 				}
 			}
 		}
 		byIdentifier := func(user authentication.User, err error) func() {
 			return func() {
-				GetUserDetailsByIdentifier = func(*gin.Context, string) (authentication.User, error) { return user, err }
+				testFunctions.GetUserDetailsByIdentifier = func(*gin.Context, string) (authentication.User, error) { return user, err }
 			}
 		}
 		save := func(err error) func() {
 			return func() {
 				fn := func(*gin.Context, string, validator.TokenInfos) error { return err }
 				if method == authentication.MethodFacebook {
-					SaveFacebookUserTokenDetailsToUser = fn
+					testFunctions.SaveFacebookUserTokenDetailsToUser = fn
 				} else {
-					SaveGoogleUserTokenDetailsToUser = fn
+					testFunctions.SaveGoogleUserTokenDetailsToUser = fn
 				}
 			}
 		}

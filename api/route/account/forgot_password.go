@@ -3,11 +3,10 @@ package account
 import (
 	"errors"
 
-	"github.com/cygy/ginamite/common/ctxconfig"
-
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
+	"github.com/cygy/ginamite/common/ctxconfig"
 	commonErrors "github.com/cygy/ginamite/common/errors"
 	authError "github.com/cygy/ginamite/common/errors/auth"
 	"github.com/cygy/ginamite/common/localization"
@@ -20,13 +19,13 @@ import (
 
 // ForgotPassword sends a mail to reset the password.
 func ForgotPassword(c *gin.Context) {
-	if GetUserDetailsByIdentifier == nil {
+	if FunctionsOf(c).GetUserDetailsByIdentifier == nil {
 		c.Error(errors.New("undefined function 'GetUserDetailsByIdentifier'"))
 		response.InternalServerError(c)
 		return
 	}
 
-	if NewForgotPasswordProcessForUser == nil {
+	if FunctionsOf(c).NewForgotPasswordProcessForUser == nil {
 		c.Error(errors.New("undefined function 'NewForgotPasswordProcessForUser'"))
 		response.InternalServerError(c)
 		return
@@ -51,7 +50,7 @@ func ForgotPassword(c *gin.Context) {
 		return
 	}
 
-	user, err := GetUserDetailsByIdentifier(c, identifier)
+	user, err := FunctionsOf(c).GetUserDetailsByIdentifier(c, identifier)
 	if err != nil {
 		if commonErrors.IsNotFound(err) {
 			message := t("error.forgot_password.account.not_found.message")
@@ -72,7 +71,7 @@ func ForgotPassword(c *gin.Context) {
 	}
 
 	processPrivateKey := random.String(64)
-	processID, err := NewForgotPasswordProcessForUser(c, user.ID, processPrivateKey)
+	processID, err := FunctionsOf(c).NewForgotPasswordProcessForUser(c, user.ID, processPrivateKey)
 	if err != nil {
 		response.InternalServerError(c)
 		return

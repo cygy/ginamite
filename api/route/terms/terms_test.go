@@ -8,17 +8,21 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cygy/ginamite/common/ctxconfig"
-
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/internal/apitest"
 	"github.com/cygy/ginamite/common/config"
+	"github.com/cygy/ginamite/common/ctxconfig"
 
 	"github.com/gin-gonic/gin"
 )
 
-// testConfig is the configuration of the handlers, replaced by setup.
-var testConfig *config.Configuration
+var (
+	// testConfig is the configuration of the handlers, replaced by setup.
+	testConfig *config.Configuration
+
+	// testFunctions are the functions of the handlers, reset at the end of each test.
+	testFunctions Functions
+)
 
 func setup(t *testing.T) string {
 	t.Helper()
@@ -30,14 +34,14 @@ func setup(t *testing.T) string {
 	testConfig.Terms.Version = "2"
 	testConfig.Terms.Path = dir
 	termsContents = map[string]string{}
-	t.Cleanup(func() { UpdateVersionOfTermsAcceptedByUser = nil })
+	t.Cleanup(func() { testFunctions = Functions{} })
 
 	return dir
 }
 
 func newRouter(handler gin.HandlerFunc) *gin.Engine {
 	router := gin.New()
-	router.Use(ctxconfig.Inject(testConfig), ctxLocale.Inject("en", []string{"en"}))
+	router.Use(ctxconfig.Inject(testConfig), Inject(&testFunctions), ctxLocale.Inject("en", []string{"en"}))
 	router.Any("/", handler)
 
 	return router
@@ -75,6 +79,7 @@ func TestGetTermsVersion(t *testing.T) {
 
 	c, recorder := apitest.NewContext("GET", "/", nil)
 	ctxconfig.Set(c, testConfig)
+	SetFunctions(c, &testFunctions)
 	GetTermsVersion(c)
 
 	if recorder.Code != http.StatusOK || !strings.Contains(recorder.Body.String(), `"version":"2"`) {
@@ -98,7 +103,7 @@ func TestAcceptTerms(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			UpdateVersionOfTermsAcceptedByUser = tt.update
+			testFunctions.UpdateVersionOfTermsAcceptedByUser = tt.update
 
 			req, _ := http.NewRequest(http.MethodPost, "/", strings.NewReader(tt.body))
 			if code := apitest.Serve(newRouter(AcceptTerms), req).Code; code != tt.wantStatus {
@@ -109,7 +114,7 @@ func TestAcceptTerms(t *testing.T) {
 
 	t.Run("accepted and saved", func(t *testing.T) {
 		var savedVersion string
-		UpdateVersionOfTermsAcceptedByUser = func(_ *gin.Context, _, version string) error {
+		testFunctions.UpdateVersionOfTermsAcceptedByUser = func(_ *gin.Context, _, version string) error {
 			savedVersion = version
 			return nil
 		}

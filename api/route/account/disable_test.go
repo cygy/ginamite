@@ -10,7 +10,7 @@ import (
 func TestDisableAccount(t *testing.T) {
 	create := func(err error) func() {
 		return func() {
-			CreateNewDisableAccountProcess = func(*gin.Context, string) (string, string, error) { return "process-id", "process-key", err }
+			testFunctions.CreateNewDisableAccountProcess = func(*gin.Context, string) (string, string, error) { return "process-id", "process-key", err }
 		}
 	}
 

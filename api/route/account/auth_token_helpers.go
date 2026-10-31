@@ -5,13 +5,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/cygy/ginamite/common/ctxconfig"
-
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	ctxUser "github.com/cygy/ginamite/api/context/user"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common/authentication"
 	"github.com/cygy/ginamite/common/config/environment"
+	"github.com/cygy/ginamite/common/ctxconfig"
 	commonErrors "github.com/cygy/ginamite/common/errors"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/notifications"
@@ -39,13 +38,13 @@ func deleteAuthenticationToken(c *gin.Context, checkKey bool) {
 		}
 	}
 
-	if GetTokenDetailsByID == nil {
+	if FunctionsOf(c).GetTokenDetailsByID == nil {
 		c.Error(errors.New("undefined function 'GetTokenDetailsByID'"))
 		response.InternalServerError(c)
 		return
 	}
 
-	if DeleteTokenByID == nil {
+	if FunctionsOf(c).DeleteTokenByID == nil {
 		c.Error(errors.New("undefined function 'DeleteTokenByID'"))
 		sendError()
 		return
@@ -61,7 +60,7 @@ func deleteAuthenticationToken(c *gin.Context, checkKey bool) {
 	tokenID := c.Param("id")
 
 	// Get the requested token.
-	token, err := GetTokenDetailsByID(c, tokenID)
+	token, err := FunctionsOf(c).GetTokenDetailsByID(c, tokenID)
 	if err != nil {
 		if commonErrors.IsNotFound(err) {
 			sendError()
@@ -78,7 +77,7 @@ func deleteAuthenticationToken(c *gin.Context, checkKey bool) {
 		return
 	}
 
-	if err := DeleteTokenByID(c, tokenID); err != nil {
+	if err := FunctionsOf(c).DeleteTokenByID(c, tokenID); err != nil {
 		response.InternalServerError(c)
 		return
 	}
@@ -90,13 +89,13 @@ func deleteAuthenticationToken(c *gin.Context, checkKey bool) {
 }
 
 func createAuthenticationToken(c *gin.Context, user authentication.User, IPAddress, source string, device authentication.Device, method string, sendResponse, afterValidatingAccount bool) (string, error) {
-	if SaveAuthenticationToken == nil {
+	if FunctionsOf(c).SaveAuthenticationToken == nil {
 		err := errors.New("undefined function 'SaveAuthenticationToken'")
 		canNotLoginError(c, err)
 		return "", err
 	}
 
-	if DeleteTokenByID == nil {
+	if FunctionsOf(c).DeleteTokenByID == nil {
 		err := errors.New("undefined function 'DeleteTokenByID'")
 		canNotLoginError(c, err)
 		return "", err
@@ -117,7 +116,7 @@ func createAuthenticationToken(c *gin.Context, user authentication.User, IPAddre
 		ExpirationDate: time.Now().Add(time.Duration(ctxconfig.Get(c).JWT.TTL) * time.Second),
 	}
 
-	tokenID, knownIPAddress, err := SaveAuthenticationToken(c, authDetails)
+	tokenID, knownIPAddress, err := FunctionsOf(c).SaveAuthenticationToken(c, authDetails)
 	if err != nil {
 		canNotLoginError(c, err)
 		return "", err
@@ -134,7 +133,7 @@ func createAuthenticationToken(c *gin.Context, user authentication.User, IPAddre
 	// Sign and get the complete encoded token as a string.
 	signedToken, err := authentication.GetSignedToken(c, ctxconfig.Get(c).JWT.SigningMethod, ctxconfig.Get(c).JWT.Secret, tokenID)
 	if err != nil {
-		if deleteErr := DeleteTokenByID(c, tokenID); deleteErr != nil {
+		if deleteErr := FunctionsOf(c).DeleteTokenByID(c, tokenID); deleteErr != nil {
 			c.Error(deleteErr)
 		}
 		canNotLoginError(c, err)

@@ -33,25 +33,25 @@ func validateOrCancelForgotPassword(c *gin.Context, validate bool) {
 		)
 	}
 
-	if GetUserDetailsByID == nil {
+	if FunctionsOf(c).GetUserDetailsByID == nil {
 		c.Error(errors.New("undefined function 'GetUserDetailsByID'"))
 		sendError()
 		return
 	}
 
-	if GetForgotPasswordProcessDetailsByID == nil {
+	if FunctionsOf(c).GetForgotPasswordProcessDetailsByID == nil {
 		c.Error(errors.New("undefined function 'GetForgotPasswordProcessDetailsByID'"))
 		sendError()
 		return
 	}
 
-	if UpdateUserPassword == nil {
+	if FunctionsOf(c).UpdateUserPassword == nil {
 		c.Error(errors.New("undefined function 'UpdateUserPassword'"))
 		sendError()
 		return
 	}
 
-	if DeleteForgotPasswordProcess == nil {
+	if FunctionsOf(c).DeleteForgotPasswordProcess == nil {
 		c.Error(errors.New("undefined function 'DeleteForgotPasswordProcess'"))
 		sendError()
 		return
@@ -79,21 +79,21 @@ func validateOrCancelForgotPassword(c *gin.Context, validate bool) {
 		}
 	}
 
-	userID, processPrivateKey, err := GetForgotPasswordProcessDetailsByID(c, processID)
+	userID, processPrivateKey, err := FunctionsOf(c).GetForgotPasswordProcessDetailsByID(c, processID)
 	if err != nil {
 		sendError()
 		return
 	}
 
 	if processPrivateKey != key {
-		if WrongAccessToForgotPasswordProcess != nil {
-			WrongAccessToForgotPasswordProcess(c, processID)
+		if FunctionsOf(c).WrongAccessToForgotPasswordProcess != nil {
+			FunctionsOf(c).WrongAccessToForgotPasswordProcess(c, processID)
 		}
 		sendError()
 		return
 	}
 
-	user, err := GetUserDetailsByID(c, userID)
+	user, err := FunctionsOf(c).GetUserDetailsByID(c, userID)
 	if err != nil {
 		sendError()
 		return
@@ -105,13 +105,13 @@ func validateOrCancelForgotPassword(c *gin.Context, validate bool) {
 			sendError()
 			return
 		}
-		if err := UpdateUserPassword(c, userID, encryptedPassword, true); err != nil {
+		if err := FunctionsOf(c).UpdateUserPassword(c, userID, encryptedPassword, true); err != nil {
 			sendError()
 			return
 		}
 	}
 
-	if err := DeleteForgotPasswordProcess(c, processID); err != nil && !validate {
+	if err := FunctionsOf(c).DeleteForgotPasswordProcess(c, processID); err != nil && !validate {
 		sendError()
 		return
 	}

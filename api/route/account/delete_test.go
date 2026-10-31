@@ -13,7 +13,7 @@ func newProcess(err error) func(*gin.Context, string) (string, string, error) {
 
 func TestDeleteAccount(t *testing.T) {
 	create := func(err error) func() {
-		return func() { CreateNewDeleteAccountProcess = newProcess(err) }
+		return func() { testFunctions.CreateNewDeleteAccountProcess = newProcess(err) }
 	}
 
 	runCases(t, DeleteAccount, []testCase{

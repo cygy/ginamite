@@ -5,13 +5,12 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/cygy/ginamite/common/ctxconfig"
-
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/api/route/account"
 	"github.com/cygy/ginamite/common"
+	"github.com/cygy/ginamite/common/ctxconfig"
 	commonErrors "github.com/cygy/ginamite/common/errors"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/notifications"
@@ -23,13 +22,13 @@ import (
 
 // GetAdminEnabledUsers returns the enabled users.
 func GetAdminEnabledUsers(c *gin.Context) {
-	if GetEnabledUsersForAdmin == nil {
+	if FunctionsOf(c).GetEnabledUsersForAdmin == nil {
 		c.Error(errors.New("undefined function 'GetEnabledUsersForAdmin'"))
 		response.InternalServerError(c)
 		return
 	}
 
-	users, err := GetEnabledUsersForAdmin(c)
+	users, err := FunctionsOf(c).GetEnabledUsersForAdmin(c)
 	if err != nil {
 		response.InternalServerError(c)
 		return
@@ -42,13 +41,13 @@ func GetAdminEnabledUsers(c *gin.Context) {
 
 // GetAdminDisabledUsers returns the disabled users.
 func GetAdminDisabledUsers(c *gin.Context) {
-	if GetDisabledUsersForAdmin == nil {
+	if FunctionsOf(c).GetDisabledUsersForAdmin == nil {
 		c.Error(errors.New("undefined function 'GetDisabledUsersForAdmin'"))
 		response.InternalServerError(c)
 		return
 	}
 
-	users, err := GetDisabledUsersForAdmin(c)
+	users, err := FunctionsOf(c).GetDisabledUsersForAdmin(c)
 	if err != nil {
 		response.InternalServerError(c)
 		return
@@ -82,11 +81,11 @@ func AdminUpdatePassword(c *gin.Context) {
 	}
 
 	var err error
-	if UpdatePasswordByAdmin == nil {
+	if FunctionsOf(c).UpdatePasswordByAdmin == nil {
 		err = c.Error(errors.New("undefined function 'UpdatePasswordByAdmin'"))
 	} else {
 		userID := getUserID(c)
-		err = UpdatePasswordByAdmin(c, userID, jsonBody.Password)
+		err = FunctionsOf(c).UpdatePasswordByAdmin(c, userID, jsonBody.Password)
 	}
 
 	if err != nil {
@@ -133,11 +132,11 @@ func AdminUpdateInformations(c *gin.Context) {
 	}
 
 	var err error
-	if UpdateInformationsByAdmin == nil {
+	if FunctionsOf(c).UpdateInformationsByAdmin == nil {
 		err = c.Error(errors.New("undefined function 'UpdateInformationsByAdmin'"))
 	} else {
 		userID := getUserID(c)
-		err = UpdateInformationsByAdmin(c, userID, jsonBody.FirstName, jsonBody.LastName, newEmailAddress, jsonBody.ValidEmailAddress)
+		err = FunctionsOf(c).UpdateInformationsByAdmin(c, userID, jsonBody.FirstName, jsonBody.LastName, newEmailAddress, jsonBody.ValidEmailAddress)
 	}
 
 	if err != nil {
@@ -178,11 +177,11 @@ func AdminUpdateDescription(c *gin.Context) {
 	}
 
 	var err error
-	if UpdateDescriptionByAdmin == nil {
+	if FunctionsOf(c).UpdateDescriptionByAdmin == nil {
 		err = c.Error(errors.New("undefined function 'UpdateDescriptionByAdmin'"))
 	} else {
 		userID := getUserID(c)
-		err = UpdateDescriptionByAdmin(c, userID, newLocale, jsonBody.Description)
+		err = FunctionsOf(c).UpdateDescriptionByAdmin(c, userID, newLocale, jsonBody.Description)
 	}
 
 	if err != nil {
@@ -243,10 +242,10 @@ func AdminUpdateSocial(c *gin.Context) {
 	userID := getUserID(c)
 
 	var err error
-	if UpdateSocialByAdmin == nil {
+	if FunctionsOf(c).UpdateSocialByAdmin == nil {
 		err = c.Error(errors.New("undefined function 'UpdateSocialByAdmin'"))
 	} else {
-		err = UpdateSocialByAdmin(c, userID, facebook, twitter, instagram)
+		err = FunctionsOf(c).UpdateSocialByAdmin(c, userID, facebook, twitter, instagram)
 	}
 
 	if err != nil {
@@ -311,11 +310,11 @@ func AdminUpdateSettings(c *gin.Context) {
 	}
 
 	var err error
-	if UpdateSettingsByAdmin == nil {
+	if FunctionsOf(c).UpdateSettingsByAdmin == nil {
 		err = c.Error(errors.New("undefined function 'UpdateSettingsByAdmin'"))
 	} else {
 		userID := getUserID(c)
-		err = UpdateSettingsByAdmin(c, userID, newLocale, newTimezone)
+		err = FunctionsOf(c).UpdateSettingsByAdmin(c, userID, newLocale, newTimezone)
 	}
 
 	if err != nil {
@@ -350,11 +349,11 @@ func AdminUpdateNotifications(c *gin.Context) {
 	}
 
 	var err error
-	if UpdateNotificationsByAdmin == nil {
+	if FunctionsOf(c).UpdateNotificationsByAdmin == nil {
 		err = c.Error(errors.New("undefined function 'UpdateNotificationsByAdmin'"))
 	} else {
 		userID := getUserID(c)
-		err = UpdateNotificationsByAdmin(c, userID, notificationsToSave)
+		err = FunctionsOf(c).UpdateNotificationsByAdmin(c, userID, notificationsToSave)
 	}
 
 	if err != nil {
@@ -367,7 +366,7 @@ func AdminUpdateNotifications(c *gin.Context) {
 
 // GetAdminUserTokens returns the user's auth tokens.
 func GetAdminUserTokens(c *gin.Context) {
-	if GetTokensForAdmin == nil {
+	if FunctionsOf(c).GetTokensForAdmin == nil {
 		c.Error(errors.New("undefined function 'GetTokensForAdmin'"))
 		response.InternalServerError(c)
 		return
@@ -375,7 +374,7 @@ func GetAdminUserTokens(c *gin.Context) {
 
 	userID := getUserID(c)
 
-	tokens, err := GetTokensForAdmin(c, userID)
+	tokens, err := FunctionsOf(c).GetTokensForAdmin(c, userID)
 	if err != nil {
 		response.InternalServerError(c)
 		return
@@ -388,13 +387,13 @@ func GetAdminUserTokens(c *gin.Context) {
 
 // AdminDeleteUserToken deletes a user's auth token.
 func AdminDeleteUserToken(c *gin.Context) {
-	if DeleteTokenByIDByAdmin == nil {
+	if FunctionsOf(c).DeleteTokenByIDByAdmin == nil {
 		c.Error(errors.New("undefined function 'DeleteTokenByIDByAdmin'"))
 		response.InternalServerError(c)
 		return
 	}
 
-	if account.GetTokenDetailsByID == nil {
+	if account.FunctionsOf(c).GetTokenDetailsByID == nil {
 		c.Error(errors.New("undefined function 'GetTokenDetailsByID'"))
 		response.InternalServerError(c)
 		return
@@ -402,7 +401,7 @@ func AdminDeleteUserToken(c *gin.Context) {
 
 	tokenID := getTokenID(c)
 
-	token, err := account.GetTokenDetailsByID(c, tokenID)
+	token, err := account.FunctionsOf(c).GetTokenDetailsByID(c, tokenID)
 	if err != nil && !commonErrors.IsNotFound(err) {
 		response.InternalServerError(c)
 		return
@@ -410,7 +409,7 @@ func AdminDeleteUserToken(c *gin.Context) {
 
 	// If the token does exist, delete it.
 	if len(token.UserID) > 0 {
-		if err := DeleteTokenByIDByAdmin(c, tokenID); err != nil && !commonErrors.IsNotFound(err) {
+		if err := FunctionsOf(c).DeleteTokenByIDByAdmin(c, tokenID); err != nil && !commonErrors.IsNotFound(err) {
 			response.InternalServerError(c)
 			return
 		}
@@ -443,14 +442,14 @@ func AdminDelete(c *gin.Context) {
 	userID := getUserID(c)
 
 	// Get the user to delete.
-	user, err := account.GetUserDetailsByID(c, userID)
+	user, err := account.FunctionsOf(c).GetUserDetailsByID(c, userID)
 	if err != nil {
 		response.InternalServerError(c)
 		return
 	}
 
 	// Delete the user.
-	if err := account.DeleteUserByID(c, userID); err != nil {
+	if err := account.FunctionsOf(c).DeleteUserByID(c, userID); err != nil {
 		response.InternalServerError(c)
 		return
 	}
@@ -478,7 +477,7 @@ func AdminDisable(c *gin.Context) {
 	userID := getUserID(c)
 
 	// Disable the user.
-	user, err := account.DisableUserByID(c, userID)
+	user, err := account.FunctionsOf(c).DisableUserByID(c, userID)
 	if err != nil {
 		response.InternalServerError(c)
 		return
@@ -507,7 +506,7 @@ func AdminEnable(c *gin.Context) {
 	disabledUserID := getUserID(c)
 
 	// Enable the user.
-	user, err := account.EnableUserByID(c, disabledUserID)
+	user, err := account.FunctionsOf(c).EnableUserByID(c, disabledUserID)
 	if err != nil {
 		response.InternalServerError(c)
 		return

@@ -5,12 +5,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/cygy/ginamite/common/ctxconfig"
-
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	ctxUser "github.com/cygy/ginamite/api/context/user"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
+	"github.com/cygy/ginamite/common/ctxconfig"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/log"
 	r "github.com/cygy/ginamite/common/response"
@@ -88,9 +87,9 @@ func AcceptTerms(c *gin.Context) {
 		return
 	}
 
-	if UpdateVersionOfTermsAcceptedByUser != nil {
+	if FunctionsOf(c).UpdateVersionOfTermsAcceptedByUser != nil {
 		userID := ctxUser.GetID(c)
-		if err := UpdateVersionOfTermsAcceptedByUser(c, userID, termsVersion); err != nil {
+		if err := FunctionsOf(c).UpdateVersionOfTermsAcceptedByUser(c, userID, termsVersion); err != nil {
 			response.InternalServerError(c)
 			return
 		}

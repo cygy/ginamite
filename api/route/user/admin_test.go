@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cygy/ginamite/api/route/account"
 	"github.com/cygy/ginamite/common"
 	"github.com/cygy/ginamite/common/authentication"
 	commonErrors "github.com/cygy/ginamite/common/errors"
@@ -46,10 +45,10 @@ func TestGetAdminEnabledUsers(t *testing.T) {
 	runHandlerCases(t, GetAdminEnabledUsers, []handlerCase{
 		{"function not defined", "", nil, http.StatusInternalServerError},
 		{"error", "", func() {
-			GetEnabledUsersForAdmin = func(*gin.Context) (any, error) { return nil, errBoom }
+			testFunctions.GetEnabledUsersForAdmin = func(*gin.Context) (any, error) { return nil, errBoom }
 		}, http.StatusInternalServerError},
 		{"success", "", func() {
-			GetEnabledUsersForAdmin = func(*gin.Context) (any, error) { return []string{"u"}, nil }
+			testFunctions.GetEnabledUsersForAdmin = func(*gin.Context) (any, error) { return []string{"u"}, nil }
 		}, http.StatusOK},
 	})
 }
@@ -58,10 +57,10 @@ func TestGetAdminDisabledUsers(t *testing.T) {
 	runHandlerCases(t, GetAdminDisabledUsers, []handlerCase{
 		{"function not defined", "", nil, http.StatusInternalServerError},
 		{"error", "", func() {
-			GetDisabledUsersForAdmin = func(*gin.Context) (any, error) { return nil, errBoom }
+			testFunctions.GetDisabledUsersForAdmin = func(*gin.Context) (any, error) { return nil, errBoom }
 		}, http.StatusInternalServerError},
 		{"success", "", func() {
-			GetDisabledUsersForAdmin = func(*gin.Context) (any, error) { return []string{"u"}, nil }
+			testFunctions.GetDisabledUsersForAdmin = func(*gin.Context) (any, error) { return []string{"u"}, nil }
 		}, http.StatusOK},
 	})
 }
@@ -72,10 +71,10 @@ func TestAdminUpdatePassword(t *testing.T) {
 		{"missing password", `{}`, nil, http.StatusBadRequest},
 		{"function not defined", `{"password":"secret"}`, nil, http.StatusInternalServerError},
 		{"error", `{"password":"secret"}`, func() {
-			UpdatePasswordByAdmin = func(*gin.Context, string, string) error { return errBoom }
+			testFunctions.UpdatePasswordByAdmin = func(*gin.Context, string, string) error { return errBoom }
 		}, http.StatusInternalServerError},
 		{"success", `{"password":"secret"}`, func() {
-			UpdatePasswordByAdmin = func(_ *gin.Context, userID, password string) error {
+			testFunctions.UpdatePasswordByAdmin = func(_ *gin.Context, userID, password string) error {
 				gotUser, gotPassword = userID, password
 				return nil
 			}
@@ -94,10 +93,10 @@ func TestAdminUpdateInformations(t *testing.T) {
 		{"invalid email address", `{"email_address":"john"}`, nil, http.StatusBadRequest},
 		{"function not defined", body, nil, http.StatusInternalServerError},
 		{"error", body, func() {
-			UpdateInformationsByAdmin = func(*gin.Context, string, string, string, string, bool) error { return errBoom }
+			testFunctions.UpdateInformationsByAdmin = func(*gin.Context, string, string, string, string, bool) error { return errBoom }
 		}, http.StatusInternalServerError},
 		{"success", body, func() {
-			UpdateInformationsByAdmin = func(*gin.Context, string, string, string, string, bool) error { return nil }
+			testFunctions.UpdateInformationsByAdmin = func(*gin.Context, string, string, string, string, bool) error { return nil }
 		}, http.StatusOK},
 	})
 }
@@ -109,10 +108,10 @@ func TestAdminUpdateDescription(t *testing.T) {
 		{"unsupported locale", `{"locale":"xx"}`, nil, http.StatusBadRequest},
 		{"function not defined", body, nil, http.StatusInternalServerError},
 		{"error", body, func() {
-			UpdateDescriptionByAdmin = func(*gin.Context, string, string, string) error { return errBoom }
+			testFunctions.UpdateDescriptionByAdmin = func(*gin.Context, string, string, string) error { return errBoom }
 		}, http.StatusInternalServerError},
 		{"success", body, func() {
-			UpdateDescriptionByAdmin = func(*gin.Context, string, string, string) error { return nil }
+			testFunctions.UpdateDescriptionByAdmin = func(*gin.Context, string, string, string) error { return nil }
 		}, http.StatusOK},
 	})
 }
@@ -125,13 +124,13 @@ func TestAdminUpdateSocial(t *testing.T) {
 		{"invalid instagram", `{"instagram":"me"}`, nil, http.StatusBadRequest},
 		{"function not defined", body, nil, http.StatusInternalServerError},
 		{"error", body, func() {
-			UpdateSocialByAdmin = func(*gin.Context, string, string, string, string) error { return errBoom }
+			testFunctions.UpdateSocialByAdmin = func(*gin.Context, string, string, string, string) error { return errBoom }
 		}, http.StatusInternalServerError},
 		{"success", body, func() {
-			UpdateSocialByAdmin = func(*gin.Context, string, string, string, string) error { return nil }
+			testFunctions.UpdateSocialByAdmin = func(*gin.Context, string, string, string, string) error { return nil }
 		}, http.StatusOK},
 		{"success without network", `{}`, func() {
-			UpdateSocialByAdmin = func(*gin.Context, string, string, string, string) error { return nil }
+			testFunctions.UpdateSocialByAdmin = func(*gin.Context, string, string, string, string) error { return nil }
 		}, http.StatusOK},
 	})
 }
@@ -145,10 +144,10 @@ func TestAdminUpdateSettings(t *testing.T) {
 		{"unsupported timezone", `{"locale":"en","timezone":"Mars/Base"}`, nil, http.StatusBadRequest},
 		{"function not defined", body, nil, http.StatusInternalServerError},
 		{"error", body, func() {
-			UpdateSettingsByAdmin = func(*gin.Context, string, string, string) error { return errBoom }
+			testFunctions.UpdateSettingsByAdmin = func(*gin.Context, string, string, string) error { return errBoom }
 		}, http.StatusInternalServerError},
 		{"success", body, func() {
-			UpdateSettingsByAdmin = func(*gin.Context, string, string, string) error { return nil }
+			testFunctions.UpdateSettingsByAdmin = func(*gin.Context, string, string, string) error { return nil }
 		}, http.StatusOK},
 	})
 }
@@ -159,10 +158,10 @@ func TestAdminUpdateNotifications(t *testing.T) {
 		{"unsupported notification", `{"notifications":["unknown"]}`, nil, http.StatusBadRequest},
 		{"function not defined", body, nil, http.StatusInternalServerError},
 		{"error", body, func() {
-			UpdateNotificationsByAdmin = func(*gin.Context, string, []string) error { return errBoom }
+			testFunctions.UpdateNotificationsByAdmin = func(*gin.Context, string, []string) error { return errBoom }
 		}, http.StatusInternalServerError},
 		{"success", body, func() {
-			UpdateNotificationsByAdmin = func(*gin.Context, string, []string) error { return nil }
+			testFunctions.UpdateNotificationsByAdmin = func(*gin.Context, string, []string) error { return nil }
 		}, http.StatusOK},
 	})
 }
@@ -171,10 +170,10 @@ func TestGetAdminUserTokens(t *testing.T) {
 	runHandlerCases(t, GetAdminUserTokens, []handlerCase{
 		{"function not defined", "", nil, http.StatusInternalServerError},
 		{"error", "", func() {
-			GetTokensForAdmin = func(*gin.Context, string) (any, error) { return nil, errBoom }
+			testFunctions.GetTokensForAdmin = func(*gin.Context, string) (any, error) { return nil, errBoom }
 		}, http.StatusInternalServerError},
 		{"success", "", func() {
-			GetTokensForAdmin = func(*gin.Context, string) (any, error) { return []string{"t"}, nil }
+			testFunctions.GetTokensForAdmin = func(*gin.Context, string) (any, error) { return []string{"t"}, nil }
 		}, http.StatusOK},
 	})
 }
@@ -183,12 +182,12 @@ func TestAdminDeleteUserToken(t *testing.T) {
 	token := authentication.Token{UserID: "user", ExpirationDate: time.Now().Add(time.Hour)}
 	getToken := func(tok authentication.Token, err error) func() {
 		return func() {
-			account.GetTokenDetailsByID = func(*gin.Context, string) (authentication.Token, error) { return tok, err }
+			testAccountFunctions.GetTokenDetailsByID = func(*gin.Context, string) (authentication.Token, error) { return tok, err }
 		}
 	}
 	deleteToken := func(err error) func() {
 		return func() {
-			DeleteTokenByIDByAdmin = func(*gin.Context, string) error { return err }
+			testFunctions.DeleteTokenByIDByAdmin = func(*gin.Context, string) error { return err }
 		}
 	}
 	both := func(a, b func()) func() { return func() { a(); b() } }
@@ -208,15 +207,15 @@ func TestAdminDelete(t *testing.T) {
 	user := authentication.User{ID: "42", EmailAddress: "john@example.com", Username: "john", Locale: "en"}
 	runHandlerCases(t, AdminDelete, []handlerCase{
 		{"details error", "", func() {
-			account.GetUserDetailsByID = func(*gin.Context, string) (authentication.User, error) { return user, errBoom }
+			testAccountFunctions.GetUserDetailsByID = func(*gin.Context, string) (authentication.User, error) { return user, errBoom }
 		}, http.StatusInternalServerError},
 		{"delete error", "", func() {
-			account.GetUserDetailsByID = func(*gin.Context, string) (authentication.User, error) { return user, nil }
-			account.DeleteUserByID = func(*gin.Context, string) error { return errBoom }
+			testAccountFunctions.GetUserDetailsByID = func(*gin.Context, string) (authentication.User, error) { return user, nil }
+			testAccountFunctions.DeleteUserByID = func(*gin.Context, string) error { return errBoom }
 		}, http.StatusInternalServerError},
 		{"success", "", func() {
-			account.GetUserDetailsByID = func(*gin.Context, string) (authentication.User, error) { return user, nil }
-			account.DeleteUserByID = func(*gin.Context, string) error { return nil }
+			testAccountFunctions.GetUserDetailsByID = func(*gin.Context, string) (authentication.User, error) { return user, nil }
+			testAccountFunctions.DeleteUserByID = func(*gin.Context, string) error { return nil }
 		}, http.StatusOK},
 	})
 }
@@ -225,10 +224,10 @@ func TestAdminDisable(t *testing.T) {
 	user := authentication.User{ID: "42", EmailAddress: "john@example.com", Username: "john", Locale: "en"}
 	runHandlerCases(t, AdminDisable, []handlerCase{
 		{"error", "", func() {
-			account.DisableUserByID = func(*gin.Context, string) (authentication.User, error) { return user, errBoom }
+			testAccountFunctions.DisableUserByID = func(*gin.Context, string) (authentication.User, error) { return user, errBoom }
 		}, http.StatusInternalServerError},
 		{"success", "", func() {
-			account.DisableUserByID = func(*gin.Context, string) (authentication.User, error) { return user, nil }
+			testAccountFunctions.DisableUserByID = func(*gin.Context, string) (authentication.User, error) { return user, nil }
 		}, http.StatusOK},
 	})
 }
@@ -237,10 +236,10 @@ func TestAdminEnable(t *testing.T) {
 	user := authentication.User{ID: "42", EmailAddress: "john@example.com", Username: "john", Locale: "en"}
 	runHandlerCases(t, AdminEnable, []handlerCase{
 		{"error", "", func() {
-			account.EnableUserByID = func(*gin.Context, string) (authentication.User, error) { return user, errBoom }
+			testAccountFunctions.EnableUserByID = func(*gin.Context, string) (authentication.User, error) { return user, errBoom }
 		}, http.StatusInternalServerError},
 		{"success", "", func() {
-			account.EnableUserByID = func(*gin.Context, string) (authentication.User, error) { return user, nil }
+			testAccountFunctions.EnableUserByID = func(*gin.Context, string) (authentication.User, error) { return user, nil }
 		}, http.StatusOK},
 	})
 }

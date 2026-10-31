@@ -4,9 +4,8 @@ import (
 	"crypto/subtle"
 	"errors"
 
-	"github.com/cygy/ginamite/common/ctxconfig"
-
 	apiContextLocale "github.com/cygy/ginamite/api/context/locale"
+	"github.com/cygy/ginamite/common/ctxconfig"
 	commonErrors "github.com/cygy/ginamite/common/errors"
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/mongo/bson"

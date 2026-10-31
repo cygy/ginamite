@@ -14,8 +14,8 @@ import (
 // deleteStubs defines the functions used by deleteAuthenticationToken.
 func deleteStubs(token authentication.Token, getErr, deleteErr error) func() {
 	return func() {
-		GetTokenDetailsByID = func(*gin.Context, string) (authentication.Token, error) { return token, getErr }
-		DeleteTokenByID = func(*gin.Context, string) error { return deleteErr }
+		testFunctions.GetTokenDetailsByID = func(*gin.Context, string) (authentication.Token, error) { return token, getErr }
+		testFunctions.DeleteTokenByID = func(*gin.Context, string) error { return deleteErr }
 	}
 }
 
@@ -25,10 +25,10 @@ func TestDeleteAuthenticationToken(t *testing.T) {
 	t.Run("without key", func(t *testing.T) {
 		runCases(t, DeleteAuthToken, []testCase{
 			{name: "GetTokenDetailsByID not defined", userID: testUserID, id: "t1", setup: func() {
-				DeleteTokenByID = func(*gin.Context, string) error { return nil }
+				testFunctions.DeleteTokenByID = func(*gin.Context, string) error { return nil }
 			}, want: http.StatusInternalServerError},
 			{name: "DeleteTokenByID not defined", userID: testUserID, id: "t1", setup: func() {
-				GetTokenDetailsByID = func(*gin.Context, string) (authentication.Token, error) { return token, nil }
+				testFunctions.GetTokenDetailsByID = func(*gin.Context, string) (authentication.Token, error) { return token, nil }
 			}, want: http.StatusNotFound},
 			{name: "token not found", userID: testUserID, id: "t1", setup: deleteStubs(token, commonErrors.NotFound(), nil), want: http.StatusNotFound},
 			{name: "lookup error", userID: testUserID, id: "t1", setup: deleteStubs(token, errBoom, nil), want: http.StatusInternalServerError},
@@ -40,7 +40,7 @@ func TestDeleteAuthenticationToken(t *testing.T) {
 		runCases(t, DeleteAuthTokenWithKey, []testCase{
 			{name: "token not found", id: "t1", key: "token-key", setup: deleteStubs(token, commonErrors.NotFound(), nil), want: http.StatusBadRequest},
 			{name: "DeleteTokenByID not defined", id: "t1", key: "token-key", setup: func() {
-				GetTokenDetailsByID = func(*gin.Context, string) (authentication.Token, error) { return token, nil }
+				testFunctions.GetTokenDetailsByID = func(*gin.Context, string) (authentication.Token, error) { return token, nil }
 			}, want: http.StatusBadRequest},
 		})
 	})
@@ -56,23 +56,23 @@ func TestCreateAuthenticationToken(t *testing.T) {
 		wantErr      bool
 		wantStatus   int
 	}{
-		{"SaveAuthenticationToken not defined", func() { DeleteTokenByID = func(*gin.Context, string) error { return nil } }, false, true, true, http.StatusBadRequest},
+		{"SaveAuthenticationToken not defined", func() { testFunctions.DeleteTokenByID = func(*gin.Context, string) error { return nil } }, false, true, true, http.StatusBadRequest},
 		{"DeleteTokenByID not defined", func() {
-			SaveAuthenticationToken = func(*gin.Context, authentication.Details) (string, bool, error) { return testTokenID, true, nil }
+			testFunctions.SaveAuthenticationToken = func(*gin.Context, authentication.Details) (string, bool, error) { return testTokenID, true, nil }
 		}, false, true, true, http.StatusBadRequest},
 		{"save error", all(loginStubs, func() {
-			SaveAuthenticationToken = func(*gin.Context, authentication.Details) (string, bool, error) { return "", false, errBoom }
+			testFunctions.SaveAuthenticationToken = func(*gin.Context, authentication.Details) (string, bool, error) { return "", false, errBoom }
 		}), false, true, true, http.StatusBadRequest},
 		{"sign error", all(loginStubs, func() {
 			authentication.BuildTokenFromID = nil
 		}), false, true, true, http.StatusBadRequest},
 		{"sign error and deletion error", all(loginStubs, func() {
 			authentication.BuildTokenFromID = nil
-			DeleteTokenByID = func(*gin.Context, string) error { return errBoom }
+			testFunctions.DeleteTokenByID = func(*gin.Context, string) error { return errBoom }
 		}), false, true, true, http.StatusBadRequest},
 		{"success", loginStubs, false, true, false, http.StatusCreated},
 		{"success with known IP address", all(loginStubs, func() {
-			SaveAuthenticationToken = func(*gin.Context, authentication.Details) (string, bool, error) { return testTokenID, true, nil }
+			testFunctions.SaveAuthenticationToken = func(*gin.Context, authentication.Details) (string, bool, error) { return testTokenID, true, nil }
 		}), false, true, false, http.StatusCreated},
 		{"success after validating the account", loginStubs, true, true, false, http.StatusOK},
 		{"success in test environment", all(loginStubs, inTestEnvironment), false, true, false, http.StatusCreated},

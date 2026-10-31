@@ -4,13 +4,12 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/cygy/ginamite/common/ctxconfig"
-
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	ctxUser "github.com/cygy/ginamite/api/context/user"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common/authentication"
+	"github.com/cygy/ginamite/common/ctxconfig"
 	accountErrors "github.com/cygy/ginamite/common/errors/account"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/queue"
@@ -21,13 +20,13 @@ import (
 
 // UpdateEmailAddress updates the email address and sends a mail to confirm.
 func UpdateEmailAddress(c *gin.Context) {
-	if GetUserDetailsByID == nil {
+	if FunctionsOf(c).GetUserDetailsByID == nil {
 		c.Error(errors.New("undefined function 'GetUserDetailsByID'"))
 		response.InternalServerError(c)
 		return
 	}
 
-	if CreateNewUpdateEmailAddressProcess == nil {
+	if FunctionsOf(c).CreateNewUpdateEmailAddressProcess == nil {
 		c.Error(errors.New("undefined function 'CreateNewUpdateEmailAddressProcess'"))
 		response.InternalServerError(c)
 		return
@@ -49,7 +48,7 @@ func UpdateEmailAddress(c *gin.Context) {
 	}
 
 	userID := ctxUser.GetID(c)
-	user, err := GetUserDetailsByID(c, userID)
+	user, err := FunctionsOf(c).GetUserDetailsByID(c, userID)
 	if err != nil {
 		response.InternalServerError(c)
 		return
@@ -64,7 +63,7 @@ func UpdateEmailAddress(c *gin.Context) {
 		return
 	}
 
-	processID, processKey, err := CreateNewUpdateEmailAddressProcess(c, userID, emailAddress)
+	processID, processKey, err := FunctionsOf(c).CreateNewUpdateEmailAddressProcess(c, userID, emailAddress)
 	if err != nil {
 		response.InternalServerError(c)
 		return
@@ -109,7 +108,7 @@ func ValidateNewEmailAddress(c *gin.Context) {
 
 // ConfirmEmailAddress validates the new email address.
 func ConfirmEmailAddress(c *gin.Context) {
-	if GetUserDetailsByID == nil {
+	if FunctionsOf(c).GetUserDetailsByID == nil {
 		c.Error(errors.New("undefined function 'GetUserDetailsByID'"))
 		response.InternalServerError(c)
 		return
@@ -119,7 +118,7 @@ func ConfirmEmailAddress(c *gin.Context) {
 	t := localization.Translate(locale)
 
 	userID := ctxUser.GetID(c)
-	user, err := GetUserDetailsByID(c, userID)
+	user, err := FunctionsOf(c).GetUserDetailsByID(c, userID)
 	if err != nil {
 		response.InternalServerError(c)
 		return

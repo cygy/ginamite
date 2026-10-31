@@ -89,8 +89,8 @@ func Post(c *gin.Context) {
 		return
 	}
 
-	if CreateContact != nil {
-		if err := CreateContact(c, emailAddress, subject, text); err != nil {
+	if FunctionsOf(c).CreateContact != nil {
+		if err := FunctionsOf(c).CreateContact(c, emailAddress, subject, text); err != nil {
 			response.InternalServerError(c)
 			return
 		}

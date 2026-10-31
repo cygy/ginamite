@@ -5,12 +5,9 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
-	"reflect"
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/cygy/ginamite/common/ctxconfig"
 
 	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
@@ -20,6 +17,7 @@ import (
 	"github.com/cygy/ginamite/common/authentication"
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/config/environment"
+	"github.com/cygy/ginamite/common/ctxconfig"
 	"github.com/cygy/ginamite/common/kafka"
 	"github.com/cygy/ginamite/common/timezone"
 
@@ -81,10 +79,8 @@ func setup(t *testing.T) {
 	originalIDValidator := request.IsValidID
 	request.IsValidID = func(id string) bool { return len(id) == len(validNotificationID) }
 
-	originalValidator := newTokenValidator
 	t.Cleanup(func() {
 		request.IsValidID = originalIDValidator
-		newTokenValidator = originalValidator
 		resetFunctions()
 		authentication.BuildTokenFromID = nil
 		authentication.ExtraPropertiesForTokenWithID = nil
@@ -92,33 +88,16 @@ func setup(t *testing.T) {
 	})
 }
 
-// resetFunctions sets to nil every function variable of the package.
-func resetFunctions() {
-	vars := []any{
-		&NotificationsReceivedByUser, &NotificationReceivedByUser, &UpdateUserNotificationRead, &UpdateUserNotificationNotified,
-		&DeleteUserNotification, &NotificationsSubscribedByUser, &SubscribeNotificationsToUser, &UnsubscribeNotificationFromUser,
-		&GetUserDetailsByIdentifier, &GetUserDetailsByID, &GetUserDetailsByFacebookUserID, &GetUserDetailsByGoogleUserID,
-		&GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser, &NewForgotPasswordProcessForUser,
-		&GetForgotPasswordProcessDetailsByID, &WrongAccessToForgotPasswordProcess, &UpdateUserPassword, &UpdateUserEmailAddress,
-		&UserEmailAddressIsVerified, &UpdateUserSocialNetworks, &DeleteForgotPasswordProcess, &ValidateUserRegistration,
-		&CancelUserRegistration, &GetRegistrationDetails, &SaveAuthenticationToken, &DoesAccountWithUsernameExist,
-		&DoesAccountWithEmailAddressExist, &RegisterByEmailAddress, &RegisterByThirdPartyToken, &DoesUserWithFacebookUserIDExist,
-		&DoesUserWithGoogleUserIDExist, &SaveFacebookUserTokenDetailsToUser, &SaveGoogleUserTokenDetailsToUser,
-		&GetTokenExpirationDate, &DeleteTokenByID, &GetTokenDetailsByID, &GetOwnedTokens, &GetOwnedTokenByID, &UpdateTokenByID,
-		&GetOwnedAccountDetails, &UpdatedAccountInfos, &UpdatedAccountSettings, &CreateNewDeleteAccountProcess,
-		&CreateNewDisableAccountProcess, &CreateNewUpdatePasswordProcess, &CreateNewUpdateEmailAddressProcess,
-		&CreateNewVerifyEmailAddressProcess, &VerifyProcess, &DeleteProcessByID, &DeleteUserByID, &DisableUserByID, &EnableUserByID,
-	}
-	for _, v := range vars {
-		rv := reflect.ValueOf(v).Elem()
-		rv.Set(reflect.Zero(rv.Type()))
-	}
-}
+// testFunctions are the functions of the handlers, set by the tests and reset at the end of each one.
+var testFunctions Functions
+
+// resetFunctions removes every function of the handlers.
+func resetFunctions() { testFunctions = Functions{} }
 
 // newRouter returns a router with the locale and the auth token middlewares, serving the handler on every path shape.
 func newRouter(handler gin.HandlerFunc) *gin.Engine {
 	router := gin.New()
-	router.Use(ctxconfig.Inject(testConfig), ctxLocale.Inject("en", []string{"en"}))
+	router.Use(ctxconfig.Inject(testConfig), Inject(&testFunctions), ctxLocale.Inject("en", []string{"en"}))
 	router.Use(ctxAuthToken.Parse(testSecret, nil, false))
 	router.Any("/", handler)
 	router.Any("/:id", handler)
@@ -175,6 +154,7 @@ func newContext(params gin.Params) (*gin.Context, *httptest.ResponseRecorder) {
 	c, recorder := apitest.NewContext(http.MethodPost, "/", nil)
 	c.Params = params
 	ctxconfig.Set(c, testConfig)
+	SetFunctions(c, &testFunctions)
 	ctxLocale.Set(c, "en", "en")
 
 	return c, recorder
@@ -195,7 +175,7 @@ func inTestEnvironment() { testConfig.Environment = environment.Test }
 // withUser defines GetUserDetailsByID.
 func withUser(user authentication.User, err error) func() {
 	return func() {
-		GetUserDetailsByID = func(*gin.Context, string) (authentication.User, error) { return user, err }
+		testFunctions.GetUserDetailsByID = func(*gin.Context, string) (authentication.User, error) { return user, err }
 	}
 }
 
@@ -228,6 +208,6 @@ func (v fakeValidator) VerifyTokenAndExtractInfos(string) (validator.TokenInfos,
 // withValidator makes the handlers use the fake validator for every third-party method.
 func withValidator(v fakeValidator) func() {
 	return func() {
-		newTokenValidator = func(*gin.Context, string) validator.TokenValidator { return v }
+		testFunctions.NewTokenValidator = func(*gin.Context, string) validator.TokenValidator { return v }
 	}
 }

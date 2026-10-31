@@ -10,7 +10,7 @@ import (
 func TestGetAvailability(t *testing.T) {
 	exists := func(exists bool, err error) func() {
 		return func() {
-			DoesAccountWithUsernameExist = func(*gin.Context, string) (bool, error) { return exists, err }
+			testFunctions.DoesAccountWithUsernameExist = func(*gin.Context, string) (bool, error) { return exists, err }
 		}
 	}
 

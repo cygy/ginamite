@@ -3,12 +3,11 @@ package account
 import (
 	"errors"
 
-	"github.com/cygy/ginamite/common/ctxconfig"
-
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	ctxUser "github.com/cygy/ginamite/api/context/user"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common/authentication"
+	"github.com/cygy/ginamite/common/ctxconfig"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/queue"
 
@@ -17,13 +16,13 @@ import (
 
 // DeleteAccount starts the delete processus and sends a mail to confirm.
 func DeleteAccount(c *gin.Context) {
-	if GetUserDetailsByID == nil {
+	if FunctionsOf(c).GetUserDetailsByID == nil {
 		c.Error(errors.New("undefined function 'GetUserDetailsByID'"))
 		response.InternalServerError(c)
 		return
 	}
 
-	if CreateNewDeleteAccountProcess == nil {
+	if FunctionsOf(c).CreateNewDeleteAccountProcess == nil {
 		c.Error(errors.New("undefined function 'CreateNewDeleteAccountProcess'"))
 		response.InternalServerError(c)
 		return
@@ -33,13 +32,13 @@ func DeleteAccount(c *gin.Context) {
 	t := localization.Translate(locale)
 
 	userID := ctxUser.GetID(c)
-	user, err := GetUserDetailsByID(c, userID)
+	user, err := FunctionsOf(c).GetUserDetailsByID(c, userID)
 	if err != nil {
 		response.InternalServerError(c)
 		return
 	}
 
-	processID, processKey, err := CreateNewDeleteAccountProcess(c, userID)
+	processID, processKey, err := FunctionsOf(c).CreateNewDeleteAccountProcess(c, userID)
 	if err != nil {
 		response.InternalServerError(c)
 		return

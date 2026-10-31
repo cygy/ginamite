@@ -7,9 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cygy/ginamite/common/ctxconfig"
-
 	"github.com/cygy/ginamite/common/config"
+	"github.com/cygy/ginamite/common/ctxconfig"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/log"
 	htmlTemplate "github.com/cygy/ginamite/common/template/html"

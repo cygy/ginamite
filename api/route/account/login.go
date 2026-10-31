@@ -78,19 +78,19 @@ func loginWithThirdParty(c *gin.Context, v validator.TokenValidator) {
 	var user authentication.User
 	var err error
 	if isFacebookMethod {
-		if GetUserDetailsByFacebookUserID == nil {
+		if FunctionsOf(c).GetUserDetailsByFacebookUserID == nil {
 			err := errors.New("undefined function 'GetUserDetailsByFacebookUserID'")
 			canNotLoginError(c, err)
 			return
 		}
-		user, err = GetUserDetailsByFacebookUserID(c, tokenInfos.UserID)
+		user, err = FunctionsOf(c).GetUserDetailsByFacebookUserID(c, tokenInfos.UserID)
 	} else if isGoogleMethod {
-		if GetUserDetailsByGoogleUserID == nil {
+		if FunctionsOf(c).GetUserDetailsByGoogleUserID == nil {
 			err := errors.New("undefined function 'GetUserDetailsByGoogleUserID'")
 			canNotLoginError(c, err)
 			return
 		}
-		user, err = GetUserDetailsByGoogleUserID(c, tokenInfos.UserID)
+		user, err = FunctionsOf(c).GetUserDetailsByGoogleUserID(c, tokenInfos.UserID)
 	}
 	if err != nil && !commonErrors.IsNotFound(err) {
 		canNotLoginError(c, err)
@@ -98,13 +98,13 @@ func loginWithThirdParty(c *gin.Context, v validator.TokenValidator) {
 	}
 
 	if !user.IsSaved() {
-		if GetUserDetailsByIdentifier == nil {
+		if FunctionsOf(c).GetUserDetailsByIdentifier == nil {
 			err := errors.New("undefined function 'GetUserDetailsByIdentifier'")
 			canNotLoginError(c, err)
 			return
 		}
 
-		if user, err = GetUserDetailsByIdentifier(c, tokenInfos.Email); err != nil && !commonErrors.IsNotFound(err) {
+		if user, err = FunctionsOf(c).GetUserDetailsByIdentifier(c, tokenInfos.Email); err != nil && !commonErrors.IsNotFound(err) {
 			canNotLoginError(c, err)
 			return
 		}
@@ -118,19 +118,19 @@ func loginWithThirdParty(c *gin.Context, v validator.TokenValidator) {
 
 	// Save the token.
 	if isFacebookMethod {
-		if SaveFacebookUserTokenDetailsToUser == nil {
+		if FunctionsOf(c).SaveFacebookUserTokenDetailsToUser == nil {
 			err := errors.New("undefined function 'SaveFacebookUserTokenDetailsToUser'")
 			canNotLoginError(c, err)
 			return
 		}
-		err = SaveFacebookUserTokenDetailsToUser(c, user.ID, tokenInfos)
+		err = FunctionsOf(c).SaveFacebookUserTokenDetailsToUser(c, user.ID, tokenInfos)
 	} else if isGoogleMethod {
-		if SaveGoogleUserTokenDetailsToUser == nil {
+		if FunctionsOf(c).SaveGoogleUserTokenDetailsToUser == nil {
 			err := errors.New("undefined function 'SaveGoogleUserTokenDetailsToUser'")
 			canNotLoginError(c, err)
 			return
 		}
-		err = SaveGoogleUserTokenDetailsToUser(c, user.ID, tokenInfos)
+		err = FunctionsOf(c).SaveGoogleUserTokenDetailsToUser(c, user.ID, tokenInfos)
 	}
 	if err != nil {
 		canNotLoginError(c, err)

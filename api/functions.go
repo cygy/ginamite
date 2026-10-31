@@ -99,80 +99,17 @@ func (s *Server) Start() {
 	authentication.BuildTokenFromID = s.Functions.BuildTokenFromID
 	authentication.ExtraPropertiesForTokenWithID = s.Functions.ExtraPropertiesForTokenWithID
 	authentication.ExtendTokenExpirationDateFromID = s.Functions.ExtendTokenExpirationDateFromID
-	terms.UpdateVersionOfTermsAcceptedByUser = s.Functions.UpdateVersionOfTermsAcceptedByUser
-	user.GetEnabledUsersForAdmin = s.Functions.GetEnabledUsersForAdmin
-	user.GetDisabledUsersForAdmin = s.Functions.GetDisabledUsersForAdmin
-	user.UpdatePasswordByAdmin = s.Functions.UpdatePasswordByAdmin
-	user.UpdateInformationsByAdmin = s.Functions.UpdateInformationsByAdmin
-	user.UpdateDescriptionByAdmin = s.Functions.UpdateDescriptionByAdmin
-	user.UpdateSocialByAdmin = s.Functions.UpdateSocialByAdmin
-	user.UpdateSettingsByAdmin = s.Functions.UpdateSettingsByAdmin
-	user.UpdateNotificationsByAdmin = s.Functions.UpdateNotificationsByAdmin
-	user.GetTokensForAdmin = s.Functions.GetTokensForAdmin
-	user.DeleteTokenByIDByAdmin = s.Functions.DeleteTokenByIDByAdmin
-	user.SetAbilitiesToUser = s.Functions.SetAbilitiesToUser
-	user.AddAbilitiesToUser = s.Functions.AddAbilitiesToUser
-	user.RemoveAbilitiesFromUser = s.Functions.RemoveAbilitiesFromUser
-	account.NotificationsReceivedByUser = s.Functions.NotificationsReceivedByUser
-	account.NotificationReceivedByUser = s.Functions.NotificationReceivedByUser
-	account.UpdateUserNotificationRead = s.Functions.UpdateUserNotificationRead
-	account.UpdateUserNotificationNotified = s.Functions.UpdateUserNotificationNotified
-	account.DeleteUserNotification = s.Functions.DeleteUserNotification
-	account.NotificationsSubscribedByUser = s.Functions.NotificationsSubscribedByUser
-	account.SubscribeNotificationsToUser = s.Functions.SubscribeNotificationsToUser
-	account.UnsubscribeNotificationFromUser = s.Functions.UnsubscribeNotificationFromUser
-	account.GetUserDetailsByIdentifier = s.Functions.GetUserDetailsByIdentifier
-	account.GetUserDetailsByID = s.Functions.GetUserDetailsByID
-	account.NewForgotPasswordProcessForUser = s.Functions.NewForgotPasswordProcessForUser
-	account.GetForgotPasswordProcessDetailsByID = s.Functions.GetForgotPasswordProcessDetailsByID
-	account.WrongAccessToForgotPasswordProcess = s.Functions.WrongAccessToForgotPasswordProcess
-	account.UpdateUserPassword = s.Functions.UpdateUserPassword
-	account.UpdateUserEmailAddress = s.Functions.UpdateUserEmailAddress
-	account.UserEmailAddressIsVerified = s.Functions.UserEmailAddressIsVerified
-	account.UpdateUserSocialNetworks = s.Functions.UpdateUserSocialNetworks
-	account.DeleteForgotPasswordProcess = s.Functions.DeleteForgotPasswordProcess
-	account.ValidateUserRegistration = s.Functions.ValidateUserRegistration
-	account.CancelUserRegistration = s.Functions.CancelUserRegistration
-	account.GetRegistrationDetails = s.Functions.GetRegistrationDetails
-	account.SaveAuthenticationToken = s.Functions.SaveAuthenticationToken
-	account.DoesAccountWithUsernameExist = s.Functions.DoesAccountWithUsernameExist
-	account.DoesAccountWithEmailAddressExist = s.Functions.DoesAccountWithEmailAddressExist
-	account.RegisterByEmailAddress = s.Functions.RegisterByEmailAddress
-	account.RegisterByThirdPartyToken = s.Functions.RegisterByThirdPartyToken
-	account.DoesUserWithFacebookUserIDExist = s.Functions.DoesUserWithFacebookUserIDExist
-	account.DoesUserWithGoogleUserIDExist = s.Functions.DoesUserWithGoogleUserIDExist
-	account.GetUserDetailsByFacebookUserID = s.Functions.GetUserDetailsByFacebookUserID
-	account.GetUserDetailsByGoogleUserID = s.Functions.GetUserDetailsByGoogleUserID
-	account.SaveFacebookUserTokenDetailsToUser = s.Functions.SaveFacebookUserTokenDetailsToUser
-	account.SaveGoogleUserTokenDetailsToUser = s.Functions.SaveGoogleUserTokenDetailsToUser
-	account.GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser = s.Functions.GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser
-	account.GetTokenExpirationDate = s.Functions.GetTokenExpirationDate
-	account.DeleteTokenByID = s.Functions.DeleteTokenByID
-	account.GetTokenDetailsByID = s.Functions.GetTokenDetailsByID
-	account.GetOwnedTokens = s.Functions.GetOwnedTokens
-	account.GetOwnedTokenByID = s.Functions.GetOwnedTokenByID
-	account.UpdateTokenByID = s.Functions.UpdateTokenByID
-	account.GetOwnedAccountDetails = s.Functions.GetOwnedAccountDetails
-	account.UpdatedAccountInfos = s.Functions.UpdatedAccountInfos
-	account.UpdatedAccountSettings = s.Functions.UpdatedAccountSettings
-	account.CreateNewDeleteAccountProcess = s.Functions.CreateNewDeleteAccountProcess
-	account.CreateNewDisableAccountProcess = s.Functions.CreateNewDisableAccountProcess
-	account.CreateNewUpdatePasswordProcess = s.Functions.CreateNewUpdatePasswordProcess
-	account.CreateNewUpdateEmailAddressProcess = s.Functions.CreateNewUpdateEmailAddressProcess
-	account.CreateNewVerifyEmailAddressProcess = s.Functions.CreateNewVerifyEmailAddressProcess
-	account.VerifyProcess = s.Functions.VerifyProcess
-	account.DeleteProcessByID = s.Functions.DeleteProcessByID
-	account.DeleteUserByID = s.Functions.DeleteUserByID
-	account.DisableUserByID = s.Functions.DisableUserByID
-	account.EnableUserByID = s.Functions.EnableUserByID
-	contact.CreateContact = s.Functions.CreateContact
-	contact.UpdateContact = s.Functions.UpdateContact
-	contact.GetContacts = s.Functions.GetContacts
-	contact.GetContact = s.Functions.GetContact
+	accountFunctions, userFunctions, contactFunctions, termsFunctions := s.routeFunctions()
 
 	// Load the middlewares.
 	server.Use(ctxconfig.Inject(s.Config))
 	server.Use(s.Middlewares...)
+	server.Use(
+		account.Inject(&accountFunctions),
+		user.Inject(&userFunctions),
+		contact.Inject(&contactFunctions),
+		terms.Inject(&termsFunctions),
+	)
 	server.Use(ctxLocale.Inject(s.Config.DefaultLocale, s.Config.SupportedLocales))
 
 	// Load the templates.
@@ -228,6 +165,82 @@ func NewServer() *Server {
 		Config:       config.NewConfiguration(),
 		customRoutes: []route.ConfigureCustomRoutes{},
 	}
+}
+
+// routeFunctions returns the functions of the server used by the handlers of the routes, by package.
+func (s *Server) routeFunctions() (accountFunctions account.Functions, userFunctions user.Functions, contactFunctions contact.Functions, termsFunctions terms.Functions) {
+	termsFunctions.UpdateVersionOfTermsAcceptedByUser = s.Functions.UpdateVersionOfTermsAcceptedByUser
+	userFunctions.GetEnabledUsersForAdmin = s.Functions.GetEnabledUsersForAdmin
+	userFunctions.GetDisabledUsersForAdmin = s.Functions.GetDisabledUsersForAdmin
+	userFunctions.UpdatePasswordByAdmin = s.Functions.UpdatePasswordByAdmin
+	userFunctions.UpdateInformationsByAdmin = s.Functions.UpdateInformationsByAdmin
+	userFunctions.UpdateDescriptionByAdmin = s.Functions.UpdateDescriptionByAdmin
+	userFunctions.UpdateSocialByAdmin = s.Functions.UpdateSocialByAdmin
+	userFunctions.UpdateSettingsByAdmin = s.Functions.UpdateSettingsByAdmin
+	userFunctions.UpdateNotificationsByAdmin = s.Functions.UpdateNotificationsByAdmin
+	userFunctions.GetTokensForAdmin = s.Functions.GetTokensForAdmin
+	userFunctions.DeleteTokenByIDByAdmin = s.Functions.DeleteTokenByIDByAdmin
+	userFunctions.SetAbilitiesToUser = s.Functions.SetAbilitiesToUser
+	userFunctions.AddAbilitiesToUser = s.Functions.AddAbilitiesToUser
+	userFunctions.RemoveAbilitiesFromUser = s.Functions.RemoveAbilitiesFromUser
+	accountFunctions.NotificationsReceivedByUser = s.Functions.NotificationsReceivedByUser
+	accountFunctions.NotificationReceivedByUser = s.Functions.NotificationReceivedByUser
+	accountFunctions.UpdateUserNotificationRead = s.Functions.UpdateUserNotificationRead
+	accountFunctions.UpdateUserNotificationNotified = s.Functions.UpdateUserNotificationNotified
+	accountFunctions.DeleteUserNotification = s.Functions.DeleteUserNotification
+	accountFunctions.NotificationsSubscribedByUser = s.Functions.NotificationsSubscribedByUser
+	accountFunctions.SubscribeNotificationsToUser = s.Functions.SubscribeNotificationsToUser
+	accountFunctions.UnsubscribeNotificationFromUser = s.Functions.UnsubscribeNotificationFromUser
+	accountFunctions.GetUserDetailsByIdentifier = s.Functions.GetUserDetailsByIdentifier
+	accountFunctions.GetUserDetailsByID = s.Functions.GetUserDetailsByID
+	accountFunctions.NewForgotPasswordProcessForUser = s.Functions.NewForgotPasswordProcessForUser
+	accountFunctions.GetForgotPasswordProcessDetailsByID = s.Functions.GetForgotPasswordProcessDetailsByID
+	accountFunctions.WrongAccessToForgotPasswordProcess = s.Functions.WrongAccessToForgotPasswordProcess
+	accountFunctions.UpdateUserPassword = s.Functions.UpdateUserPassword
+	accountFunctions.UpdateUserEmailAddress = s.Functions.UpdateUserEmailAddress
+	accountFunctions.UserEmailAddressIsVerified = s.Functions.UserEmailAddressIsVerified
+	accountFunctions.UpdateUserSocialNetworks = s.Functions.UpdateUserSocialNetworks
+	accountFunctions.DeleteForgotPasswordProcess = s.Functions.DeleteForgotPasswordProcess
+	accountFunctions.ValidateUserRegistration = s.Functions.ValidateUserRegistration
+	accountFunctions.CancelUserRegistration = s.Functions.CancelUserRegistration
+	accountFunctions.GetRegistrationDetails = s.Functions.GetRegistrationDetails
+	accountFunctions.SaveAuthenticationToken = s.Functions.SaveAuthenticationToken
+	accountFunctions.DoesAccountWithUsernameExist = s.Functions.DoesAccountWithUsernameExist
+	accountFunctions.DoesAccountWithEmailAddressExist = s.Functions.DoesAccountWithEmailAddressExist
+	accountFunctions.RegisterByEmailAddress = s.Functions.RegisterByEmailAddress
+	accountFunctions.RegisterByThirdPartyToken = s.Functions.RegisterByThirdPartyToken
+	accountFunctions.DoesUserWithFacebookUserIDExist = s.Functions.DoesUserWithFacebookUserIDExist
+	accountFunctions.DoesUserWithGoogleUserIDExist = s.Functions.DoesUserWithGoogleUserIDExist
+	accountFunctions.GetUserDetailsByFacebookUserID = s.Functions.GetUserDetailsByFacebookUserID
+	accountFunctions.GetUserDetailsByGoogleUserID = s.Functions.GetUserDetailsByGoogleUserID
+	accountFunctions.SaveFacebookUserTokenDetailsToUser = s.Functions.SaveFacebookUserTokenDetailsToUser
+	accountFunctions.SaveGoogleUserTokenDetailsToUser = s.Functions.SaveGoogleUserTokenDetailsToUser
+	accountFunctions.GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser = s.Functions.GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser
+	accountFunctions.GetTokenExpirationDate = s.Functions.GetTokenExpirationDate
+	accountFunctions.DeleteTokenByID = s.Functions.DeleteTokenByID
+	accountFunctions.GetTokenDetailsByID = s.Functions.GetTokenDetailsByID
+	accountFunctions.GetOwnedTokens = s.Functions.GetOwnedTokens
+	accountFunctions.GetOwnedTokenByID = s.Functions.GetOwnedTokenByID
+	accountFunctions.UpdateTokenByID = s.Functions.UpdateTokenByID
+	accountFunctions.GetOwnedAccountDetails = s.Functions.GetOwnedAccountDetails
+	accountFunctions.UpdatedAccountInfos = s.Functions.UpdatedAccountInfos
+	accountFunctions.UpdatedAccountSettings = s.Functions.UpdatedAccountSettings
+	accountFunctions.CreateNewDeleteAccountProcess = s.Functions.CreateNewDeleteAccountProcess
+	accountFunctions.CreateNewDisableAccountProcess = s.Functions.CreateNewDisableAccountProcess
+	accountFunctions.CreateNewUpdatePasswordProcess = s.Functions.CreateNewUpdatePasswordProcess
+	accountFunctions.CreateNewUpdateEmailAddressProcess = s.Functions.CreateNewUpdateEmailAddressProcess
+	accountFunctions.CreateNewVerifyEmailAddressProcess = s.Functions.CreateNewVerifyEmailAddressProcess
+	accountFunctions.VerifyProcess = s.Functions.VerifyProcess
+	accountFunctions.DeleteProcessByID = s.Functions.DeleteProcessByID
+	accountFunctions.DeleteUserByID = s.Functions.DeleteUserByID
+	accountFunctions.DisableUserByID = s.Functions.DisableUserByID
+	accountFunctions.EnableUserByID = s.Functions.EnableUserByID
+	contactFunctions.CreateContact = s.Functions.CreateContact
+	contactFunctions.UpdateContact = s.Functions.UpdateContact
+	contactFunctions.GetContacts = s.Functions.GetContacts
+	contactFunctions.GetContact = s.Functions.GetContact
+
+	return accountFunctions, userFunctions, contactFunctions, termsFunctions
 }
 
 // setUpIDValidation makes the requests use the IsValidID function of the server, if any, to validate the identifiers.

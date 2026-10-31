@@ -3,13 +3,12 @@ package account
 import (
 	"errors"
 
-	"github.com/cygy/ginamite/common/ctxconfig"
-
 	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	ctxUser "github.com/cygy/ginamite/api/context/user"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
+	"github.com/cygy/ginamite/common/ctxconfig"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/timezone"
 
@@ -18,14 +17,14 @@ import (
 
 // GetInfos returns the details of an account.
 func GetInfos(c *gin.Context) {
-	if GetOwnedAccountDetails == nil {
+	if FunctionsOf(c).GetOwnedAccountDetails == nil {
 		c.Error(errors.New("undefined function 'GetOwnedAccountDetails'"))
 		response.InternalServerError(c)
 		return
 	}
 
 	userID := ctxUser.GetID(c)
-	user := GetOwnedAccountDetails(c, userID)
+	user := FunctionsOf(c).GetOwnedAccountDetails(c, userID)
 	if user == nil {
 		response.InternalServerError(c)
 		return
@@ -38,7 +37,7 @@ func GetInfos(c *gin.Context) {
 
 // UpdateInfos updated the details of an account.
 func UpdateInfos(c *gin.Context) {
-	if UpdatedAccountInfos == nil {
+	if FunctionsOf(c).UpdatedAccountInfos == nil {
 		c.Error(errors.New("undefined function 'UpdatedAccountInfos'"))
 		response.InternalServerError(c)
 		return
@@ -79,7 +78,7 @@ func UpdateInfos(c *gin.Context) {
 
 	// Update the infos of the user.
 	userID := ctxUser.GetID(c)
-	if err := UpdatedAccountInfos(c, userID, firstName, lastName); err != nil {
+	if err := FunctionsOf(c).UpdatedAccountInfos(c, userID, firstName, lastName); err != nil {
 		response.InternalServerError(c)
 		return
 	}
@@ -92,7 +91,7 @@ func UpdateInfos(c *gin.Context) {
 
 // UpdateSettings updated the settings of an account.
 func UpdateSettings(c *gin.Context) {
-	if UpdatedAccountSettings == nil {
+	if FunctionsOf(c).UpdatedAccountSettings == nil {
 		c.Error(errors.New("undefined function 'UpdatedAccountSettings'"))
 		response.InternalServerError(c)
 		return
@@ -149,7 +148,7 @@ func UpdateSettings(c *gin.Context) {
 
 	// Update the settings of the user.
 	userID := ctxUser.GetID(c)
-	if err := UpdatedAccountSettings(c, userID, accountLocale, accountTimezone); err != nil {
+	if err := FunctionsOf(c).UpdatedAccountSettings(c, userID, accountLocale, accountTimezone); err != nil {
 		response.InternalServerError(c)
 		return
 	}

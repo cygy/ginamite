@@ -16,8 +16,8 @@ const loginDevice = `"source":"web","device":{"type":"mobile","name":"iPhone"}`
 
 // loginStubs defines the functions needed to create an authentication token.
 func loginStubs() {
-	SaveAuthenticationToken = func(*gin.Context, authentication.Details) (string, bool, error) { return testTokenID, false, nil }
-	DeleteTokenByID = func(*gin.Context, string) error { return nil }
+	testFunctions.SaveAuthenticationToken = func(*gin.Context, authentication.Details) (string, bool, error) { return testTokenID, false, nil }
+	testFunctions.DeleteTokenByID = func(*gin.Context, string) error { return nil }
 }
 
 func TestLoginWithPassword(t *testing.T) {
@@ -27,7 +27,7 @@ func TestLoginWithPassword(t *testing.T) {
 	}
 	lookup := func(password string, err error) func() {
 		return func() {
-			GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser = func(*gin.Context, string) (authentication.User, string, error) {
+			testFunctions.GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser = func(*gin.Context, string) (authentication.User, string, error) {
 				return testUser, password, err
 			}
 		}
@@ -49,11 +49,11 @@ func TestLoginWithPassword(t *testing.T) {
 
 func TestLogout(t *testing.T) {
 	remove := func(err error) func() {
-		return func() { DeleteTokenByID = func(*gin.Context, string) error { return err } }
+		return func() { testFunctions.DeleteTokenByID = func(*gin.Context, string) error { return err } }
 	}
 	expiration := func(err error) func() {
 		return func() {
-			GetTokenExpirationDate = func(*gin.Context, string) (time.Time, error) { return time.Now().Add(time.Hour), err }
+			testFunctions.GetTokenExpirationDate = func(*gin.Context, string) (time.Time, error) { return time.Now().Add(time.Hour), err }
 		}
 	}
 
@@ -69,7 +69,9 @@ func TestLogout(t *testing.T) {
 
 func TestGetAuthTokens(t *testing.T) {
 	list := func(err error) func() {
-		return func() { GetOwnedTokens = func(*gin.Context, string) (any, error) { return []string{"t1"}, err } }
+		return func() {
+			testFunctions.GetOwnedTokens = func(*gin.Context, string) (any, error) { return []string{"t1"}, err }
+		}
 	}
 
 	runCases(t, GetAuthTokens, []testCase{
@@ -83,7 +85,7 @@ func TestGetAuthTokens(t *testing.T) {
 func TestGetAuthToken(t *testing.T) {
 	get := func(owner string, err error) func() {
 		return func() {
-			GetOwnedTokenByID = func(*gin.Context, string) (any, string, error) { return "t1", owner, err }
+			testFunctions.GetOwnedTokenByID = func(*gin.Context, string) (any, string, error) { return "t1", owner, err }
 		}
 	}
 
@@ -120,17 +122,17 @@ func TestUpdateAuthToken(t *testing.T) {
 	token := authentication.Token{UserID: testUserID}
 	stubs := func(owner authentication.Token, getErr, updateErr error) func() {
 		return func() {
-			GetTokenDetailsByID = func(*gin.Context, string) (authentication.Token, error) { return owner, getErr }
-			UpdateTokenByID = func(*gin.Context, string, string, bool, []string) error { return updateErr }
+			testFunctions.GetTokenDetailsByID = func(*gin.Context, string) (authentication.Token, error) { return owner, getErr }
+			testFunctions.UpdateTokenByID = func(*gin.Context, string, string, bool, []string) error { return updateErr }
 		}
 	}
 
 	runCases(t, UpdateAuthToken, []testCase{
 		{name: "GetTokenDetailsByID not defined", userID: testUserID, id: "t1", body: body, setup: func() {
-			UpdateTokenByID = func(*gin.Context, string, string, bool, []string) error { return nil }
+			testFunctions.UpdateTokenByID = func(*gin.Context, string, string, bool, []string) error { return nil }
 		}, want: http.StatusInternalServerError},
 		{name: "UpdateTokenByID not defined", userID: testUserID, id: "t1", body: body, setup: func() {
-			GetTokenDetailsByID = func(*gin.Context, string) (authentication.Token, error) { return token, nil }
+			testFunctions.GetTokenDetailsByID = func(*gin.Context, string) (authentication.Token, error) { return token, nil }
 		}, want: http.StatusInternalServerError},
 		{name: "missing name", userID: testUserID, id: "t1", body: `{}`, setup: stubs(token, nil, nil), want: http.StatusBadRequest},
 		{name: "unsupported notification", userID: testUserID, id: "t1", body: `{"name":"x","notifications":["unknown"]}`, setup: stubs(token, nil, nil), want: http.StatusBadRequest},

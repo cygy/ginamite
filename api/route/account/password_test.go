@@ -11,7 +11,7 @@ func TestUpdatePassword(t *testing.T) {
 	const body = `{"password":"Abcdefghij1"}`
 	create := func(err error) func() {
 		return func() {
-			CreateNewUpdatePasswordProcess = func(*gin.Context, string, string) (string, string, error) {
+			testFunctions.CreateNewUpdatePasswordProcess = func(*gin.Context, string, string) (string, string, error) {
 				return "process-id", "process-key", err
 			}
 		}

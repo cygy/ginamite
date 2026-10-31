@@ -12,7 +12,7 @@ import (
 
 // GetAdminContacts returns the contact documents.
 func GetAdminContacts(c *gin.Context) {
-	if GetContacts == nil {
+	if FunctionsOf(c).GetContacts == nil {
 		c.Error(errors.New("undefined function 'GetContacts'"))
 		response.InternalServerError(c)
 		return
@@ -21,7 +21,7 @@ func GetAdminContacts(c *gin.Context) {
 	offset := request.GetOffset(c)
 	limit := request.GetLimit(c)
 
-	contacts, err := GetContacts(c, offset, limit)
+	contacts, err := FunctionsOf(c).GetContacts(c, offset, limit)
 	if err != nil {
 		response.InternalServerError(c)
 		return
@@ -34,7 +34,7 @@ func GetAdminContacts(c *gin.Context) {
 
 // GetAdminContact returns a contact document.
 func GetAdminContact(c *gin.Context) {
-	if GetContact == nil {
+	if FunctionsOf(c).GetContact == nil {
 		c.Error(errors.New("undefined function 'GetContact'"))
 		response.InternalServerError(c)
 		return
@@ -42,7 +42,7 @@ func GetAdminContact(c *gin.Context) {
 
 	contactID := getContactID(c)
 
-	contact, err := GetContact(c, contactID)
+	contact, err := FunctionsOf(c).GetContact(c, contactID)
 	if err != nil {
 		response.InternalServerError(c)
 		return
@@ -55,7 +55,7 @@ func GetAdminContact(c *gin.Context) {
 
 // Update updates a contact document.
 func Update(c *gin.Context) {
-	if UpdateContact == nil {
+	if FunctionsOf(c).UpdateContact == nil {
 		c.Error(errors.New("undefined function 'UpdateContact'"))
 		response.InternalServerError(c)
 		return
@@ -68,7 +68,7 @@ func Update(c *gin.Context) {
 
 	contactID := getContactID(c)
 
-	err := UpdateContact(c, contactID, jsonBody.Done)
+	err := FunctionsOf(c).UpdateContact(c, contactID, jsonBody.Done)
 	if err != nil {
 		response.InternalServerError(c)
 		return

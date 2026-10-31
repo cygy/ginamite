@@ -36,7 +36,7 @@ func TestPost(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			CreateContact = tt.create
+			testFunctions.CreateContact = tt.create
 			if got := serve(Post, http.MethodPost, "/", tt.body); got != tt.wantStatus {
 				t.Errorf("status = %d, want %d", got, tt.wantStatus)
 			}
@@ -45,7 +45,7 @@ func TestPost(t *testing.T) {
 
 	t.Run("created and stored", func(t *testing.T) {
 		var email, subject, text string
-		CreateContact = func(_ *gin.Context, e, s, x string) error {
+		testFunctions.CreateContact = func(_ *gin.Context, e, s, x string) error {
 			email, subject, text = e, s, x
 			return nil
 		}

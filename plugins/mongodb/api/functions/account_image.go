@@ -9,14 +9,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cygy/ginamite/common/ctxconfig"
-
 	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	ctxUser "github.com/cygy/ginamite/api/context/user"
 	"github.com/cygy/ginamite/api/image"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
+	"github.com/cygy/ginamite/common/ctxconfig"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/mongo/session"

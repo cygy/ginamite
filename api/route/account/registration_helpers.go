@@ -4,12 +4,11 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/cygy/ginamite/common/ctxconfig"
-
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common/authentication"
+	"github.com/cygy/ginamite/common/ctxconfig"
 	registrationError "github.com/cygy/ginamite/common/errors/registration"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/queue"
@@ -21,31 +20,31 @@ import (
 )
 
 func register(c *gin.Context, method string) {
-	if GetUserDetailsByIdentifier == nil {
+	if FunctionsOf(c).GetUserDetailsByIdentifier == nil {
 		c.Error(errors.New("undefined function 'GetUserDetailsByIdentifier'"))
 		response.InternalServerError(c)
 		return
 	}
 
-	if RegisterByEmailAddress == nil {
+	if FunctionsOf(c).RegisterByEmailAddress == nil {
 		c.Error(errors.New("undefined function 'RegisterByEmailAddress'"))
 		response.InternalServerError(c)
 		return
 	}
 
-	if RegisterByThirdPartyToken == nil {
+	if FunctionsOf(c).RegisterByThirdPartyToken == nil {
 		c.Error(errors.New("undefined function 'RegisterByThirdPartyToken'"))
 		response.InternalServerError(c)
 		return
 	}
 
-	if DoesAccountWithUsernameExist == nil {
+	if FunctionsOf(c).DoesAccountWithUsernameExist == nil {
 		c.Error(errors.New("undefined function 'DoesAccountWithUsernameExist'"))
 		response.InternalServerError(c)
 		return
 	}
 
-	if DoesAccountWithEmailAddressExist == nil {
+	if FunctionsOf(c).DoesAccountWithEmailAddressExist == nil {
 		c.Error(errors.New("undefined function 'DoesAccountWithEmailAddressExist'"))
 		response.InternalServerError(c)
 		return
@@ -186,7 +185,7 @@ func register(c *gin.Context, method string) {
 		})
 	}
 
-	exists, err := DoesAccountWithUsernameExist(c, username)
+	exists, err := FunctionsOf(c).DoesAccountWithUsernameExist(c, username)
 	if exists || err != nil {
 		sendAccountAlreadyExistsError()
 		return
@@ -219,9 +218,9 @@ func register(c *gin.Context, method string) {
 		// Then verify that an exiting account is not linked to the third-party user.
 		var DoesUserWithSocialNetworkUserIDExist DoesUserWithSocialNetworkUserIDExistFunc
 		if isFacebookMethod {
-			DoesUserWithSocialNetworkUserIDExist = DoesUserWithFacebookUserIDExist
+			DoesUserWithSocialNetworkUserIDExist = FunctionsOf(c).DoesUserWithFacebookUserIDExist
 		} else if isGoogleMethod {
-			DoesUserWithSocialNetworkUserIDExist = DoesUserWithGoogleUserIDExist
+			DoesUserWithSocialNetworkUserIDExist = FunctionsOf(c).DoesUserWithGoogleUserIDExist
 		}
 		if DoesUserWithSocialNetworkUserIDExist != nil {
 			exists, err := DoesUserWithSocialNetworkUserIDExist(c, tokenInfos.UserID)
@@ -231,14 +230,14 @@ func register(c *gin.Context, method string) {
 		}
 
 		// Finally verify that an account with this email address does not exist.
-		exists, err := DoesAccountWithEmailAddressExist(c, tokenInfos.Email)
+		exists, err := FunctionsOf(c).DoesAccountWithEmailAddressExist(c, tokenInfos.Email)
 		if exists || err != nil {
 			sendAccountAlreadyExistsError()
 			return
 		}
 
 		// Create an account with this third-party token.
-		if err := RegisterByThirdPartyToken(c, username, tokenInfos, tokenValidator.SourceName(), accountLocale, termsVersion, registrationCode, privateKey, source, IPAddress, device); err != nil {
+		if err := FunctionsOf(c).RegisterByThirdPartyToken(c, username, tokenInfos, tokenValidator.SourceName(), accountLocale, termsVersion, registrationCode, privateKey, source, IPAddress, device); err != nil {
 			response.InternalServerError(c)
 			return
 		}
@@ -251,21 +250,21 @@ func register(c *gin.Context, method string) {
 	// Register with a email/password
 	if isPasswordMethod {
 		// Verify that an account with this email address does not exist.
-		exists, err := DoesAccountWithEmailAddressExist(c, emailAddress)
+		exists, err := FunctionsOf(c).DoesAccountWithEmailAddressExist(c, emailAddress)
 		if exists || err != nil {
 			sendAccountAlreadyExistsError()
 			return
 		}
 
 		// Create an account with this email address.
-		if err := RegisterByEmailAddress(c, username, encryptedPassword, emailAddress, accountLocale, termsVersion, registrationCode, privateKey, source, IPAddress, device); err != nil {
+		if err := FunctionsOf(c).RegisterByEmailAddress(c, username, encryptedPassword, emailAddress, accountLocale, termsVersion, registrationCode, privateKey, source, IPAddress, device); err != nil {
 			response.InternalServerError(c)
 			return
 		}
 	}
 
 	// Get the newly created account.
-	user, err := GetUserDetailsByIdentifier(c, emailAddress)
+	user, err := FunctionsOf(c).GetUserDetailsByIdentifier(c, emailAddress)
 	if err != nil {
 		response.InternalServerError(c)
 		return
@@ -334,25 +333,25 @@ func validateOrCancelRegistration(c *gin.Context, validate bool) {
 		)
 	}
 
-	if GetUserDetailsByID == nil {
+	if FunctionsOf(c).GetUserDetailsByID == nil {
 		c.Error(errors.New("undefined function 'GetUserDetailsByID'"))
 		sendError()
 		return
 	}
 
-	if GetRegistrationDetails == nil {
+	if FunctionsOf(c).GetRegistrationDetails == nil {
 		c.Error(errors.New("undefined function 'GetRegistrationDetails'"))
 		sendError()
 		return
 	}
 
-	if ValidateUserRegistration == nil {
+	if FunctionsOf(c).ValidateUserRegistration == nil {
 		c.Error(errors.New("undefined function 'ValidateUserRegistration'"))
 		sendError()
 		return
 	}
 
-	if CancelUserRegistration == nil {
+	if FunctionsOf(c).CancelUserRegistration == nil {
 		c.Error(errors.New("undefined function 'CancelUserRegistration'"))
 		sendError()
 		return
@@ -366,7 +365,7 @@ func validateOrCancelRegistration(c *gin.Context, validate bool) {
 		return
 	}
 
-	user, err := GetUserDetailsByID(c, userID)
+	user, err := FunctionsOf(c).GetUserDetailsByID(c, userID)
 	if err != nil {
 		sendError()
 		return
@@ -374,15 +373,15 @@ func validateOrCancelRegistration(c *gin.Context, validate bool) {
 
 	var registrationDetails *authentication.Details
 	if validate {
-		registrationDetails, err = GetRegistrationDetails(c, userID)
+		registrationDetails, err = FunctionsOf(c).GetRegistrationDetails(c, userID)
 		if err != nil {
 			sendError()
 			return
 		}
 
-		err = ValidateUserRegistration(c, userID, key)
+		err = FunctionsOf(c).ValidateUserRegistration(c, userID, key)
 	} else {
-		err = CancelUserRegistration(c, userID, key)
+		err = FunctionsOf(c).CancelUserRegistration(c, userID, key)
 	}
 	if err != nil {
 		sendError()

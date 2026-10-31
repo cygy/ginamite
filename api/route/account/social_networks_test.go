@@ -13,7 +13,7 @@ func TestUpdateSocialNetworks(t *testing.T) {
 	body := `{"facebook":"` + common.FacebookPrefix + `me","twitter":"` + common.TwitterPrefix + `me","instagram":"` + common.InstagramPrefix + `me"}`
 	update := func(err error) func() {
 		return func() {
-			UpdateUserSocialNetworks = func(*gin.Context, string, string, string, string) error { return err }
+			testFunctions.UpdateUserSocialNetworks = func(*gin.Context, string, string, string, string) error { return err }
 		}
 	}
 

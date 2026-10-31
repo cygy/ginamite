@@ -26,6 +26,43 @@ func TestNewServer(t *testing.T) {
 	}
 }
 
+func TestServer_routeFunctions(t *testing.T) {
+	s := NewServer()
+
+	// Every function of the server is defined.
+	values := reflect.ValueOf(&s.Functions).Elem()
+	for i := range values.NumField() {
+		field := values.Field(i)
+		if field.Kind() == reflect.Func {
+			field.Set(reflect.MakeFunc(field.Type(), func([]reflect.Value) []reflect.Value {
+				out := make([]reflect.Value, field.Type().NumOut())
+				for j := range out {
+					out[j] = reflect.Zero(field.Type().Out(j))
+				}
+
+				return out
+			}))
+		}
+	}
+
+	account, user, contact, terms := s.routeFunctions()
+
+	// Every function of the routes, except the ones which have a default, is the function of the server.
+	for name, functions := range map[string]any{"account": &account, "user": &user, "contact": &contact, "terms": &terms} {
+		fields := reflect.ValueOf(functions).Elem()
+		for i := range fields.NumField() {
+			fieldName := fields.Type().Field(i).Name
+			if fieldName == "NewTokenValidator" {
+				continue
+			}
+
+			if fields.Field(i).IsNil() {
+				t.Errorf("%s.%s is not set from the functions of the server", name, fieldName)
+			}
+		}
+	}
+}
+
 func TestServer_setUpIDValidation(t *testing.T) {
 	old := request.IsValidID
 	t.Cleanup(func() { request.IsValidID = old })

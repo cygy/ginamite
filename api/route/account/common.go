@@ -4,21 +4,24 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/cygy/ginamite/common/ctxconfig"
-
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/api/validator"
 	"github.com/cygy/ginamite/common/authentication"
+	"github.com/cygy/ginamite/common/ctxconfig"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/queue"
 
 	"github.com/gin-gonic/gin"
 )
 
-// newTokenValidator returns the validator of the tokens issued by a third-party authentication method.
-// It is a variable so that the tests can replace it.
-var newTokenValidator = func(c *gin.Context, method string) validator.TokenValidator {
+// newTokenValidator returns the validator of the tokens issued by a third-party authentication method: the one of the
+// functions of the context if any, the validators of Facebook and Google else. It returns nil for another method.
+func newTokenValidator(c *gin.Context, method string) validator.TokenValidator {
+	if newValidator := FunctionsOf(c).NewTokenValidator; newValidator != nil {
+		return newValidator(c, method)
+	}
+
 	switch method {
 	case authentication.MethodFacebook:
 		return validator.NewFacebookTokenValidator(ctxconfig.Get(c).Facebook.AppID, ctxconfig.Get(c).Facebook.APIVersion, ctxconfig.Get(c).Facebook.TimeOut, ctxconfig.Get(c).Facebook.RetryCount, ctxconfig.Get(c).IsDebugModeEnabled())
@@ -106,19 +109,19 @@ func validateOrCancelUpdateProperty(c *gin.Context, property string, validate bo
 	}
 
 	// Some functions must be verified.
-	undefined := GetUserDetailsByID == nil || VerifyProcess == nil || DeleteProcessByID == nil
+	undefined := FunctionsOf(c).GetUserDetailsByID == nil || FunctionsOf(c).VerifyProcess == nil || FunctionsOf(c).DeleteProcessByID == nil
 
 	if validate {
 		if isEmailAddressProcess {
-			undefined = undefined || UpdateUserEmailAddress == nil
+			undefined = undefined || FunctionsOf(c).UpdateUserEmailAddress == nil
 		} else if isPasswordProcess {
-			undefined = undefined || UpdateUserPassword == nil
+			undefined = undefined || FunctionsOf(c).UpdateUserPassword == nil
 		} else if isValidateEmailAddressProcess {
-			undefined = undefined || UserEmailAddressIsVerified == nil
+			undefined = undefined || FunctionsOf(c).UserEmailAddressIsVerified == nil
 		} else if isDeleteAccountProcess {
-			undefined = undefined || DeleteUserByID == nil
+			undefined = undefined || FunctionsOf(c).DeleteUserByID == nil
 		} else if isDisableAccountProcess {
-			undefined = undefined || DisableUserByID == nil
+			undefined = undefined || FunctionsOf(c).DisableUserByID == nil
 		}
 	}
 
@@ -128,13 +131,13 @@ func validateOrCancelUpdateProperty(c *gin.Context, property string, validate bo
 	}
 
 	// Verify the process.
-	userID, value, err := VerifyProcess(c, processID, key)
+	userID, value, err := FunctionsOf(c).VerifyProcess(c, processID, key)
 	if err != nil {
 		sendError(err)
 		return
 	}
 
-	user, err := GetUserDetailsByID(c, userID)
+	user, err := FunctionsOf(c).GetUserDetailsByID(c, userID)
 	if err != nil {
 		sendError(err)
 		return
@@ -143,22 +146,22 @@ func validateOrCancelUpdateProperty(c *gin.Context, property string, validate bo
 	// Now update the password/email address.
 	if validate {
 		if isEmailAddressProcess {
-			if err := UpdateUserEmailAddress(c, userID, value); err != nil {
+			if err := FunctionsOf(c).UpdateUserEmailAddress(c, userID, value); err != nil {
 				sendError(err)
 				return
 			}
 		} else if isPasswordProcess {
-			if err := UpdateUserPassword(c, userID, value, true); err != nil {
+			if err := FunctionsOf(c).UpdateUserPassword(c, userID, value, true); err != nil {
 				sendError(err)
 				return
 			}
 		} else if isValidateEmailAddressProcess {
-			if err := UserEmailAddressIsVerified(c, userID); err != nil {
+			if err := FunctionsOf(c).UserEmailAddressIsVerified(c, userID); err != nil {
 				sendError(err)
 				return
 			}
 		} else if isDeleteAccountProcess {
-			if err := DeleteUserByID(c, userID); err != nil {
+			if err := FunctionsOf(c).DeleteUserByID(c, userID); err != nil {
 				sendError(err)
 				return
 			}
@@ -167,7 +170,7 @@ func validateOrCancelUpdateProperty(c *gin.Context, property string, validate bo
 				UserID: userID,
 			})
 		} else if isDisableAccountProcess {
-			if _, err := DisableUserByID(c, userID); err != nil {
+			if _, err := FunctionsOf(c).DisableUserByID(c, userID); err != nil {
 				sendError(err)
 				return
 			}
@@ -179,7 +182,7 @@ func validateOrCancelUpdateProperty(c *gin.Context, property string, validate bo
 	}
 
 	// Now delete the process.
-	err = DeleteProcessByID(c, processID)
+	err = FunctionsOf(c).DeleteProcessByID(c, processID)
 	if err != nil && !validate {
 		sendError(err)
 		return

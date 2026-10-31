@@ -14,12 +14,12 @@ func TestForgotPassword(t *testing.T) {
 	const body = `{"identifier":"john"}`
 	lookup := func(err error) func() {
 		return func() {
-			GetUserDetailsByIdentifier = func(*gin.Context, string) (authentication.User, error) { return testUser, err }
+			testFunctions.GetUserDetailsByIdentifier = func(*gin.Context, string) (authentication.User, error) { return testUser, err }
 		}
 	}
 	create := func(err error) func() {
 		return func() {
-			NewForgotPasswordProcessForUser = func(*gin.Context, string, string) (string, error) { return "process-id", err }
+			testFunctions.NewForgotPasswordProcessForUser = func(*gin.Context, string, string) (string, error) { return "process-id", err }
 		}
 	}
 
@@ -39,14 +39,14 @@ func TestForgotPassword(t *testing.T) {
 }
 
 func (f forgotPasswordStubs) install() {
-	GetForgotPasswordProcessDetailsByID = func(*gin.Context, string) (string, string, error) {
+	testFunctions.GetForgotPasswordProcessDetailsByID = func(*gin.Context, string) (string, string, error) {
 		return testUserID, f.key, f.detailsErr
 	}
-	GetUserDetailsByID = func(*gin.Context, string) (authentication.User, error) { return testUser, f.userErr }
-	UpdateUserPassword = func(*gin.Context, string, string, bool) error { return f.updateErr }
-	DeleteForgotPasswordProcess = func(*gin.Context, string) error { return f.deleteErr }
+	testFunctions.GetUserDetailsByID = func(*gin.Context, string) (authentication.User, error) { return testUser, f.userErr }
+	testFunctions.UpdateUserPassword = func(*gin.Context, string, string, bool) error { return f.updateErr }
+	testFunctions.DeleteForgotPasswordProcess = func(*gin.Context, string) error { return f.deleteErr }
 	if !f.skipWrongAccessFunctionDefinition {
-		WrongAccessToForgotPasswordProcess = func(*gin.Context, string) {
+		testFunctions.WrongAccessToForgotPasswordProcess = func(*gin.Context, string) {
 			if f.wrongAccessCalls != nil {
 				*f.wrongAccessCalls++
 			}
@@ -55,12 +55,12 @@ func (f forgotPasswordStubs) install() {
 
 	switch f.missing {
 	case "GetUserDetailsByID":
-		GetUserDetailsByID = nil
+		testFunctions.GetUserDetailsByID = nil
 	case "GetForgotPasswordProcessDetailsByID":
-		GetForgotPasswordProcessDetailsByID = nil
+		testFunctions.GetForgotPasswordProcessDetailsByID = nil
 	case "UpdateUserPassword":
-		UpdateUserPassword = nil
+		testFunctions.UpdateUserPassword = nil
 	case "DeleteForgotPasswordProcess":
-		DeleteForgotPasswordProcess = nil
+		testFunctions.DeleteForgotPasswordProcess = nil
 	}
 }

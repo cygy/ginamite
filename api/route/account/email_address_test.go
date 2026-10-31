@@ -11,7 +11,7 @@ func TestUpdateEmailAddress(t *testing.T) {
 	const body = `{"email_address":"new@example.com"}`
 	create := func(err error) func() {
 		return func() {
-			CreateNewUpdateEmailAddressProcess = func(*gin.Context, string, string) (string, string, error) {
+			testFunctions.CreateNewUpdateEmailAddressProcess = func(*gin.Context, string, string) (string, string, error) {
 				return "process-id", "process-key", err
 			}
 		}
@@ -61,7 +61,7 @@ func TestConfirmEmailAddress(t *testing.T) {
 	verified.IsEmailValid = true
 	create := func(err error) func() {
 		return func() {
-			CreateNewVerifyEmailAddressProcess = func(*gin.Context, string) (string, string, error) {
+			testFunctions.CreateNewVerifyEmailAddressProcess = func(*gin.Context, string) (string, string, error) {
 				return "process-id", "process-key", err
 			}
 		}
