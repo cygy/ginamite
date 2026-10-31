@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"testing"
 
+	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
+
 	"github.com/cygy/ginamite/api/internal/apitest"
 	"github.com/cygy/ginamite/common/authentication"
 	"github.com/cygy/ginamite/common/config"
@@ -17,17 +19,12 @@ func TestGetExpiredToken(t *testing.T) {
 	testConfig.JWT.Secret = "secret"
 	testConfig.JWT.SigningMethod = "HS256"
 
-	t.Cleanup(func() {
-		authentication.BuildTokenFromID = nil
-		authentication.ExtraPropertiesForTokenWithID = nil
-	})
+	var hooks authentication.Hooks
 
 	t.Run("token functions undefined", func(t *testing.T) {
-		authentication.BuildTokenFromID = nil
-		authentication.ExtraPropertiesForTokenWithID = nil
-
 		c, recorder := apitest.NewContext("GET", "/", nil)
 		ctxconfig.Set(c, testConfig)
+		ctxAuthToken.SetHooks(c, hooks)
 		GetExpiredToken(c)
 		c.Writer.WriteHeaderNow()
 
@@ -37,15 +34,16 @@ func TestGetExpiredToken(t *testing.T) {
 	})
 
 	t.Run("expired token", func(t *testing.T) {
-		authentication.BuildTokenFromID = func(context.Context, string) (*authentication.Token, error) {
+		hooks.BuildTokenFromID = func(context.Context, string) (*authentication.Token, error) {
 			return &authentication.Token{}, nil
 		}
-		authentication.ExtraPropertiesForTokenWithID = func(string) (map[string]string, error) {
+		hooks.ExtraPropertiesForTokenWithID = func(string) (map[string]string, error) {
 			return map[string]string{}, nil
 		}
 
 		c, recorder := apitest.NewContext("GET", "/", nil)
 		ctxconfig.Set(c, testConfig)
+		ctxAuthToken.SetHooks(c, hooks)
 		GetExpiredToken(c)
 
 		if recorder.Code != http.StatusOK {

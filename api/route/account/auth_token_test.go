@@ -147,7 +147,7 @@ func TestRefreshAuthToken(t *testing.T) {
 	runCases(t, RefreshAuthToken, []testCase{
 		{name: "success", userID: testUserID, want: http.StatusOK, check: contains("auth_token")},
 		{name: "refresh error", userID: testUserID, setup: func() {
-			authentication.ExtendTokenExpirationDateFromID = func(context.Context, string, time.Duration) error { return errBoom }
+			testHooks.ExtendTokenExpirationDateFromID = func(context.Context, string, time.Duration) error { return errBoom }
 		}, want: http.StatusBadRequest},
 	})
 }

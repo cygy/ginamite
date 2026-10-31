@@ -64,10 +64,10 @@ func TestCreateAuthenticationToken(t *testing.T) {
 			testFunctions.SaveAuthenticationToken = func(*gin.Context, authentication.Details) (string, bool, error) { return "", false, errBoom }
 		}), false, true, true, http.StatusBadRequest},
 		{"sign error", all(loginStubs, func() {
-			authentication.BuildTokenFromID = nil
+			testHooks.BuildTokenFromID = nil
 		}), false, true, true, http.StatusBadRequest},
 		{"sign error and deletion error", all(loginStubs, func() {
-			authentication.BuildTokenFromID = nil
+			testHooks.BuildTokenFromID = nil
 			testFunctions.DeleteTokenByID = func(*gin.Context, string) error { return errBoom }
 		}), false, true, true, http.StatusBadRequest},
 		{"success", loginStubs, false, true, false, http.StatusCreated},

@@ -33,7 +33,6 @@ func setup(t *testing.T) string {
 	testConfig = &config.Configuration{}
 	testConfig.Terms.Version = "2"
 	testConfig.Terms.Path = dir
-	termsContents = map[string]string{}
 	t.Cleanup(func() { testFunctions = Functions{} })
 
 	return dir
@@ -51,7 +50,7 @@ func TestGetTerms(t *testing.T) {
 	dir := setup(t)
 
 	req, _ := http.NewRequest(http.MethodGet, "/", nil)
-	if code := apitest.Serve(newRouter(GetTerms), req).Code; code != http.StatusInternalServerError {
+	if code := apitest.Serve(newRouter(GetTerms()), req).Code; code != http.StatusInternalServerError {
 		t.Errorf("missing terms file: status = %d, want %d", code, http.StatusInternalServerError)
 	}
 
@@ -63,8 +62,9 @@ func TestGetTerms(t *testing.T) {
 	}
 
 	// The file is read once, then served from the cache.
+	router := newRouter(GetTerms())
 	for range 2 {
-		recorder := apitest.Serve(newRouter(GetTerms), req)
+		recorder := apitest.Serve(router, req)
 		if recorder.Code != http.StatusOK || !strings.Contains(recorder.Body.String(), "the terms") {
 			t.Fatalf("status = %d, body = %q, want 200 with the terms", recorder.Code, recorder.Body.String())
 		}

@@ -16,7 +16,6 @@ func TestGetNotifications(t *testing.T) {
 		"notification.login.name":        "Login",
 		"notification.login.description": "A login occurs",
 	})
-	notifications = map[string][]localizedNotification{}
 
 	router := gin.New()
 	router.Use(ctxLocale.Inject("en", []string{"en"}))

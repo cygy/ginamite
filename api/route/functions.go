@@ -315,7 +315,7 @@ func (r *Router) LoadDefaultRoutes() {
 	// ----- Terms.
 	if r.DefaultRoutes.Terms.Enabled {
 		if r.DefaultRoutes.Terms.Paths.GetTerms.Enabled {
-			v.GET(r.DefaultRoutes.Terms.Paths.GetTerms.Path, terms.GetTerms)
+			v.GET(r.DefaultRoutes.Terms.Paths.GetTerms.Path, terms.GetTerms())
 		}
 		if r.DefaultRoutes.Terms.Paths.GetVersion.Enabled {
 			v.GET(r.DefaultRoutes.Terms.Paths.GetVersion.Path, terms.GetTermsVersion)

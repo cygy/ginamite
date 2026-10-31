@@ -3,6 +3,7 @@ package notifications
 
 import (
 	"fmt"
+	"sync"
 
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/response"
@@ -11,10 +12,17 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// GetNotifications returns the available notifications.
+// GetNotifications returns the handler listing the supported notifications. The localized notifications are cached
+// by locale in the handler.
 func GetNotifications(supportedNotifications []string) gin.HandlerFunc {
+	var mutex sync.Mutex
+	notifications := map[string][]localizedNotification{} // Locale > []struct
+
 	return func(c *gin.Context) {
 		locale := ctxLocale.Get(c)
+
+		mutex.Lock()
+		defer mutex.Unlock()
 
 		localizedNotifications, ok := notifications[locale]
 		if !ok {

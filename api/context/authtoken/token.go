@@ -43,7 +43,7 @@ func GetID(c *gin.Context) string {
 // Refresh refreshes the auth token with the latest properties of the user.
 func Refresh(c *gin.Context) {
 	tokenID := GetID(c)
-	signedToken, err := authentication.RefreshAuthToken(c, ctxconfig.Get(c).JWT.Secret, ctxconfig.Get(c).JWT.SigningMethod, tokenID, time.Duration(ctxconfig.Get(c).JWT.TTL))
+	signedToken, err := HooksOf(c).RefreshAuthToken(c, ctxconfig.Get(c).JWT.Secret, ctxconfig.Get(c).JWT.SigningMethod, tokenID, time.Duration(ctxconfig.Get(c).JWT.TTL))
 	if err == nil {
 		response.AddRenewedAuthToken(c, signedToken)
 	}

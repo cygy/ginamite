@@ -14,7 +14,9 @@ type ExtraPropertiesForTokenWithIDFunc func(tokenID string) (map[string]string, 
 // ExtendTokenExpirationDateFunc extends the expiration date of a token from its ID.
 type ExtendTokenExpirationDateFunc func(ctx context.Context, tokenID string, ttl time.Duration) error
 
-var (
+// Hooks are the functions provided by the application, such as the storage plugin, to build the auth tokens and to
+// extend their validity.
+type Hooks struct {
 	// BuildTokenFromID returns the content of an auth token from its ID.
 	BuildTokenFromID BuildTokenFunc
 
@@ -23,4 +25,4 @@ var (
 
 	// ExtendTokenExpirationDateFromID extends the expiration date of an auth token from its ID.
 	ExtendTokenExpirationDateFromID ExtendTokenExpirationDateFunc
-)
+}

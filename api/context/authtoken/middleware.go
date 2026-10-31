@@ -1,7 +1,6 @@
 package authtoken
 
 import (
-	tokencache "github.com/cygy/ginamite/api/cache/authtoken"
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	ctxShared "github.com/cygy/ginamite/api/context/shared"
 	"github.com/cygy/ginamite/api/response"
@@ -60,7 +59,7 @@ func Parse(secret string, buildUser GetUserAndLocaleFunc, authTokenMustBePresent
 
 			// Verify if the token is revoked.
 			tokenID := GetID(c)
-			if tokencache.IsRevoked(tokenID) {
+			if isRevoked(c, tokenID) {
 				response.UnauthorizedWithRevokedAuthorizationToken(c, requestLocale)
 				return
 			}

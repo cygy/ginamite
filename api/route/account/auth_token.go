@@ -271,7 +271,7 @@ func UpdateAuthToken(c *gin.Context) {
 func RefreshAuthToken(c *gin.Context) {
 	tokenID := ctxAuthToken.GetID(c)
 
-	signedToken, err := authentication.RefreshAuthToken(c, ctxconfig.Get(c).JWT.Secret, ctxconfig.Get(c).JWT.SigningMethod, tokenID, time.Duration(ctxconfig.Get(c).JWT.TTL))
+	signedToken, err := ctxAuthToken.HooksOf(c).RefreshAuthToken(c, ctxconfig.Get(c).JWT.Secret, ctxconfig.Get(c).JWT.SigningMethod, tokenID, time.Duration(ctxconfig.Get(c).JWT.TTL))
 	if err != nil {
 		locale := ctxLocale.Get(c)
 		t := localization.Translate(locale)

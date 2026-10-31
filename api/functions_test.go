@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	tokencache "github.com/cygy/ginamite/api/cache/authtoken"
 	_ "github.com/cygy/ginamite/api/internal/apitest"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/route"
@@ -145,7 +144,7 @@ func TestServer_CreateKafkaConsumers(t *testing.T) {
 
 			consumers[0].Action(tt.value)
 
-			if got := tokencache.IsRevoked("revoked-token"); got != tt.wantRevoked {
+			if got := s.RevokedTokens.IsRevoked("revoked-token"); got != tt.wantRevoked {
 				t.Errorf("IsRevoked() = %v, want %v", got, tt.wantRevoked)
 			}
 			warnings := 0
@@ -157,7 +156,6 @@ func TestServer_CreateKafkaConsumers(t *testing.T) {
 			if warnings != tt.wantWarnings {
 				t.Errorf("warnings = %d, want %d", warnings, tt.wantWarnings)
 			}
-			tokencache.Remove("revoked-token")
 		})
 	}
 }

@@ -25,12 +25,12 @@ type Token struct {
 // GetSignedToken returns a signed JWT with the details of the auth token tokenID.
 // It needs the BuildTokenFromID and ExtraPropertiesForTokenWithID hooks.
 // Unknown signing methods fall back to HS256.
-func GetSignedToken(ctx context.Context, signingMethod, secret, tokenID string) (string, error) {
-	if BuildTokenFromID == nil {
+func (h Hooks) GetSignedToken(ctx context.Context, signingMethod, secret, tokenID string) (string, error) {
+	if h.BuildTokenFromID == nil {
 		return "", errors.New("undefined function 'BuildTokenFromID'")
 	}
 
-	if ExtraPropertiesForTokenWithID == nil {
+	if h.ExtraPropertiesForTokenWithID == nil {
 		return "", errors.New("undefined function 'ExtraPropertiesForTokenWithID'")
 	}
 
@@ -48,7 +48,7 @@ func GetSignedToken(ctx context.Context, signingMethod, secret, tokenID string) 
 		}
 		extraProperties = map[string]string{}
 	} else {
-		token, err = BuildTokenFromID(ctx, tokenID)
+		token, err = h.BuildTokenFromID(ctx, tokenID)
 		if err != nil {
 			log.WithFields(logrus.Fields{
 				"token id":         tokenID,
@@ -58,7 +58,7 @@ func GetSignedToken(ctx context.Context, signingMethod, secret, tokenID string) 
 			return "", err
 		}
 
-		extraProperties, err = ExtraPropertiesForTokenWithID(tokenID)
+		extraProperties, err = h.ExtraPropertiesForTokenWithID(tokenID)
 		if err != nil {
 			log.WithFields(logrus.Fields{
 				"token id":         tokenID,
@@ -129,18 +129,18 @@ func ParseToken(signedToken, secret string) (*jwt.Token, error) {
 
 // RefreshAuthToken extends the validity of the auth token tokenID by ttl and
 // returns it freshly signed.
-func RefreshAuthToken(ctx context.Context, secret, signingMethod, tokenID string, ttl time.Duration) (string, error) {
-	if ExtendTokenExpirationDateFromID == nil {
+func (h Hooks) RefreshAuthToken(ctx context.Context, secret, signingMethod, tokenID string, ttl time.Duration) (string, error) {
+	if h.ExtendTokenExpirationDateFromID == nil {
 		return "", errors.New("undefined function 'ExtendTokenExpirationDateFromID'")
 	}
 
 	// Extends the validity of the token.
-	if err := ExtendTokenExpirationDateFromID(ctx, tokenID, ttl); err != nil {
+	if err := h.ExtendTokenExpirationDateFromID(ctx, tokenID, ttl); err != nil {
 		return "", err
 	}
 
 	// Sign and get the complete encoded token as a string.
-	signedToken, err := GetSignedToken(ctx, signingMethod, secret, tokenID)
+	signedToken, err := h.GetSignedToken(ctx, signingMethod, secret, tokenID)
 	if err != nil {
 		return "", err
 	}

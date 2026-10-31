@@ -8,6 +8,7 @@ import (
 	"github.com/cygy/ginamite/api/route/contact"
 
 	tokencache "github.com/cygy/ginamite/api/cache/authtoken"
+	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/route"
@@ -51,7 +52,7 @@ func (s *Server) CreateKafkaConsumers() []kafka.MessageConsumer {
 				if err := queue.UnmarshalPayload(payload, &p); err != nil {
 					return
 				}
-				tokencache.Add(p.Tokens)
+				s.RevokedTokens.Add(p.Tokens)
 			default:
 				if s.Functions.NewMessageFromQueueCache == nil || !s.Functions.NewMessageFromQueueCache(msgType) {
 					log.WithFields(logrus.Fields{
@@ -96,14 +97,17 @@ func (s *Server) Start() {
 
 	// Set up some global functions.
 	s.setUpIDValidation()
-	authentication.BuildTokenFromID = s.Functions.BuildTokenFromID
-	authentication.ExtraPropertiesForTokenWithID = s.Functions.ExtraPropertiesForTokenWithID
-	authentication.ExtendTokenExpirationDateFromID = s.Functions.ExtendTokenExpirationDateFromID
 	accountFunctions, userFunctions, contactFunctions, termsFunctions := s.routeFunctions()
 
 	// Load the middlewares.
 	server.Use(ctxconfig.Inject(s.Config))
 	server.Use(s.Middlewares...)
+	server.Use(ctxAuthToken.InjectRevoked(s.RevokedTokens.IsRevoked))
+	server.Use(ctxAuthToken.InjectHooks(authentication.Hooks{
+		BuildTokenFromID:                s.Functions.BuildTokenFromID,
+		ExtraPropertiesForTokenWithID:   s.Functions.ExtraPropertiesForTokenWithID,
+		ExtendTokenExpirationDateFromID: s.Functions.ExtendTokenExpirationDateFromID,
+	}))
 	server.Use(
 		account.Inject(&accountFunctions),
 		user.Inject(&userFunctions),
@@ -136,7 +140,7 @@ func (s *Server) Start() {
 	}
 
 	// Start the built-in recurring tasks.
-	tokencache.StartDeletingExpired(time.Duration(s.Config.ExpiredAuthTokens.FlushCacheInterval))
+	s.RevokedTokens.StartDeletingExpired(time.Duration(s.Config.ExpiredAuthTokens.FlushCacheInterval))
 
 	// Start the custom recurring tasks.
 	if s.Functions.RecurringTasks != nil {
@@ -162,8 +166,9 @@ func (s *Server) AddCustomRoutes(configuration route.ConfigureCustomRoutes) {
 // NewServer returns a new struct 'Server'.
 func NewServer() *Server {
 	return &Server{
-		Config:       config.NewConfiguration(),
-		customRoutes: []route.ConfigureCustomRoutes{},
+		Config:        config.NewConfiguration(),
+		RevokedTokens: tokencache.NewRevoked(),
+		customRoutes:  []route.ConfigureCustomRoutes{},
 	}
 }
 

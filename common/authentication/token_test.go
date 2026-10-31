@@ -13,17 +13,6 @@ const testSecret = "a-very-secret-key"
 
 var errBoom = errors.New("boom")
 
-// withHooks installs the hooks for the duration of the test.
-func withHooks(t *testing.T, build BuildTokenFunc, extra ExtraPropertiesForTokenWithIDFunc, extend ExtendTokenExpirationDateFunc) {
-	t.Helper()
-
-	oldBuild, oldExtra, oldExtend := BuildTokenFromID, ExtraPropertiesForTokenWithID, ExtendTokenExpirationDateFromID
-	BuildTokenFromID, ExtraPropertiesForTokenWithID, ExtendTokenExpirationDateFromID = build, extra, extend
-	t.Cleanup(func() {
-		BuildTokenFromID, ExtraPropertiesForTokenWithID, ExtendTokenExpirationDateFromID = oldBuild, oldExtra, oldExtend
-	})
-}
-
 func okBuild(context.Context, string) (*Token, error) {
 	now := time.Now()
 
@@ -65,9 +54,9 @@ func TestGetSignedToken_Errors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			withHooks(t, tt.build, tt.extra, nil)
+			hooks := Hooks{tt.build, tt.extra, nil}
 
-			signed, err := GetSignedToken(context.Background(), "HS256", testSecret, "token-1")
+			signed, err := hooks.GetSignedToken(context.Background(), "HS256", testSecret, "token-1")
 			if err == nil || signed != "" {
 				t.Fatalf("GetSignedToken() = %q, %v, want an error", signed, err)
 			}
@@ -79,7 +68,7 @@ func TestGetSignedToken_Errors(t *testing.T) {
 }
 
 func TestGetSignedToken(t *testing.T) {
-	withHooks(t, okBuild, okExtra, nil)
+	hooks := Hooks{okBuild, okExtra, nil}
 
 	tests := []struct {
 		name   string
@@ -95,7 +84,7 @@ func TestGetSignedToken(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			signed, err := GetSignedToken(context.Background(), tt.method, testSecret, "token-1")
+			signed, err := hooks.GetSignedToken(context.Background(), tt.method, testSecret, "token-1")
 			if err != nil {
 				t.Fatalf("GetSignedToken() error = %v", err)
 			}
@@ -125,9 +114,9 @@ func TestGetSignedToken(t *testing.T) {
 }
 
 func TestGetSignedToken_FakeExpiredToken(t *testing.T) {
-	withHooks(t, okBuild, okExtra, nil)
+	hooks := Hooks{okBuild, okExtra, nil}
 
-	signed, err := GetSignedToken(context.Background(), "HS256", testSecret, "fakeexpiredtoken")
+	signed, err := hooks.GetSignedToken(context.Background(), "HS256", testSecret, "fakeexpiredtoken")
 	if err != nil {
 		t.Fatalf("GetSignedToken() error = %v", err)
 	}
@@ -138,9 +127,9 @@ func TestGetSignedToken_FakeExpiredToken(t *testing.T) {
 }
 
 func TestParseToken(t *testing.T) {
-	withHooks(t, okBuild, okExtra, nil)
+	hooks := Hooks{okBuild, okExtra, nil}
 
-	valid, err := GetSignedToken(context.Background(), "HS256", testSecret, "token-1")
+	valid, err := hooks.GetSignedToken(context.Background(), "HS256", testSecret, "token-1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -178,25 +167,25 @@ func TestParseToken(t *testing.T) {
 
 func TestRefreshAuthToken(t *testing.T) {
 	t.Run("undefined extend", func(t *testing.T) {
-		withHooks(t, okBuild, okExtra, nil)
+		hooks := Hooks{okBuild, okExtra, nil}
 
-		if _, err := RefreshAuthToken(context.Background(), testSecret, "HS256", "token-1", time.Hour); err == nil {
+		if _, err := hooks.RefreshAuthToken(context.Background(), testSecret, "HS256", "token-1", time.Hour); err == nil {
 			t.Error("expected an error")
 		}
 	})
 
 	t.Run("extend error", func(t *testing.T) {
-		withHooks(t, okBuild, okExtra, func(context.Context, string, time.Duration) error { return errBoom })
+		hooks := Hooks{okBuild, okExtra, func(context.Context, string, time.Duration) error { return errBoom }}
 
-		if _, err := RefreshAuthToken(context.Background(), testSecret, "HS256", "token-1", time.Hour); !errors.Is(err, errBoom) {
+		if _, err := hooks.RefreshAuthToken(context.Background(), testSecret, "HS256", "token-1", time.Hour); !errors.Is(err, errBoom) {
 			t.Errorf("error = %v, want %v", err, errBoom)
 		}
 	})
 
 	t.Run("sign error", func(t *testing.T) {
-		withHooks(t, nil, okExtra, func(context.Context, string, time.Duration) error { return nil })
+		hooks := Hooks{nil, okExtra, func(context.Context, string, time.Duration) error { return nil }}
 
-		if _, err := RefreshAuthToken(context.Background(), testSecret, "HS256", "token-1", time.Hour); err == nil {
+		if _, err := hooks.RefreshAuthToken(context.Background(), testSecret, "HS256", "token-1", time.Hour); err == nil {
 			t.Error("expected an error")
 		}
 	})
@@ -204,12 +193,12 @@ func TestRefreshAuthToken(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		var gotID string
 		var gotTTL time.Duration
-		withHooks(t, okBuild, okExtra, func(_ context.Context, id string, ttl time.Duration) error {
+		hooks := Hooks{okBuild, okExtra, func(_ context.Context, id string, ttl time.Duration) error {
 			gotID, gotTTL = id, ttl
 			return nil
-		})
+		}}
 
-		signed, err := RefreshAuthToken(context.Background(), testSecret, "HS256", "token-1", time.Hour)
+		signed, err := hooks.RefreshAuthToken(context.Background(), testSecret, "HS256", "token-1", time.Hour)
 		if err != nil {
 			t.Fatalf("RefreshAuthToken() error = %v", err)
 		}

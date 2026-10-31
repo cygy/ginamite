@@ -4,6 +4,7 @@ package terms
 import (
 	"fmt"
 	"os"
+	"sync"
 
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	ctxUser "github.com/cygy/ginamite/api/context/user"
@@ -18,8 +19,22 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// GetTerms returns the current terms and version.
-func GetTerms(c *gin.Context) {
+// GetTerms returns the handler sending the current terms and version. The contents of the terms are cached by version
+// and locale in the handler.
+func GetTerms() gin.HandlerFunc {
+	var mutex sync.Mutex
+	termsContents := map[string]string{} // The localized contents of the terms.
+
+	return func(c *gin.Context) {
+		mutex.Lock()
+		defer mutex.Unlock()
+
+		getTerms(c, termsContents)
+	}
+}
+
+// getTerms sends the terms, read from the file if they are not in the cache.
+func getTerms(c *gin.Context, termsContents map[string]string) {
 	locale := ctxLocale.Get(c)
 	version := ctxconfig.Get(c).Terms.Version
 	filename := fmt.Sprintf("%s/%s", version, locale)

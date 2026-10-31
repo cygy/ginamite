@@ -17,8 +17,8 @@ func TestParse(t *testing.T) {
 	const secret = "secret"
 
 	apitest.InitLocalization(t, map[string]string{"placeholder": "placeholder"})
-	tokencache.Add(map[string]time.Time{"revoked-token": time.Now().Add(time.Hour)})
-	t.Cleanup(func() { tokencache.Remove("revoked-token") })
+	revoked := tokencache.NewRevoked()
+	revoked.Add(map[string]time.Time{"revoked-token": time.Now().Add(time.Hour)})
 
 	buildUser := func(token *jwt.Token) (any, string, error) { return "the-user", "en", nil }
 
@@ -41,7 +41,7 @@ func TestParse(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var gotID string
 			router := gin.New()
-			router.Use(ctxLocale.Inject("en", []string{"en"}))
+			router.Use(ctxLocale.Inject("en", []string{"en"}), InjectRevoked(revoked.IsRevoked))
 			router.Use(Parse(secret, buildUser, tt.mustBeThere))
 			router.GET("/", func(c *gin.Context) {
 				gotID = GetID(c)

@@ -2,8 +2,8 @@
 package debug
 
 import (
+	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
 	"github.com/cygy/ginamite/api/response"
-	"github.com/cygy/ginamite/common/authentication"
 	"github.com/cygy/ginamite/common/ctxconfig"
 
 	"github.com/gin-gonic/gin"
@@ -11,7 +11,7 @@ import (
 
 // GetExpiredToken returns an expired token.
 func GetExpiredToken(c *gin.Context) {
-	signedToken, err := authentication.GetSignedToken(c, ctxconfig.Get(c).JWT.SigningMethod, ctxconfig.Get(c).JWT.Secret, "fakeexpiredtoken")
+	signedToken, err := ctxAuthToken.HooksOf(c).GetSignedToken(c, ctxconfig.Get(c).JWT.SigningMethod, ctxconfig.Get(c).JWT.Secret, "fakeexpiredtoken")
 	if err != nil {
 		response.InternalServerError(c)
 		return

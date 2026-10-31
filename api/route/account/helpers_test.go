@@ -70,11 +70,11 @@ func setup(t *testing.T) {
 	timezone.Main.Timezones = []string{"Europe/Paris"}
 	kafka.Main = kafka.NewClient()
 
-	authentication.BuildTokenFromID = func(context.Context, string) (*authentication.Token, error) {
+	testHooks.BuildTokenFromID = func(context.Context, string) (*authentication.Token, error) {
 		return &authentication.Token{UserID: testUserID, ExpirationDate: time.Now().Add(time.Hour), CreationDate: time.Now()}, nil
 	}
-	authentication.ExtraPropertiesForTokenWithID = func(string) (map[string]string, error) { return nil, nil }
-	authentication.ExtendTokenExpirationDateFromID = func(context.Context, string, time.Duration) error { return nil }
+	testHooks.ExtraPropertiesForTokenWithID = func(string) (map[string]string, error) { return nil, nil }
+	testHooks.ExtendTokenExpirationDateFromID = func(context.Context, string, time.Duration) error { return nil }
 
 	originalIDValidator := request.IsValidID
 	request.IsValidID = func(id string) bool { return len(id) == len(validNotificationID) }
@@ -82,14 +82,17 @@ func setup(t *testing.T) {
 	t.Cleanup(func() {
 		request.IsValidID = originalIDValidator
 		resetFunctions()
-		authentication.BuildTokenFromID = nil
-		authentication.ExtraPropertiesForTokenWithID = nil
-		authentication.ExtendTokenExpirationDateFromID = nil
+		testHooks = authentication.Hooks{}
 	})
 }
 
-// testFunctions are the functions of the handlers, set by the tests and reset at the end of each one.
-var testFunctions Functions
+var (
+	// testFunctions are the functions of the handlers, set by the tests and reset at the end of each one.
+	testFunctions Functions
+
+	// testHooks are the functions building and extending the auth tokens, set by setup.
+	testHooks authentication.Hooks
+)
 
 // resetFunctions removes every function of the handlers.
 func resetFunctions() { testFunctions = Functions{} }
@@ -97,7 +100,7 @@ func resetFunctions() { testFunctions = Functions{} }
 // newRouter returns a router with the locale and the auth token middlewares, serving the handler on every path shape.
 func newRouter(handler gin.HandlerFunc) *gin.Engine {
 	router := gin.New()
-	router.Use(ctxconfig.Inject(testConfig), Inject(&testFunctions), ctxLocale.Inject("en", []string{"en"}))
+	router.Use(ctxconfig.Inject(testConfig), Inject(&testFunctions), ctxAuthToken.InjectHooks(testHooks), ctxLocale.Inject("en", []string{"en"}))
 	router.Use(ctxAuthToken.Parse(testSecret, nil, false))
 	router.Any("/", handler)
 	router.Any("/:id", handler)
@@ -155,6 +158,7 @@ func newContext(params gin.Params) (*gin.Context, *httptest.ResponseRecorder) {
 	c.Params = params
 	ctxconfig.Set(c, testConfig)
 	SetFunctions(c, &testFunctions)
+	ctxAuthToken.SetHooks(c, testHooks)
 	ctxLocale.Set(c, "en", "en")
 
 	return c, recorder

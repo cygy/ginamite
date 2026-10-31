@@ -1,6 +1,7 @@
 package api
 
 import (
+	tokencache "github.com/cygy/ginamite/api/cache/authtoken"
 	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
 	"github.com/cygy/ginamite/api/rights"
 	"github.com/cygy/ginamite/api/route"
@@ -20,6 +21,10 @@ type Server struct {
 	Config     *config.Configuration
 	RoutesFile string
 	Functions  Handlers
+
+	// RevokedTokens are the auth tokens revoked, which are rejected until they expire. The cache messages of the queue
+	// add tokens to it.
+	RevokedTokens *tokencache.Revoked
 
 	// Middlewares are added to the Gin engine, in order, before the middleware that sets the locale and the routes.
 	// A database plugin uses them to put its connection in the context of the requests.

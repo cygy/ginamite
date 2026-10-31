@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	ctxUser "github.com/cygy/ginamite/api/context/user"
 	"github.com/cygy/ginamite/api/response"
@@ -131,7 +132,7 @@ func createAuthenticationToken(c *gin.Context, user authentication.User, IPAddre
 	}
 
 	// Sign and get the complete encoded token as a string.
-	signedToken, err := authentication.GetSignedToken(c, ctxconfig.Get(c).JWT.SigningMethod, ctxconfig.Get(c).JWT.Secret, tokenID)
+	signedToken, err := ctxAuthToken.HooksOf(c).GetSignedToken(c, ctxconfig.Get(c).JWT.SigningMethod, ctxconfig.Get(c).JWT.Secret, tokenID)
 	if err != nil {
 		if deleteErr := FunctionsOf(c).DeleteTokenByID(c, tokenID); deleteErr != nil {
 			c.Error(deleteErr)

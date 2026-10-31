@@ -2,19 +2,35 @@ package authtoken
 
 import "time"
 
-var revoked = newCache()
+// Revoked is the set of the revoked auth tokens, kept in memory until they expire.
+// It is safe for concurrent use. Create it with NewRevoked.
+type Revoked struct {
+	tokens *cache
+}
+
+// NewRevoked returns an empty set of revoked auth tokens.
+func NewRevoked() *Revoked {
+	return &Revoked{tokens: newCache()}
+}
 
 // IsRevoked reports whether the token ID is revoked.
-func IsRevoked(tokenID string) bool {
-	return revoked.has(tokenID)
+func (r *Revoked) IsRevoked(tokenID string) bool {
+	return r.tokens.has(tokenID)
 }
 
-// Add adds revoked tokens, with their expiration date, to the cache.
-func Add(tokens map[string]time.Time) {
-	revoked.add(tokens)
+// Add adds revoked tokens, with their expiration date, to the set.
+func (r *Revoked) Add(tokens map[string]time.Time) {
+	r.tokens.add(tokens)
 }
 
-// Remove removes a revoked token from the cache.
-func Remove(token string) {
-	revoked.remove(token)
+// Remove removes a revoked token from the set.
+func (r *Revoked) Remove(token string) {
+	r.tokens.remove(token)
+}
+
+// StartDeletingExpired starts a background task that deletes the expired
+// tokens every interval seconds. The interval is a number of seconds, not a
+// nanosecond-based duration, and must be positive.
+func (r *Revoked) StartDeletingExpired(interval time.Duration) {
+	go r.tokens.runDeleteExpired(interval * time.Second)
 }
