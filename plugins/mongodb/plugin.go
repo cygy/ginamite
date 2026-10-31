@@ -262,6 +262,7 @@ func (p *Plugin) configureAPI(a *api.Server) {
 	a.Functions.GetUserDetailsByGoogleUserID = apiFunctions.GetUserDetailsByGoogleUserID
 	a.Functions.GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser = apiFunctions.GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser
 
+	a.Functions.UpdateEncryptedPasswordByUserID = apiFunctions.UpdateEncryptedPasswordByUserID
 	a.Functions.NewForgotPasswordProcessForUser = apiFunctions.NewForgotPasswordProcessForUser
 	a.Functions.GetForgotPasswordProcessDetailsByID = apiFunctions.GetForgotPasswordProcessDetailsByID
 	a.Functions.WrongAccessToForgotPasswordProcess = apiFunctions.WrongAccessToForgotPasswordProcess

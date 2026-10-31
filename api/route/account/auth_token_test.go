@@ -3,6 +3,7 @@ package account
 import (
 	"context"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 	commonErrors "github.com/cygy/ginamite/common/errors"
 
 	"github.com/gin-gonic/gin"
+	"github.com/tredoe/osutil/user/crypt/sha512_crypt"
 )
 
 const loginDevice = `"source":"web","device":{"type":"mobile","name":"iPhone"}`
@@ -149,5 +151,56 @@ func TestRefreshAuthToken(t *testing.T) {
 		{name: "refresh error", userID: testUserID, setup: func() {
 			testHooks.ExtendTokenExpirationDateFromID = func(context.Context, string, time.Duration) error { return errBoom }
 		}, want: http.StatusBadRequest},
+	})
+}
+
+func TestLoginWithPassword_UpgradesTheLegacyHash(t *testing.T) {
+	legacy, err := sha512_crypt.New().Generate([]byte("Abcdefghij1"), []byte("$6$rounds=5000$abcdefghijklmnop$"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	current, err := authentication.EncryptPassword("Abcdefghij1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := `{"identifier":"john","password":"Abcdefghij1",` + loginDevice + `}`
+
+	run := func(stored string, updateErr error) (updated string, calls int) {
+		lookup := func() {
+			testFunctions.GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser = func(*gin.Context, string) (authentication.User, string, error) {
+				return testUser, stored, nil
+			}
+			testFunctions.UpdateEncryptedPasswordByUserID = func(_ *gin.Context, userID, encrypted string) error {
+				if userID != testUser.ID {
+					t.Errorf("user = %q, want %q", userID, testUser.ID)
+				}
+				updated = encrypted
+				calls++
+
+				return updateErr
+			}
+		}
+		runCases(t, LoginWithPassword, []testCase{{name: "login", body: body, setup: all(lookup, loginStubs), want: http.StatusCreated, check: contains("auth_token")}})
+
+		return updated, calls
+	}
+
+	t.Run("a legacy hash is replaced", func(t *testing.T) {
+		updated, calls := run(legacy, nil)
+		if calls != 1 || !strings.HasPrefix(updated, "$argon2id$") || !authentication.ComparePassword("Abcdefghij1", updated) {
+			t.Errorf("calls = %d, updated = %q", calls, updated)
+		}
+	})
+
+	t.Run("a current hash is kept", func(t *testing.T) {
+		if _, calls := run(current, nil); calls != 0 {
+			t.Errorf("calls = %d, want 0", calls)
+		}
+	})
+
+	t.Run("a failure does not prevent the login", func(t *testing.T) {
+		if _, calls := run(legacy, errBoom); calls != 1 {
+			t.Errorf("calls = %d, want 1", calls)
+		}
 	})
 }

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"html/template"
 	"io"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -13,6 +14,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/ctxconfig"
@@ -152,11 +154,15 @@ func WriteFile(t *testing.T, dir, name, content string) string {
 	return path
 }
 
-// SignToken returns a JWT with the claims, signed with HS256 and the secret.
+// SignToken returns a JWT with the claims, signed with HS256 and the secret. The token expires in one hour if the
+// claims have no expiration, which the parsing of the tokens requires.
 func SignToken(t *testing.T, secret string, claims map[string]any) string {
 	t.Helper()
 
-	signed, err := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims(claims)).SignedString([]byte(secret))
+	withExpiration := jwt.MapClaims{"exp": time.Now().Add(time.Hour).Unix()}
+	maps.Copy(withExpiration, claims)
+
+	signed, err := jwt.NewWithClaims(jwt.SigningMethodHS256, withExpiration).SignedString([]byte(secret))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -42,6 +42,10 @@ type GetUserDetailsByIDFunc func(c *gin.Context, userID string) (authentication.
 // GetUserDetailsBySocialNetworkIDFunc is a function to get the user details from its unique social network identifier.
 type GetUserDetailsBySocialNetworkIDFunc func(c *gin.Context, userID string) (authentication.User, error)
 
+// UpdateEncryptedPasswordByUserIDFunc is a function to replace the encrypted password of a user by another one, such as
+// the same password encrypted with stronger parameters.
+type UpdateEncryptedPasswordByUserIDFunc func(c *gin.Context, userID, encryptedPassword string) error
+
 // GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUserFunc is a function to get the user details and its encrypted password from its identifier (username, email addresse, what you want.)
 type GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUserFunc func(c *gin.Context, identifier string) (authentication.User, string, error)
 

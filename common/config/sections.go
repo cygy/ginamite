@@ -16,11 +16,15 @@ type SSLConfiguration struct {
 
 // ServerConfiguration holds the settings of the HTTP server.
 type ServerConfiguration struct {
-	Host      string
-	Port      int
-	GZip      GZipConfiguration `yaml:"gzip"`
-	SSL       SSLConfiguration  `yaml:"ssl"`
-	LogFormat string            `yaml:"log_format"`
+	Host string
+	Port int
+	// TrustedProxies are the addresses or the networks of the proxies allowed to give the address of the client in the
+	// header X-Forwarded-For, such as ["10.0.0.0/8"]. Without this setting every proxy is trusted, and the client address,
+	// used to limit the requests, can be forged: set it, even to an empty list if there is no proxy.
+	TrustedProxies []string          `yaml:"trusted_proxies"`
+	GZip           GZipConfiguration `yaml:"gzip"`
+	SSL            SSLConfiguration  `yaml:"ssl"`
+	LogFormat      string            `yaml:"log_format"`
 }
 
 // APIConfiguration holds the settings of an API called by the server.
@@ -157,4 +161,19 @@ type SitemapConfiguration struct {
 	Path               string `yaml:"path"`
 	Name               string `yaml:"name"`
 	MaximumURLsPerPage int    `yaml:"max_urls_per_page"`
+}
+
+// RateLimitConfiguration limits the requests of a client: at most Requests in Seconds seconds, by IP address. The
+// requests are not limited if Requests is 0.
+type RateLimitConfiguration struct {
+	Requests int
+	Seconds  int
+}
+
+// RateLimitsConfiguration holds the limits of the requests which try to guess a secret, by group of routes. The counters
+// are kept in memory by each instance of the API.
+type RateLimitsConfiguration struct {
+	Authentication RateLimitConfiguration `yaml:"authentication"`
+	Registration   RateLimitConfiguration `yaml:"registration"`
+	ForgotPassword RateLimitConfiguration `yaml:"forgot_password"`
 }

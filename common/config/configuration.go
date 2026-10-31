@@ -51,6 +51,7 @@ type Configuration struct {
 	Terms               TermsConfiguration
 	UserNotifications   UserNotificationsConfiguration `yaml:"user_notifications"`
 	Account             AccountConfiguration
+	RateLimits          RateLimitsConfiguration   `yaml:"rate_limits"`      // limits of the requests by client, 0 to disable
 	Kafka               KafkaConfiguration        `yaml:"kafka"`            // connection to Kafka and its topics, the address is the service "kafka"
 	WorkerConsumers     []ConsumerConfiguration   `yaml:"worker_consumers"` // topics consumed by the worker, all if empty
 	RecurringTasks      []recurring.ScheduledTask `yaml:"recurring_tasks"`  // tasks executed by the workers
@@ -76,6 +77,9 @@ func NewConfiguration() (config *Configuration) {
 	config.JWT.SigningMethod = "HS256"
 	config.JWT.TTL = 3600
 	config.API.TimeOut = 2000
+	config.RateLimits.Authentication = RateLimitConfiguration{Requests: 10, Seconds: 60}
+	config.RateLimits.Registration = RateLimitConfiguration{Requests: 5, Seconds: 60}
+	config.RateLimits.ForgotPassword = RateLimitConfiguration{Requests: 5, Seconds: 60}
 	config.KafkaMaxAttempts = 3
 	config.KafkaRetryDelay = 1000
 	config.Kafka.Topics.Partitions = 1

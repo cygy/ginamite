@@ -3,7 +3,6 @@ package authentication
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/cygy/ginamite/common/log"
@@ -111,17 +110,17 @@ func (h Hooks) GetSignedToken(ctx context.Context, signingMethod, secret, tokenI
 	return signedToken, nil
 }
 
-// ParseToken parses and verifies a signed JWT and returns it.
+// ParseToken parses and verifies a signed JWT and returns it. Only the HMAC methods HS256, HS384 and HS512 are accepted
+// and the token must expire. The error wraps the ones of the jwt package: use errors.Is with jwt.ErrTokenExpired.
 func ParseToken(signedToken, secret string) (*jwt.Token, error) {
-	token, err := jwt.Parse(signedToken, func(token *jwt.Token) (any, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-		}
+	token, err := jwt.Parse(signedToken, func(*jwt.Token) (any, error) {
 		return []byte(secret), nil
-	})
-
-	if err != nil || !token.Valid {
+	}, jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg(), jwt.SigningMethodHS384.Alg(), jwt.SigningMethodHS512.Alg()}), jwt.WithExpirationRequired())
+	if err != nil {
 		return nil, err
+	}
+	if !token.Valid {
+		return nil, errors.New("invalid token")
 	}
 
 	return token, nil

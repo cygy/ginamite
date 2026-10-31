@@ -1,6 +1,8 @@
 package authtoken
 
 import (
+	"errors"
+
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	ctxShared "github.com/cygy/ginamite/api/context/shared"
 	"github.com/cygy/ginamite/api/response"
@@ -8,6 +10,7 @@ import (
 	"github.com/cygy/ginamite/common/log"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/golang-jwt/jwt/v5/request"
 	"github.com/sirupsen/logrus"
 )
@@ -40,12 +43,13 @@ func Parse(secret string, buildUser GetUserAndLocaleFunc, authTokenMustBePresent
 			// Verify the JWT token.
 			token, err := authentication.ParseToken(signedToken, secret)
 			if token == nil {
+				// The token is not logged: it is a credential, which is still valid when only its signature failed to
+				// match for another reason, such as a rotated secret.
 				log.WithFields(logrus.Fields{
-					"token": signedToken,
 					"error": err.Error(),
 				}).Error("unable to validate the authentication token from the headers")
 
-				if err.Error() == "Token is expired" {
+				if errors.Is(err, jwt.ErrTokenExpired) {
 					response.UnauthorizedWithExpiredAuthorizationToken(c, requestLocale)
 				} else {
 					response.UnauthorizedWithInvalidAuthorizationToken(c, requestLocale)

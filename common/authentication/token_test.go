@@ -165,6 +165,35 @@ func TestParseToken(t *testing.T) {
 	}
 }
 
+func TestParseToken_Policy(t *testing.T) {
+	sign := func(method jwt.SigningMethod, claims jwt.MapClaims) string {
+		t.Helper()
+
+		signed, err := jwt.NewWithClaims(method, claims).SignedString([]byte(testSecret))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		return signed
+	}
+	future := time.Now().Add(time.Hour).Unix()
+
+	for _, method := range []jwt.SigningMethod{jwt.SigningMethodHS256, jwt.SigningMethodHS384, jwt.SigningMethodHS512} {
+		if _, err := ParseToken(sign(method, jwt.MapClaims{"exp": future}), testSecret); err != nil {
+			t.Errorf("%s: %v", method.Alg(), err)
+		}
+	}
+
+	_, err := ParseToken(sign(jwt.SigningMethodHS256, jwt.MapClaims{"exp": time.Now().Add(-time.Hour).Unix()}), testSecret)
+	if !errors.Is(err, jwt.ErrTokenExpired) {
+		t.Errorf("expired token: error = %v, want jwt.ErrTokenExpired", err)
+	}
+
+	if _, err := ParseToken(sign(jwt.SigningMethodHS256, jwt.MapClaims{"sub": "no-expiration"}), testSecret); err == nil {
+		t.Error("a token without expiration must be refused")
+	}
+}
+
 func TestRefreshAuthToken(t *testing.T) {
 	t.Run("undefined extend", func(t *testing.T) {
 		hooks := Hooks{okBuild, okExtra, nil}

@@ -253,3 +253,21 @@ func TestEnableUserByID(t *testing.T) {
 		t.Error("a failure to restore the user must be reported")
 	}
 }
+
+func TestUpdateEncryptedPasswordByUserID(t *testing.T) {
+	id := bson.NewObjectID()
+	db := mock.NewDatabase("app")
+	c, _ := plugintest.NewContext(db, "GET", "/", nil)
+
+	if err := UpdateEncryptedPasswordByUserID(c, id.Hex(), "$argon2id$hash"); err != nil {
+		t.Fatal(err)
+	}
+	call := db.Coll(model.UserCollection).LastCall()
+	if call.Method != "UpdateByID" {
+		t.Errorf("call = %+v", call)
+	}
+
+	if err := UpdateEncryptedPasswordByUserID(c, "nope", "$argon2id$hash"); err == nil {
+		t.Error("an invalid ID must be rejected")
+	}
+}

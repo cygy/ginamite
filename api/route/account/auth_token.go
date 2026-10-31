@@ -21,10 +21,12 @@ import (
 	commonErrors "github.com/cygy/ginamite/common/errors"
 	authError "github.com/cygy/ginamite/common/errors/auth"
 	"github.com/cygy/ginamite/common/localization"
+	"github.com/cygy/ginamite/common/log"
 	req "github.com/cygy/ginamite/common/request"
 	res "github.com/cygy/ginamite/common/response"
 
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 )
 
 // LoginWithPassword creates a token to log in an account.
@@ -91,10 +93,18 @@ func LoginWithPassword(c *gin.Context) {
 	}
 
 	user, encryptedPassword, err := FunctionsOf(c).GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser(c, identifier)
-	if err != nil || !authentication.ComparePassword(password, encryptedPassword) {
+	if err != nil {
+		// Spend the time of a comparison: a login must not be faster when the account does not exist.
+		authentication.DummyCompare(password)
 		canNotLoginError(c, err)
 		return
 	}
+	if !authentication.ComparePassword(password, encryptedPassword) {
+		canNotLoginError(c, nil)
+		return
+	}
+
+	upgradePassword(c, user.ID, password, encryptedPassword)
 
 	IPAddress := req.GetRealIPAddress(c)
 	// The errors are already reported to the client.
@@ -293,4 +303,21 @@ func RefreshAuthToken(c *gin.Context) {
 	response.Ok(c, response.H{
 		"auth_token": signedToken,
 	})
+}
+
+// upgradePassword encrypts the password of the user again if its hash is weaker than the current one, and the function
+// to update it is defined. The failure is logged: the user can sign in anyway.
+func upgradePassword(c *gin.Context, userID, password, encryptedPassword string) {
+	update := FunctionsOf(c).UpdateEncryptedPasswordByUserID
+	if update == nil || !authentication.NeedsRehash(encryptedPassword) {
+		return
+	}
+
+	upgraded, err := authentication.EncryptPassword(password)
+	if err == nil {
+		err = update(c, userID, upgraded)
+	}
+	if err != nil {
+		log.WithFields(logrus.Fields{"user": userID, "error": err.Error()}).Error("unable to upgrade the encrypted password")
+	}
 }

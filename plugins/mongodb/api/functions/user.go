@@ -88,6 +88,16 @@ func GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser(c *gin.Contex
 	return user.ToUser(), user.IdentificationMethods.Password, nil
 }
 
+// UpdateEncryptedPasswordByUserID replaces the encrypted password of a user.
+func UpdateEncryptedPasswordByUserID(c *gin.Context, userID, encryptedPassword string) error {
+	user, err := model.UserWithID(userID)
+	if err != nil {
+		return err
+	}
+
+	return user.UpdatePassword(c, encryptedPassword, true, session.Get(c))
+}
+
 // DeleteUserByID deletes a user by its ID.
 func DeleteUserByID(c *gin.Context, userID string) error {
 	mongoSession := session.Get(c)

@@ -83,6 +83,7 @@ func (s *Server) CreateConsumers() []broker.MessageConsumer {
 func (s *Server) Start() {
 	// Warn about the undefined functions.
 	s.warnUndefinedFunctions()
+	s.warnWeakSecret()
 
 	// Enable debug mode if needed.
 	if s.Config.IsDebugModeEnabled() {
@@ -101,6 +102,8 @@ func (s *Server) Start() {
 	} else {
 		server = gin.Default()
 	}
+
+	s.configureProxies(server)
 
 	// Enable server settings
 	if s.Config.Server.GZip.Enabled {
@@ -143,6 +146,11 @@ func (s *Server) Start() {
 		s.Functions.RouterConfigureDefaultRoutes(&router.DefaultRoutes)
 	}
 	router.Notifications = s.Notifications
+	router.Limits = route.RateLimits{
+		Authentication: request.RateLimitFromConfiguration(s.Config.RateLimits.Authentication),
+		Registration:   request.RateLimitFromConfiguration(s.Config.RateLimits.Registration),
+		ForgotPassword: request.RateLimitFromConfiguration(s.Config.RateLimits.ForgotPassword),
+	}
 	router.LoadDefaultRoutes()
 	for _, customRoute := range s.customRoutes {
 		customRoute(router.Group, router.Handlers, router.ProductionEnvironment, router.Rights)
@@ -234,6 +242,7 @@ func (s *Server) routeFunctions() (accountFunctions account.Functions, userFunct
 	accountFunctions.SaveFacebookUserTokenDetailsToUser = s.Functions.SaveFacebookUserTokenDetailsToUser
 	accountFunctions.SaveGoogleUserTokenDetailsToUser = s.Functions.SaveGoogleUserTokenDetailsToUser
 	accountFunctions.GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser = s.Functions.GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser
+	accountFunctions.UpdateEncryptedPasswordByUserID = s.Functions.UpdateEncryptedPasswordByUserID
 	accountFunctions.GetTokenExpirationDate = s.Functions.GetTokenExpirationDate
 	accountFunctions.DeleteTokenByID = s.Functions.DeleteTokenByID
 	accountFunctions.GetTokenDetailsByID = s.Functions.GetTokenDetailsByID
@@ -447,6 +456,9 @@ func (s *Server) warnUndefinedFunctions() {
 	if s.Functions.GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser == nil {
 		log.Warn("The function 'GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser' is undefined.")
 	}
+	if s.Functions.UpdateEncryptedPasswordByUserID == nil {
+		log.Warn("The function 'UpdateEncryptedPasswordByUserID' is undefined: the weak password hashes are not upgraded.")
+	}
 	if s.Functions.GetTokenExpirationDate == nil {
 		log.Warn("The function 'GetTokenExpirationDate' is undefined.")
 	}
@@ -515,5 +527,31 @@ func (s *Server) warnUndefinedFunctions() {
 	}
 	if s.Functions.GetContact == nil {
 		log.Warn("The function 'GetContact' is undefined.")
+	}
+}
+
+// configureProxies sets the proxies trusted to give the address of the client, which limits the requests. Gin trusts
+// every proxy by default, so a client can forge the address: a warning asks to configure them in production.
+func (s *Server) configureProxies(server *gin.Engine) {
+	if s.Config.Server.TrustedProxies == nil {
+		if s.Config.IsProductionEnvironment() {
+			log.Warn("The setting 'server.trusted_proxies' is undefined: every proxy is trusted, the address of the clients can be forged.")
+		}
+
+		return
+	}
+
+	if err := server.SetTrustedProxies(s.Config.Server.TrustedProxies); err != nil {
+		log.WithField("error", err).Fatal("invalid setting 'server.trusted_proxies'")
+	}
+}
+
+// minimumSecretLength is the length under which the secret of the JWT can be guessed.
+const minimumSecretLength = 32
+
+// warnWeakSecret logs a warning if the secret signing the auth tokens is short.
+func (s *Server) warnWeakSecret() {
+	if len(s.Config.JWT.Secret) < minimumSecretLength {
+		log.Warn(fmt.Sprintf("The setting 'jwt.secret' is shorter than %d characters: the auth tokens can be forged.", minimumSecretLength))
 	}
 }

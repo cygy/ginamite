@@ -21,11 +21,21 @@ type Router struct {
 	DefaultRoutes         DefaultRoutes
 	Handlers              Middlewares
 
+	// Limits are the middlewares limiting the requests which try to guess a secret. A nil one does not limit.
+	Limits RateLimits
+
 	// Notifications is the registry of the notifications the users can subscribe to.
 	Notifications *notifications.Registry
 
 	// private properties
 	getUserAbilities rights.GetUserAbilitiesFunc
+}
+
+// RateLimits are the middlewares limiting the requests of the default routes, by group of routes.
+type RateLimits struct {
+	Authentication gin.HandlerFunc
+	Registration   gin.HandlerFunc
+	ForgotPassword gin.HandlerFunc
 }
 
 // Middlewares is the collection of the built-in handlers.

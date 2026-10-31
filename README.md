@@ -84,6 +84,30 @@ default values. The main sections are:
 | `kafka` | Connection to Kafka (version, TLS, SASL), creation of the topics, statistics (see below). |
 | `worker_consumers` | Kafka topics consumed by a worker, with their consumer group (see below). |
 
+### Security
+
+- **Passwords** are hashed with Argon2id (PHC format, random salt, constant-time comparison). The legacy SHA-512 crypt
+  hashes (`$6$`) are still accepted, and replaced by an Argon2id hash after a successful login when the database plugin
+  defines `UpdateEncryptedPasswordByUserID` (a warning is logged at start-up if it is undefined). Logging in with an
+  unknown email costs as much time as with a wrong password.
+- **JWT**: only HS256, HS384 and HS512 are accepted, and the `exp` claim is required. The tokens are never logged.
+  A `jwt` secret shorter than 32 characters logs a warning.
+- **Rate limiting**: the sign-in, registration and forgot-password routes are limited per client IP (token bucket in the
+  memory of each instance, so the limit applies per API instance). A refused request gets a `429` and a `Retry-After`
+  header.
+
+  ```yaml
+  rate_limits:
+    authentication:  { requests: 10, seconds: 60 }
+    registration:    { requests: 5,  seconds: 60 }
+    forgot_password: { requests: 5,  seconds: 60 }
+  server:
+    trusted_proxies: ["10.0.0.0/8"]  # the proxies allowed to set X-Forwarded-For
+  ```
+
+  Set `server.trusted_proxies` behind a reverse proxy, otherwise the client IP, hence the limit, can be forged: Gin
+  trusts every proxy by default, and the API warns in production when the setting is missing.
+
 ### Workers and Kafka consumer groups
 
 The messages are consumed through Kafka consumer groups, and a message is committed once it is handled, so a worker

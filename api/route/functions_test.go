@@ -2,6 +2,7 @@ package route
 
 import (
 	"net/http"
+	"net/http/httptest"
 	"reflect"
 	"testing"
 
@@ -145,5 +146,43 @@ func TestRouter_StatusRoute(t *testing.T) {
 
 	if recorder.Code != http.StatusOK {
 		t.Errorf("status = %d, want %d", recorder.Code, http.StatusOK)
+	}
+}
+
+func TestLimited(t *testing.T) {
+	handler := func(*gin.Context) {}
+	limit := func(*gin.Context) {}
+
+	if got := limited(nil, handler); len(got) != 1 {
+		t.Errorf("without limit: %d handlers, want 1", len(got))
+	}
+	if got := limited(limit, handler, handler); len(got) != 3 {
+		t.Errorf("with a limit: %d handlers, want 3", len(got))
+	}
+}
+
+func TestRouter_LoadDefaultRoutes_Limits(t *testing.T) {
+	engine, router := newTestRouter()
+	calls := map[string]int{}
+	limit := func(name string) gin.HandlerFunc {
+		return func(c *gin.Context) {
+			calls[name]++
+			c.AbortWithStatus(http.StatusTooManyRequests)
+		}
+	}
+	router.Limits = RateLimits{Authentication: limit("authentication"), Registration: limit("registration"), ForgotPassword: limit("forgot_password")}
+	router.LoadDefaultRoutes()
+
+	for _, tt := range []struct{ method, path, group string }{
+		{http.MethodPost, "/v1/auth/login", "authentication"},
+		{http.MethodPost, "/v1/registration", "registration"},
+		{http.MethodPost, "/v1/forgotPassword", "forgot_password"},
+	} {
+		recorder := httptest.NewRecorder()
+		engine.ServeHTTP(recorder, httptest.NewRequest(tt.method, tt.path, nil))
+
+		if recorder.Code != http.StatusTooManyRequests || calls[tt.group] != 1 {
+			t.Errorf("%s %s: status = %d, limit calls = %v", tt.method, tt.path, recorder.Code, calls)
+		}
 	}
 }

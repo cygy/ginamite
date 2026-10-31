@@ -13,6 +13,7 @@ import (
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/route"
 	"github.com/cygy/ginamite/common/broker"
+	"github.com/cygy/ginamite/common/config/environment"
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/queue"
 
@@ -227,4 +228,47 @@ func TestServer_warnUndefinedFunctions(t *testing.T) {
 			t.Errorf("warnings = %d, want 0", got)
 		}
 	})
+}
+
+func TestServer_configureProxies(t *testing.T) {
+	t.Run("undefined in production", func(t *testing.T) {
+		s := NewServer()
+		s.Config.Environment = environment.Production
+
+		if got := countWarnings(func() { s.configureProxies(gin.New()) }); got != 1 {
+			t.Errorf("warnings = %d, want 1", got)
+		}
+	})
+
+	t.Run("undefined in development", func(t *testing.T) {
+		s := NewServer()
+
+		if got := countWarnings(func() { s.configureProxies(gin.New()) }); got != 0 {
+			t.Errorf("warnings = %d, want 0", got)
+		}
+	})
+
+	t.Run("defined", func(t *testing.T) {
+		s := NewServer()
+		s.Config.Environment = environment.Production
+		s.Config.Server.TrustedProxies = []string{"10.0.0.0/8"}
+
+		if got := countWarnings(func() { s.configureProxies(gin.New()) }); got != 0 {
+			t.Errorf("warnings = %d, want 0", got)
+		}
+	})
+}
+
+func TestServer_warnWeakSecret(t *testing.T) {
+	s := NewServer()
+
+	s.Config.JWT.Secret = "short"
+	if got := countWarnings(s.warnWeakSecret); got != 1 {
+		t.Errorf("short secret: warnings = %d, want 1", got)
+	}
+
+	s.Config.JWT.Secret = strings.Repeat("x", 32)
+	if got := countWarnings(s.warnWeakSecret); got != 0 {
+		t.Errorf("long secret: warnings = %d, want 0", got)
+	}
 }

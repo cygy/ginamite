@@ -105,6 +105,7 @@ type Handlers struct {
 	SaveFacebookUserTokenDetailsToUser                            account.SaveSocialNetworkUserTokenDetailsToUserFunc
 	SaveGoogleUserTokenDetailsToUser                              account.SaveSocialNetworkUserTokenDetailsToUserFunc
 	GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser account.GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUserFunc
+	UpdateEncryptedPasswordByUserID                               account.UpdateEncryptedPasswordByUserIDFunc
 	GetTokenExpirationDate                                        account.GetTokenExpirationDateFunc
 	DeleteTokenByID                                               account.DeleteTokenByIDFunc
 	GetTokenDetailsByID                                           account.GetTokenDetailsByIDFunc

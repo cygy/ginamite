@@ -1,7 +1,9 @@
 package authtoken
 
 import (
+	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -11,8 +13,11 @@ import (
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/internal/apitest"
 
+	"github.com/cygy/ginamite/common/errors/auth"
+	"github.com/cygy/ginamite/common/log"
 	"github.com/gin-gonic/gin"
 	jwt "github.com/golang-jwt/jwt/v5"
+	logtest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestParse(t *testing.T) {
@@ -89,5 +94,48 @@ func TestVerify(t *testing.T) {
 				t.Errorf("status = %d, want %d", recorder.Code, tt.wantStatus)
 			}
 		})
+	}
+}
+
+func TestParse_ExpiredTokenAndLogs(t *testing.T) {
+	const secret = "secret"
+
+	apitest.InitLocalization(t, map[string]string{"placeholder": "placeholder"})
+
+	hook := logtest.NewLocal(log.Main.Logger)
+	defer hook.Reset()
+
+	router := gin.New()
+	router.Use(ctxlocalization.Inject(apitest.Localization), ctxLocale.Inject("en", []string{"en"}), InjectRevoked(func(string) bool { return false }))
+	router.Use(Parse(secret, nil, true))
+	router.GET("/", func(c *gin.Context) { c.Status(http.StatusOK) })
+
+	serve := func(token string) string {
+		req, _ := http.NewRequest(http.MethodGet, "/", nil)
+		req.Header.Set("Authorization", "Bearer "+token)
+
+		return apitest.Serve(router, req).Body.String()
+	}
+
+	expired := apitest.SignToken(t, secret, "u", "t", true)
+	invalid := apitest.SignToken(t, "other", "u", "t", false)
+
+	expiredBody, invalidBody := serve(expired), serve(invalid)
+	if want := fmt.Sprintf(`"code":%d`, auth.ExpiredAuthorizationToken); !strings.Contains(expiredBody, want) {
+		t.Errorf("expired token: body = %s, want %s", expiredBody, want)
+	}
+	if invalidBody == expiredBody {
+		t.Errorf("an invalid token is reported as an expired one: %s", invalidBody)
+	}
+
+	for _, entry := range hook.AllEntries() {
+		if strings.Contains(entry.Message, expired) || strings.Contains(entry.Message, invalid) {
+			t.Errorf("a token is logged: %q", entry.Message)
+		}
+		for _, value := range entry.Data {
+			if text, ok := value.(string); ok && (strings.Contains(text, expired) || strings.Contains(text, invalid)) {
+				t.Errorf("a token is logged: %v", entry.Data)
+			}
+		}
 	}
 }

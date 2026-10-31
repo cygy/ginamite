@@ -213,6 +213,15 @@ func (r *Router) Rights(admin bool, abilities []string) gin.HandlerFunc {
 	return rights.Check(admin, abilities, r.getUserAbilities)
 }
 
+// limited returns the handlers preceded by the middleware limiting the requests, if there is one.
+func limited(limit gin.HandlerFunc, handlers ...gin.HandlerFunc) []gin.HandlerFunc {
+	if limit == nil {
+		return handlers
+	}
+
+	return append([]gin.HandlerFunc{limit}, handlers...)
+}
+
 // LoadDefaultRoutes load the default routes.
 func (r *Router) LoadDefaultRoutes() {
 	// Get the middlewares.
@@ -328,16 +337,16 @@ func (r *Router) LoadDefaultRoutes() {
 	// ----- Account : registration.
 	if r.DefaultRoutes.Registration.Enabled {
 		if r.DefaultRoutes.Registration.Paths.RegisterWithPassword.Enabled {
-			v.POST(r.DefaultRoutes.Registration.Paths.RegisterWithPassword.Path, account.RegisterWithPassword)
+			v.POST(r.DefaultRoutes.Registration.Paths.RegisterWithPassword.Path, limited(r.Limits.Registration, account.RegisterWithPassword)...)
 		}
 		if r.DefaultRoutes.Registration.Paths.RegisterWithFacebook.Enabled {
-			v.POST(r.DefaultRoutes.Registration.Paths.RegisterWithFacebook.Path, account.RegisterWithFacebook)
+			v.POST(r.DefaultRoutes.Registration.Paths.RegisterWithFacebook.Path, limited(r.Limits.Registration, account.RegisterWithFacebook)...)
 		}
 		if r.DefaultRoutes.Registration.Paths.RegisterWithGoogle.Enabled {
-			v.POST(r.DefaultRoutes.Registration.Paths.RegisterWithGoogle.Path, account.RegisterWithGoogle)
+			v.POST(r.DefaultRoutes.Registration.Paths.RegisterWithGoogle.Path, limited(r.Limits.Registration, account.RegisterWithGoogle)...)
 		}
 		if r.DefaultRoutes.Registration.Paths.Validate.Enabled {
-			v.PUT(r.DefaultRoutes.Registration.Paths.Validate.Path, account.ValidateRegistration)
+			v.PUT(r.DefaultRoutes.Registration.Paths.Validate.Path, limited(r.Limits.Registration, account.ValidateRegistration)...)
 		}
 		if r.DefaultRoutes.Registration.Paths.Cancel.Enabled {
 			v.DELETE(r.DefaultRoutes.Registration.Paths.Cancel.Path, account.CancelRegistration)
@@ -347,10 +356,10 @@ func (r *Router) LoadDefaultRoutes() {
 	// ----- Account : forgot password.
 	if r.DefaultRoutes.ForgotPassword.Enabled {
 		if r.DefaultRoutes.ForgotPassword.Paths.ForgotPassword.Enabled {
-			v.POST(r.DefaultRoutes.ForgotPassword.Paths.ForgotPassword.Path, account.ForgotPassword)
+			v.POST(r.DefaultRoutes.ForgotPassword.Paths.ForgotPassword.Path, limited(r.Limits.ForgotPassword, account.ForgotPassword)...)
 		}
 		if r.DefaultRoutes.ForgotPassword.Paths.Validate.Enabled {
-			v.PUT(r.DefaultRoutes.ForgotPassword.Paths.Validate.Path, mustBeValidForgotPasswordID("error.forgot_password.validate.message"), account.ValidateForgotPassword)
+			v.PUT(r.DefaultRoutes.ForgotPassword.Paths.Validate.Path, limited(r.Limits.ForgotPassword, mustBeValidForgotPasswordID("error.forgot_password.validate.message"), account.ValidateForgotPassword)...)
 		}
 		if r.DefaultRoutes.ForgotPassword.Paths.Cancel.Enabled {
 			v.DELETE(r.DefaultRoutes.ForgotPassword.Paths.Cancel.Path, mustBeValidForgotPasswordID("error.forgot_password.cancel.message"), account.CancelForgotPassword)
@@ -360,13 +369,13 @@ func (r *Router) LoadDefaultRoutes() {
 	// ----- Account : auth tokens management.
 	if r.DefaultRoutes.Authentication.Enabled {
 		if r.DefaultRoutes.Authentication.Paths.LoginWithPassword.Enabled {
-			v.POST(r.DefaultRoutes.Authentication.Paths.LoginWithPassword.Path, account.LoginWithPassword)
+			v.POST(r.DefaultRoutes.Authentication.Paths.LoginWithPassword.Path, limited(r.Limits.Authentication, account.LoginWithPassword)...)
 		}
 		if r.DefaultRoutes.Authentication.Paths.LoginWithFacebook.Enabled {
-			v.POST(r.DefaultRoutes.Authentication.Paths.LoginWithFacebook.Path, account.LoginWithFacebook)
+			v.POST(r.DefaultRoutes.Authentication.Paths.LoginWithFacebook.Path, limited(r.Limits.Authentication, account.LoginWithFacebook)...)
 		}
 		if r.DefaultRoutes.Authentication.Paths.LoginWithGoogle.Enabled {
-			v.POST(r.DefaultRoutes.Authentication.Paths.LoginWithGoogle.Path, account.LoginWithGoogle)
+			v.POST(r.DefaultRoutes.Authentication.Paths.LoginWithGoogle.Path, limited(r.Limits.Authentication, account.LoginWithGoogle)...)
 		}
 		if r.DefaultRoutes.Authentication.Paths.Logout.Enabled {
 			v.DELETE(r.DefaultRoutes.Authentication.Paths.Logout.Path, mustBeAuthenticated, account.Logout)

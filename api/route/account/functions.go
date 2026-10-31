@@ -55,6 +55,10 @@ type Functions struct {
 	// GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser is a function to get the user details from its identifier (username, email addresse, what you want.)
 	GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUserFunc
 
+	// UpdateEncryptedPasswordByUserID is an optional function to replace the encrypted password of a user. If it is
+	// defined, the password of a user signing in is encrypted again when its hash is weaker than the current one.
+	UpdateEncryptedPasswordByUserID UpdateEncryptedPasswordByUserIDFunc
+
 	// NewForgotPasswordProcessForUser is a function to create a new forgot password process for a user. Return the unique identifier of the process.
 	NewForgotPasswordProcessForUser NewForgotPasswordProcessForUserFunc
 

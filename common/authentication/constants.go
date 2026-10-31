@@ -41,12 +41,6 @@ const (
 
 	// RegisterCodeLength is the length of the generated register code.
 	RegisterCodeLength = 64
-
-	// PasswordEncryptionSalt is the salt prefix used to encrypt a password.
-	PasswordEncryptionSalt = "$6$rounds=5000$"
-
-	// PasswordEncryptionSaltLength is the length of the random part of the salt used to encrypt a password.
-	PasswordEncryptionSaltLength = 16
 )
 
 // Types of process a user can start on their account.

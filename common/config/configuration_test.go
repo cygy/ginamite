@@ -218,3 +218,17 @@ func writeFile(t *testing.T, content string) string {
 
 	return path
 }
+
+func TestNewConfiguration_RateLimits(t *testing.T) {
+	c := NewConfiguration()
+
+	if c.RateLimits.Authentication.Requests != 10 || c.RateLimits.Authentication.Seconds != 60 {
+		t.Errorf("authentication = %+v", c.RateLimits.Authentication)
+	}
+	if c.RateLimits.Registration.Requests == 0 || c.RateLimits.ForgotPassword.Requests == 0 {
+		t.Errorf("limits = %+v", c.RateLimits)
+	}
+	if c.Server.TrustedProxies != nil {
+		t.Errorf("trusted proxies = %v, want undefined", c.Server.TrustedProxies)
+	}
+}

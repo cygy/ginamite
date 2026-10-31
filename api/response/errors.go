@@ -2,7 +2,10 @@
 package response
 
 import (
+	"math"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/response"
@@ -39,6 +42,12 @@ func BadRequest(c *gin.Context) {
 // BadRequestWithError returns a detailed HTTP 400 error.
 func BadRequestWithError(c *gin.Context, err response.Error) {
 	c.AbortWithStatusJSON(http.StatusBadRequest, response.NewError(err))
+}
+
+// TooManyRequests returns a HTTP 429 error, with the delay after which the client can try again.
+func TooManyRequests(c *gin.Context, retryAfter time.Duration) {
+	c.Header("Retry-After", strconv.Itoa(int(math.Ceil(retryAfter.Seconds()))))
+	c.AbortWithStatus(http.StatusTooManyRequests)
 }
 
 // Unauthorized returns a HTTP 401 error.
