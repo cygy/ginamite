@@ -57,6 +57,23 @@ func TestFlags_parse(t *testing.T) {
 		{name: "no server configuration", args: []string{"-web", "-name", "n", "-routes", "r"}, wantProblem: "server configuration file"},
 		{name: "no application configuration", args: valid, appConfig: true, wantProblem: "application configuration file"},
 		{name: "no routes", args: []string{"-web", "-name", "n", "-conf-server", "s"}, wantProblem: "routes file"},
+		{
+			name:   "dead letters command, which needs no server nor routes",
+			args:   []string{"-dlq", "replay", "-dlq-topic", "mail", "-dlq-limit", "5", "-dlq-body", "-name", "n", "-conf-server", "s.yml"},
+			wantOK: true,
+			checkSuccess: func(t *testing.T, f *Flags) {
+				t.Helper()
+				if f.DLQ != DLQReplay || f.DLQTopic != "mail" || f.DLQLimit != 5 || !f.DLQBody || f.IsAPIServer || f.RoutesFile != "" {
+					t.Errorf("unexpected flags %+v", f)
+				}
+			},
+		},
+		{name: "unknown dead letters command", args: []string{"-dlq", "delete", "-dlq-topic", "mail", "-name", "n", "-conf-server", "s"}, wantProblem: "-dlq must be 'list', 'replay' or 'purge'"},
+		{name: "dead letters command with a server", args: []string{"-dlq", "list", "-api", "-dlq-topic", "mail", "-name", "n", "-conf-server", "s"}, wantProblem: "starts no server"},
+		{name: "dead letters command without topic", args: []string{"-dlq", "list", "-name", "n", "-conf-server", "s"}, wantProblem: "-dlq-topic"},
+		{name: "dead letters command with a negative limit", args: []string{"-dlq", "list", "-dlq-topic", "mail", "-dlq-limit", "-1", "-name", "n", "-conf-server", "s"}, wantProblem: "must not be negative"},
+		{name: "dead letters command without name", args: []string{"-dlq", "list", "-dlq-topic", "mail", "-conf-server", "s"}, wantProblem: "server name"},
+		{name: "dead letters command without configuration", args: []string{"-dlq", "list", "-dlq-topic", "mail", "-name", "n"}, wantProblem: "server configuration file"},
 	}
 
 	for _, tt := range tests {

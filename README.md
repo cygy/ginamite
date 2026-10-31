@@ -81,6 +81,7 @@ default values. The main sections are:
 | `facebook`, `google` | Sign-in with a social network. |
 | `recurring_tasks`, `run_start_up_tasks` | Tasks executed by the workers. |
 | `kafka_max_attempts`, `kafka_retry_delay` | Attempts to handle a Kafka message and delay in milliseconds between them (see below). |
+| `kafka` | Connection to Kafka (version, TLS, SASL), creation of the topics, statistics (see below). |
 | `worker_consumers` | Kafka topics consumed by a worker, with their consumer group (see below). |
 
 ### Workers and Kafka consumer groups
@@ -123,8 +124,8 @@ A message whose handling fails is handled again, then sent to a **dead-letter to
   meanwhile, which keeps the order of its messages.
 - The failed message is then published, as it is, to the topic named like its own with the suffix `_dlq`
   (`<prefix>mail_dlq`), and the consumer goes on. The headers give the reason: `error`, `attempts`, `group`, `topic`,
-  `partition` and `offset`. Nothing consumes this topic: read it to inspect the failures, and send the messages again
-  to their topic once the cause is fixed.
+  `partition` and `offset`. No worker consumes this topic: use the command below to inspect the failures and to send
+  the messages again once the cause is fixed.
 - A message which can not be decoded is dead-lettered at once, since no retry can fix it. A panic is recovered and
   counts as a failure. A message of an unknown type is only logged.
 - The functions of `worker.Handlers` handling a message (`DeleteUserByID`, `SaveIPAddressDetails`, `HandleMail`, etc.)
@@ -137,6 +138,28 @@ A message whose handling fails is handled again, then sent to a **dead-letter to
   (the ipstack API) is logged but not retried.
 - If the producer is not connected, the failed message is dropped and logged as an error.
 
+##### Dead letters command
+
+The binary lists, replays and purges the dead letters of a topic, without starting any server. It only needs the
+server configuration (`-conf-server`) and the name of the process, and the service `kafka` of the configuration:
+
+```bash
+myapp -name dlq -conf-server server.yaml -dlq list -dlq-topic mail
+myapp -name dlq -conf-server server.yaml -dlq replay -dlq-topic mail -dlq-limit 10
+myapp -name dlq -conf-server server.yaml -dlq purge -dlq-topic mail
+```
+
+- `-dlq-topic` is the topic without the prefix. `-dlq-limit` limits the count of dead letters (all if absent).
+- `list` prints where each dead letter is, when it failed, the topic, group and number of attempts, the error and the
+  size of the message; `-dlq-body` prints the body too, which holds secrets.
+- `replay` sends the dead letters again to the topic they came from, partition by partition, and stops at the first
+  failure. A message replayed again and failing again is dead-lettered again. The replayed message has a header
+  `replayed-from`.
+- `purge` forgets the dead letters without sending them again.
+- The position of the command is saved in Kafka, in the consumer group `<prefix><topic>_dlq_tool`: a dead letter
+  replayed or purged is never visited again, and `list` shows only the others. The messages themselves stay in the
+  topic until their retention ends (`dead_letter_retention_hours`).
+
 #### Shutdown and logs
 
 - When the process is interrupted or terminated, the consumers finish the message they are handling, commit it and
@@ -144,6 +167,50 @@ A message whose handling fails is handled again, then sent to a **dead-letter to
   their connections. `Start` returns, and the exit code is 0.
 - The logs give the topic, the partition, the offset and the size of the messages, never their body, which holds the
   keys of the confirmation links: it is logged at the debug level only.
+
+### Kafka connection and topics
+
+The address of the broker is the service `kafka`. The other settings are in the section `kafka` of the configuration
+file; `kafka_topics_prefix` is prepended to the names of the topics and of the consumer groups.
+
+```yaml
+services:
+  kafka: {host: kafka.example.com, port: 9093}
+
+kafka_topics_prefix: myapp_
+kafka_max_attempts: 3
+kafka_retry_delay: 1000        # milliseconds
+
+kafka:
+  version: 3.6.0               # the version of the brokers, the one of the client library if absent
+  tls:
+    enabled: true
+    ca_file: /etc/kafka/ca.pem  # the system authorities if absent
+    cert_file: /etc/kafka/client.pem   # for a mutual authentication
+    key_file: /etc/kafka/client.key
+  sasl:
+    mechanism: SCRAM-SHA-512   # PLAIN, SCRAM-SHA-256 or SCRAM-SHA-512
+    username: myapp
+    password: secret
+  topics:
+    create: true               # create the missing topics when a server starts
+    partitions: 6
+    replication_factor: 3
+    retention_hours: 168
+    dead_letter_retention_hours: 720
+  stats_interval: 60           # seconds between two logs of the statistics, none if absent
+```
+
+- **Producer.** A message is acknowledged by all the in-sync replicas, and sent again if it fails without being
+  duplicated nor reordered (idempotent producer). The messages are sent in the order of the calls; the ones sent before
+  the producer is connected wait for it (1024 at most, the others are dropped and logged).
+- **Topics.** With `topics.create`, the servers create the topics, and the topics of their dead letters, which do not
+  exist yet, and never change the ones which exist. Without it, create them yourself, or let the brokers do it.
+- **Partitions.** The workers of a group share the partitions of a topic: with one partition, a single worker
+  works and the others wait. The messages are only ordered within a partition, and the messages have no key, so with
+  several partitions two messages sent one after the other may be handled in any order.
+- **Statistics.** `Client.Stats()` gives the counters (messages received, handled, retried, dead-lettered, sent, refused,
+  dropped) and the lag (messages waiting) of each partition. `kafka.stats_interval` logs them.
 
 ### Shared services are injected
 

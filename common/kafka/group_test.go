@@ -32,10 +32,13 @@ func (s *fakeSession) MarkMessage(message *sarama.ConsumerMessage, _ string) {
 type fakeClaim struct {
 	sarama.ConsumerGroupClaim
 
-	messages chan *sarama.ConsumerMessage
+	messages      chan *sarama.ConsumerMessage
+	highWaterMark int64
 }
 
 func (c *fakeClaim) Messages() <-chan *sarama.ConsumerMessage { return c.messages }
+
+func (c *fakeClaim) HighWaterMarkOffset() int64 { return c.highWaterMark }
 
 // deadLetters collects the dead letters of a handler.
 type deadLetters struct {
@@ -59,24 +62,31 @@ func TestGroupHandler_ConsumeClaim(t *testing.T) {
 		useHook(t)
 
 		var events []string
-		handler := groupHandler{topic: "app_users", attempts: 1, action: func(value []byte) error {
+		counters := &stats{}
+		handler := groupHandler{topic: "app_users", attempts: 1, stats: counters, action: func(value []byte) error {
 			events = append(events, "handle:"+string(value))
 
 			return nil
 		}}
 
 		messages := make(chan *sarama.ConsumerMessage, 2)
-		messages <- &sarama.ConsumerMessage{Value: []byte("a")}
-		messages <- &sarama.ConsumerMessage{Value: []byte("b")}
+		messages <- &sarama.ConsumerMessage{Topic: "app_users", Partition: 3, Offset: 8, Value: []byte("a")}
+		messages <- &sarama.ConsumerMessage{Topic: "app_users", Partition: 3, Offset: 9, Value: []byte("b")}
 		close(messages)
 
 		session := &fakeSession{ctx: context.Background(), events: &events}
-		if err := handler.ConsumeClaim(session, &fakeClaim{messages: messages}); err != nil {
+		if err := handler.ConsumeClaim(session, &fakeClaim{messages: messages, highWaterMark: 12}); err != nil {
 			t.Fatal(err)
 		}
 
 		if want := []string{"handle:a", "mark:a", "handle:b", "mark:b"}; !slices.Equal(events, want) {
 			t.Errorf("events = %v, want %v", events, want)
+		}
+
+		// The offsets 10 and 11 wait after the offset 9.
+		snapshot := counters.snapshot()
+		if snapshot.Received != 2 || snapshot.Handled != 2 || snapshot.Retried != 0 || snapshot.DeadLettered != 0 || snapshot.Lag["app_users/3"] != 2 {
+			t.Errorf("stats = %+v", snapshot)
 		}
 	})
 
@@ -111,7 +121,8 @@ func TestGroupHandler_ConsumeClaim(t *testing.T) {
 
 		var events []string
 		letters := &deadLetters{}
-		handler := groupHandler{attempts: 2, delay: time.Millisecond, deadLetter: letters.add, action: func(value []byte) error {
+		counters := &stats{}
+		handler := groupHandler{attempts: 2, delay: time.Millisecond, deadLetter: letters.add, stats: counters, action: func(value []byte) error {
 			events = append(events, "handle:"+string(value))
 			if string(value) == "bad" {
 				return errors.New("boom")
@@ -136,6 +147,9 @@ func TestGroupHandler_ConsumeClaim(t *testing.T) {
 		}
 		if !slices.Equal(letters.messages, []string{"bad"}) || letters.attempts[0] != 2 {
 			t.Errorf("dead letters = %v after %v attempts", letters.messages, letters.attempts)
+		}
+		if snapshot := counters.snapshot(); snapshot.Received != 2 || snapshot.Handled != 1 || snapshot.Retried != 1 || snapshot.DeadLettered != 1 {
+			t.Errorf("stats = %+v", snapshot)
 		}
 	})
 

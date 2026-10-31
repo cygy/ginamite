@@ -20,6 +20,9 @@ func TestNewConfiguration(t *testing.T) {
 	if c.Server.Host != "localhost" || c.Server.Port != 80 || c.DefaultLocale != "en-us" || c.JWT.SigningMethod != "HS256" {
 		t.Errorf("unexpected defaults %+v", c)
 	}
+	if topics := c.Kafka.Topics; topics.Create || topics.Partitions != 1 || topics.ReplicationFactor != 1 || topics.RetentionHours != 168 || topics.DeadLetterRetentionHours != 720 {
+		t.Errorf("kafka topics = %+v, want the defaults", topics)
+	}
 	if c.KafkaMaxAttempts != 3 || c.KafkaRetryDelay != 1000 {
 		t.Errorf("kafka attempts = %d, delay = %d, want the defaults", c.KafkaMaxAttempts, c.KafkaRetryDelay)
 	}
@@ -47,6 +50,12 @@ services:
     port: 9092
 kafka_max_attempts: 5
 kafka_retry_delay: 250
+kafka:
+  version: 3.6.0
+  tls: {enabled: true, ca_file: ca.pem}
+  sasl: {mechanism: SCRAM-SHA-256, username: user, password: secret}
+  topics: {create: true, partitions: 6, replication_factor: 3, retention_hours: 24}
+  stats_interval: 30
 worker_consumers:
   - topic: mail
     group: mails
@@ -75,6 +84,16 @@ worker_consumers:
 	}
 	if c.KafkaMaxAttempts != 5 || c.KafkaRetryDelay != 250 {
 		t.Errorf("kafka attempts = %d, delay = %d", c.KafkaMaxAttempts, c.KafkaRetryDelay)
+	}
+	wantKafka := KafkaConfiguration{
+		Version:       "3.6.0",
+		TLS:           KafkaTLSConfiguration{Enabled: true, CAFile: "ca.pem"},
+		SASL:          KafkaSASLConfiguration{Mechanism: "SCRAM-SHA-256", Username: "user", Password: "secret"},
+		Topics:        KafkaTopicsConfiguration{Create: true, Partitions: 6, ReplicationFactor: 3, RetentionHours: 24, DeadLetterRetentionHours: 720},
+		StatsInterval: 30,
+	}
+	if c.Kafka != wantKafka {
+		t.Errorf("kafka = %+v, want %+v", c.Kafka, wantKafka)
 	}
 	if want := []ConsumerConfiguration{{Topic: "mail", Group: "mails"}, {Topic: "task"}}; !slices.Equal(c.WorkerConsumers, want) {
 		t.Errorf("worker consumers = %+v, want %+v", c.WorkerConsumers, want)

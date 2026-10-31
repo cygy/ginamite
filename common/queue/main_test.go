@@ -9,6 +9,7 @@ import (
 	"github.com/cygy/ginamite/common/kafka"
 	"github.com/cygy/ginamite/common/log"
 
+	"github.com/IBM/sarama"
 	"github.com/IBM/sarama/mocks"
 	"github.com/sirupsen/logrus"
 	logtest "github.com/sirupsen/logrus/hooks/test"
@@ -41,16 +42,20 @@ func capture(t *testing.T) (*Queue, func(send func()) sent) {
 	producer := mocks.NewAsyncProducer(t, config)
 
 	client := kafka.NewClient()
-	client.HasProducer = true
-	client.Producer = producer
+	client.UseProducer(producer)
 
 	return New(client), func(send func()) sent {
 		t.Helper()
-		producer.ExpectInputAndSucceed()
+		captured := make(chan *sarama.ProducerMessage, 1)
+		producer.ExpectInputWithMessageCheckerFunctionAndSucceed(func(m *sarama.ProducerMessage) error {
+			captured <- m
+
+			return nil
+		})
 		send()
 
 		select {
-		case msg := <-producer.Successes():
+		case msg := <-captured:
 			value, err := msg.Value.Encode()
 			if err != nil {
 				t.Fatal(err)

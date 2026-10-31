@@ -51,6 +51,7 @@ type Configuration struct {
 	Terms               TermsConfiguration
 	UserNotifications   UserNotificationsConfiguration `yaml:"user_notifications"`
 	Account             AccountConfiguration
+	Kafka               KafkaConfiguration        `yaml:"kafka"`            // connection to Kafka and its topics, the address is the service "kafka"
 	WorkerConsumers     []ConsumerConfiguration   `yaml:"worker_consumers"` // topics consumed by the worker, all if empty
 	RecurringTasks      []recurring.ScheduledTask `yaml:"recurring_tasks"`  // tasks executed by the workers
 	RunStartUpTasks     bool                      `yaml:"run_start_up_tasks"`
@@ -77,6 +78,10 @@ func NewConfiguration() (config *Configuration) {
 	config.API.TimeOut = 2000
 	config.KafkaMaxAttempts = 3
 	config.KafkaRetryDelay = 1000
+	config.Kafka.Topics.Partitions = 1
+	config.Kafka.Topics.ReplicationFactor = 1
+	config.Kafka.Topics.RetentionHours = 168
+	config.Kafka.Topics.DeadLetterRetentionHours = 720
 	config.Facebook.Enabled = false
 	config.Google.Enabled = false
 	config.ExpiredAuthTokens.FlushCacheInterval = 60

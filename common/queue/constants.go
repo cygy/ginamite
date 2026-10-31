@@ -2,6 +2,11 @@
 // the workers, cache invalidations, mails and notifications.
 package queue
 
+// Topics returns all the topics of the messages.
+func Topics() []string {
+	return []string{TopicTasks, TopicCache, TopicMail, TopicUserNotification, TopicGroupNotification, TopicIOS, TopicAndroid, TopicSafari, TopicFirefox, TopicChrome}
+}
+
 // Topics of the messages.
 const (
 	// TopicTasks is the name of the topic for the various tasks.

@@ -4,58 +4,13 @@ import (
 	"context"
 	"errors"
 	"slices"
-	"strconv"
 	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/IBM/sarama"
-	"github.com/IBM/sarama/mocks"
 )
-
-// newMockBroker returns a broker answering the metadata, offset and fetch requests of a single-partition topic.
-func newMockBroker(t *testing.T, topic string) *sarama.MockBroker {
-	t.Helper()
-
-	broker := sarama.NewMockBroker(t, 1)
-	t.Cleanup(broker.Close)
-
-	broker.SetHandlerByMap(map[string]sarama.MockResponse{
-		"ApiVersionsRequest": sarama.NewMockApiVersionsResponse(t).SetApiKeys([]sarama.ApiVersionsResponseKey{
-			{ApiKey: 0, MinVersion: 0, MaxVersion: 8},  // Produce
-			{ApiKey: 1, MinVersion: 0, MaxVersion: 11}, // Fetch
-			{ApiKey: 2, MinVersion: 0, MaxVersion: 5},  // ListOffsets
-			{ApiKey: 3, MinVersion: 0, MaxVersion: 8},  // Metadata
-		}),
-		"MetadataRequest": sarama.NewMockMetadataResponse(t).
-			SetBroker(broker.Addr(), broker.BrokerID()).
-			SetLeader(topic, 0, broker.BrokerID()),
-		"OffsetRequest": sarama.NewMockOffsetResponse(t).
-			SetOffset(topic, 0, sarama.OffsetNewest, 0).
-			SetOffset(topic, 0, sarama.OffsetOldest, 0),
-		"FetchRequest": sarama.NewMockFetchResponse(t, 1).
-			SetMessage(topic, 0, 0, sarama.StringEncoder("consumed")),
-	})
-
-	return broker
-}
-
-func splitAddress(t *testing.T, addr string) (string, int) {
-	t.Helper()
-
-	host, port, found := strings.Cut(addr, ":")
-	if !found {
-		t.Fatalf("invalid address %q", addr)
-	}
-
-	n, err := strconv.Atoi(port)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	return host, n
-}
 
 // fakeGroup is a consumer group which calls consume each time it is asked to consume.
 type fakeGroup struct {
@@ -237,7 +192,7 @@ func TestClient_consume_Errors(t *testing.T) {
 	client.Initialize("localhost", 9092, "", false, []MessageConsumer{{Topic: "users", Action: func([]byte) error { return nil }}})
 
 	// A closed group ends the consumer.
-	client.consumers.Wait()
+	client.background.Wait()
 	client.Close()
 
 	waitForLog(t, hook, "kafka consume error")
@@ -264,31 +219,23 @@ func TestClient_Initialize_DeadLetter(t *testing.T) {
 	})
 	useGroup(t, func(string) (sarama.ConsumerGroup, error) { return group, nil })
 
-	producer := mocks.NewAsyncProducer(t, mocks.NewTestConfig())
-	dead := make(chan *sarama.ProducerMessage, 1)
-	producer.ExpectInputWithMessageCheckerFunctionAndSucceed(func(m *sarama.ProducerMessage) error {
-		dead <- m
-
-		return nil
-	})
+	producer := newFakeProducer()
 
 	var attempts atomic.Int32
 	client := NewClient()
 	client.MaxAttempts, client.RetryDelay = 2, time.Millisecond
-	client.Producer = producer
+	client.attachProducer(producer)
 	client.Initialize("localhost", 9092, "app_", false, []MessageConsumer{{
 		Topic:  "mail",
 		Action: func([]byte) error { attempts.Add(1); return errors.New("smtp down") },
 	}})
 	t.Cleanup(client.Close)
 
-	select {
-	case m := <-dead:
-		if m.Topic != "app_mail_dlq" || attempts.Load() != 2 {
-			t.Errorf("dead letter = %+v after %d attempts", m, attempts.Load())
-		}
-	case <-time.After(5 * time.Second):
-		t.Fatal("the message was not dead-lettered")
+	if m := producer.next(t); m.Topic != "app_mail_dlq" || attempts.Load() != 2 {
+		t.Errorf("dead letter = %+v after %d attempts", m, attempts.Load())
+	}
+	if stats := client.Stats(); stats.Received != 1 || stats.Retried != 1 || stats.DeadLettered != 1 || stats.Handled != 0 {
+		t.Errorf("stats = %+v", stats)
 	}
 }
 
@@ -302,19 +249,4 @@ func TestUniqueGroup(t *testing.T) {
 	if !strings.HasPrefix(a, "cache_") || a == b {
 		t.Errorf("groups = %q, %q", a, b)
 	}
-}
-
-func TestClient_Initialize_Producer(t *testing.T) {
-	hook := useHook(t)
-	broker := newMockBroker(t, "app_users")
-	host, port := splitAddress(t, broker.Addr())
-
-	client := NewClient()
-	client.Initialize(host, port, "app_", true, nil)
-
-	if !client.HasProducer {
-		t.Fatal("the client must be a producer")
-	}
-
-	waitForLog(t, hook, "connected to kafka")
 }

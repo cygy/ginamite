@@ -23,6 +23,9 @@ type groupHandler struct {
 
 	// deadLetter receives a message which could not be handled.
 	deadLetter func(message *sarama.ConsumerMessage, err error, attempts int)
+
+	// stats counts the messages. It may be nil.
+	stats *stats
 }
 
 // Setup is called when a consumer joins the group.
@@ -50,11 +53,13 @@ func (h groupHandler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sa
 			}
 			log.WithFields(fields).Info("kafka message received")
 			log.WithFields(fields).WithField("message", string(message.Value)).Debug("kafka message body")
+			h.stats.countReceived()
 
 			if !h.handle(session.Context(), message) {
 				return nil
 			}
 			session.MarkMessage(message, "")
+			h.stats.setLag(message.Topic, message.Partition, claim.HighWaterMarkOffset()-message.Offset-1)
 
 		case <-session.Context().Done():
 			return nil
@@ -70,6 +75,8 @@ func (h groupHandler) handle(ctx context.Context, message *sarama.ConsumerMessag
 	attempt := 1
 	for ; ; attempt++ {
 		if err = h.try(message.Value); err == nil {
+			h.stats.countHandled()
+
 			return true
 		}
 
@@ -84,6 +91,7 @@ func (h groupHandler) handle(ctx context.Context, message *sarama.ConsumerMessag
 		}
 
 		log.WithFields(fields).Warn("kafka message failed, trying again")
+		h.stats.countRetried()
 		if !sleep(ctx, h.backoff(attempt)) {
 			return false
 		}
@@ -93,6 +101,7 @@ func (h groupHandler) handle(ctx context.Context, message *sarama.ConsumerMessag
 		return false
 	}
 
+	h.stats.countDeadLettered()
 	h.deadLetter(message, err, attempt)
 
 	return true

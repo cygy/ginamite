@@ -25,6 +25,14 @@ func (s *Server) Start() {
 		return
 	}
 
+	if f.DLQ != "" {
+		if err := s.runDLQ(f, os.Stdout); err != nil {
+			log.WithField("error", err).Fatal("the command on the dead letters failed")
+		}
+
+		return
+	}
+
 	s.initializeConfiguration(f)
 
 	if f.IsAPIServer || f.IsWorkerServer {
@@ -57,6 +65,15 @@ func (s *Server) Start() {
 	}
 
 	if kafkaConf, ok := s.Config.KafkaConfiguration(); ok {
+		options, err := kafkaOptions(s.Config)
+		if err != nil {
+			log.WithField("error", err).Fatal("invalid kafka configuration")
+			return
+		}
+
+		createKafkaTopics(s.Config, kafkaConf.Host, kafkaConf.Port, options)
+
+		s.Kafka.Options = options
 		s.Kafka.MaxAttempts = max(s.Config.KafkaMaxAttempts, 1)
 		s.Kafka.RetryDelay = time.Duration(s.Config.KafkaRetryDelay) * time.Millisecond
 		s.Kafka.Initialize(kafkaConf.Host, kafkaConf.Port, s.Config.KafkaTopicsPrefix, true, specializedServer.CreateKafkaConsumers())

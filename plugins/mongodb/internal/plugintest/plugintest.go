@@ -36,6 +36,7 @@ import (
 	"github.com/cygy/ginamite/plugins/mongodb/api/ctxsettings"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
 
+	"github.com/IBM/sarama"
 	"github.com/IBM/sarama/mocks"
 	"github.com/gin-gonic/gin"
 	jwt "github.com/golang-jwt/jwt/v5"
@@ -135,7 +136,7 @@ type Queue struct {
 	Sender *queue.Queue
 
 	t        *testing.T
-	producer *mocks.AsyncProducer
+	captured chan *sarama.ProducerMessage
 }
 
 // senderInUse is the queue of the contexts created by NewContext. It is the one of the capture, if any.
@@ -149,20 +150,24 @@ func CaptureQueue(t *testing.T) *Queue {
 	config := mocks.NewTestConfig()
 	config.Producer.Return.Successes = true
 	producer := mocks.NewAsyncProducer(t, config)
+	captured := make(chan *sarama.ProducerMessage, maxMessages)
 	for range maxMessages {
-		producer.ExpectInputAndSucceed()
+		producer.ExpectInputWithMessageCheckerFunctionAndSucceed(func(m *sarama.ProducerMessage) error {
+			captured <- m
+
+			return nil
+		})
 	}
 
 	client := kafka.NewClient()
-	client.HasProducer = true
-	client.Producer = producer
+	client.UseProducer(producer)
 
 	sender := queue.New(client)
 	old := senderInUse
 	senderInUse = sender
 	t.Cleanup(func() { senderInUse = old })
 
-	return &Queue{Sender: sender, t: t, producer: producer}
+	return &Queue{Sender: sender, t: t, captured: captured}
 }
 
 // maxMessages is the number of messages a Queue can capture.
@@ -173,7 +178,7 @@ func (q *Queue) Next() (message queue.Message, ok bool) {
 	q.t.Helper()
 
 	select {
-	case sent := <-q.producer.Successes():
+	case sent := <-q.captured:
 		value, err := sent.Value.Encode()
 		if err != nil {
 			q.t.Fatal(err)

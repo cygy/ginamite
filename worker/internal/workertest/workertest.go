@@ -11,6 +11,7 @@ import (
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/queue"
 
+	"github.com/IBM/sarama"
 	"github.com/IBM/sarama/mocks"
 	"github.com/sirupsen/logrus"
 	logtest "github.com/sirupsen/logrus/hooks/test"
@@ -34,7 +35,7 @@ type Queue struct {
 	Sender *queue.Queue
 
 	t        *testing.T
-	producer *mocks.AsyncProducer
+	captured chan *sarama.ProducerMessage
 }
 
 // Message is a message sent to Kafka.
@@ -51,15 +52,19 @@ func CaptureQueue(t *testing.T) *Queue {
 	config := mocks.NewTestConfig()
 	config.Producer.Return.Successes = true
 	producer := mocks.NewAsyncProducer(t, config)
+	captured := make(chan *sarama.ProducerMessage, maxMessages)
 	for range maxMessages {
-		producer.ExpectInputAndSucceed()
+		producer.ExpectInputWithMessageCheckerFunctionAndSucceed(func(m *sarama.ProducerMessage) error {
+			captured <- m
+
+			return nil
+		})
 	}
 
 	client := kafka.NewClient()
-	client.HasProducer = true
-	client.Producer = producer
+	client.UseProducer(producer)
 
-	return &Queue{Sender: queue.New(client), t: t, producer: producer}
+	return &Queue{Sender: queue.New(client), t: t, captured: captured}
 }
 
 // Next returns the next message sent to Kafka, and ok is false if there is none after a short delay.
@@ -67,7 +72,7 @@ func (q *Queue) Next() (message Message, ok bool) {
 	q.t.Helper()
 
 	select {
-	case sent := <-q.producer.Successes():
+	case sent := <-q.captured:
 		value, err := sent.Value.Encode()
 		if err != nil {
 			q.t.Fatal(err)
