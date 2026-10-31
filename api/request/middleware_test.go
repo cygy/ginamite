@@ -85,8 +85,8 @@ func TestVerifyURLParameter(t *testing.T) {
 		wantStored any
 	}{
 		{"valid ID", Config{Name: "id", StoreKey: "stored"}, "/" + validID, http.StatusOK, validID},
-		{"invalid ID", Config{Name: "id", StoreKey: "stored", InvalidObjectIDReasonKey: "reason"}, "/xyz", http.StatusBadRequest, nil},
-		{"invalid ID accepted when skipped", Config{Name: "id", StoreKey: "stored", SkipVerifyingInvalidObjectID: true}, "/xyz", http.StatusOK, "xyz"},
+		{"invalid ID", Config{Name: "id", StoreKey: "stored", InvalidIDReasonKey: "reason"}, "/xyz", http.StatusBadRequest, nil},
+		{"invalid ID accepted when skipped", Config{Name: "id", StoreKey: "stored", SkipVerifyingInvalidID: true}, "/xyz", http.StatusOK, "xyz"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

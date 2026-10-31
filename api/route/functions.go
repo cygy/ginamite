@@ -227,49 +227,49 @@ func (r *Router) LoadDefaultRoutes() {
 
 	mustBeValidAuthToken := func(messageKey string) gin.HandlerFunc {
 		return middleware.VerifyURLParameter(middleware.Config{
-			Name:                       "id",
-			StoreKey:                   "tokenID",
-			MessageKey:                 messageKey,
-			NotFoundReasonKey:          "error.admin.token.id.not_found.reason",
-			NotFoundRecoveryKey:        "error.admin.token.id.not_found.recovery",
-			InvalidObjectIDReasonKey:   "error.admin.token.id.invalid.reason",
-			InvalidObjectIDRecoveryKey: "error.admin.token.id.invalid.recovery",
+			Name:                 "id",
+			StoreKey:             "tokenID",
+			MessageKey:           messageKey,
+			NotFoundReasonKey:    "error.admin.token.id.not_found.reason",
+			NotFoundRecoveryKey:  "error.admin.token.id.not_found.recovery",
+			InvalidIDReasonKey:   "error.admin.token.id.invalid.reason",
+			InvalidIDRecoveryKey: "error.admin.token.id.invalid.recovery",
 		})
 	}
 
 	mustBeValidUserID := func(messageKey string) gin.HandlerFunc {
 		return middleware.VerifyURLParameter(middleware.Config{
-			Name:                       "id",
-			StoreKey:                   "userID",
-			MessageKey:                 messageKey,
-			NotFoundReasonKey:          "error.admin.user.id.not_found.reason",
-			NotFoundRecoveryKey:        "error.admin.user.id.not_found.recovery",
-			InvalidObjectIDReasonKey:   "error.admin.user.id.invalid.reason",
-			InvalidObjectIDRecoveryKey: "error.admin.user.id.invalid.recovery",
+			Name:                 "id",
+			StoreKey:             "userID",
+			MessageKey:           messageKey,
+			NotFoundReasonKey:    "error.admin.user.id.not_found.reason",
+			NotFoundRecoveryKey:  "error.admin.user.id.not_found.recovery",
+			InvalidIDReasonKey:   "error.admin.user.id.invalid.reason",
+			InvalidIDRecoveryKey: "error.admin.user.id.invalid.recovery",
 		})
 	}
 
 	mustBeValidContactID := func(messageKey string) gin.HandlerFunc {
 		return middleware.VerifyURLParameter(middleware.Config{
-			Name:                       "id",
-			StoreKey:                   "contactID",
-			MessageKey:                 messageKey,
-			NotFoundReasonKey:          "error.admin.contact.id.not_found.reason",
-			NotFoundRecoveryKey:        "error.admin.contact.id.not_found.recovery",
-			InvalidObjectIDReasonKey:   "error.admin.contact.id.invalid.reason",
-			InvalidObjectIDRecoveryKey: "error.admin.contact.id.invalid.recovery",
+			Name:                 "id",
+			StoreKey:             "contactID",
+			MessageKey:           messageKey,
+			NotFoundReasonKey:    "error.admin.contact.id.not_found.reason",
+			NotFoundRecoveryKey:  "error.admin.contact.id.not_found.recovery",
+			InvalidIDReasonKey:   "error.admin.contact.id.invalid.reason",
+			InvalidIDRecoveryKey: "error.admin.contact.id.invalid.recovery",
 		})
 	}
 
 	mustBeValidForgotPasswordID := func(messageKey string) gin.HandlerFunc {
 		return middleware.VerifyURLParameter(middleware.Config{
-			Name:                       "id",
-			StoreKey:                   "fpID",
-			MessageKey:                 messageKey,
-			NotFoundReasonKey:          "error.forgot_password.validate_or_cancel.reason",
-			NotFoundRecoveryKey:        "error.forgot_password.validate_or_cancel.recovery",
-			InvalidObjectIDReasonKey:   "error.forgot_password.validate_or_cancel.reason",
-			InvalidObjectIDRecoveryKey: "error.forgot_password.validate_or_cancel.recovery",
+			Name:                 "id",
+			StoreKey:             "fpID",
+			MessageKey:           messageKey,
+			NotFoundReasonKey:    "error.forgot_password.validate_or_cancel.reason",
+			NotFoundRecoveryKey:  "error.forgot_password.validate_or_cancel.recovery",
+			InvalidIDReasonKey:   "error.forgot_password.validate_or_cancel.reason",
+			InvalidIDRecoveryKey: "error.forgot_password.validate_or_cancel.recovery",
 		})
 	}
 

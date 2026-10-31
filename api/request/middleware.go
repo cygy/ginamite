@@ -49,12 +49,12 @@ func VerifyURLParameter(cfg Config) gin.HandlerFunc {
 			return
 		}
 
-		if !cfg.SkipVerifyingInvalidObjectID {
+		if !cfg.SkipVerifyingInvalidID {
 			if !IsValidID(value) {
 				response.InvalidRequestParameterWithDetails(c,
 					t(cfg.MessageKey),
-					t(cfg.InvalidObjectIDReasonKey),
-					t(cfg.InvalidObjectIDRecoveryKey),
+					t(cfg.InvalidIDReasonKey),
+					t(cfg.InvalidIDRecoveryKey),
 				)
 				return
 			}
