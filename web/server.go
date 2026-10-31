@@ -34,8 +34,10 @@ type Server struct {
 	Config *config.Configuration
 	// Localization translates the messages of the pages, set by the main server before it starts.
 	Localization *localization.Engine
-	RoutesFile   string // The path of the routes file.
-	Functions    Handlers
+	// Robots is the content of the robots.txt file, loaded by the main server before it starts.
+	Robots     string
+	RoutesFile string // The path of the routes file.
+	Functions  Handlers
 
 	customRoutes []route.ConfigureCustomRoutes
 	apiClient    *api.Client         // The client of the API, created when the server is set up.
@@ -159,6 +161,7 @@ func (s *Server) setUp(engine *gin.Engine) {
 		s.Config.SupportedLocales, s.Config.DefaultLocale,
 		s.Config.Cookie.Name, s.Config.JWT.Secret,
 	)
+	router.Robots = s.Robots
 	if s.Functions.RouterConfigureDefaultRoutes != nil {
 		s.Functions.RouterConfigureDefaultRoutes(&router.DefaultRoutes)
 	}

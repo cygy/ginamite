@@ -225,7 +225,8 @@ func TestServer_loadRecurringTasks(t *testing.T) {
 		custom = true
 	}
 
-	(&Server{Config: c, Functions: h}).loadRecurringTasks()
+	server := &Server{Config: c, Functions: h, scheduler: recurring.NewScheduler()}
+	server.loadRecurringTasks()
 
 	if !custom {
 		t.Error("the functions of the custom tasks are not set")
@@ -237,13 +238,13 @@ func TestServer_loadRecurringTasks(t *testing.T) {
 		"custom":                        true,  // The function is set by SetFuncOfRecurringTasks.
 		"unknown":                       false,
 	} {
-		if got := recurring.HasFunc(name); got != want {
+		if got := server.scheduler.HasFunc(name); got != want {
 			t.Errorf("HasFunc(%s) = %v, want %v", name, got, want)
 		}
 	}
 
 	// Without a function to set the custom tasks.
-	(&Server{Config: c}).loadRecurringTasks()
+	(&Server{Config: c, scheduler: recurring.NewScheduler()}).loadRecurringTasks()
 }
 
 func TestServer_setup(t *testing.T) {
@@ -270,7 +271,7 @@ func TestServer_setup(t *testing.T) {
 
 	var env, version string
 	var calls []string
-	s := &Server{Config: c, RoutesFile: filepath.Join(dir, "routes.yml")}
+	s := &Server{Config: c, scheduler: recurring.NewScheduler(), RoutesFile: filepath.Join(dir, "routes.yml")}
 	s.Functions.StartUpTasks = func(_ context.Context, environment, v string) {
 		env, version = environment, v
 		calls = append(calls, "start up")
@@ -289,7 +290,7 @@ func TestServer_setup(t *testing.T) {
 	if got := s.routes.GetURL("home", "en"); got != "https://web/en/" {
 		t.Errorf("URL of the home = %q", got)
 	}
-	if !recurring.HasFunc(recurring.DeleteExpiredTokens) {
+	if !s.scheduler.HasFunc(recurring.DeleteExpiredTokens) {
 		t.Error("the recurring tasks are not loaded")
 	}
 

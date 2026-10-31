@@ -16,7 +16,6 @@ import (
 	"github.com/cygy/ginamite/common/response"
 	"github.com/cygy/ginamite/web/api"
 	"github.com/cygy/ginamite/web/internal/webtest"
-	"github.com/cygy/ginamite/web/robots"
 	"github.com/cygy/ginamite/web/route"
 
 	"github.com/gin-gonic/gin"
@@ -70,12 +69,9 @@ func newTestServer(t *testing.T, environmentName string) (*Server, *config.Confi
 	webtest.WriteFile(t, conf.TemplatesPath, "pages/decorator.html", `<html>{{.IncludeMainTemplate}}</html>`)
 	webtest.WriteFile(t, conf.TemplatesPath, "pages/main.html", `{{.Content.Title}}`)
 
-	oldRobots := robots.Content
-	t.Cleanup(func() { robots.Content = oldRobots })
-	robots.Content = "User-agent: *"
-
 	server := NewServer()
 	server.Config = conf
+	server.Robots = "User-agent: *"
 	server.RoutesFile = webtest.WriteFile(t, t.TempDir(), "routes.yaml", testRoutes)
 
 	return server, conf

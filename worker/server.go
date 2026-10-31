@@ -37,8 +37,9 @@ type Server struct {
 	RoutesFile   string
 	Functions    Handlers
 
-	routes *weburl.Configuration // The routes of the website, loaded when the worker starts.
-	mailer *mail.Mailer          // Sends the emails, created when the worker starts.
+	routes    *weburl.Configuration // The routes of the website, loaded when the worker starts.
+	mailer    *mail.Mailer          // Sends the emails, created when the worker starts.
+	scheduler *recurring.Scheduler  // Runs the recurring tasks.
 }
 
 // Handlers are the functions of a worker, which depend on the storage of the application.
@@ -110,7 +111,7 @@ type Handlers struct {
 
 // NewServer returns a new worker.
 func NewServer() *Server {
-	return &Server{Config: config.NewConfiguration(), Queue: queue.New(nil), Localization: localization.NewEngine()}
+	return &Server{Config: config.NewConfiguration(), Queue: queue.New(nil), Localization: localization.NewEngine(), scheduler: recurring.NewScheduler()}
 }
 
 // Start starts the worker: it loads the templates and the routes, initializes the emails, runs the start up tasks
@@ -162,7 +163,7 @@ func (s *Server) setup() {
 	}
 
 	s.loadRecurringTasks()
-	recurring.StartScheduledTasks()
+	s.scheduler.Start()
 }
 
 // commonMailVars returns the variables available in all the emails, by name then by locale.
@@ -187,17 +188,17 @@ func (s *Server) commonMailVars() map[string]map[string]any {
 // loadRecurringTasks registers the recurring tasks of the configuration and sets the function of each one.
 // A built-in task without the functions it relies on has no function: it is not scheduled.
 func (s *Server) loadRecurringTasks() {
-	recurring.LoadScheduledTasks(s.Config.RecurringTasks)
+	s.scheduler.Load(s.Config.RecurringTasks)
 
 	funcs := s.recurringFuncs()
 	for _, task := range s.Config.RecurringTasks {
 		if f, ok := funcs[task.Name]; ok {
-			recurring.SetFunc(task.Name, f)
+			s.scheduler.SetFunc(task.Name, f)
 		}
 	}
 
 	if s.Functions.SetFuncOfRecurringTasks != nil {
-		s.Functions.SetFuncOfRecurringTasks(recurring.SetFunc)
+		s.Functions.SetFuncOfRecurringTasks(s.scheduler.SetFunc)
 	}
 }
 

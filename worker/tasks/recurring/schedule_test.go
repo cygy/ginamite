@@ -9,42 +9,33 @@ import (
 	"github.com/cygy/ginamite/worker/internal/workertest"
 )
 
-// resetTasks empties the scheduled tasks, for the duration of the test.
-func resetTasks(t *testing.T) {
-	t.Helper()
+func TestScheduler_Load(t *testing.T) {
+	s := NewScheduler()
 
-	old := scheduledTasks
-	t.Cleanup(func() { scheduledTasks = old })
-	scheduledTasks = map[string]ScheduledTask{}
-}
+	s.Load([]ScheduledTask{{Name: "a", Interval: 10}, {Name: ""}, {Name: "b", Enabled: true}})
 
-func TestLoadScheduledTasks(t *testing.T) {
-	resetTasks(t)
-
-	LoadScheduledTasks([]ScheduledTask{{Name: "a", Interval: 10}, {Name: ""}, {Name: "b", Enabled: true}})
-
-	if len(scheduledTasks) != 2 || scheduledTasks["a"].Interval != 10 || !scheduledTasks["b"].Enabled {
-		t.Errorf("scheduledTasks = %+v", scheduledTasks)
+	if len(s.tasks) != 2 || s.tasks["a"].Interval != 10 || !s.tasks["b"].Enabled {
+		t.Errorf("s.tasks = %+v", s.tasks)
 	}
 }
 
-func TestSetFunc(t *testing.T) {
-	resetTasks(t)
-	LoadScheduledTasks([]ScheduledTask{{Name: "a"}})
+func TestScheduler_SetFunc(t *testing.T) {
+	s := NewScheduler()
+	s.Load([]ScheduledTask{{Name: "a"}})
 
-	SetFunc("a", func(string) {})
-	SetFunc("unknown", func(string) {})
+	s.SetFunc("a", func(string) {})
+	s.SetFunc("unknown", func(string) {})
 
-	if scheduledTasks["a"].f == nil {
+	if s.tasks["a"].f == nil {
 		t.Error("the function of the task is not set")
 	}
-	if _, ok := scheduledTasks["unknown"]; ok {
+	if _, ok := s.tasks["unknown"]; ok {
 		t.Error("a task must not be created by SetFunc")
 	}
 }
 
-func TestStartScheduledTasks(t *testing.T) {
-	resetTasks(t)
+func TestScheduler_Start(t *testing.T) {
+	s := NewScheduler()
 
 	oldWait := wait
 	t.Cleanup(func() { wait = oldWait })
@@ -61,19 +52,19 @@ func TestStartScheduledTasks(t *testing.T) {
 	}
 
 	runs := make(chan string, 10)
-	LoadScheduledTasks([]ScheduledTask{
+	s.Load([]ScheduledTask{
 		{Name: "ok", Interval: 5, StartAt: "bad", Enabled: true},
 		{Name: "disabled", Interval: 5},
 		{Name: "no func", Interval: 5, Enabled: true},
 		{Name: "no interval", Enabled: true},
 	})
-	SetFunc("ok", func(name string) { runs <- name })
-	SetFunc("disabled", func(string) { t.Error("a disabled task must not run") })
-	SetFunc("no interval", func(string) { t.Error("a task without interval must not run") })
+	s.SetFunc("ok", func(name string) { runs <- name })
+	s.SetFunc("disabled", func(string) { t.Error("a disabled task must not run") })
+	s.SetFunc("no interval", func(string) { t.Error("a task without interval must not run") })
 
 	workertest.Hook.Reset()
 	ctx, cancel := context.WithCancel(context.Background())
-	startScheduledTasks(ctx)
+	s.start(ctx)
 
 	for range 3 {
 		ticks <- time.Now()
@@ -115,19 +106,19 @@ func TestStartScheduledTasks(t *testing.T) {
 	}
 }
 
-func TestStartScheduledTasks_Default(t *testing.T) {
-	resetTasks(t)
+func TestScheduler_Start_Default(t *testing.T) {
+	s := NewScheduler()
 
 	// No task: nothing is started, and the default context is used.
-	StartScheduledTasks()
+	s.Start()
 }
 
-func TestHasFunc(t *testing.T) {
-	resetTasks(t)
-	LoadScheduledTasks([]ScheduledTask{{Name: "a"}, {Name: "b"}})
-	SetFunc("a", func(string) {})
+func TestScheduler_HasFunc(t *testing.T) {
+	s := NewScheduler()
+	s.Load([]ScheduledTask{{Name: "a"}, {Name: "b"}})
+	s.SetFunc("a", func(string) {})
 
-	if !HasFunc("a") || HasFunc("b") || HasFunc("unknown") {
-		t.Errorf("HasFunc: a = %v, b = %v, unknown = %v", HasFunc("a"), HasFunc("b"), HasFunc("unknown"))
+	if !s.HasFunc("a") || s.HasFunc("b") || s.HasFunc("unknown") {
+		t.Errorf("HasFunc: a = %v, b = %v, unknown = %v", s.HasFunc("a"), s.HasFunc("b"), s.HasFunc("unknown"))
 	}
 }

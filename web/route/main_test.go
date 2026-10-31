@@ -7,7 +7,6 @@ import (
 
 	"github.com/cygy/ginamite/web/api"
 	"github.com/cygy/ginamite/web/internal/pagetest"
-	"github.com/cygy/ginamite/web/robots"
 
 	"github.com/gin-gonic/gin"
 )
@@ -21,13 +20,12 @@ func newRouter(t *testing.T) (*Router, *gin.Engine) {
 
 	engine := pagetest.Setup(t)
 
-	old := robots.Content
-	robots.Content = "User-agent: *"
-	t.Cleanup(func() { robots.Content = old })
-
 	t.Cleanup(func() { testClient = nil })
 
-	return NewRouter(engine, pagetest.Pages, testClient, pagetest.Locales, "en-us", pagetest.CookieName, pagetest.Secret), engine
+	router := NewRouter(engine, pagetest.Pages, testClient, pagetest.Locales, "en-us", pagetest.CookieName, pagetest.Secret)
+	router.Robots = "User-agent: *"
+
+	return router, engine
 }
 
 // do sends the request to the engine and returns the response.

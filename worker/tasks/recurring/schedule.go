@@ -8,43 +8,51 @@ import (
 	"github.com/cygy/ginamite/worker/tasks"
 )
 
-// scheduledTasks are the scheduled tasks, by name.
-// They are loaded before the tasks are started: the map is not protected.
-var scheduledTasks = map[string]ScheduledTask{}
+// Scheduler runs the scheduled tasks, each one in the background, forever.
+// The tasks are loaded before they are started: the scheduler is not safe for concurrent use. Create it with
+// NewScheduler.
+type Scheduler struct {
+	tasks map[string]ScheduledTask // The scheduled tasks, by name.
+}
+
+// NewScheduler returns a scheduler without task.
+func NewScheduler() *Scheduler {
+	return &Scheduler{tasks: map[string]ScheduledTask{}}
+}
 
 // wait returns a channel receiving the time after the duration. It is replaced by the tests.
 var wait = time.After
 
-// LoadScheduledTasks registers the scheduled tasks. The tasks without name are ignored.
-func LoadScheduledTasks(tasks []ScheduledTask) {
+// Load registers the scheduled tasks. The tasks without name are ignored.
+func (s *Scheduler) Load(tasks []ScheduledTask) {
 	for _, task := range tasks {
 		if len(task.Name) == 0 {
 			continue
 		}
 
-		scheduledTasks[task.Name] = task
+		s.tasks[task.Name] = task
 
 		log.WithField("name", task.Name).Info("scheduled task loaded")
 	}
 }
 
 // SetFunc sets the function called by the scheduled task with that name. It does nothing if there is no such task.
-func SetFunc(name string, f func(string)) {
-	if task, ok := scheduledTasks[name]; ok {
+func (s *Scheduler) SetFunc(name string, f func(string)) {
+	if task, ok := s.tasks[name]; ok {
 		task.f = f
-		scheduledTasks[name] = task
+		s.tasks[name] = task
 	}
 }
 
-// StartScheduledTasks starts the scheduled tasks which are enabled and have a function and an interval.
+// Start starts the scheduled tasks which are enabled and have a function and an interval.
 // Each task runs in the background, forever.
-func StartScheduledTasks() {
-	startScheduledTasks(context.Background())
+func (s *Scheduler) Start() {
+	s.start(context.Background())
 }
 
-// startScheduledTasks starts the scheduled tasks until the context is done.
-func startScheduledTasks(ctx context.Context) {
-	for name, task := range scheduledTasks {
+// start starts the scheduled tasks until the context is done.
+func (s *Scheduler) start(ctx context.Context) {
+	for name, task := range s.tasks {
 		reason := ""
 		switch {
 		case !task.Enabled:
@@ -88,6 +96,6 @@ func run(ctx context.Context, name string, startIn, interval time.Duration, f fu
 }
 
 // HasFunc reports whether the scheduled task with that name has a function.
-func HasFunc(name string) bool {
-	return scheduledTasks[name].f != nil
+func (s *Scheduler) HasFunc(name string) bool {
+	return s.tasks[name].f != nil
 }

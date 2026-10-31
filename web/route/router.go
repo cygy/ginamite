@@ -56,7 +56,7 @@ func NewRouter(e *gin.Engine, pages *html.Configuration, client *api.Client, loc
 // locale, the page not found for the unknown routes, and, for each locale, the error pages and the async calls.
 func (r *Router) LoadDefaultRoutes() {
 	if r.DefaultRoutes.Robots.Enabled && r.DefaultRoutes.Robots.Paths.Get.Enabled {
-		r.engine.GET(r.DefaultRoutes.Robots.Paths.Get.Path, robots.Robots)
+		r.engine.GET(r.DefaultRoutes.Robots.Paths.Get.Path, robots.Robots(r.Robots))
 	}
 
 	if path, _, ok := relativeRoutePath(r.pages, "index", r.defaultLocale); ok {

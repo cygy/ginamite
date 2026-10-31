@@ -1,4 +1,4 @@
-// Package robots holds the content of the robots.txt file served by the web server.
+// Package robots loads the content of the robots.txt file served by the web server.
 package robots
 
 import (
@@ -6,17 +6,12 @@ import (
 	"os"
 )
 
-// Content is the content of the robots file, set by Initialize.
-var Content string
-
-// Initialize loads the robots file into Content.
-func Initialize(filepath string) error {
+// Load returns the content of the robots file.
+func Load(filepath string) (string, error) {
 	bytes, err := os.ReadFile(filepath)
 	if err != nil {
-		return fmt.Errorf("unable to load the robots file: %w", err)
+		return "", fmt.Errorf("unable to load the robots file: %w", err)
 	}
 
-	Content = string(bytes)
-
-	return nil
+	return string(bytes), nil
 }

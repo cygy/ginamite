@@ -23,6 +23,9 @@ type Router struct {
 	DefaultRoutes DefaultRoutes
 	Handlers      Middlewares
 
+	// Robots is the content of the robots.txt file, served by the route of the default routes.
+	Robots string
+
 	// private properties
 	engine        *gin.Engine
 	pages         *html.Configuration

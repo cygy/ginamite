@@ -39,9 +39,13 @@ func (s *Server) Start() {
 	}
 
 	if f.IsWebServer {
-		if err := robots.Initialize(s.Config.RobotsFilePath); err != nil {
+		content, err := robots.Load(s.Config.RobotsFilePath)
+		if err != nil {
 			log.WithField("error", err).Fatal("unable to initialize the robots.txt file")
+			return
 		}
+
+		s.Web.Robots = content
 	}
 
 	specializedServer := s.specializedServer(f)
