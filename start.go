@@ -3,6 +3,7 @@ package ginamite
 import (
 	"os"
 	"slices"
+	"time"
 
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/config/environment"
@@ -55,6 +56,8 @@ func (s *Server) Start() {
 	}
 
 	if kafkaConf, ok := s.Config.KafkaConfiguration(); ok {
+		s.Kafka.MaxAttempts = max(s.Config.KafkaMaxAttempts, 1)
+		s.Kafka.RetryDelay = time.Duration(s.Config.KafkaRetryDelay) * time.Millisecond
 		s.Kafka.Initialize(kafkaConf.Host, kafkaConf.Port, s.Config.KafkaTopicsPrefix, true, specializedServer.CreateKafkaConsumers())
 	}
 

@@ -29,6 +29,8 @@ type Configuration struct {
 	TimezonesFilePath   string                         `yaml:"timezones_file_path"`
 	APIVersion          string                         `yaml:"api_version"`
 	KafkaTopicsPrefix   string                         `yaml:"kafka_topics_prefix"`
+	KafkaMaxAttempts    int                            `yaml:"kafka_max_attempts"` // attempts to handle a message before it is dead-lettered
+	KafkaRetryDelay     int                            `yaml:"kafka_retry_delay"`  // in milliseconds, doubled at each attempt
 	SenderName          string                         `yaml:"sender_name"`
 	SenderEmailAddress  string                         `yaml:"sender_email_address"`
 	NoReplyEmailAddress string                         `yaml:"noreply_email_address"`
@@ -73,6 +75,8 @@ func NewConfiguration() (config *Configuration) {
 	config.JWT.SigningMethod = "HS256"
 	config.JWT.TTL = 3600
 	config.API.TimeOut = 2000
+	config.KafkaMaxAttempts = 3
+	config.KafkaRetryDelay = 1000
 	config.Facebook.Enabled = false
 	config.Google.Enabled = false
 	config.ExpiredAuthTokens.FlushCacheInterval = 60

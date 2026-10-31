@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"testing"
 
+	"github.com/cygy/ginamite/common/kafka"
 	"github.com/cygy/ginamite/common/weburl"
 )
 
@@ -16,7 +17,9 @@ func TestNewLogin(t *testing.T) {
 
 	t.Run("sent", func(t *testing.T) {
 		mailer, delivered := stub(t)
-		mailer.NewLogin(context.Background(), payload, valid)
+		if err := mailer.NewLogin(context.Background(), payload, valid); err != nil {
+			t.Fatalf("error = %v", err)
+		}
 
 		if len(*delivered) != 1 {
 			t.Fatalf("delivered %d messages, want 1", len(*delivered))
@@ -42,7 +45,9 @@ func TestNewLogin(t *testing.T) {
 
 	t.Run("invalid payload", func(t *testing.T) {
 		mailer, delivered := stub(t)
-		mailer.NewLogin(context.Background(), []byte("{"), valid)
+		if err := mailer.NewLogin(context.Background(), []byte("{"), valid); !kafka.IsPermanent(err) {
+			t.Errorf("error = %v, want a permanent error", err)
+		}
 
 		if len(*delivered) != 0 {
 			t.Errorf("delivered %d messages, want none", len(*delivered))
@@ -51,7 +56,9 @@ func TestNewLogin(t *testing.T) {
 
 	t.Run("invalid address", func(t *testing.T) {
 		mailer, delivered := stub(t)
-		mailer.NewLogin(context.Background(), payload, invalid)
+		if err := mailer.NewLogin(context.Background(), payload, invalid); err != nil {
+			t.Errorf("error = %v, an invalid address is not a failure", err)
+		}
 
 		if len(*delivered) != 0 {
 			t.Errorf("delivered %d messages, want none", len(*delivered))

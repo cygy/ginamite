@@ -1,6 +1,9 @@
 package kafka
 
 import (
+	"context"
+	"errors"
+	"maps"
 	"os"
 	"testing"
 	"time"
@@ -16,6 +19,9 @@ func TestNewClient(t *testing.T) {
 
 	if c.ProducerSignals == nil || cap(c.ProducerSignals) != 1 || c.HasProducer || c.Producer != nil {
 		t.Errorf("NewClient() = %+v", c)
+	}
+	if c.MaxAttempts != DefaultMaxAttempts || c.RetryDelay != DefaultRetryDelay {
+		t.Errorf("attempts = %d, delay = %v, want the defaults", c.MaxAttempts, c.RetryDelay)
 	}
 }
 
@@ -124,4 +130,83 @@ func waitForLog(t *testing.T, hook *logtest.Hook, message string) {
 	}
 
 	t.Fatalf("%q is not logged", message)
+}
+
+func TestClient_SendMessageToTopic_ProducerNotConnected(t *testing.T) {
+	hook := useHook(t)
+
+	client := NewClient()
+	client.HasProducer = true
+	client.SendMessageToTopic("hello", "users")
+
+	waitForLog(t, hook, "can not send message")
+}
+
+func TestClient_sendDeadLetter(t *testing.T) {
+	message := &sarama.ConsumerMessage{Topic: "app_mail", Partition: 2, Offset: 41, Key: []byte("k"), Value: []byte("value")}
+
+	t.Run("sends the message with the reason", func(t *testing.T) {
+		hook := useHook(t)
+
+		var sent *sarama.ProducerMessage
+		producer := mocks.NewAsyncProducer(t, mocks.NewTestConfig())
+		producer.ExpectInputWithMessageCheckerFunctionAndSucceed(func(m *sarama.ProducerMessage) error {
+			sent = m
+
+			return nil
+		})
+
+		client := NewClient()
+		client.Producer = producer
+
+		client.sendDeadLetter(context.Background(), message, "app_mail", errors.New("boom"), 3)
+
+		if err := producer.Close(); err != nil {
+			t.Fatal(err)
+		}
+		if sent == nil || sent.Topic != "app_mail_dlq" {
+			t.Fatalf("sent = %+v, want a message of the topic app_mail_dlq", sent)
+		}
+		if value, _ := sent.Value.Encode(); string(value) != "value" {
+			t.Errorf("value = %q", value)
+		}
+		if key, _ := sent.Key.Encode(); string(key) != "k" {
+			t.Errorf("key = %q", key)
+		}
+
+		headers := map[string]string{}
+		for _, h := range sent.Headers {
+			headers[string(h.Key)] = string(h.Value)
+		}
+		want := map[string]string{"error": "boom", "attempts": "3", "group": "app_mail", "topic": "app_mail", "partition": "2", "offset": "41"}
+		if !maps.Equal(headers, want) {
+			t.Errorf("headers = %v, want %v", headers, want)
+		}
+		waitForLog(t, hook, "kafka message dead-lettered")
+	})
+
+	t.Run("no producer", func(t *testing.T) {
+		hook := useHook(t)
+
+		NewClient().sendDeadLetter(context.Background(), message, "app_mail", errors.New("boom"), 3)
+
+		waitForLog(t, hook, "kafka message dropped: no producer for the dead letters")
+	})
+
+	t.Run("interrupted", func(t *testing.T) {
+		hook := useHook(t)
+
+		client := NewClient()
+		client.Producer = &blockedProducer{input: make(chan *sarama.ProducerMessage), closed: make(chan struct{})}
+
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+		client.sendDeadLetter(ctx, message, "app_mail", errors.New("boom"), 3)
+
+		for _, entry := range hook.AllEntries() {
+			if entry.Message == "kafka message dead-lettered" {
+				t.Error("the message is not sent when the client is stopped")
+			}
+		}
+	})
 }

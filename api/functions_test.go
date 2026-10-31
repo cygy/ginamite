@@ -12,6 +12,7 @@ import (
 	_ "github.com/cygy/ginamite/api/internal/apitest"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/route"
+	"github.com/cygy/ginamite/common/kafka"
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/queue"
 
@@ -126,13 +127,15 @@ func TestServer_CreateKafkaConsumers(t *testing.T) {
 		value        []byte
 		wantRevoked  bool
 		wantWarnings int
+		wantFailure  bool // the message can not be decoded: it is dead-lettered without a retry
 	}{
 		{
 			name:        "invalidated auth token",
 			value:       cacheMessage(t, queue.MessageCacheInvalidAuthToken, queue.CacheAuthToken{Tokens: map[string]time.Time{"revoked-token": expiration}}),
 			wantRevoked: true,
 		},
-		{name: "undecodable message", value: []byte("nope")},
+		{name: "undecodable message", value: []byte("nope"), wantFailure: true},
+		{name: "undecodable payload", value: cacheMessage(t, queue.MessageCacheInvalidAuthToken, "nope"), wantFailure: true},
 		{name: "unknown message without handler", value: cacheMessage(t, "unknown", nil), wantWarnings: 1},
 		{name: "unknown message ignored by the handler", handler: func(string) bool { return false }, value: cacheMessage(t, "unknown", nil), wantWarnings: 1},
 		{name: "unknown message handled", handler: func(string) bool { return true }, value: cacheMessage(t, "unknown", nil)},
@@ -152,7 +155,11 @@ func TestServer_CreateKafkaConsumers(t *testing.T) {
 			}
 			hook.Reset()
 
-			consumers[0].Action(tt.value)
+			err := consumers[0].Action(tt.value)
+
+			if (err != nil) != tt.wantFailure || (err != nil && !kafka.IsPermanent(err)) {
+				t.Errorf("Action() error = %v, want a permanent error: %v", err, tt.wantFailure)
+			}
 
 			if got := s.RevokedTokens.IsRevoked("revoked-token"); got != tt.wantRevoked {
 				t.Errorf("IsRevoked() = %v, want %v", got, tt.wantRevoked)

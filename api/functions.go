@@ -2,6 +2,7 @@
 package api
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -36,28 +37,29 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// errUndecodableCache is the error of a message of the cache which can not be decoded, which no retry can fix.
+var errUndecodableCache = kafka.Permanent(errors.New("undecodable message"))
+
 // CreateKafkaConsumers returns an array of kafka consumers.
 func (s *Server) CreateKafkaConsumers() []kafka.MessageConsumer {
 	consumers := []kafka.MessageConsumer{}
 
-	// Handle the tasks.
-	// Every instance of the API must receive every message of the cache, so each one has its own group.
+	// Handle the messages of the cache. Every instance of the API must receive every message, so each one has its own
+	// group. A message which can not be decoded is dead-lettered.
 	consumers = append(consumers, kafka.MessageConsumer{
 		Topic: queue.TopicCache,
 		Group: kafka.UniqueGroup(queue.TopicCache),
-		Action: func(value []byte) {
-			defer kafka.Recover()
-
+		Action: func(value []byte) error {
 			msgType, payload, ok := queue.ParseMessageAndPayload(value, queue.TopicCache)
 			if !ok {
-				return
+				return errUndecodableCache
 			}
 
 			switch msgType {
 			case queue.MessageCacheInvalidAuthToken:
 				p := queue.CacheAuthToken{}
 				if err := queue.UnmarshalPayload(payload, &p); err != nil {
-					return
+					return kafka.Permanent(err)
 				}
 				s.RevokedTokens.Add(p.Tokens)
 			default:
@@ -68,6 +70,8 @@ func (s *Server) CreateKafkaConsumers() []kafka.MessageConsumer {
 					}).Warn("unknown kafka message")
 				}
 			}
+
+			return nil
 		},
 	})
 

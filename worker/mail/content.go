@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"html/template"
 
+	"github.com/cygy/ginamite/common/kafka"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/queue"
 )
@@ -82,17 +83,17 @@ func alwaysValid(context.Context, string) (bool, error) {
 
 // sendNotification decodes a notification payload and sends the email "email.<key>.*" to its recipient,
 // if the email address is valid.
-func (m *Mailer) sendNotification(ctx context.Context, payload []byte, key string, isEmailAddressValid IsEmailAddressValidFunc) {
+func (m *Mailer) sendNotification(ctx context.Context, payload []byte, key string, isEmailAddressValid IsEmailAddressValidFunc) error {
 	p := queue.MailNotification{}
 	if err := queue.UnmarshalPayload(payload, &p); err != nil {
-		return
+		return kafka.Permanent(err)
 	}
 
 	if !isEmailAddressValid.check(ctx, p.EmailAddress) {
-		return
+		return nil
 	}
 
-	m.deliver(m.message(content{
+	return m.deliver(m.message(content{
 		key:       key,
 		template:  TemplateNotification,
 		recipient: p.EmailAddress,
@@ -110,14 +111,14 @@ type process struct {
 
 // sendProcess decodes a process payload and sends the email asking the user to confirm the process,
 // if the email address is valid. The data of the payload is available as NewEmailAddress.
-func (m *Mailer) sendProcess(ctx context.Context, payload []byte, pr process, isEmailAddressValid IsEmailAddressValidFunc) {
+func (m *Mailer) sendProcess(ctx context.Context, payload []byte, pr process, isEmailAddressValid IsEmailAddressValidFunc) error {
 	p := queue.MailProcessConfirmation{}
 	if err := queue.UnmarshalPayload(payload, &p); err != nil {
-		return
+		return kafka.Permanent(err)
 	}
 
 	if !isEmailAddressValid.check(ctx, p.EmailAddress) {
-		return
+		return nil
 	}
 
 	c := content{
@@ -134,5 +135,5 @@ func (m *Mailer) sendProcess(ctx context.Context, payload []byte, pr process, is
 		c.cancelURL = m.processURL(pr.cancel, p.Locale, p.ProcessID, p.ProcessCode)
 	}
 
-	m.deliver(m.message(c))
+	return m.deliver(m.message(c))
 }

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strconv"
 	"sync"
 	"syscall"
 	"time"
@@ -25,9 +26,27 @@ type Client struct {
 	ProducerSignals chan os.Signal
 	TopicsPrefix    string
 
-	stop      context.CancelFunc // Stops the consumers, see Close.
-	consumers sync.WaitGroup
+	// MaxAttempts is the number of times a message is handled before it is dead-lettered, 1 or more.
+	MaxAttempts int
+	// RetryDelay is the delay before the second attempt. It doubles at each attempt, up to a minute.
+	RetryDelay time.Duration
+
+	producerMu sync.RWMutex
+	stop       context.CancelFunc // Stops the consumers, see Close.
+	consumers  sync.WaitGroup
 }
+
+// Defaults of the Client.
+const (
+	DefaultMaxAttempts = 3
+	DefaultRetryDelay  = time.Second
+
+	// maxRetryDelay is the longest delay between two attempts.
+	maxRetryDelay = time.Minute
+
+	// deadLetterSuffix is appended to the name of a topic to get the topic of its dead-lettered messages.
+	deadLetterSuffix = "_dlq"
+)
 
 // MessageConsumer consumes the messages of a topic and executes Action on each one.
 //
@@ -37,9 +56,13 @@ type MessageConsumer struct {
 	Topic string
 	// Group is the name of the consumer group, prefixed like the topics. It is the name of the topic if empty.
 	Group string
-	// Action handles a message. The message is committed once Action returns: it is handled again by the group if the
-	// process stops before, so Action must tolerate a message handled twice.
-	Action func(value []byte)
+	// Action handles a message and returns an error if it failed. The message is committed once Action returns: it is
+	// handled again by the group if the process stops before, so Action must tolerate a message handled twice.
+	//
+	// A failed message is handled again, up to Client.MaxAttempts times, then it is sent to the topic of the dead
+	// letters, the name of the topic with the suffix "_dlq", and the next message is handled. An error marked with
+	// Permanent is not retried. A panic is recovered and handled like an error.
+	Action func(value []byte) error
 }
 
 // Replaced by the tests.
@@ -59,7 +82,7 @@ func UniqueGroup(name string) string {
 
 // NewClient returns a Client ready to be initialized.
 func NewClient() *Client {
-	return &Client{ProducerSignals: make(chan os.Signal, 1)}
+	return &Client{ProducerSignals: make(chan os.Signal, 1), MaxAttempts: DefaultMaxAttempts, RetryDelay: DefaultRetryDelay}
 }
 
 // Initialize connects the client to Kafka and starts the producer, if hasProducer
@@ -94,7 +117,9 @@ func (client *Client) Initialize(host string, port int, prefix string, hasProduc
 				}).Error("unable to connect to kafka")
 				time.Sleep(1 * time.Second)
 			} else {
+				client.producerMu.Lock()
 				client.Producer = p
+				client.producerMu.Unlock()
 				log.WithFields(logrus.Fields{
 					"host":  host,
 					"port":  port,
@@ -111,7 +136,7 @@ func (client *Client) Initialize(host string, port int, prefix string, hasProduc
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			for message := range client.Producer.Successes() {
+			for message := range client.producer().Successes() {
 				log.WithFields(logrus.Fields{
 					"type":      "producer",
 					"value":     message.Value,
@@ -124,7 +149,7 @@ func (client *Client) Initialize(host string, port int, prefix string, hasProduc
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			for err := range client.Producer.Errors() {
+			for err := range client.producer().Errors() {
 				log.WithFields(logrus.Fields{
 					"type":  "producer",
 					"error": err.Error(),
@@ -215,7 +240,16 @@ func (client *Client) consume(ctx context.Context, addresses []string, config *s
 	}()
 
 	// Consume returns when the group is rebalanced: it must be called again.
-	handler := groupHandler{topic: topic, action: mc.Action}
+	handler := groupHandler{
+		topic:    topic,
+		group:    groupName,
+		action:   mc.Action,
+		attempts: client.MaxAttempts,
+		delay:    client.RetryDelay,
+		deadLetter: func(message *sarama.ConsumerMessage, err error, attempts int) {
+			client.sendDeadLetter(ctx, message, groupName, err, attempts)
+		},
+	}
 	for ctx.Err() == nil {
 		err := group.Consume(ctx, []string{topic}, handler)
 		if err == nil || ctx.Err() != nil {
@@ -258,6 +292,12 @@ func (client *Client) SendMessageToTopic(message, topic string) {
 	}
 
 	go func() {
+		producer := client.producer()
+		if producer == nil {
+			log.WithField("error", "producer not connected").Error("can not send message")
+			return
+		}
+
 		fullTopicName := client.fullTopicName(topic)
 		producerMessage := &sarama.ProducerMessage{
 			Topic: fullTopicName,
@@ -265,16 +305,67 @@ func (client *Client) SendMessageToTopic(message, topic string) {
 		}
 
 		select {
-		case client.Producer.Input() <- producerMessage:
+		case producer.Input() <- producerMessage:
 			log.WithFields(logrus.Fields{
 				"topic":   fullTopicName,
 				"message": message,
 			}).Info("kafka message sent")
 
 		case <-client.ProducerSignals:
-			client.Producer.AsyncClose()
+			producer.AsyncClose()
 		}
 	}()
+}
+
+// producer returns the producer, or nil if it is not connected yet.
+func (client *Client) producer() sarama.AsyncProducer {
+	client.producerMu.RLock()
+	defer client.producerMu.RUnlock()
+
+	return client.Producer
+}
+
+// sendDeadLetter sends a message no attempt could handle to the topic of the dead letters, with the reason in its
+// headers. The message is lost, and logged, if the client has no connected producer.
+func (client *Client) sendDeadLetter(ctx context.Context, message *sarama.ConsumerMessage, group string, cause error, attempts int) {
+	fields := logrus.Fields{
+		"topic":     message.Topic,
+		"group":     group,
+		"partition": message.Partition,
+		"offset":    message.Offset,
+		"attempts":  attempts,
+		"error":     cause.Error(),
+	}
+
+	producer := client.producer()
+	if producer == nil {
+		log.WithFields(fields).Error("kafka message dropped: no producer for the dead letters")
+		return
+	}
+
+	headers := map[string]string{
+		"error":     cause.Error(),
+		"attempts":  strconv.Itoa(attempts),
+		"group":     group,
+		"topic":     message.Topic,
+		"partition": strconv.Itoa(int(message.Partition)),
+		"offset":    strconv.FormatInt(message.Offset, 10),
+	}
+	deadLetter := &sarama.ProducerMessage{
+		Topic: message.Topic + deadLetterSuffix,
+		Key:   sarama.ByteEncoder(message.Key),
+		Value: sarama.ByteEncoder(message.Value),
+	}
+	for name, value := range headers {
+		deadLetter.Headers = append(deadLetter.Headers, sarama.RecordHeader{Key: []byte(name), Value: []byte(value)})
+	}
+
+	select {
+	case producer.Input() <- deadLetter:
+		log.WithFields(fields).Error("kafka message dead-lettered")
+	case <-ctx.Done():
+		// The message is not committed: it is handled again.
+	}
 }
 
 // fullTopicName returns the name of the topic prefixed with the topics prefix.

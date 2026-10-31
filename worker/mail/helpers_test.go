@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/cygy/ginamite/common/kafka"
 	"github.com/cygy/ginamite/common/localization"
 )
 
@@ -23,7 +24,7 @@ func invalid(context.Context, string) (bool, error) { return false, nil }
 func failing(context.Context, string) (bool, error) { return true, errors.New("boom") }
 
 // sender is a method of the mailer sending a mail from the payload of a message.
-type sender func(m *Mailer, ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc)
+type sender func(m *Mailer, ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) error
 
 // stub returns a mailer whose translations and URLs are fake, and the messages it delivers. A translation is its
 // ID followed by its variables.
@@ -43,7 +44,11 @@ func stub(t *testing.T) (*Mailer, *[]Message) {
 	mailer.routeURL = func(route, locale string) string { return "https://web/" + locale + "/" + route }
 
 	delivered := &[]Message{}
-	mailer.deliver = func(m Message) { *delivered = append(*delivered, m) }
+	mailer.deliver = func(m Message) error {
+		*delivered = append(*delivered, m)
+
+		return nil
+	}
 
 	return mailer, delivered
 }
@@ -123,7 +128,9 @@ func checkNotification(t *testing.T, send sender, key string, checked bool) {
 
 	t.Run("sent", func(t *testing.T) {
 		mailer, delivered := stub(t)
-		send(mailer, ctx, notificationPayload(t), valid)
+		if err := send(mailer, ctx, notificationPayload(t), valid); err != nil {
+			t.Fatalf("error = %v", err)
+		}
 
 		if len(*delivered) != 1 {
 			t.Fatalf("delivered %d messages, want 1", len(*delivered))
@@ -133,7 +140,9 @@ func checkNotification(t *testing.T, send sender, key string, checked bool) {
 
 	t.Run("invalid payload", func(t *testing.T) {
 		mailer, delivered := stub(t)
-		send(mailer, ctx, []byte("{"), valid)
+		if err := send(mailer, ctx, []byte("{"), valid); !kafka.IsPermanent(err) {
+			t.Errorf("error = %v, want a permanent error", err)
+		}
 
 		if len(*delivered) != 0 {
 			t.Errorf("delivered %d messages, want none", len(*delivered))
@@ -147,7 +156,9 @@ func checkNotification(t *testing.T, send sender, key string, checked bool) {
 	for name, check := range map[string]IsEmailAddressValidFunc{"invalid address": invalid, "failing check": failing, "no check": nil} {
 		t.Run(name, func(t *testing.T) {
 			mailer, delivered := stub(t)
-			send(mailer, ctx, notificationPayload(t), check)
+			if err := send(mailer, ctx, notificationPayload(t), check); err != nil {
+				t.Errorf("error = %v, an invalid address is not a failure", err)
+			}
 
 			if len(*delivered) != 0 {
 				t.Errorf("delivered %d messages, want none", len(*delivered))
@@ -165,7 +176,9 @@ func checkProcess(t *testing.T, send sender, key, confirmRoute, cancelRoute stri
 
 	t.Run("sent", func(t *testing.T) {
 		mailer, delivered := stub(t)
-		send(mailer, ctx, processPayload(t), valid)
+		if err := send(mailer, ctx, processPayload(t), valid); err != nil {
+			t.Fatalf("error = %v", err)
+		}
 
 		if len(*delivered) != 1 {
 			t.Fatalf("delivered %d messages, want 1", len(*delivered))
@@ -203,7 +216,9 @@ func checkProcess(t *testing.T, send sender, key, confirmRoute, cancelRoute stri
 
 	t.Run("invalid payload", func(t *testing.T) {
 		mailer, delivered := stub(t)
-		send(mailer, ctx, []byte("{"), valid)
+		if err := send(mailer, ctx, []byte("{"), valid); !kafka.IsPermanent(err) {
+			t.Errorf("error = %v, want a permanent error", err)
+		}
 
 		if len(*delivered) != 0 {
 			t.Errorf("delivered %d messages, want none", len(*delivered))
@@ -212,7 +227,9 @@ func checkProcess(t *testing.T, send sender, key, confirmRoute, cancelRoute stri
 
 	t.Run("invalid address", func(t *testing.T) {
 		mailer, delivered := stub(t)
-		send(mailer, ctx, processPayload(t), invalid)
+		if err := send(mailer, ctx, processPayload(t), invalid); err != nil {
+			t.Errorf("error = %v, an invalid address is not a failure", err)
+		}
 
 		if len(*delivered) != 0 {
 			t.Errorf("delivered %d messages, want none", len(*delivered))

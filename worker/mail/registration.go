@@ -3,23 +3,24 @@ package mail
 import (
 	"context"
 
+	"github.com/cygy/ginamite/common/kafka"
 	"github.com/cygy/ginamite/common/queue"
 	"github.com/cygy/ginamite/common/weburl"
 )
 
 // RegistrationWelcome sends an email to welcome the user after the registration.
-func (m *Mailer) RegistrationWelcome(payload []byte) {
-	m.sendNotification(context.Background(), payload, "registration.welcome", alwaysValid)
+func (m *Mailer) RegistrationWelcome(payload []byte) error {
+	return m.sendNotification(context.Background(), payload, "registration.welcome", alwaysValid)
 }
 
 // RegistrationConfirmation sends an email asking to confirm, or to cancel, the registration.
-func (m *Mailer) RegistrationConfirmation(payload []byte) {
+func (m *Mailer) RegistrationConfirmation(payload []byte) error {
 	p := queue.MailRegistrationConfirmation{}
 	if err := queue.UnmarshalPayload(payload, &p); err != nil {
-		return
+		return kafka.Permanent(err)
 	}
 
-	m.deliver(m.message(content{
+	return m.deliver(m.message(content{
 		key:        "registration.confirm",
 		template:   TemplateConfirmationAndCancel,
 		recipient:  p.EmailAddress,
@@ -31,11 +32,11 @@ func (m *Mailer) RegistrationConfirmation(payload []byte) {
 }
 
 // RegistrationConfirmed sends an email to notify the registration is confirmed.
-func (m *Mailer) RegistrationConfirmed(payload []byte) {
-	m.sendNotification(context.Background(), payload, "registration.confirmed", alwaysValid)
+func (m *Mailer) RegistrationConfirmed(payload []byte) error {
+	return m.sendNotification(context.Background(), payload, "registration.confirmed", alwaysValid)
 }
 
 // RegistrationCancelled sends an email to notify the registration is cancelled.
-func (m *Mailer) RegistrationCancelled(payload []byte) {
-	m.sendNotification(context.Background(), payload, "registration.cancelled", alwaysValid)
+func (m *Mailer) RegistrationCancelled(payload []byte) error {
+	return m.sendNotification(context.Background(), payload, "registration.cancelled", alwaysValid)
 }

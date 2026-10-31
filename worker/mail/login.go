@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"html/template"
 
+	"github.com/cygy/ginamite/common/kafka"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/queue"
 	"github.com/cygy/ginamite/common/weburl"
@@ -12,14 +13,14 @@ import (
 
 // NewLogin sends an email to notify a user that a login occurs on their account.
 // The email has a link to cancel the login and a link to unsubscribe from these emails.
-func (m *Mailer) NewLogin(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
+func (m *Mailer) NewLogin(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) error {
 	p := queue.MailNewLogin{}
 	if err := queue.UnmarshalPayload(payload, &p); err != nil {
-		return
+		return kafka.Permanent(err)
 	}
 
 	if !isEmailAddressValid.check(ctx, p.EmailAddress) {
-		return
+		return nil
 	}
 
 	const key = "email.login.new"
@@ -45,5 +46,5 @@ func (m *Mailer) NewLogin(ctx context.Context, payload []byte, isEmailAddressVal
 	msg.HTMLVars["Footer"] = template.HTML(t(key+".html.footer", footerVars))
 	msg.TextVars["Footer"] = t(key+".text.footer", footerVars)
 
-	m.deliver(msg)
+	return m.deliver(msg)
 }

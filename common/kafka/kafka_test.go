@@ -1,6 +1,8 @@
 package kafka
 
 import (
+	"errors"
+	"fmt"
 	"os"
 	"testing"
 
@@ -57,4 +59,23 @@ func TestRecover(t *testing.T) {
 			}
 		}
 	})
+}
+
+func TestPermanent(t *testing.T) {
+	boom := errors.New("boom")
+
+	if Permanent(nil) != nil {
+		t.Error("Permanent(nil) must be nil")
+	}
+
+	err := Permanent(boom)
+	if !IsPermanent(err) || !errors.Is(err, boom) || err.Error() != "boom" {
+		t.Errorf("Permanent() = %v", err)
+	}
+	if !IsPermanent(fmt.Errorf("wrapped: %w", err)) {
+		t.Error("a wrapped permanent error is permanent")
+	}
+	if IsPermanent(boom) || IsPermanent(nil) {
+		t.Error("an ordinary error is not permanent")
+	}
 }

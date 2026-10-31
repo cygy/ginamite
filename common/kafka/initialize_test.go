@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/IBM/sarama"
+	"github.com/IBM/sarama/mocks"
 )
 
 // newMockBroker returns a broker answering the metadata, offset and fetch requests of a single-partition topic.
@@ -127,7 +128,7 @@ func TestClient_Initialize_Consumer(t *testing.T) {
 	client := NewClient()
 	client.Initialize("localhost", 9092, "app_", false, []MessageConsumer{{
 		Topic:  "users",
-		Action: func(value []byte) { received <- value },
+		Action: func(value []byte) error { received <- value; return nil },
 	}})
 
 	if client.HasProducer || client.TopicsPrefix != "app_" {
@@ -161,8 +162,8 @@ func TestClient_Initialize_ConsumerGroup(t *testing.T) {
 
 	client := NewClient()
 	client.Initialize("localhost", 9092, "app_", false, []MessageConsumer{
-		{Topic: "users", Group: "workers", Action: func([]byte) {}},
-		{Topic: "mail", Action: func([]byte) {}},
+		{Topic: "users", Group: "workers", Action: func([]byte) error { return nil }},
+		{Topic: "mail", Action: func([]byte) error { return nil }},
 	})
 	t.Cleanup(client.Close)
 
@@ -187,7 +188,7 @@ func TestClient_consume_RetriesToConnect(t *testing.T) {
 	})
 
 	client := NewClient()
-	client.Initialize("localhost", 9092, "", false, []MessageConsumer{{Topic: "users", Action: func([]byte) {}}})
+	client.Initialize("localhost", 9092, "", false, []MessageConsumer{{Topic: "users", Action: func([]byte) error { return nil }}})
 	t.Cleanup(client.Close)
 
 	<-names
@@ -201,7 +202,7 @@ func TestClient_consume_StopsWhileConnecting(t *testing.T) {
 	retryDelay = time.Hour
 
 	client := NewClient()
-	client.Initialize("localhost", 9092, "", false, []MessageConsumer{{Topic: "users", Action: func([]byte) {}}})
+	client.Initialize("localhost", 9092, "", false, []MessageConsumer{{Topic: "users", Action: func([]byte) error { return nil }}})
 
 	done := make(chan struct{})
 	go func() {
@@ -233,7 +234,7 @@ func TestClient_consume_Errors(t *testing.T) {
 	useGroup(t, func(string) (sarama.ConsumerGroup, error) { return group, nil })
 
 	client := NewClient()
-	client.Initialize("localhost", 9092, "", false, []MessageConsumer{{Topic: "users", Action: func([]byte) {}}})
+	client.Initialize("localhost", 9092, "", false, []MessageConsumer{{Topic: "users", Action: func([]byte) error { return nil }}})
 
 	// A closed group ends the consumer.
 	client.consumers.Wait()
@@ -243,6 +244,51 @@ func TestClient_consume_Errors(t *testing.T) {
 	waitForLog(t, hook, "kafka consumer error")
 	if calls.Load() != 2 {
 		t.Errorf("Consume() called %d times, want a retry after the error and no more after the group was closed", calls.Load())
+	}
+}
+
+func TestClient_Initialize_DeadLetter(t *testing.T) {
+	useHook(t)
+
+	var calls atomic.Int32
+	group := newFakeGroup(func(ctx context.Context, handler sarama.ConsumerGroupHandler) error {
+		if calls.Add(1) > 1 {
+			return blockUntilDone(ctx, handler)
+		}
+
+		messages := make(chan *sarama.ConsumerMessage, 1)
+		messages <- &sarama.ConsumerMessage{Topic: "app_mail", Value: []byte("bad")}
+		close(messages)
+
+		return handler.ConsumeClaim(&fakeSession{ctx: ctx}, &fakeClaim{messages: messages})
+	})
+	useGroup(t, func(string) (sarama.ConsumerGroup, error) { return group, nil })
+
+	producer := mocks.NewAsyncProducer(t, mocks.NewTestConfig())
+	dead := make(chan *sarama.ProducerMessage, 1)
+	producer.ExpectInputWithMessageCheckerFunctionAndSucceed(func(m *sarama.ProducerMessage) error {
+		dead <- m
+
+		return nil
+	})
+
+	var attempts atomic.Int32
+	client := NewClient()
+	client.MaxAttempts, client.RetryDelay = 2, time.Millisecond
+	client.Producer = producer
+	client.Initialize("localhost", 9092, "app_", false, []MessageConsumer{{
+		Topic:  "mail",
+		Action: func([]byte) error { attempts.Add(1); return errors.New("smtp down") },
+	}})
+	t.Cleanup(client.Close)
+
+	select {
+	case m := <-dead:
+		if m.Topic != "app_mail_dlq" || attempts.Load() != 2 {
+			t.Errorf("dead letter = %+v after %d attempts", m, attempts.Load())
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("the message was not dead-lettered")
 	}
 }
 

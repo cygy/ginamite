@@ -4,18 +4,21 @@ import (
 	"context"
 	"testing"
 
+	"github.com/cygy/ginamite/common/kafka"
 	"github.com/cygy/ginamite/common/weburl"
 )
 
 // withoutContext adapts a sender of the registration emails, which have no context and no check.
-func withoutContext(f func(m *Mailer, payload []byte)) sender {
-	return func(m *Mailer, _ context.Context, payload []byte, _ IsEmailAddressValidFunc) { f(m, payload) }
+func withoutContext(f func(m *Mailer, payload []byte) error) sender {
+	return func(m *Mailer, _ context.Context, payload []byte, _ IsEmailAddressValidFunc) error {
+		return f(m, payload)
+	}
 }
 
 func TestRegistrationNotifications(t *testing.T) {
 	tests := []struct {
 		name string
-		send func(m *Mailer, payload []byte)
+		send func(m *Mailer, payload []byte) error
 		key  string
 	}{
 		{"RegistrationWelcome", (*Mailer).RegistrationWelcome, "registration.welcome"},
@@ -33,9 +36,11 @@ func TestRegistrationNotifications(t *testing.T) {
 func TestRegistrationConfirmation(t *testing.T) {
 	t.Run("sent", func(t *testing.T) {
 		mailer, delivered := stub(t)
-		mailer.RegistrationConfirmation(encode(t, map[string]string{
+		if err := mailer.RegistrationConfirmation(encode(t, map[string]string{
 			"email": address, "user_id": "uid", "username": "john", "locale": "en", "registration_code": "code",
-		}))
+		})); err != nil {
+			t.Fatalf("error = %v", err)
+		}
 
 		if len(*delivered) != 1 {
 			t.Fatalf("delivered %d messages, want 1", len(*delivered))
@@ -52,7 +57,9 @@ func TestRegistrationConfirmation(t *testing.T) {
 
 	t.Run("invalid payload", func(t *testing.T) {
 		mailer, delivered := stub(t)
-		mailer.RegistrationConfirmation([]byte("{"))
+		if err := mailer.RegistrationConfirmation([]byte("{")); !kafka.IsPermanent(err) {
+			t.Errorf("error = %v, want a permanent error", err)
+		}
 
 		if len(*delivered) != 0 {
 			t.Errorf("delivered %d messages, want none", len(*delivered))

@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"errors"
 	"slices"
 
 	"github.com/cygy/ginamite/common/kafka"
@@ -15,8 +16,12 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// errUndecodable is the error of a message which can not be decoded: it is dead-lettered without being tried again.
+var errUndecodable = kafka.Permanent(errors.New("undecodable message"))
+
 // CreateKafkaConsumers returns the consumers of the topics of the tasks, of the group notifications,
-// of the user notifications and of the mails. A panic of a consumer is recovered.
+// of the user notifications and of the mails. A message which can not be decoded, or whose email can not be sent, is
+// dead-lettered, after some attempts for the second case. A panic is handled like an error.
 //
 // A worker consumes all the topics, unless the configuration lists the ones it consumes, with their consumer group:
 // the workers of the same group share the messages of the topic, so several workers can handle the same topic, and
@@ -49,12 +54,10 @@ func (s *Server) CreateKafkaConsumers() []kafka.MessageConsumer {
 }
 
 // handleTask handles a message of the topic of the tasks.
-func (s *Server) handleTask(value []byte) {
-	defer kafka.Recover()
-
+func (s *Server) handleTask(value []byte) error {
 	msgType, payload, ok := queue.ParseMessageAndPayload(value, queue.TopicTasks)
 	if !ok {
-		return
+		return errUndecodable
 	}
 
 	switch msgType {
@@ -77,34 +80,34 @@ func (s *Server) handleTask(value []byte) {
 			warnUnknownMessage(queue.TopicTasks, msgType)
 		}
 	}
+
+	return nil
 }
 
 // handleGroupNotification handles a message of the topic of the group notifications.
-func (s *Server) handleGroupNotification(value []byte) {
-	defer kafka.Recover()
-
+func (s *Server) handleGroupNotification(value []byte) error {
 	msgType, payloadWithAbility, ok := queue.ParseMessageAndPayload(value, queue.TopicGroupNotification)
 	if !ok {
-		return
+		return errUndecodable
 	}
 
 	ability, payload, ok := queue.ParseGroupAbilityAndPayload(payloadWithAbility, queue.TopicGroupNotification)
 	if !ok {
-		return
+		return errUndecodable
 	}
 
 	if s.Functions.HandleNotificationForUsersWithAbility == nil || !s.Functions.HandleNotificationForUsersWithAbility(context.Background(), ability, msgType, payload) {
 		warnUnknownMessage(queue.TopicGroupNotification, msgType)
 	}
+
+	return nil
 }
 
 // handleUserNotification handles a message of the topic of the user notifications.
-func (s *Server) handleUserNotification(value []byte) {
-	defer kafka.Recover()
-
+func (s *Server) handleUserNotification(value []byte) error {
 	msgType, payload, ok := queue.ParseMessageAndPayload(value, queue.TopicUserNotification)
 	if !ok {
-		return
+		return errUndecodable
 	}
 
 	switch msgType {
@@ -115,24 +118,26 @@ func (s *Server) handleUserNotification(value []byte) {
 			warnUnknownMessage(queue.TopicUserNotification, msgType)
 		}
 	}
+
+	return nil
 }
 
 // handleMail handles a message of the topic of the mails.
-func (s *Server) handleMail(value []byte) {
-	defer kafka.Recover()
-
+func (s *Server) handleMail(value []byte) error {
 	msgType, payload, ok := queue.ParseMessageAndPayload(value, queue.TopicMail)
 	if !ok {
-		return
+		return errUndecodable
 	}
 
-	if s.mailer.Handle(context.Background(), msgType, payload, s.Functions.IsEmailAddressValid) {
-		return
+	if handled, err := s.mailer.Handle(context.Background(), msgType, payload, s.Functions.IsEmailAddressValid); handled {
+		return err
 	}
 
 	if s.Functions.HandleMail == nil || !s.Functions.HandleMail(context.Background(), msgType, payload, s.Functions.IsEmailAddressValid) {
 		warnUnknownMessage(queue.TopicMail, msgType)
 	}
+
+	return nil
 }
 
 // warnUnknownMessage logs a warning about a message no function handled.

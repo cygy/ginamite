@@ -20,6 +20,9 @@ func TestNewConfiguration(t *testing.T) {
 	if c.Server.Host != "localhost" || c.Server.Port != 80 || c.DefaultLocale != "en-us" || c.JWT.SigningMethod != "HS256" {
 		t.Errorf("unexpected defaults %+v", c)
 	}
+	if c.KafkaMaxAttempts != 3 || c.KafkaRetryDelay != 1000 {
+		t.Errorf("kafka attempts = %d, delay = %d, want the defaults", c.KafkaMaxAttempts, c.KafkaRetryDelay)
+	}
 	if c.Locales == nil || c.SupportedLocales == nil || c.FallbackLocales == nil || len(c.Services) > 0 {
 		t.Error("the collections must be initialized")
 	}
@@ -42,6 +45,8 @@ services:
   kafka:
     host: kafka
     port: 9092
+kafka_max_attempts: 5
+kafka_retry_delay: 250
 worker_consumers:
   - topic: mail
     group: mails
@@ -67,6 +72,9 @@ worker_consumers:
 	}
 	if _, ok := c.FallbackLocales["de"]; ok {
 		t.Error("a locale without region must not be a fallback")
+	}
+	if c.KafkaMaxAttempts != 5 || c.KafkaRetryDelay != 250 {
+		t.Errorf("kafka attempts = %d, delay = %d", c.KafkaMaxAttempts, c.KafkaRetryDelay)
 	}
 	if want := []ConsumerConfiguration{{Topic: "mail", Group: "mails"}, {Topic: "task"}}; !slices.Equal(c.WorkerConsumers, want) {
 		t.Errorf("worker consumers = %+v, want %+v", c.WorkerConsumers, want)

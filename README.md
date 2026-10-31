@@ -80,6 +80,7 @@ default values. The main sections are:
 | `smtp`, `sender_*` | Sending of the emails. |
 | `facebook`, `google` | Sign-in with a social network. |
 | `recurring_tasks`, `run_start_up_tasks` | Tasks executed by the workers. |
+| `kafka_max_attempts`, `kafka_retry_delay` | Attempts to handle a Kafka message and delay in milliseconds between them (see below). |
 | `worker_consumers` | Kafka topics consumed by a worker, with their consumer group (see below). |
 
 ### Workers and Kafka consumer groups
@@ -112,6 +113,25 @@ worker_consumers:
 - The API servers use a group of their own per instance for the `cache` topic, because every instance must receive
   every invalidation.
 - A group created for the first time handles the messages sent from then on.
+
+#### Retries and dead letters
+
+A message whose handling fails is handled again, then sent to a **dead-letter topic** instead of blocking the others.
+
+- Failures are retried up to `kafka_max_attempts` times (3 by default), waiting `kafka_retry_delay` milliseconds
+  (1000 by default) before the second attempt, then twice as long each time, a minute at most. The partition waits
+  meanwhile, which keeps the order of its messages.
+- The failed message is then published, as it is, to the topic named like its own with the suffix `_dlq`
+  (`<prefix>mail_dlq`), and the consumer goes on. The headers give the reason: `error`, `attempts`, `group`, `topic`,
+  `partition` and `offset`. Nothing consumes this topic: read it to inspect the failures, and send the messages again
+  to their topic once the cause is fixed.
+- A message which can not be decoded is dead-lettered at once, since no retry can fix it. A panic is recovered and
+  counts as a failure. A message of an unknown type is only logged.
+- Today the failures reported are the undecodable messages, the panics and the emails which can not be sent (SMTP
+  error). The functions of `worker.Handlers` do not return errors, so the failures they log are not retried. A
+  handler of your own (`kafka.MessageConsumer.Action`) returns an error, and `kafka.Permanent(err)` marks the one which
+  must not be retried.
+- If the producer is not connected, the failed message is dropped and logged as an error.
 
 ### Shared services are injected
 

@@ -10,6 +10,8 @@ import (
 	"sync"
 	"testing"
 	ttemplate "text/template"
+
+	"github.com/cygy/ginamite/common/kafka"
 )
 
 func TestIsEmailAddressValidFunc_check(t *testing.T) {
@@ -181,7 +183,9 @@ func TestMailer_Send(t *testing.T) {
 			map[string]map[string]any{"Host": {"en": "https://html"}},
 			map[string]map[string]any{"Host": {"en": "https://text"}})
 
-		mailer.Send(message)
+		if err := mailer.Send(message); err != nil {
+			t.Fatalf("Send() error = %v", err)
+		}
 
 		data := server.received()
 		if len(data) != 1 {
@@ -202,8 +206,11 @@ func TestMailer_Send(t *testing.T) {
 			TextTemplates: ttemplate.Must(ttemplate.New("notification.txt").Parse("{{.Title}}")),
 		})
 
-		mailer.Send(message)
+		err := mailer.Send(message)
 
+		if err == nil || kafka.IsPermanent(err) {
+			t.Errorf("Send() error = %v, want an error a retry can fix", err)
+		}
 		if entry := hook.LastEntry(); entry == nil || entry.Message != "unable to send mail" {
 			t.Errorf("last log = %+v", entry)
 		}
@@ -221,7 +228,9 @@ func TestMailer_Send(t *testing.T) {
 				server := startSMTP(t)
 				mailer := newTestMailer(t, server, tt.html, tt.text, nil, nil)
 
-				mailer.Send(message)
+				if err := mailer.Send(message); !kafka.IsPermanent(err) {
+					t.Errorf("Send() error = %v, want a permanent error", err)
+				}
 
 				if entry := hook.LastEntry(); entry == nil || entry.Message != "unable to execute the template" {
 					t.Errorf("last log = %+v", entry)

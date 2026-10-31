@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/cygy/ginamite/common/config"
+	"github.com/cygy/ginamite/common/kafka"
 	"github.com/cygy/ginamite/common/notifications"
 	"github.com/cygy/ginamite/common/queue"
 	"github.com/cygy/ginamite/worker/internal/workertest"
@@ -27,8 +28,8 @@ func message(t *testing.T, messageType string, payload any) []byte {
 	return b
 }
 
-// consumer returns the action of the consumer of the topic.
-func consumer(t *testing.T, s *Server, topic string) func([]byte) {
+// consumerErr returns the action of the consumer of the topic.
+func consumerErr(t *testing.T, s *Server, topic string) func([]byte) error {
 	t.Helper()
 
 	for _, c := range s.CreateKafkaConsumers() {
@@ -40,6 +41,30 @@ func consumer(t *testing.T, s *Server, topic string) func([]byte) {
 	t.Fatalf("no consumer for the topic %q", topic)
 
 	return nil
+}
+
+// consumer returns the action of the consumer of the topic, which fails the test if the message is not handled.
+func consumer(t *testing.T, s *Server, topic string) func([]byte) {
+	t.Helper()
+
+	action := consumerErr(t, s, topic)
+
+	return func(value []byte) {
+		t.Helper()
+
+		if err := action(value); err != nil {
+			t.Errorf("the message %s failed: %v", value, err)
+		}
+	}
+}
+
+// checkUndecodable checks that the consumer of the topic dead-letters a message it can not decode, without a retry.
+func checkUndecodable(t *testing.T, s *Server, topic string) {
+	t.Helper()
+
+	if err := consumerErr(t, s, topic)([]byte("{")); !kafka.IsPermanent(err) {
+		t.Errorf("error = %v, want a permanent error", err)
+	}
 }
 
 // warnings returns the types of the messages logged as unknown, for the topic.
@@ -186,25 +211,10 @@ func TestServer_handleTask(t *testing.T) {
 
 	t.Run("invalid message", func(t *testing.T) {
 		calls = nil
-		action([]byte("{"))
+		checkUndecodable(t, s, queue.TopicTasks)
 
 		if len(calls) != 0 {
 			t.Errorf("calls = %v", calls)
-		}
-	})
-
-	t.Run("panic recovered", func(t *testing.T) {
-		workertest.Hook.Reset()
-		s.Functions.EnableUserByID = func(context.Context, string) { panic("boom") }
-
-		action(message(t, queue.MessageTaskEnableUser, queue.TaskEnableUser{UserID: "u"}))
-
-		recovered := false
-		for _, entry := range workertest.Hook.AllEntries() {
-			recovered = recovered || entry.Data["panic"] == "boom"
-		}
-		if !recovered {
-			t.Error("the panic is not recovered")
 		}
 	})
 }
@@ -248,8 +258,10 @@ func TestServer_handleGroupNotification(t *testing.T) {
 			return true
 		}
 
-		action([]byte("{"))
-		action(message(t, "type", "not a group notification"))
+		checkUndecodable(t, s, queue.TopicGroupNotification)
+		if err := consumerErr(t, s, queue.TopicGroupNotification)(message(t, "type", "not a group notification")); !kafka.IsPermanent(err) {
+			t.Errorf("error = %v, want a permanent error", err)
+		}
 	})
 }
 
@@ -302,7 +314,7 @@ func TestServer_handleUserNotification(t *testing.T) {
 	})
 
 	t.Run("invalid message", func(t *testing.T) {
-		action([]byte("{"))
+		checkUndecodable(t, s, queue.TopicUserNotification)
 	})
 }
 
@@ -318,8 +330,10 @@ func TestServer_handleMail(t *testing.T) {
 			return true
 		}
 
-		// The payload is invalid: the message is handled without sending any mail.
-		action(message(t, queue.MessageMailNewLogin, "invalid payload"))
+		// The payload is invalid: the message is handled without sending any mail, and dead-lettered.
+		if err := consumerErr(t, s, queue.TopicMail)(message(t, queue.MessageMailNewLogin, "invalid payload")); !kafka.IsPermanent(err) {
+			t.Errorf("error = %v, want a permanent error", err)
+		}
 
 		if len(warnings(queue.TopicMail)) != 0 {
 			t.Errorf("warnings = %v", warnings(queue.TopicMail))
@@ -356,6 +370,6 @@ func TestServer_handleMail(t *testing.T) {
 	})
 
 	t.Run("invalid message", func(t *testing.T) {
-		action([]byte("{"))
+		checkUndecodable(t, s, queue.TopicMail)
 	})
 }

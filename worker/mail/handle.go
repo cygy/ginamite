@@ -7,19 +7,19 @@ import (
 )
 
 // handlers returns the senders of the emails, by type of message.
-func (m *Mailer) handlers() map[string]func(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
-	return map[string]func(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc){
-		queue.MessageMailRegistrationConfirmation: func(_ context.Context, payload []byte, _ IsEmailAddressValidFunc) {
-			m.RegistrationConfirmation(payload)
+func (m *Mailer) handlers() map[string]func(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) error {
+	return map[string]func(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) error{
+		queue.MessageMailRegistrationConfirmation: func(_ context.Context, payload []byte, _ IsEmailAddressValidFunc) error {
+			return m.RegistrationConfirmation(payload)
 		},
-		queue.MessageMailRegistrationConfirmed: func(_ context.Context, payload []byte, _ IsEmailAddressValidFunc) {
-			m.RegistrationConfirmed(payload)
+		queue.MessageMailRegistrationConfirmed: func(_ context.Context, payload []byte, _ IsEmailAddressValidFunc) error {
+			return m.RegistrationConfirmed(payload)
 		},
-		queue.MessageMailRegistrationCancelled: func(_ context.Context, payload []byte, _ IsEmailAddressValidFunc) {
-			m.RegistrationCancelled(payload)
+		queue.MessageMailRegistrationCancelled: func(_ context.Context, payload []byte, _ IsEmailAddressValidFunc) error {
+			return m.RegistrationCancelled(payload)
 		},
-		queue.MessageMailRegistrationWelcome: func(_ context.Context, payload []byte, _ IsEmailAddressValidFunc) {
-			m.RegistrationWelcome(payload)
+		queue.MessageMailRegistrationWelcome: func(_ context.Context, payload []byte, _ IsEmailAddressValidFunc) error {
+			return m.RegistrationWelcome(payload)
 		},
 		queue.MessageMailForgotPasswordConfirmation:     m.ForgotPasswordConfirmation,
 		queue.MessageMailForgotPasswordConfirmed:        m.ForgotPasswordConfirmed,
@@ -43,12 +43,12 @@ func (m *Mailer) handlers() map[string]func(ctx context.Context, payload []byte,
 }
 
 // Handle sends the email of a message of the mail topic.
-// It reports whether the type of the message is a built-in one.
-func (m *Mailer) Handle(ctx context.Context, messageType string, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) bool {
+// It reports whether the type of the message is a built-in one, and the error of the sending, if any.
+func (m *Mailer) Handle(ctx context.Context, messageType string, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) (bool, error) {
 	handler, ok := m.handlers()[messageType]
-	if ok {
-		handler(ctx, payload, isEmailAddressValid)
+	if !ok {
+		return false, nil
 	}
 
-	return ok
+	return true, handler(ctx, payload, isEmailAddressValid)
 }
