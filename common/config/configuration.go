@@ -49,7 +49,8 @@ type Configuration struct {
 	Terms               TermsConfiguration
 	UserNotifications   UserNotificationsConfiguration `yaml:"user_notifications"`
 	Account             AccountConfiguration
-	RecurringTasks      []recurring.ScheduledTask `yaml:"recurring_tasks"` // tasks executed by the workers
+	WorkerConsumers     []ConsumerConfiguration   `yaml:"worker_consumers"` // topics consumed by the worker, all if empty
+	RecurringTasks      []recurring.ScheduledTask `yaml:"recurring_tasks"`  // tasks executed by the workers
 	RunStartUpTasks     bool                      `yaml:"run_start_up_tasks"`
 }
 

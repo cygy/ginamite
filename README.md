@@ -80,6 +80,38 @@ default values. The main sections are:
 | `smtp`, `sender_*` | Sending of the emails. |
 | `facebook`, `google` | Sign-in with a social network. |
 | `recurring_tasks`, `run_start_up_tasks` | Tasks executed by the workers. |
+| `worker_consumers` | Kafka topics consumed by a worker, with their consumer group (see below). |
+
+### Workers and Kafka consumer groups
+
+The messages are consumed through Kafka consumer groups, and a message is committed once it is handled, so a worker
+stopped in the middle of a message does not lose it (the message is handled again: handlers must tolerate it).
+
+- The workers of the **same group** share the messages of a topic: each message is handled by one worker. Run several
+  identical workers to share the load.
+- The workers of **different groups** each receive every message.
+- A worker consumes all the topics (`task`, `group_notification`, `user_notification`, `mail`) unless `worker_consumers`
+  lists the ones it consumes. The group is the topic by default, so two workers listing the same topic share it:
+
+```yaml
+# worker 1: the mails, shared with the worker 2, and the tasks
+worker_consumers:
+  - topic: mail
+  - topic: task
+```
+
+```yaml
+# worker 2: the mails, shared with the worker 1, and the user notifications
+worker_consumers:
+  - topic: mail
+  - topic: user_notification
+```
+
+- A worker cannot ignore some messages of a topic: it would take them away from the other workers of the group. To
+  split the work, give each kind of work its own topic.
+- The API servers use a group of their own per instance for the `cache` topic, because every instance must receive
+  every invalidation.
+- A group created for the first time handles the messages sent from then on.
 
 ### Shared services are injected
 

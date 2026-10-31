@@ -83,6 +83,14 @@ type SMTPConfiguration struct {
 	Password string
 }
 
+// ConsumerConfiguration holds the settings of the consumption of a Kafka topic.
+type ConsumerConfiguration struct {
+	Topic string
+	// Group is the consumer group of the workers. The workers of the same group share the messages of the topic, the
+	// workers of different groups each receive every message. It is the topic if empty.
+	Group string
+}
+
 // ServiceConfiguration holds the address of a hosted service.
 type ServiceConfiguration struct {
 	Host string

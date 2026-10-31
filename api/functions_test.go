@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -145,6 +146,9 @@ func TestServer_CreateKafkaConsumers(t *testing.T) {
 			consumers := s.CreateKafkaConsumers()
 			if len(consumers) != 1 || consumers[0].Topic != queue.TopicCache {
 				t.Fatalf("consumers = %+v, want one consumer of the topic %q", consumers, queue.TopicCache)
+			}
+			if other := s.CreateKafkaConsumers()[0]; !strings.HasPrefix(consumers[0].Group, queue.TopicCache+"_") || consumers[0].Group == other.Group {
+				t.Errorf("groups = %q, %q: each instance needs its own group", consumers[0].Group, other.Group)
 			}
 			hook.Reset()
 

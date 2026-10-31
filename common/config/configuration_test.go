@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/cygy/ginamite/common/config/database"
@@ -41,6 +42,10 @@ services:
   kafka:
     host: kafka
     port: 9092
+worker_consumers:
+  - topic: mail
+    group: mails
+  - topic: task
 `)
 
 	c := NewConfiguration()
@@ -62,6 +67,9 @@ services:
 	}
 	if _, ok := c.FallbackLocales["de"]; ok {
 		t.Error("a locale without region must not be a fallback")
+	}
+	if want := []ConsumerConfiguration{{Topic: "mail", Group: "mails"}, {Topic: "task"}}; !slices.Equal(c.WorkerConsumers, want) {
+		t.Errorf("worker consumers = %+v, want %+v", c.WorkerConsumers, want)
 	}
 }
 

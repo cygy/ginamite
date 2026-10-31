@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"slices"
 
 	"github.com/cygy/ginamite/common/kafka"
 	"github.com/cygy/ginamite/common/log"
@@ -16,13 +17,35 @@ import (
 
 // CreateKafkaConsumers returns the consumers of the topics of the tasks, of the group notifications,
 // of the user notifications and of the mails. A panic of a consumer is recovered.
+//
+// A worker consumes all the topics, unless the configuration lists the ones it consumes, with their consumer group:
+// the workers of the same group share the messages of the topic, so several workers can handle the same topic, and
+// each handle different ones.
 func (s *Server) CreateKafkaConsumers() []kafka.MessageConsumer {
-	return []kafka.MessageConsumer{
+	all := []kafka.MessageConsumer{
 		{Topic: queue.TopicTasks, Action: s.handleTask},
 		{Topic: queue.TopicGroupNotification, Action: s.handleGroupNotification},
 		{Topic: queue.TopicUserNotification, Action: s.handleUserNotification},
 		{Topic: queue.TopicMail, Action: s.handleMail},
 	}
+	if s.Config == nil || len(s.Config.WorkerConsumers) == 0 {
+		return all
+	}
+
+	consumers := make([]kafka.MessageConsumer, 0, len(s.Config.WorkerConsumers))
+	for _, wanted := range s.Config.WorkerConsumers {
+		i := slices.IndexFunc(all, func(c kafka.MessageConsumer) bool { return c.Topic == wanted.Topic })
+		if i < 0 {
+			log.WithField("topic", wanted.Topic).Error("unknown kafka topic of the worker")
+			continue
+		}
+
+		consumer := all[i]
+		consumer.Group = wanted.Group
+		consumers = append(consumers, consumer)
+	}
+
+	return consumers
 }
 
 // handleTask handles a message of the topic of the tasks.

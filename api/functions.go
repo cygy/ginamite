@@ -41,8 +41,10 @@ func (s *Server) CreateKafkaConsumers() []kafka.MessageConsumer {
 	consumers := []kafka.MessageConsumer{}
 
 	// Handle the tasks.
+	// Every instance of the API must receive every message of the cache, so each one has its own group.
 	consumers = append(consumers, kafka.MessageConsumer{
 		Topic: queue.TopicCache,
+		Group: kafka.UniqueGroup(queue.TopicCache),
 		Action: func(value []byte) {
 			defer kafka.Recover()
 

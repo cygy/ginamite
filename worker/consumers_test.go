@@ -69,6 +69,44 @@ func TestServer_CreateKafkaConsumers(t *testing.T) {
 	}
 }
 
+func TestServer_CreateKafkaConsumers_Configured(t *testing.T) {
+	s := NewServer()
+	s.Config.WorkerConsumers = []config.ConsumerConfiguration{
+		{Topic: queue.TopicMail, Group: "mails"},
+		{Topic: "unknown"},
+		{Topic: queue.TopicTasks},
+	}
+
+	workertest.Hook.Reset()
+	consumers := s.CreateKafkaConsumers()
+
+	if len(consumers) != 2 {
+		t.Fatalf("consumers = %+v, want the mails and the tasks", consumers)
+	}
+	if consumers[0].Topic != queue.TopicMail || consumers[0].Group != "mails" || consumers[0].Action == nil {
+		t.Errorf("consumers[0] = %+v", consumers[0])
+	}
+	if consumers[1].Topic != queue.TopicTasks || consumers[1].Group != "" || consumers[1].Action == nil {
+		t.Errorf("consumers[1] = %+v", consumers[1])
+	}
+
+	var unknown bool
+	for _, entry := range workertest.Hook.AllEntries() {
+		if entry.Message == "unknown kafka topic of the worker" && entry.Data["topic"] == "unknown" {
+			unknown = true
+		}
+	}
+	if !unknown {
+		t.Error("an unknown topic must be logged")
+	}
+}
+
+func TestServer_CreateKafkaConsumers_WithoutConfiguration(t *testing.T) {
+	if consumers := (&Server{}).CreateKafkaConsumers(); len(consumers) != 4 {
+		t.Errorf("consumers = %+v, want the 4 topics", consumers)
+	}
+}
+
 func TestServer_handleTask(t *testing.T) {
 	var calls []string
 	record := func(name string) func(context.Context, string) {
