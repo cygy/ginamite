@@ -51,6 +51,7 @@ type Configuration struct {
 	Terms               TermsConfiguration
 	UserNotifications   UserNotificationsConfiguration `yaml:"user_notifications"`
 	Account             AccountConfiguration
+	Metrics             MetricsConfiguration      `yaml:"metrics"`          // Prometheus metrics, disabled by default
 	RateLimits          RateLimitsConfiguration   `yaml:"rate_limits"`      // limits of the requests by client, 0 to disable
 	Kafka               KafkaConfiguration        `yaml:"kafka"`            // connection to Kafka and its topics, the address is the service "kafka"
 	WorkerConsumers     []ConsumerConfiguration   `yaml:"worker_consumers"` // topics consumed by the worker, all if empty

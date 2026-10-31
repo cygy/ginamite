@@ -77,6 +77,8 @@ func (s *Server) Start() {
 		defer s.Broker.Close()
 	}
 
+	defer s.startMetrics()()
+
 	specializedServer.Start()
 }
 

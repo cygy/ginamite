@@ -81,6 +81,7 @@ default values. The main sections are:
 | `facebook`, `google` | Sign-in with a social network. |
 | `recurring_tasks`, `run_start_up_tasks` | Tasks executed by the workers. |
 | `kafka_max_attempts`, `kafka_retry_delay` | Attempts to handle a Kafka message and delay in milliseconds between them (see below). |
+| `metrics`, `rate_limits` | Prometheus endpoint and limits of the requests (see Security and Metrics). |
 | `kafka` | Connection to Kafka (version, TLS, SASL), creation of the topics, statistics (see below). |
 | `worker_consumers` | Kafka topics consumed by a worker, with their consumer group (see below). |
 
@@ -107,6 +108,22 @@ default values. The main sections are:
 
   Set `server.trusted_proxies` behind a reverse proxy, otherwise the client IP, hence the limit, can be forged: Gin
   trusts every proxy by default, and the API warns in production when the setting is missing.
+
+### Metrics
+
+With `metrics.address`, the server listens there for Prometheus and serves `/metrics`, on its own port: do not expose
+it to the Internet. It is disabled when the address is empty.
+
+```yaml
+metrics:
+  address: ":9100"
+```
+
+- `http_requests_total` and `http_request_duration_seconds_total`, by method, route pattern and status (API).
+- `kafka_messages_{received,handled,retried,dead_lettered,duplicates,sent,dropped}_total`, `kafka_send_errors_total`,
+  `kafka_outbox_messages` and `kafka_consumer_lag_messages{topic,partition}`.
+
+A custom broker appears in the metrics if it implements `metrics.Collector` (`common/metrics`).
 
 ### Workers and Kafka consumer groups
 
@@ -157,9 +174,10 @@ A message whose handling fails is handled again, then sent to a **dead-letter to
   errors of its database. An email which can not be sent (SMTP error) fails the same way. The functions must tolerate
   being called again for the same message, and `broker.Permanent(err)` marks the error which must not be retried. A
   handler of your own (`broker.MessageConsumer.Action`) follows the same rule.
-- Not covered: the functions the plugin lets you plug in to update the documents referencing a user
-  (`UpdateDocumentsReferencingTo...`) have no error to return, and a failing lookup of the location of an IP address
-  (the ipstack API) is logged but not retried.
+- The hooks of the plugin `plugins/mongodb` which update the documents referencing a user
+  (`UpdateDocumentsReferencingTo...`) return an error, and the message is handled again when they fail, so they must be
+  safe to run again. The temporary failures of the ipstack API (network, `429`, `5xx`) are retried the same way; an
+  unknown location or a client error is logged and not retried.
 - If the producer is not connected, the failed message is dropped and logged as an error.
 
 ##### Dead letters command

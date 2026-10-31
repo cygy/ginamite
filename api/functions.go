@@ -114,6 +114,9 @@ func (s *Server) Start() {
 	accountFunctions, userFunctions, contactFunctions, termsFunctions := s.routeFunctions()
 
 	// Load the middlewares.
+	if s.Requests != nil {
+		server.Use(s.Requests.Middleware())
+	}
 	server.Use(ctxconfig.Inject(s.Config), ctxqueue.Inject(s.Queue), ctxlocalization.Inject(s.Localization), ctxtimezone.Inject(s.Timezones), ctxnotifications.Inject(s.Notifications))
 	server.Use(s.Middlewares...)
 	server.Use(s.idValidator())

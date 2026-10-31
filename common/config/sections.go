@@ -177,3 +177,10 @@ type RateLimitsConfiguration struct {
 	Registration   RateLimitConfiguration `yaml:"registration"`
 	ForgotPassword RateLimitConfiguration `yaml:"forgot_password"`
 }
+
+// MetricsConfiguration holds the settings of the Prometheus metrics.
+type MetricsConfiguration struct {
+	// Address is the address (host:port) the server listens to, on /metrics, for Prometheus. It should not be
+	// reachable from the Internet. The metrics are disabled if empty.
+	Address string `yaml:"address"`
+}
