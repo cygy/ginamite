@@ -5,6 +5,8 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/cygy/ginamite/common/ctxtimezone"
+
 	"github.com/cygy/ginamite/common/ctxlocalization"
 
 	"github.com/cygy/ginamite/common/ctxqueue"
@@ -19,7 +21,6 @@ import (
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/notifications"
 	"github.com/cygy/ginamite/common/queue"
-	"github.com/cygy/ginamite/common/timezone"
 
 	"github.com/gin-gonic/gin"
 )
@@ -304,7 +305,7 @@ func AdminUpdateSettings(c *gin.Context) {
 	}
 
 	// Timezone not supported.
-	if !timezone.Main.SupportsTimezone(newTimezone) {
+	if !ctxtimezone.Get(c).SupportsTimezone(newTimezone) {
 		response.InvalidParameterValue(c, "timezone",
 			t(errorMessageKey),
 			t("error.admin.user.settings.update.timezone.not_supported.reason"),

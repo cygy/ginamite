@@ -31,9 +31,6 @@ func NewConfiguration() (conf *Configuration) {
 	return
 }
 
-// Main is the global timezones configuration of the application, set by Initialize.
-var Main *Configuration
-
 const itemsByLine = 3
 
 // GetTimezones returns the timezones of a country, given by its code (case-insensitive).
@@ -154,11 +151,15 @@ func (conf *Configuration) SupportsTimezone(timezone string) bool {
 	return false
 }
 
-// Initialize creates the main configuration Main and loads it from the file.
+// Load returns the configuration loaded from the file.
 // See Configuration.Initialize.
-func Initialize(filepath string) error {
-	Main = NewConfiguration()
-	return Main.Initialize(filepath)
+func Load(filepath string) (*Configuration, error) {
+	conf := NewConfiguration()
+	if err := conf.Initialize(filepath); err != nil {
+		return nil, err
+	}
+
+	return conf, nil
 }
 
 func hasValue(slice []string, value string) bool {

@@ -28,9 +28,14 @@ func (s *Server) Start() {
 	if f.IsAPIServer || f.IsWorkerServer {
 		defer s.connectPlugins(s.Config)()
 
-		if err := timezone.Initialize(s.Config.TimezonesFilePath); err != nil {
+		timezones, err := timezone.Load(s.Config.TimezonesFilePath)
+		if err != nil {
 			log.WithField("error", err).Fatal("unable to initialize the timezones")
+			return
 		}
+
+		s.Timezones = timezones
+		s.API.Timezones = timezones
 	}
 
 	if f.IsWebServer {

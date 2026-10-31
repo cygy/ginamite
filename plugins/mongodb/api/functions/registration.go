@@ -3,10 +3,11 @@ package functions
 import (
 	"errors"
 
+	"github.com/cygy/ginamite/common/ctxtimezone"
+
 	"github.com/cygy/ginamite/common/ctxqueue"
 
 	"github.com/cygy/ginamite/common/ctxconfig"
-	"github.com/cygy/ginamite/common/timezone"
 
 	"github.com/cygy/ginamite/common/queue"
 
@@ -20,7 +21,7 @@ import (
 
 // registrationTimezone returns the timezone of the user who registers with the locale.
 func registrationTimezone(c *gin.Context, locale string) string {
-	return model.RegistrationTimezone(locale, timezone.Main, ctxconfig.Get(c).DefaultTimezone)
+	return model.RegistrationTimezone(locale, ctxtimezone.Get(c), ctxconfig.Get(c).DefaultTimezone)
 }
 
 // RegisterByEmailAddress saves the registration details of a user.

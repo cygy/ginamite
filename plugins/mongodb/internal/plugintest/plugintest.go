@@ -12,6 +12,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cygy/ginamite/common/ctxtimezone"
+	"github.com/cygy/ginamite/common/timezone"
+
 	"github.com/cygy/ginamite/common/ctxlocalization"
 
 	"github.com/cygy/ginamite/common/authentication"
@@ -45,7 +48,7 @@ func init() {
 
 // NewContext returns a gin context bound to a request, to the stub database and to the recorder of the response.
 // The locale of the context is "en", see InitLocalization. The configuration of the context is the default one, and
-// can be changed with ctxconfig.Get, and has no auth token hooks.
+// can be changed with ctxconfig.Get, and has no auth token hooks and no timezones.
 func NewContext(db *mock.Database, method, target string, body io.Reader) (*gin.Context, *httptest.ResponseRecorder) {
 	recorder := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(recorder)
@@ -54,6 +57,7 @@ func NewContext(db *mock.Database, method, target string, body io.Reader) (*gin.
 	ctxconfig.Set(c, config.NewConfiguration())
 	ctxAuthToken.SetHooks(c, authentication.Hooks{})
 	ctxqueue.Set(c, senderInUse)
+	ctxtimezone.Set(c, timezone.NewConfiguration())
 	if Localization != nil {
 		ctxlocalization.Set(c, Localization)
 	}

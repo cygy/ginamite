@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/cygy/ginamite/common/ctxtimezone"
+
 	"github.com/cygy/ginamite/common/ctxlocalization"
 
 	"github.com/cygy/ginamite/common/ctxqueue"
@@ -26,6 +28,9 @@ var (
 	// testConfig is the configuration of the handlers, replaced by setup.
 	testConfig *config.Configuration
 
+	// testTimezones are the timezones of the handlers.
+	testTimezones = &timezone.Configuration{Timezones: []string{"Europe/Paris"}}
+
 	// testQueue is the queue of the handlers: it has no producer, the messages are only logged.
 	testQueue = queue.New(kafka.NewClient())
 
@@ -42,8 +47,6 @@ func setup(t *testing.T) {
 
 	testConfig = config.NewConfiguration()
 	testConfig.SupportedLocales = []string{"en"}
-	timezone.Main = timezone.NewConfiguration()
-	timezone.Main.Timezones = []string{"Europe/Paris"}
 
 	t.Cleanup(func() {
 		testFunctions = Functions{}
@@ -54,7 +57,7 @@ func setup(t *testing.T) {
 // serve sends a request with the given JSON body to the handler, mounted on "/:id", and returns the HTTP status.
 func serve(handler gin.HandlerFunc, body string) int {
 	router := gin.New()
-	router.Use(ctxconfig.Inject(testConfig), ctxqueue.Inject(testQueue), Inject(&testFunctions), account.Inject(&testAccountFunctions), ctxlocalization.Inject(apitest.Localization), ctxLocale.Inject("en", []string{"en"}))
+	router.Use(ctxconfig.Inject(testConfig), ctxqueue.Inject(testQueue), ctxtimezone.Inject(testTimezones), Inject(&testFunctions), account.Inject(&testAccountFunctions), ctxlocalization.Inject(apitest.Localization), ctxLocale.Inject("en", []string{"en"}))
 	router.Any("/:id", handler)
 
 	req, _ := http.NewRequest(http.MethodPost, "/42", strings.NewReader(body))
@@ -67,6 +70,7 @@ func newTestContext(body string) (*gin.Context, *httptest.ResponseRecorder) {
 	c, recorder := apitest.NewContext(http.MethodPost, "/42", strings.NewReader(body))
 	ctxconfig.Set(c, testConfig)
 	ctxqueue.Set(c, testQueue)
+	ctxtimezone.Set(c, testTimezones)
 	SetFunctions(c, &testFunctions)
 	account.SetFunctions(c, &testAccountFunctions)
 	ctxLocale.Set(c, "en", "en")

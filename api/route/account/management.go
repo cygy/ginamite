@@ -3,6 +3,8 @@ package account
 import (
 	"errors"
 
+	"github.com/cygy/ginamite/common/ctxtimezone"
+
 	"github.com/cygy/ginamite/common/ctxlocalization"
 
 	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
@@ -11,7 +13,6 @@ import (
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common/ctxconfig"
-	"github.com/cygy/ginamite/common/timezone"
 
 	"github.com/gin-gonic/gin"
 )
@@ -138,7 +139,7 @@ func UpdateSettings(c *gin.Context) {
 	}
 
 	// Timezone not supported.
-	if !timezone.Main.SupportsTimezone(accountTimezone) {
+	if !ctxtimezone.Get(c).SupportsTimezone(accountTimezone) {
 		response.InvalidParameterValue(c, "timezone",
 			t(errorMessageKey),
 			t("error.account.settings.update.timezone.not_supported.reason"),

@@ -53,7 +53,7 @@ func TestNewServer(t *testing.T) {
 func TestNewServer_SharedServices(t *testing.T) {
 	s := NewServer()
 
-	if s.Config == nil || s.Kafka == nil || s.Queue == nil {
+	if s.Config == nil || s.Kafka == nil || s.Queue == nil || s.Localization == nil || s.Timezones == nil {
 		t.Fatalf("server = %+v", s)
 	}
 	if s.API.Queue != s.Queue || s.Worker.Queue != s.Queue {

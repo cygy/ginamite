@@ -20,11 +20,13 @@ import (
 	"github.com/cygy/ginamite/common/ctxconfig"
 	"github.com/cygy/ginamite/common/ctxlocalization"
 	"github.com/cygy/ginamite/common/ctxqueue"
+	"github.com/cygy/ginamite/common/ctxtimezone"
 	"github.com/cygy/ginamite/common/kafka"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/queue"
 	"github.com/cygy/ginamite/common/template/html"
+	"github.com/cygy/ginamite/common/timezone"
 
 	"github.com/fvbock/endless"
 	"github.com/gin-contrib/gzip"
@@ -101,7 +103,7 @@ func (s *Server) Start() {
 	accountFunctions, userFunctions, contactFunctions, termsFunctions := s.routeFunctions()
 
 	// Load the middlewares.
-	server.Use(ctxconfig.Inject(s.Config), ctxqueue.Inject(s.Queue), ctxlocalization.Inject(s.Localization))
+	server.Use(ctxconfig.Inject(s.Config), ctxqueue.Inject(s.Queue), ctxlocalization.Inject(s.Localization), ctxtimezone.Inject(s.Timezones))
 	server.Use(s.Middlewares...)
 	server.Use(ctxAuthToken.InjectRevoked(s.RevokedTokens.IsRevoked))
 	server.Use(ctxAuthToken.InjectHooks(authentication.Hooks{
@@ -165,6 +167,7 @@ func NewServer() *Server {
 	return &Server{
 		Config:        config.NewConfiguration(),
 		Localization:  localization.NewEngine(),
+		Timezones:     timezone.NewConfiguration(),
 		Queue:         queue.New(nil),
 		RevokedTokens: tokencache.NewRevoked(),
 		customRoutes:  []route.ConfigureCustomRoutes{},

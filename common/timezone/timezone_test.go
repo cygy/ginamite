@@ -79,14 +79,13 @@ func TestConfiguration_Initialize_Errors(t *testing.T) {
 	_ = NewConfiguration().Initialize(filepath.Join(t.TempDir(), "missing.tab"))
 }
 
-func TestInitialize(t *testing.T) {
-	defer func(old *Configuration) { Main = old }(Main)
-
-	if err := Initialize(writeSample(t, sample)); err != nil {
-		t.Fatalf("Initialize() error = %v", err)
+func TestLoad(t *testing.T) {
+	conf, err := Load(writeSample(t, sample))
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
 	}
-	if Main == nil || !Main.SupportsTimezone("Europe/Paris") {
-		t.Errorf("Main = %+v", Main)
+	if !conf.SupportsTimezone("Europe/Paris") {
+		t.Errorf("conf = %+v", conf)
 	}
 }
 

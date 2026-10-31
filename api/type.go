@@ -13,6 +13,7 @@ import (
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/queue"
+	"github.com/cygy/ginamite/common/timezone"
 
 	"github.com/gin-gonic/gin"
 )
@@ -25,7 +26,9 @@ type Server struct {
 	Queue *queue.Queue
 	// Localization translates the messages of the responses, set by the main server before it starts.
 	Localization *localization.Engine
-	Functions    Handlers
+	// Timezones are the timezones of the countries, set by the main server before it starts.
+	Timezones *timezone.Configuration
+	Functions Handlers
 
 	// RevokedTokens are the auth tokens revoked, which are rejected until they expire. The cache messages of the queue
 	// add tokens to it.

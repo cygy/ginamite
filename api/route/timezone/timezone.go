@@ -3,7 +3,7 @@ package timezone
 
 import (
 	"github.com/cygy/ginamite/api/response"
-	"github.com/cygy/ginamite/common/timezone"
+	"github.com/cygy/ginamite/common/ctxtimezone"
 
 	"github.com/gin-gonic/gin"
 )
@@ -11,6 +11,6 @@ import (
 // GetTimezones returns the timezones.
 func GetTimezones(c *gin.Context) {
 	response.Ok(c, response.H{
-		"timezones": timezone.Main.Timezones,
+		"timezones": ctxtimezone.Get(c).Timezones,
 	})
 }

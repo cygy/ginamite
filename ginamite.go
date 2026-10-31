@@ -16,6 +16,7 @@ import (
 	"github.com/cygy/ginamite/common/kafka"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/queue"
+	"github.com/cygy/ginamite/common/timezone"
 	"github.com/cygy/ginamite/web"
 	"github.com/cygy/ginamite/worker"
 
@@ -27,9 +28,10 @@ type Server struct {
 	// Config is the configuration of the application, loaded from the configuration file by Start and shared with the
 	// specialized servers and the plugins.
 	Config                   *config.Configuration
-	Kafka                    *kafka.Client        // The Kafka client, connected by Start if the configuration has a Kafka service.
-	Queue                    *queue.Queue         // Sends the messages to the other servers through Kafka.
-	Localization             *localization.Engine // The translations, loaded by Start.
+	Kafka                    *kafka.Client           // The Kafka client, connected by Start if the configuration has a Kafka service.
+	Queue                    *queue.Queue            // Sends the messages to the other servers through Kafka.
+	Localization             *localization.Engine    // The translations, loaded by Start.
+	Timezones                *timezone.Configuration // The timezones of the countries, loaded by Start for the API and the worker.
 	ApplicationConfiguration ApplicationConfiguration
 	Worker                   *worker.Server
 	API                      *api.Server
@@ -69,6 +71,7 @@ func NewServer() *Server {
 		Kafka:        kafkaClient,
 		Queue:        queue.New(kafkaClient),
 		Localization: localization.NewEngine(),
+		Timezones:    timezone.NewConfiguration(),
 		plugins:      []Plugin{},
 		Web:          web.NewServer(),
 		Worker:       worker.NewServer(),

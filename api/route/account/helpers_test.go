@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cygy/ginamite/common/ctxtimezone"
+
 	"github.com/cygy/ginamite/common/ctxlocalization"
 
 	"github.com/cygy/ginamite/common/ctxqueue"
@@ -60,6 +62,9 @@ type testCase struct {
 // testConfig is the configuration of the handlers, replaced by setup.
 var testConfig *config.Configuration
 
+// testTimezones are the timezones of the handlers.
+var testTimezones = &timezone.Configuration{Timezones: []string{"Europe/Paris"}}
+
 // testQueue is the queue of the handlers: it has no producer, the messages are only logged.
 var testQueue = queue.New(kafka.NewClient())
 
@@ -74,8 +79,6 @@ func setup(t *testing.T) {
 	testConfig.JWT.Secret = testSecret
 	testConfig.Terms.Version = "v1"
 	testConfig.Environment = environment.Development
-	timezone.Main = timezone.NewConfiguration()
-	timezone.Main.Timezones = []string{"Europe/Paris"}
 
 	testHooks.BuildTokenFromID = func(context.Context, string) (*authentication.Token, error) {
 		return &authentication.Token{UserID: testUserID, ExpirationDate: time.Now().Add(time.Hour), CreationDate: time.Now()}, nil
@@ -107,7 +110,7 @@ func resetFunctions() { testFunctions = Functions{} }
 // newRouter returns a router with the locale and the auth token middlewares, serving the handler on every path shape.
 func newRouter(handler gin.HandlerFunc) *gin.Engine {
 	router := gin.New()
-	router.Use(ctxconfig.Inject(testConfig), ctxqueue.Inject(testQueue), Inject(&testFunctions), ctxAuthToken.InjectHooks(testHooks), ctxlocalization.Inject(apitest.Localization), ctxLocale.Inject("en", []string{"en"}))
+	router.Use(ctxconfig.Inject(testConfig), ctxqueue.Inject(testQueue), ctxtimezone.Inject(testTimezones), Inject(&testFunctions), ctxAuthToken.InjectHooks(testHooks), ctxlocalization.Inject(apitest.Localization), ctxLocale.Inject("en", []string{"en"}))
 	router.Use(ctxAuthToken.Parse(testSecret, nil, false))
 	router.Any("/", handler)
 	router.Any("/:id", handler)
@@ -165,6 +168,7 @@ func newContext(params gin.Params) (*gin.Context, *httptest.ResponseRecorder) {
 	c.Params = params
 	ctxconfig.Set(c, testConfig)
 	ctxqueue.Set(c, testQueue)
+	ctxtimezone.Set(c, testTimezones)
 	SetFunctions(c, &testFunctions)
 	ctxAuthToken.SetHooks(c, testHooks)
 	ctxLocale.Set(c, "en", "en")
