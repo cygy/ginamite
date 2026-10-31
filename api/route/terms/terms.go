@@ -6,12 +6,13 @@ import (
 	"os"
 	"sync"
 
+	"github.com/cygy/ginamite/common/ctxlocalization"
+
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	ctxUser "github.com/cygy/ginamite/api/context/user"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common/ctxconfig"
-	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/log"
 	r "github.com/cygy/ginamite/common/response"
 
@@ -79,7 +80,7 @@ func AcceptTerms(c *gin.Context) {
 	request.DecodeBody(c, &jsonBody)
 
 	locale := ctxLocale.Get(c)
-	t := localization.Translate(locale)
+	t := ctxlocalization.Get(c).Translate(locale)
 
 	// Terms version is mandatory.
 	termsVersion := jsonBody.Version

@@ -4,6 +4,8 @@ package response
 import (
 	"net/http"
 
+	"github.com/cygy/ginamite/common/ctxlocalization"
+
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/response"
@@ -15,7 +17,7 @@ import (
 
 // InternalServerError renders the page "error.internal_server" with a HTTP code 500, displaying the ID of the request.
 func InternalServerError(c *gin.Context) {
-	page := html.Main.PageByKey(c, "error.internal_server")
+	page := html.Of(c).PageByKey(c, "error.internal_server")
 	if page == nil {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
@@ -23,7 +25,7 @@ func InternalServerError(c *gin.Context) {
 
 	requestID := c.Request.Header.Get(log.RequestIDHeaderName)
 	locale := context.GetLocale(c)
-	page.SetVar("ID", localization.Translate(locale)("tpl.error.internal_server.id", localization.H{"ErrorID": requestID}))
+	page.SetVar("ID", ctxlocalization.Get(c).Translate(locale)("tpl.error.internal_server.id", localization.H{"ErrorID": requestID}))
 
 	page.RenderError(c)
 }
@@ -50,7 +52,7 @@ func Unauthorized(c *gin.Context) {
 
 // NotFound renders the page "error.not_found" with a HTTP code 404.
 func NotFound(c *gin.Context) {
-	page := html.Main.PageByKey(c, "error.not_found")
+	page := html.Of(c).PageByKey(c, "error.not_found")
 	if page == nil {
 		c.AbortWithStatus(http.StatusNotFound)
 		return
@@ -67,7 +69,7 @@ func APIError(c *gin.Context, page *html.Page, err response.Error) {
 
 // renderUnauthorized renders the page key with a HTTP code 401, or only the code if the page does not exist.
 func renderUnauthorized(c *gin.Context, key string) {
-	page := html.Main.PageByKey(c, key)
+	page := html.Of(c).PageByKey(c, key)
 	if page == nil {
 		c.AbortWithStatus(http.StatusUnauthorized)
 		return

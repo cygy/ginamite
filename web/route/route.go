@@ -2,7 +2,12 @@
 // asynchronous calls to the API) and the custom ones of the application, for each supported locale.
 package route
 
-import "github.com/gin-gonic/gin"
+import (
+	"github.com/cygy/ginamite/web/api"
+	"github.com/cygy/ginamite/web/html"
+
+	"github.com/gin-gonic/gin"
+)
 
 // ConfigureDefaultRoutes is the function configuring the default routes of the web server.
 type ConfigureDefaultRoutes func(routes *DefaultRoutes)
@@ -20,6 +25,8 @@ type Router struct {
 
 	// private properties
 	engine        *gin.Engine
+	pages         *html.Configuration
+	api           *api.Client
 	locales       []string
 	defaultLocale string
 	cookieName    string

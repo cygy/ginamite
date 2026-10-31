@@ -4,6 +4,8 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/cygy/ginamite/common/ctxlocalization"
+
 	"github.com/cygy/ginamite/common/ctxqueue"
 
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
@@ -43,7 +45,7 @@ func validateOrCancelUpdateProperty(c *gin.Context, property string, validate bo
 	isDisableAccountProcess := property == authentication.ProcessDisableAccount
 
 	locale := ctxLocale.Get(c)
-	t := localization.Translate(locale)
+	t := ctxlocalization.Get(c).Translate(locale)
 
 	// Here is a local function that returns an error. This route does only return a single error.
 	sendError := func(err error) {
@@ -265,7 +267,7 @@ func validateOrCancelUpdateProperty(c *gin.Context, property string, validate bo
 
 func validatePassword(c *gin.Context, password, messageKey string) bool {
 	locale := ctxLocale.Get(c)
-	t := localization.Translate(locale)
+	t := ctxlocalization.Get(c).Translate(locale)
 
 	message := t(messageKey)
 
@@ -315,7 +317,7 @@ func validatePassword(c *gin.Context, password, messageKey string) bool {
 
 func validateEmailAddress(c *gin.Context, emailAddress, messageKey string) bool {
 	locale := ctxLocale.Get(c)
-	t := localization.Translate(locale)
+	t := ctxlocalization.Get(c).Translate(locale)
 
 	message := t(messageKey)
 

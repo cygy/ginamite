@@ -23,7 +23,7 @@ func TestPage_Localize(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			page := &Page{Locale: tt.locale}
+			page := &Page{Locale: tt.locale, conf: testConf}
 
 			if got := page.Localize(tt.key, tt.args...); got != tt.want {
 				t.Errorf("Localize() = %q, want %q", got, tt.want)
@@ -48,7 +48,7 @@ func TestPage_LocalizeDateTime(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			page := &Page{Locale: tt.locale, Timezone: tt.timezone, formats: testFormats[tt.locale]}
+			page := &Page{Locale: tt.locale, Timezone: tt.timezone, conf: &Configuration{settings: Settings{LocaleFormats: testFormats}}}
 
 			if got := page.LocalizeDate(at); got != tt.date {
 				t.Errorf("LocalizeDate() = %q, want %q", got, tt.date)
@@ -86,7 +86,7 @@ func TestPage_FormattedTime(t *testing.T) {
 func TestPage_URLs(t *testing.T) {
 	setup(t)
 
-	page := &Page{Locale: "en-us", staticHost: testStaticHost}
+	page := &Page{Locale: "en-us", conf: testConf}
 
 	tests := []struct{ name, got, want string }{
 		{"URL", page.URL("home"), testWebHost + "/en-us/home"},

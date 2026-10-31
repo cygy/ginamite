@@ -6,14 +6,11 @@ import (
 	"path/filepath"
 	"slices"
 	"sort"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/notifications"
-	"github.com/cygy/ginamite/common/template/html"
-	"github.com/cygy/ginamite/common/template/text"
 	"github.com/cygy/ginamite/common/weburl"
 	"github.com/cygy/ginamite/worker/internal/workertest"
 	"github.com/cygy/ginamite/worker/mail"
@@ -179,12 +176,8 @@ func TestServer_recurringFuncs_run(t *testing.T) {
 	c.Account.DeleteInactiveAfter = 48
 	c.Sitemap = config.SitemapConfiguration{Path: t.TempDir(), Name: "sitemap", MaximumURLsPerPage: 1000}
 
-	oldRoutes := weburl.Main
-	t.Cleanup(func() { weburl.Main = oldRoutes })
-	weburl.Main = weburl.NewConfiguration()
-
 	q := workertest.CaptureQueue(t)
-	s := &Server{Config: c, Queue: q.Sender, Functions: allHandlers()}
+	s := &Server{Config: c, Queue: q.Sender, routes: weburl.NewConfiguration(), Functions: allHandlers()}
 
 	// The count logged by each task.
 	wantCounts := map[string]any{
@@ -275,9 +268,6 @@ func TestServer_setup(t *testing.T) {
 	c.SupportedLocales = []string{"en"}
 	c.RecurringTasks = []recurring.ScheduledTask{{Name: recurring.DeleteExpiredTokens}}
 
-	oldHTML, oldText, oldRoutes := html.Main, text.Main, weburl.Main
-	t.Cleanup(func() { html.Main, text.Main, weburl.Main = oldHTML, oldText, oldRoutes })
-
 	var env, version string
 	var calls []string
 	s := &Server{Config: c, RoutesFile: filepath.Join(dir, "routes.yml")}
@@ -293,15 +283,10 @@ func TestServer_setup(t *testing.T) {
 	if env != "test" || version != "1.0" || !slices.Equal(calls, []string{"start up", "recurring"}) {
 		t.Errorf("env = %q, version = %q, calls = %v", env, version, calls)
 	}
-	if html.Main == nil || text.Main == nil {
-		t.Fatal("the templates are not loaded")
+	if s.mailer == nil {
+		t.Fatal("the mailer is not created")
 	}
-
-	var b strings.Builder
-	if err := html.Main.ExecuteTemplate(&b, "hello.html", map[string]string{"Name": "John"}); err != nil || b.String() != "<p>John</p>" {
-		t.Errorf("HTML template = %q, %v", b.String(), err)
-	}
-	if got := weburl.GetURL("home", "en"); got != "https://web/en/" {
+	if got := s.routes.GetURL("home", "en"); got != "https://web/en/" {
 		t.Errorf("URL of the home = %q", got)
 	}
 	if !recurring.HasFunc(recurring.DeleteExpiredTokens) {

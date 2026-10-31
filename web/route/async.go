@@ -10,7 +10,6 @@ import (
 	"github.com/cygy/ginamite/common/log"
 	apiResponse "github.com/cygy/ginamite/common/response"
 	"github.com/cygy/ginamite/web/api"
-	"github.com/cygy/ginamite/web/html"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
@@ -18,8 +17,8 @@ import (
 
 // loadAsyncRoutes loads the passthrough async calls of the routes file for the locale into the group.
 func (r *Router) loadAsyncRoutes(group *gin.RouterGroup, locale string) {
-	for key, async := range html.Main.Async {
-		path, ok := relativeAsyncPath(key, locale)
+	for key, async := range r.pages.Async {
+		path, ok := relativeAsyncPath(r.pages, key, locale)
 		if !ok {
 			continue
 		}
@@ -27,7 +26,7 @@ func (r *Router) loadAsyncRoutes(group *gin.RouterGroup, locale string) {
 		method := strings.ToUpper(async.Method)
 		switch method {
 		case api.GET, api.POST, api.PUT, api.PATCH, api.DELETE:
-			group.Handle(method, path, forwardToAPI(async.Target, method))
+			group.Handle(method, path, forwardToAPI(r.api, async.Target, method))
 		default:
 			log.WithFields(logrus.Fields{
 				"async":  key,
@@ -39,7 +38,7 @@ func (r *Router) loadAsyncRoutes(group *gin.RouterGroup, locale string) {
 
 // forwardToAPI returns the handler which sends the request to the endpoint target of the API with the method, and
 // sends the response of the API back. The parameters of the route, prefixed by a colon in the target, are escaped.
-func forwardToAPI(target, method string) gin.HandlerFunc {
+func forwardToAPI(client *api.Client, target, method string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		body, err := io.ReadAll(c.Request.Body)
 		if err != nil {
@@ -58,7 +57,7 @@ func forwardToAPI(target, method string) gin.HandlerFunc {
 		request.UseDefaultResponseHandlers = false
 		request.ContentType = c.Request.Header.Get("Content-Type")
 
-		result, _ := api.Main.Call(c, request)
+		result, _ := client.Call(c, request)
 		switch {
 		case result.RequestError != nil:
 			c.AbortWithStatus(http.StatusInternalServerError)

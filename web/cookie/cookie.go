@@ -52,6 +52,6 @@ func redirectTo(c *gin.Context, key string) {
 		return
 	}
 
-	c.Redirect(http.StatusFound, html.Main.URL(key, context.GetLocale(c)))
+	c.Redirect(http.StatusFound, html.Of(c).URL(key, context.GetLocale(c)))
 	c.Writer.WriteHeaderNow()
 }

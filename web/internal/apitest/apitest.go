@@ -1,4 +1,4 @@
-// Package apitest replaces the main API client with a client of a test server.
+// Package apitest provides clients of the API connected to a test server.
 package apitest
 
 import (
@@ -12,17 +12,13 @@ import (
 	"github.com/cygy/ginamite/web/api"
 )
 
-// SetAddress replaces the main API client, for the duration of the test, with a client of the API at host:port.
-func SetAddress(t *testing.T, host string, port int) {
-	t.Helper()
-
-	old := api.Main
-	api.Main = api.NewClient(host, "v1", port, 2000, 0, false)
-	t.Cleanup(func() { api.Main = old })
+// NewClient returns a client of the API at host:port.
+func NewClient(host string, port int) *api.Client {
+	return api.NewClient(host, "v1", port, 2000, 0, false)
 }
 
-// Set replaces the main API client, for the duration of the test, with a client of a server running the handler.
-func Set(t *testing.T, handler http.HandlerFunc) {
+// Set returns a client of a server running the handler, closed at the end of the test.
+func Set(t *testing.T, handler http.HandlerFunc) *api.Client {
 	t.Helper()
 
 	server := httptest.NewServer(handler)
@@ -37,5 +33,5 @@ func Set(t *testing.T, handler http.HandlerFunc) {
 		t.Fatal(err)
 	}
 
-	SetAddress(t, "http://"+host, portNumber)
+	return NewClient("http://"+host, portNumber)
 }

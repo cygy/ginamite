@@ -66,7 +66,7 @@ func TestPageLocaleVar_IgnoresTheCaseOfTheLocale(t *testing.T) {
 func TestPageSetLocalizedVar(t *testing.T) {
 	setup(t)
 
-	page := &Page{Locale: "fr-fr"}
+	page := &Page{Locale: "fr-fr", conf: testConf}
 
 	page.SetLocalizedVar("title", "home.title")
 
@@ -95,7 +95,7 @@ func TestPageSetHrefLangParam(t *testing.T) {
 func TestPageRawString(t *testing.T) {
 	setup(t)
 
-	page := &Page{Locale: "fr-fr"}
+	page := &Page{Locale: "fr-fr", conf: testConf}
 
 	if got := page.rawString("hello"); got != "Bonjour {{.Name}}" {
 		t.Errorf("rawString() = %q, want the untranslated message", got)

@@ -4,7 +4,7 @@ import (
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
-	"github.com/cygy/ginamite/common/localization"
+	"github.com/cygy/ginamite/common/ctxlocalization"
 	"github.com/gin-gonic/gin"
 )
 
@@ -12,7 +12,7 @@ import (
 // false if it is missing or not a valid ID, see request.IsValidID.
 func checkNotificationID(c *gin.Context, messageKey string) (string, bool) {
 	locale := ctxLocale.Get(c)
-	t := localization.Translate(locale)
+	t := ctxlocalization.Get(c).Translate(locale)
 
 	notificationID := c.Param("id")
 	if len(notificationID) == 0 {

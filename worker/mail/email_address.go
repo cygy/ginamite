@@ -12,21 +12,21 @@ var (
 )
 
 // UpdateEmailAddressConfirmation sends an email asking to confirm, or to cancel, the update of the email address.
-func UpdateEmailAddressConfirmation(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
-	sendProcess(ctx, payload, updateEmailAddress, isEmailAddressValid)
+func (m *Mailer) UpdateEmailAddressConfirmation(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
+	m.sendProcess(ctx, payload, updateEmailAddress, isEmailAddressValid)
 }
 
 // UpdateEmailAddressConfirmed sends an email to notify the update of the email address is confirmed.
-func UpdateEmailAddressConfirmed(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
-	sendNotification(ctx, payload, "update_email_address.confirmed", isEmailAddressValid)
+func (m *Mailer) UpdateEmailAddressConfirmed(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
+	m.sendNotification(ctx, payload, "update_email_address.confirmed", isEmailAddressValid)
 }
 
 // UpdateEmailAddressCancelled sends an email to notify the update of the email address is cancelled.
-func UpdateEmailAddressCancelled(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
-	sendNotification(ctx, payload, "update_email_address.cancelled", isEmailAddressValid)
+func (m *Mailer) UpdateEmailAddressCancelled(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
+	m.sendNotification(ctx, payload, "update_email_address.cancelled", isEmailAddressValid)
 }
 
 // ValidateNewEmailAddress sends an email asking to validate the new email address.
-func ValidateNewEmailAddress(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
-	sendProcess(ctx, payload, validateNewEmailAddress, isEmailAddressValid)
+func (m *Mailer) ValidateNewEmailAddress(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
+	m.sendProcess(ctx, payload, validateNewEmailAddress, isEmailAddressValid)
 }

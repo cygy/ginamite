@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/cygy/ginamite/common/ctxlocalization"
+
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/response"
-	"github.com/cygy/ginamite/common/localization"
 
 	"github.com/gin-gonic/gin"
 )
@@ -26,7 +27,7 @@ func GetNotifications(supportedNotifications []string) gin.HandlerFunc {
 
 		localizedNotifications, ok := notifications[locale]
 		if !ok {
-			t := localization.Translate(locale)
+			t := ctxlocalization.Get(c).Translate(locale)
 
 			localizedNotifications = make([]localizedNotification, len(supportedNotifications))
 			for i, notificationType := range supportedNotifications {

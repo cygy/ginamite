@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/cygy/ginamite/common/ctxlocalization"
+
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/log"
 
@@ -21,11 +23,18 @@ func init() {
 	log.Initialize("test", false)
 }
 
-// NewContext returns a gin context bound to a request and the recorder of its response.
+// Localization is the translation engine of the contexts created by NewContext, set by InitLocalization.
+var Localization *localization.Engine
+
+// NewContext returns a gin context bound to a request and the recorder of its response. The context holds the
+// translation engine of InitLocalization, if called.
 func NewContext(method, target string, body io.Reader) (*gin.Context, *httptest.ResponseRecorder) {
 	recorder := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(recorder)
 	c.Request = httptest.NewRequest(method, target, body)
+	if Localization != nil {
+		ctxlocalization.Set(c, Localization)
+	}
 
 	return c, recorder
 }
@@ -38,7 +47,7 @@ func Serve(handler http.Handler, req *http.Request) *httptest.ResponseRecorder {
 	return recorder
 }
 
-// InitLocalization initializes the translation engine with the "en" messages.
+// InitLocalization sets the translation engine, see Localization, with the "en" messages for the duration of the test.
 func InitLocalization(t *testing.T, messages map[string]string) {
 	t.Helper()
 
@@ -52,5 +61,7 @@ func InitLocalization(t *testing.T, messages map[string]string) {
 		t.Fatalf("unable to write the messages: %v", err)
 	}
 
-	localization.Initialize(dir, []string{"en"})
+	old := Localization
+	Localization = localization.Load(dir, []string{"en"})
+	t.Cleanup(func() { Localization = old })
 }

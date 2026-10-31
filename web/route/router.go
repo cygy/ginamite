@@ -3,10 +3,13 @@ package route
 import (
 	"net/http"
 
+	"github.com/cygy/ginamite/common/ctxlocalization"
+
 	"github.com/cygy/ginamite/common/errors/auth"
-	"github.com/cygy/ginamite/common/localization"
 	apiResponse "github.com/cygy/ginamite/common/response"
+	"github.com/cygy/ginamite/web/api"
 	"github.com/cygy/ginamite/web/context"
+	"github.com/cygy/ginamite/web/html"
 	"github.com/cygy/ginamite/web/response"
 	"github.com/cygy/ginamite/web/route/robots"
 
@@ -27,10 +30,13 @@ var errorPages = []struct {
 }
 
 // NewRouter returns a router of the engine for the locales, with the robots.txt route enabled.
+// The paths of the routes come from the pages, and the async calls are forwarded with the client of the API.
 // The auth token of the requests is read from the cookie cookieName, and verified with the secret JWTSecret.
-func NewRouter(e *gin.Engine, locales []string, defaultLocale, cookieName, JWTSecret string) *Router {
+func NewRouter(e *gin.Engine, pages *html.Configuration, client *api.Client, locales []string, defaultLocale, cookieName, JWTSecret string) *Router {
 	r := &Router{
 		engine:        e,
+		pages:         pages,
+		api:           client,
 		locales:       locales,
 		defaultLocale: defaultLocale,
 		cookieName:    cookieName,
@@ -53,7 +59,7 @@ func (r *Router) LoadDefaultRoutes() {
 		r.engine.GET(r.DefaultRoutes.Robots.Paths.Get.Path, robots.Robots)
 	}
 
-	if path, _, ok := relativeRoutePath("index", r.defaultLocale); ok {
+	if path, _, ok := relativeRoutePath(r.pages, "index", r.defaultLocale); ok {
 		r.engine.GET("/", func(c *gin.Context) {
 			c.Redirect(http.StatusPermanentRedirect, "/"+r.defaultLocale+path)
 		})
@@ -65,7 +71,7 @@ func (r *Router) LoadDefaultRoutes() {
 		group := r.localeGroup(locale)
 
 		for _, page := range errorPages {
-			if path, _, ok := relativeRoutePath(page.key, locale); ok {
+			if path, _, ok := relativeRoutePath(r.pages, page.key, locale); ok {
 				group.GET(path, page.handler)
 			}
 		}
@@ -82,7 +88,7 @@ func (r *Router) LoadCustomRoutes(configureRoutes ConfigureCustomRoutes) {
 
 	for _, locale := range r.locales {
 		configureRoutes(r.localeGroup(locale), locale, r.Handlers, func(key string) (string, bool, gin.HandlerFunc, bool) {
-			path, partial, ok := relativeRoutePath(key, locale)
+			path, partial, ok := relativeRoutePath(r.pages, key, locale)
 			return path, partial, context.SavePageKey(key), ok
 		})
 	}
@@ -108,7 +114,7 @@ func mustBeAuthenticated(partial bool) gin.HandlerFunc {
 			return
 		}
 
-		t := localization.Translate(context.GetLocale(c))
+		t := ctxlocalization.Get(c).Translate(context.GetLocale(c))
 		c.AbortWithStatusJSON(http.StatusUnauthorized, apiResponse.NewError(apiResponse.Error{
 			Domain:   auth.Domain,
 			Code:     auth.InsufficientRights,

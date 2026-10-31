@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/cygy/ginamite/common/ctxlocalization"
+
 	"github.com/cygy/ginamite/common/ctxqueue"
 
 	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
@@ -15,7 +17,6 @@ import (
 	"github.com/cygy/ginamite/common/config/environment"
 	"github.com/cygy/ginamite/common/ctxconfig"
 	commonErrors "github.com/cygy/ginamite/common/errors"
-	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/notifications"
 	"github.com/cygy/ginamite/common/queue"
 	"github.com/cygy/ginamite/common/random"
@@ -26,7 +27,7 @@ import (
 
 func deleteAuthenticationToken(c *gin.Context, checkKey bool) {
 	locale := ctxLocale.Get(c)
-	t := localization.Translate(locale)
+	t := ctxlocalization.Get(c).Translate(locale)
 
 	// Closure to send an invalid request error.
 	sendError := func() {

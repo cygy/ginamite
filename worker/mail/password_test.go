@@ -12,10 +12,10 @@ func TestPasswordNotifications(t *testing.T) {
 		send sender
 		key  string
 	}{
-		{"ForgotPasswordConfirmed", ForgotPasswordConfirmed, "forgot_password.confirmed"},
-		{"ForgotPasswordCancelled", ForgotPasswordCancelled, "forgot_password.cancelled"},
-		{"UpdatePasswordConfirmed", UpdatePasswordConfirmed, "update_password.confirmed"},
-		{"UpdatePasswordCancelled", UpdatePasswordCancelled, "update_password.cancelled"},
+		{"ForgotPasswordConfirmed", (*Mailer).ForgotPasswordConfirmed, "forgot_password.confirmed"},
+		{"ForgotPasswordCancelled", (*Mailer).ForgotPasswordCancelled, "forgot_password.cancelled"},
+		{"UpdatePasswordConfirmed", (*Mailer).UpdatePasswordConfirmed, "update_password.confirmed"},
+		{"UpdatePasswordCancelled", (*Mailer).UpdatePasswordCancelled, "update_password.cancelled"},
 	}
 
 	for _, tt := range tests {
@@ -32,8 +32,8 @@ func TestPasswordConfirmations(t *testing.T) {
 		key             string
 		confirm, cancel string
 	}{
-		{"ForgotPasswordConfirmation", ForgotPasswordConfirmation, "forgot_password.confirm", weburl.AccountForgotPasswordConfirm, weburl.AccountForgotPasswordCancel},
-		{"UpdatePasswordConfirmation", UpdatePasswordConfirmation, "update_password.confirm", weburl.AccountUpdatePasswordConfirm, weburl.AccountUpdatePasswordCancel},
+		{"ForgotPasswordConfirmation", (*Mailer).ForgotPasswordConfirmation, "forgot_password.confirm", weburl.AccountForgotPasswordConfirm, weburl.AccountForgotPasswordCancel},
+		{"UpdatePasswordConfirmation", (*Mailer).UpdatePasswordConfirmation, "update_password.confirm", weburl.AccountUpdatePasswordConfirm, weburl.AccountUpdatePasswordCancel},
 	}
 
 	for _, tt := range tests {

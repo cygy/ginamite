@@ -40,7 +40,7 @@ func TestPage_InitializeData(t *testing.T) {
 				c.Request.AddCookie(&http.Cookie{Name: testCookieName, Value: tt.cookie})
 			}
 
-			page := Main.preprocessedPages["home"]["en-us"].Copy()
+			page := testConf.preprocessedPages["home"]["en-us"].Copy()
 			page.Vars = map[string]any{"a": 1}
 			page.Content.Error.Message = "stale"
 			page.InitializeData(c)

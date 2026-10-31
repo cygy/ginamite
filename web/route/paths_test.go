@@ -47,7 +47,7 @@ func TestRelativeRoutePath(t *testing.T) {
 		{"unknown", "en-us", "", true, false},
 	}
 	for _, tt := range tests {
-		path, partial, ok := relativeRoutePath(tt.key, tt.locale)
+		path, partial, ok := relativeRoutePath(pagetest.Pages, tt.key, tt.locale)
 
 		if path != tt.want || partial != tt.wantPartial || ok != tt.wantOk {
 			t.Errorf("relativeRoutePath(%q, %q) = %q, %v, %v, want %q, %v, %v", tt.key, tt.locale, path, partial, ok, tt.want, tt.wantPartial, tt.wantOk)
@@ -69,7 +69,7 @@ func TestRelativeAsyncPath(t *testing.T) {
 		{"unknown", "en-us", "", false},
 	}
 	for _, tt := range tests {
-		path, ok := relativeAsyncPath(tt.key, tt.locale)
+		path, ok := relativeAsyncPath(pagetest.Pages, tt.key, tt.locale)
 
 		if path != tt.want || ok != tt.wantOk {
 			t.Errorf("relativeAsyncPath(%q, %q) = %q, %v, want %q, %v", tt.key, tt.locale, path, ok, tt.want, tt.wantOk)

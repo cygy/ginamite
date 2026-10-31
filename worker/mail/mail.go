@@ -4,12 +4,12 @@ package mail
 import (
 	"context"
 	"fmt"
+	htmltemplate "html/template"
 	"net/smtp"
+	texttemplate "text/template"
 
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/log"
-	"github.com/cygy/ginamite/common/template/html"
-	"github.com/cygy/ginamite/common/template/text"
 	"github.com/cygy/ginamite/common/weburl"
 
 	"github.com/domodwyer/mailyak/v3"
@@ -60,21 +60,6 @@ func (f IsEmailAddressValidFunc) check(ctx context.Context, emailAddress string)
 	return isValid && err == nil
 }
 
-var (
-	mailAuth       smtp.Auth
-	smtpHost       string
-	addresses      Sender
-	commonHTMLVars map[string]map[string]any // i.e. commonHTMLVars["StaticHost"]["fr-fr"] => "http://..."
-	commonTextVars map[string]map[string]any // i.e. commonTextVars["StaticHost"]["fr-fr"] => "http://..."
-)
-
-// Replaced by the tests.
-var (
-	translate = localization.Translate
-	routeURL  = weburl.GetURL
-	deliver   = Message.Send
-)
-
 // Sender holds the addresses of the emails sent.
 type Sender struct {
 	EmailAddress        string
@@ -82,13 +67,54 @@ type Sender struct {
 	NoReplyEmailAddress string
 }
 
-// Initialize initializes the mail session. The variables of the templates are indexed by name, then by locale.
-func Initialize(identity, username, password, host string, port int, sender Sender, HTMLVars, textVars map[string]map[string]any) {
-	addresses = sender
-	mailAuth = smtp.PlainAuth(identity, username, password, host)
-	smtpHost = fmt.Sprintf("%s:%d", host, port)
-	commonHTMLVars = HTMLVars
-	commonTextVars = textVars
+// Settings are the properties of a Mailer.
+type Settings struct {
+	Identity string
+	Username string
+	Password string
+	Host     string // The host of the SMTP server.
+	Port     int    // The port of the SMTP server.
+	Sender   Sender
+
+	// HTMLVars and TextVars are the variables available in all the emails, indexed by name, then by locale.
+	HTMLVars map[string]map[string]any
+	TextVars map[string]map[string]any
+
+	// Localization translates the emails.
+	Localization *localization.Engine
+
+	// Routes gives the URLs of the pages of the website linked by the emails.
+	Routes *weburl.Configuration
+
+	// HTMLTemplates and TextTemplates are the templates of the emails.
+	HTMLTemplates *htmltemplate.Template
+	TextTemplates *texttemplate.Template
+}
+
+// Mailer builds and sends the emails. Create it with New.
+type Mailer struct {
+	auth     smtp.Auth
+	smtpHost string
+	settings Settings
+
+	// translate, routeURL and deliver are replaced by the tests.
+	translate func(locale string) localization.TranslateFunc // Returns nil if the locale is unknown.
+	routeURL  func(route, locale string) string
+	deliver   func(Message)
+}
+
+// New returns a Mailer sending the emails with the settings.
+func New(settings Settings) *Mailer {
+	m := &Mailer{
+		auth:     smtp.PlainAuth(settings.Identity, settings.Username, settings.Password, settings.Host),
+		smtpHost: fmt.Sprintf("%s:%d", settings.Host, settings.Port),
+		settings: settings,
+	}
+	m.translate = settings.Localization.Translate
+	m.routeURL = settings.Routes.GetURL
+	m.deliver = m.Send
+
+	return m
 }
 
 // mergeVars returns the common variables of the locale completed, and overridden, by the variables of the message.
@@ -104,31 +130,31 @@ func mergeVars(common map[string]map[string]any, locale string, vars map[string]
 	return merged
 }
 
-// Send sends the HTML and text versions of the email to the recipient.
+// Send sends the HTML and text versions of the message to its recipient.
 // Nothing is sent if a template can not be executed. The errors are logged.
-func (m Message) Send() {
-	fullHTMLVars := mergeVars(commonHTMLVars, m.Locale, m.HTMLVars)
-	fullTextVars := mergeVars(commonTextVars, m.Locale, m.TextVars)
+func (m *Mailer) Send(msg Message) {
+	fullHTMLVars := mergeVars(m.settings.HTMLVars, msg.Locale, msg.HTMLVars)
+	fullTextVars := mergeVars(m.settings.TextVars, msg.Locale, msg.TextVars)
 
-	message := mailyak.New(smtpHost, mailAuth)
-	message.Subject(m.Subject)
-	message.From(addresses.EmailAddress)
-	message.FromName(addresses.Name)
-	message.To(m.Recipient)
-	message.ReplyTo(addresses.NoReplyEmailAddress)
+	message := mailyak.New(m.smtpHost, m.auth)
+	message.Subject(msg.Subject)
+	message.From(m.settings.Sender.EmailAddress)
+	message.FromName(m.settings.Sender.Name)
+	message.To(msg.Recipient)
+	message.ReplyTo(m.settings.Sender.NoReplyEmailAddress)
 
 	// The variables are not logged: they contain the keys of the confirmation links.
-	if err := html.Main.ExecuteTemplate(message.HTML(), m.Template+".html", fullHTMLVars); err != nil {
+	if err := m.settings.HTMLTemplates.ExecuteTemplate(message.HTML(), msg.Template+".html", fullHTMLVars); err != nil {
 		log.WithFields(logrus.Fields{
-			"template": m.Template,
+			"template": msg.Template,
 			"error":    err.Error(),
 		}).Error("unable to execute the template")
 		return
 	}
 
-	if err := text.Main.ExecuteTemplate(message.Plain(), m.Template+".txt", fullTextVars); err != nil {
+	if err := m.settings.TextTemplates.ExecuteTemplate(message.Plain(), msg.Template+".txt", fullTextVars); err != nil {
 		log.WithFields(logrus.Fields{
-			"template": m.Template,
+			"template": msg.Template,
 			"error":    err.Error(),
 		}).Error("unable to execute the template")
 		return
@@ -136,7 +162,7 @@ func (m Message) Send() {
 
 	if err := message.Send(); err != nil {
 		log.WithFields(logrus.Fields{
-			"SMTP":  smtpHost,
+			"SMTP":  m.smtpHost,
 			"error": err.Error(),
 		}).Error("unable to send mail")
 	}

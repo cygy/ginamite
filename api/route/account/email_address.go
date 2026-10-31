@@ -4,6 +4,8 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/cygy/ginamite/common/ctxlocalization"
+
 	"github.com/cygy/ginamite/common/ctxqueue"
 
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
@@ -13,7 +15,6 @@ import (
 	"github.com/cygy/ginamite/common/authentication"
 	"github.com/cygy/ginamite/common/ctxconfig"
 	accountErrors "github.com/cygy/ginamite/common/errors/account"
-	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/queue"
 	res "github.com/cygy/ginamite/common/response"
 
@@ -40,7 +41,7 @@ func UpdateEmailAddress(c *gin.Context) {
 	request.DecodeBody(c, &jsonBody)
 
 	locale := ctxLocale.Get(c)
-	t := localization.Translate(locale)
+	t := ctxlocalization.Get(c).Translate(locale)
 
 	emailAddress := jsonBody.EmailAddress
 
@@ -117,7 +118,7 @@ func ConfirmEmailAddress(c *gin.Context) {
 	}
 
 	locale := ctxLocale.Get(c)
-	t := localization.Translate(locale)
+	t := ctxlocalization.Get(c).Translate(locale)
 
 	userID := ctxUser.GetID(c)
 	user, err := FunctionsOf(c).GetUserDetailsByID(c, userID)

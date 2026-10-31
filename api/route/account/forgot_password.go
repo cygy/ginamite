@@ -3,6 +3,8 @@ package account
 import (
 	"errors"
 
+	"github.com/cygy/ginamite/common/ctxlocalization"
+
 	"github.com/cygy/ginamite/common/ctxqueue"
 
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
@@ -11,7 +13,6 @@ import (
 	"github.com/cygy/ginamite/common/ctxconfig"
 	commonErrors "github.com/cygy/ginamite/common/errors"
 	authError "github.com/cygy/ginamite/common/errors/auth"
-	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/queue"
 	"github.com/cygy/ginamite/common/random"
 	res "github.com/cygy/ginamite/common/response"
@@ -39,7 +40,7 @@ func ForgotPassword(c *gin.Context) {
 	request.DecodeBody(c, &jsonBody)
 
 	locale := ctxLocale.Get(c)
-	t := localization.Translate(locale)
+	t := ctxlocalization.Get(c).Translate(locale)
 
 	// Identifier is mandatory.
 	identifier := jsonBody.Identifier

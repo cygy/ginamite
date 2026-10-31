@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/cygy/ginamite/common/ctxlocalization"
+
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common/ctxconfig"
@@ -40,7 +42,7 @@ func GetOffsetAndLimit(c *gin.Context, defaultOffset, defaultLimit, maxLimit int
 	}
 
 	locale := ctxLocale.Get(c)
-	t := localization.Translate(locale)
+	t := ctxlocalization.Get(c).Translate(locale)
 
 	if offset < 0 {
 		message := t("error.request.parameter.offset.negative.message")

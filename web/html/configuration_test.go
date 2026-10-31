@@ -9,19 +9,15 @@ import (
 	"github.com/cygy/ginamite/web/internal/webtest"
 )
 
-func TestInitialize(t *testing.T) {
+func TestLoad(t *testing.T) {
 	setup(t)
 
-	if jwtCookieName != testCookieName || jwtSecret != testSecret {
-		t.Errorf("the JWT settings are %q and %q", jwtCookieName, jwtSecret)
-	}
-
 	t.Run("pages", func(t *testing.T) {
-		if got := len(Main.preprocessedPages); got != 3 {
+		if got := len(testConf.preprocessedPages); got != 3 {
 			t.Fatalf("%d pages prepared, want 3", got)
 		}
 
-		home := Main.preprocessedPages["home"]["fr-fr"]
+		home := testConf.preprocessedPages["home"]["fr-fr"]
 		if home.Locale != "fr-fr" || home.Timezone != "Europe/Paris" || home.Key != "home" {
 			t.Errorf("locale = %q, timezone = %q, key = %q", home.Locale, home.Timezone, home.Key)
 		}
@@ -55,7 +51,7 @@ func TestInitialize(t *testing.T) {
 			"empty":   "follow,noindex",
 		}
 		for key, want := range tests {
-			if got := Main.preprocessedPages[key]["en-us"].Meta.Robots; got != want {
+			if got := testConf.preprocessedPages[key]["en-us"].Meta.Robots; got != want {
 				t.Errorf("robots of %q = %q, want %q", key, got, want)
 			}
 		}
@@ -72,20 +68,20 @@ func TestInitialize(t *testing.T) {
 			{"unknown", "en-us", ""},
 		}
 		for _, tt := range tests {
-			if got := Main.URL(tt.key, tt.locale); got != tt.want {
+			if got := testConf.URL(tt.key, tt.locale); got != tt.want {
 				t.Errorf("URL(%q, %q) = %q, want %q", tt.key, tt.locale, got, tt.want)
 			}
 		}
 	})
 
 	t.Run("async", func(t *testing.T) {
-		if got := Main.AsyncURL("like", "en-us"); got != testWebHost+"/en-us/like" {
+		if got := testConf.AsyncURL("like", "en-us"); got != testWebHost+"/en-us/like" {
 			t.Errorf("AsyncURL() = %q", got)
 		}
-		if got := Main.AsyncURL("like", "de-de"); got != "" {
+		if got := testConf.AsyncURL("like", "de-de"); got != "" {
 			t.Errorf("AsyncURL() of an unsupported locale = %q, want empty", got)
 		}
-		if got := Main.AsyncURL("unknown", "en-us"); got != "" {
+		if got := testConf.AsyncURL("unknown", "en-us"); got != "" {
 			t.Errorf("AsyncURL() of an unknown call = %q, want empty", got)
 		}
 	})
@@ -107,29 +103,27 @@ func TestInitialize_Panics(t *testing.T) {
 
 			defer func() {
 				if recover() == nil {
-					t.Error("Initialize() must panic")
+					t.Error("Load() must panic")
 				}
 				if entry := webtest.Hook.LastEntry(); entry == nil || entry.Message != "unable to load routes" || entry.Data["path"] != file {
 					t.Errorf("logged entry = %+v", entry)
 				}
 			}()
 
-			Initialize(file, "", "", "", "UTC", testLocales, testFallback, "", "", FacebookConfiguration{}, GoogleConfiguration{}, SocialNetworksConfiguration{}, nil, false, false)
+			Load(file, Settings{Timezone: "UTC", Locales: testLocales, FallbackLocales: testFallback})
 		})
 	}
 }
 
-func TestInitialize_WithoutDefaultPage(t *testing.T) {
-	old := Main
-	t.Cleanup(func() { Main = old })
+func TestLoad_WithoutDefaultPage(t *testing.T) {
 	webtest.SetTranslations(t, map[string]map[string]string{"en-us": {"a": "b"}, "fr-fr": {"a": "b"}})
 
 	file := webtest.WriteFile(t, t.TempDir(), "routes.yaml", "routes:\n  home:\n    paths:\n      en-us: /home\n")
-	Initialize(file, testWebHost, "", "", "UTC", testLocales, testFallback, "", "", FacebookConfiguration{}, GoogleConfiguration{}, SocialNetworksConfiguration{}, nil, false, true)
+	conf := Load(file, Settings{WebHost: testWebHost, Timezone: "UTC", Locales: testLocales, FallbackLocales: testFallback, Production: true})
 
-	page := Main.preprocessedPages["home"]["en-us"]
-	if page == nil || !page.Production || Main.URL("home", "en-us") != testWebHost+"/home" {
-		t.Errorf("page = %+v, url = %q", page, Main.URL("home", "en-us"))
+	page := conf.preprocessedPages["home"]["en-us"]
+	if page == nil || !page.Production || conf.URL("home", "en-us") != testWebHost+"/home" {
+		t.Errorf("page = %+v, url = %q", page, conf.URL("home", "en-us"))
 	}
 }
 
@@ -142,19 +136,19 @@ func TestConfiguration_PageByKey(t *testing.T) {
 			{"home", "de-de"},
 		}
 		for _, tt := range tests {
-			if page := Main.PageByKey(requestFor(tt.locale), tt.key); page != nil {
+			if page := testConf.PageByKey(requestFor(tt.locale), tt.key); page != nil {
 				t.Errorf("PageByKey(%q, %q) = %+v, want nil", tt.key, tt.locale, page)
 			}
 		}
 	})
 
 	t.Run("copy", func(t *testing.T) {
-		first := Main.PageByKey(requestFor("en-us"), "home")
+		first := testConf.PageByKey(requestFor("en-us"), "home")
 		first.Title = "changed"
 		first.Meta.Keywords[0] = "changed"
 		first.SetVar("a", 1)
 
-		second := Main.PageByKey(requestFor("en-us"), "home")
+		second := testConf.PageByKey(requestFor("en-us"), "home")
 		if second.Title != "Home" || second.Meta.Keywords[0] != "default keyword" || second.Var("a") != nil {
 			t.Errorf("the prepared page is shared: %+v", second)
 		}
@@ -167,7 +161,7 @@ func TestConfiguration_PageByKey(t *testing.T) {
 		token := webtest.SignToken(t, testSecret, map[string]any{"sub": "u1"})
 		c := requestFor("en-us", &http.Cookie{Name: testCookieName, Value: token})
 
-		if page := Main.PageByKey(c, "home"); page.Content.CurrentUser.ID != "u1" {
+		if page := testConf.PageByKey(c, "home"); page.Content.CurrentUser.ID != "u1" {
 			t.Errorf("CurrentUser = %+v", page.Content.CurrentUser)
 		}
 	})
@@ -177,12 +171,12 @@ func TestConfiguration_Page(t *testing.T) {
 	setup(t)
 
 	c := requestFor("fr-fr")
-	if page := Main.Page(c); page != nil {
+	if page := testConf.Page(c); page != nil {
 		t.Errorf("Page() without page key = %+v, want nil", page)
 	}
 
 	c.Set("_pagekey", "home")
-	if page := Main.Page(c); page == nil || page.Key != "home" || page.Locale != "fr-fr" {
+	if page := testConf.Page(c); page == nil || page.Key != "home" || page.Locale != "fr-fr" {
 		t.Errorf("Page() = %+v", page)
 	}
 }
@@ -200,7 +194,7 @@ func TestConfiguration_IsPartial(t *testing.T) {
 		{"home", "de-de", true},
 	}
 	for _, tt := range tests {
-		if got := Main.IsPartial(tt.key, tt.locale); got != tt.want {
+		if got := testConf.IsPartial(tt.key, tt.locale); got != tt.want {
 			t.Errorf("IsPartial(%q, %q) = %v, want %v", tt.key, tt.locale, got, tt.want)
 		}
 	}
@@ -209,8 +203,8 @@ func TestConfiguration_IsPartial(t *testing.T) {
 func TestConfiguration_PageByKey_SharesNothingBetweenLocales(t *testing.T) {
 	setup(t)
 
-	en := Main.PageByKey(requestFor("en-us"), "home")
-	fr := Main.PageByKey(requestFor("fr-fr"), "home")
+	en := testConf.PageByKey(requestFor("en-us"), "home")
+	fr := testConf.PageByKey(requestFor("fr-fr"), "home")
 
 	if en.Title == fr.Title || strings.Contains(en.Meta.OpenGraph.Locale, fr.Meta.OpenGraph.Locale) {
 		t.Errorf("en = %q/%q, fr = %q/%q", en.Title, en.Meta.OpenGraph.Locale, fr.Title, fr.Meta.OpenGraph.Locale)

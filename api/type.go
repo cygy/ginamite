@@ -11,6 +11,7 @@ import (
 	"github.com/cygy/ginamite/api/route/user"
 	"github.com/cygy/ginamite/common/authentication"
 	"github.com/cygy/ginamite/common/config"
+	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/queue"
 
 	"github.com/gin-gonic/gin"
@@ -21,9 +22,10 @@ type Server struct {
 	// Config is the configuration of the application, set by the main server before it starts.
 	Config *config.Configuration
 	// Queue sends the messages to the other servers, set by the main server before it starts.
-	Queue      *queue.Queue
-	RoutesFile string
-	Functions  Handlers
+	Queue *queue.Queue
+	// Localization translates the messages of the responses, set by the main server before it starts.
+	Localization *localization.Engine
+	Functions    Handlers
 
 	// RevokedTokens are the auth tokens revoked, which are rejected until they expire. The cache messages of the queue
 	// add tokens to it.

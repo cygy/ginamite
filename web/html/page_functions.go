@@ -7,16 +7,28 @@ import (
 	"html/template"
 	"strings"
 	"time"
-
-	"github.com/cygy/ginamite/common/localization"
 )
+
+// settings returns the settings of the configuration the page belongs to, or empty settings if there is none.
+func (page *Page) settings() Settings {
+	if page.conf == nil {
+		return Settings{}
+	}
+
+	return page.conf.settings
+}
 
 // The methods below are the helpers of the templates.
 
 // Localize returns the translation of the message ID key in the locale of the page, or key if the locale is unknown.
 // See localization.TranslateFunc for the arguments.
 func (page *Page) Localize(key string, args ...any) string {
-	translate := localization.Translate(page.Locale)
+	engine := page.settings().Localization
+	if engine == nil {
+		return key
+	}
+
+	translate := engine.Translate(page.Locale)
 	if translate == nil {
 		return key
 	}
@@ -26,17 +38,17 @@ func (page *Page) Localize(key string, args ...any) string {
 
 // LocalizeDate returns the date of t formatted for the locale and in the timezone of the page.
 func (page *Page) LocalizeDate(t time.Time) string {
-	return page.formatTime(t, page.formats.DateFormat)
+	return page.formatTime(t, page.settings().LocaleFormats[page.Locale].DateFormat)
 }
 
 // LocalizeTime returns the time of t formatted for the locale and in the timezone of the page.
 func (page *Page) LocalizeTime(t time.Time) string {
-	return page.formatTime(t, page.formats.TimeFormat)
+	return page.formatTime(t, page.settings().LocaleFormats[page.Locale].TimeFormat)
 }
 
 // LocalizeDateTime returns the date and the time of t formatted for the locale and in the timezone of the page.
 func (page *Page) LocalizeDateTime(t time.Time) string {
-	return page.formatTime(t, page.formats.DateTimeFormat)
+	return page.formatTime(t, page.settings().LocaleFormats[page.Locale].DateTimeFormat)
 }
 
 // formatTime formats t with the layout, in the timezone of the page. An unknown timezone leaves t unchanged.
@@ -60,18 +72,18 @@ func (page *Page) FormattedTime(s uint) string {
 // URL returns the URL of the route key in the locale of the page, whose parameters, prefixed by a colon,
 // are replaced with the values of the first map of vars.
 func (page *Page) URL(key string, vars ...map[string]string) string {
-	return page.replaceURLVars(Main.URL(key, page.Locale), vars...)
+	return page.replaceURLVars(page.conf.URL(key, page.Locale), vars...)
 }
 
 // AsyncURL returns the URL of the async call key in the locale of the page, whose parameters, prefixed by a colon,
 // are replaced with the values of the first map of vars.
 func (page *Page) AsyncURL(key string, vars ...map[string]string) string {
-	return page.replaceURLVars(Main.AsyncURL(key, page.Locale), vars...)
+	return page.replaceURLVars(page.conf.AsyncURL(key, page.Locale), vars...)
 }
 
 // StaticURL returns the URL of the static asset at path.
 func (page *Page) StaticURL(path string) string {
-	return fmt.Sprintf("%s/%s", page.staticHost, path)
+	return fmt.Sprintf("%s/%s", page.settings().StaticHost, path)
 }
 
 // HTMLSafe returns text as HTML, which is not escaped by the templates.

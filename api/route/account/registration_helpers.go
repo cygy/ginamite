@@ -4,6 +4,8 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/cygy/ginamite/common/ctxlocalization"
+
 	"github.com/cygy/ginamite/common/ctxqueue"
 
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
@@ -12,7 +14,6 @@ import (
 	"github.com/cygy/ginamite/common/authentication"
 	"github.com/cygy/ginamite/common/ctxconfig"
 	registrationError "github.com/cygy/ginamite/common/errors/registration"
-	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/queue"
 	"github.com/cygy/ginamite/common/random"
 	req "github.com/cygy/ginamite/common/request"
@@ -77,7 +78,7 @@ func register(c *gin.Context, method string) {
 	}
 
 	locale := ctxLocale.Get(c)
-	t := localization.Translate(locale)
+	t := ctxlocalization.Get(c).Translate(locale)
 
 	// Verify that the username follows some rules.
 	username := jsonBody.Username
@@ -317,7 +318,7 @@ func register(c *gin.Context, method string) {
 
 func validateOrCancelRegistration(c *gin.Context, validate bool) {
 	locale := ctxLocale.Get(c)
-	t := localization.Translate(locale)
+	t := ctxlocalization.Get(c).Translate(locale)
 
 	// Here is a local function that returns an error. This route does only return a single error.
 	sendError := func() {

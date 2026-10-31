@@ -11,7 +11,6 @@ import (
 	termsErrors "github.com/cygy/ginamite/common/errors/terms"
 	"github.com/cygy/ginamite/common/response"
 	"github.com/cygy/ginamite/web/api"
-	"github.com/cygy/ginamite/web/html"
 	"github.com/cygy/ginamite/web/internal/pagetest"
 
 	"github.com/gin-gonic/gin"
@@ -139,7 +138,7 @@ func TestHandleAPIError(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var handled, aborted bool
 			rec := serve(t, "en-us", nil, func(c *gin.Context) {
-				handled = HandleAPIError(html.Main.PageByKey(c, "index"))(c, http.StatusBadRequest, nil, tt.apiError)
+				handled = HandleAPIError(pagetest.Pages.PageByKey(c, "index"))(c, http.StatusBadRequest, nil, tt.apiError)
 				aborted = c.IsAborted()
 			})
 

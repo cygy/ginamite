@@ -56,8 +56,8 @@ func (s *Server) Start() {
 	specializedServer.Start()
 }
 
-// initializeConfiguration sets up the main logger, the server configuration, which is shared with the specialized
-// servers, the application configuration and the translations.
+// initializeConfiguration sets up the main logger, the server configuration and the translations, which are shared
+// with the specialized servers, and the application configuration.
 func (s *Server) initializeConfiguration(f *flags.Flags) {
 	log.Initialize(f.ServerName, f.Environment == environment.Production)
 
@@ -71,7 +71,8 @@ func (s *Server) initializeConfiguration(f *flags.Flags) {
 		s.ApplicationConfiguration.InitializeFunc(f.ApplicationConfigurationFile)
 	}
 
-	localization.Initialize(s.Config.LocalizationPath, s.Config.SupportedLocales)
+	s.Localization = localization.Load(s.Config.LocalizationPath, s.Config.SupportedLocales)
+	s.API.Localization, s.Worker.Localization, s.Web.Localization = s.Localization, s.Localization, s.Localization
 }
 
 // connectPlugins connects, with the configuration, the plugins which are Connectors, and returns the function which closes them, in the reverse
@@ -92,12 +93,11 @@ func (s *Server) connectPlugins(configuration *config.Configuration) (closeAll f
 	}
 }
 
-// specializedServer returns the server chosen by the arguments, with its routes file, or nil if none is.
+// specializedServer returns the server chosen by the arguments, with its routes file if it uses one, or nil if none is.
 // The API server wins over the worker, which wins over the web server.
 func (s *Server) specializedServer(f *flags.Flags) SpecializedServer {
 	switch {
 	case f.IsAPIServer:
-		s.API.RoutesFile = f.RoutesFile
 		return s.API
 	case f.IsWorkerServer:
 		s.Worker.RoutesFile = f.RoutesFile

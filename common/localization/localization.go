@@ -31,23 +31,11 @@ func NewEngine() (e *Engine) {
 	return
 }
 
-// Main is the main localization engine of the application, set by Initialize.
-var Main *Engine
-
-// Initialize creates the main engine Main and loads the translations of the locales.
+// Load returns an Engine with the translations of the locales loaded from the directory path.
 // See Engine.Initialize.
-func Initialize(path string, locales []string) {
-	Main = NewEngine()
-	Main.Initialize(path, locales)
-}
+func Load(path string, locales []string) *Engine {
+	e := NewEngine()
+	e.Initialize(path, locales)
 
-// Translate returns the translate function of the locale with the main engine,
-// or nil if the locale is not loaded.
-func Translate(locale string) TranslateFunc {
-	return Main.Translate(locale)
-}
-
-// Source returns the raw, untranslated source string of a message with the main engine.
-func Source(locale, key string) string {
-	return Main.Source(locale, key)
+	return e
 }

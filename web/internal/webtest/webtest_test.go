@@ -7,11 +7,12 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/cygy/ginamite/common/ctxlocalization"
+
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/ctxconfig"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/log"
-	htmlTemplate "github.com/cygy/ginamite/common/template/html"
 
 	"github.com/gin-gonic/gin"
 	jwt "github.com/golang-jwt/jwt/v5"
@@ -76,20 +77,31 @@ func TestSetConfig(t *testing.T) {
 }
 
 func TestSetTranslations(t *testing.T) {
-	original := localization.Main
+	original := Localization
 
 	t.Run("replaced", func(t *testing.T) {
 		SetTranslations(t, map[string]map[string]string{"fr-FR": {"hello": "Bonjour"}, "en-us": {"hello": "Hello"}})
 
-		if got := localization.Translate("fr-FR")("hello"); got != "Bonjour" {
+		if got := Localization.Translate("fr-FR")("hello"); got != "Bonjour" {
 			t.Errorf("translation = %q", got)
 		}
-		if got := localization.Translate("en-us")("hello"); got != "Hello" {
+		if got := Localization.Translate("en-us")("hello"); got != "Hello" {
 			t.Errorf("translation = %q", got)
+		}
+
+		c, _ := Context(http.MethodGet, "/", nil)
+		if ctxlocalization.Get(c) != Localization {
+			t.Error("the context must hold the translation engine")
+		}
+
+		var inRequest *localization.Engine
+		Serve(httpRequest(http.MethodGet, "/"), func(c *gin.Context) { inRequest = ctxlocalization.Get(c) })
+		if inRequest != Localization {
+			t.Error("the requests must hold the translation engine")
 		}
 	})
 
-	if localization.Main != original {
+	if Localization != original {
 		t.Error("the translations are not restored")
 	}
 }
@@ -114,20 +126,11 @@ func TestSignToken(t *testing.T) {
 }
 
 func TestSetTemplates(t *testing.T) {
-	original := htmlTemplate.Main
-	engine := gin.New()
+	templates := SetTemplates(t, map[string]string{"hello.html": "Hello {{.}}"}, gin.New())
 
-	t.Run("replaced", func(t *testing.T) {
-		SetTemplates(t, map[string]string{"hello.html": "Hello {{.}}"}, engine)
-
-		var out strings.Builder
-		if err := htmlTemplate.Main.ExecuteTemplate(&out, "hello.html", "you"); err != nil || out.String() != "Hello you" {
-			t.Errorf("output = %q, error = %v", out.String(), err)
-		}
-	})
-
-	if htmlTemplate.Main != original {
-		t.Error("the templates are not restored")
+	var out strings.Builder
+	if err := templates.ExecuteTemplate(&out, "hello.html", "you"); err != nil || out.String() != "Hello you" {
+		t.Errorf("output = %q, error = %v", out.String(), err)
 	}
 }
 

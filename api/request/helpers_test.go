@@ -3,6 +3,8 @@ package request
 import (
 	"testing"
 
+	"github.com/cygy/ginamite/common/ctxlocalization"
+
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/internal/apitest"
 
@@ -26,7 +28,12 @@ func initLocalization(t *testing.T) {
 	})
 }
 
-// ctxLocaleMiddleware stores the "en" locale in the context.
+// ctxLocaleMiddleware stores the "en" locale and the translation engine in the context.
 func ctxLocaleMiddleware() gin.HandlerFunc {
-	return ctxLocale.Inject("en", []string{"en", "fr"})
+	locale := ctxLocale.Inject("en", []string{"en", "fr"})
+
+	return func(c *gin.Context) {
+		ctxlocalization.Set(c, apitest.Localization)
+		locale(c)
+	}
 }

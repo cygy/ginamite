@@ -8,11 +8,11 @@ import (
 	"github.com/cygy/ginamite/common/localization"
 )
 
-func TestContent_message(t *testing.T) {
-	stub(t)
+func TestMailer_message(t *testing.T) {
+	mailer, _ := stub(t)
 
 	t.Run("without links", func(t *testing.T) {
-		m := content{key: "k", template: TemplateNotification, recipient: address, username: "john", locale: "en"}.message()
+		m := mailer.message(content{key: "k", template: TemplateNotification, recipient: address, username: "john", locale: "en"})
 
 		checkCommon(t, m, "k", TemplateNotification)
 		for _, name := range []string{"ConfirmURL", "ConfirmButton", "CancelURL", "CancelButton"} {
@@ -23,10 +23,10 @@ func TestContent_message(t *testing.T) {
 	})
 
 	t.Run("with links and variables", func(t *testing.T) {
-		m := content{
+		m := mailer.message(content{
 			key: "k", template: TemplateConfirmationAndCancel, recipient: address, username: "john", locale: "en",
 			vars: localization.H{"Extra": "x"}, confirmURL: "https://c", cancelURL: "https://x",
-		}.message()
+		})
 
 		checkCommon(t, m, "k", TemplateConfirmationAndCancel)
 		contains(t, "HTML message", m.HTMLVars["Message"], "Extra:x")
@@ -40,10 +40,10 @@ func TestContent_message(t *testing.T) {
 	})
 }
 
-func TestProcessURL(t *testing.T) {
-	stub(t)
+func TestMailer_processURL(t *testing.T) {
+	mailer, _ := stub(t)
 
-	if got, want := processURL("route", "fr", "id", "code"), "https://web/fr/route?id=id&key=code"; got != want {
+	if got, want := mailer.processURL("route", "fr", "id", "code"), "https://web/fr/route?id=id&key=code"; got != want {
 		t.Errorf("processURL = %q, want %q", got, want)
 	}
 }

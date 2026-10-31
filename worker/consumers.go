@@ -7,7 +7,6 @@ import (
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/notifications"
 	"github.com/cygy/ginamite/common/queue"
-	"github.com/cygy/ginamite/worker/mail"
 	"github.com/cygy/ginamite/worker/notification"
 	"github.com/cygy/ginamite/worker/tasks/async/location"
 	"github.com/cygy/ginamite/worker/tasks/async/user"
@@ -104,7 +103,7 @@ func (s *Server) handleMail(value []byte) {
 		return
 	}
 
-	if mail.Handle(context.Background(), msgType, payload, s.Functions.IsEmailAddressValid) {
+	if s.mailer.Handle(context.Background(), msgType, payload, s.Functions.IsEmailAddressValid) {
 		return
 	}
 

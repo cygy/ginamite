@@ -31,6 +31,7 @@ type generator struct {
 	staticHost     string
 	locales        []string
 	supportsLocale func(locale string) bool
+	routes         *weburl.Configuration
 	maxURLs        int // The maximum number of URLs per file of a route with variables.
 	getVariables   GetLocalizedVariablesFunc
 	index          *File
@@ -40,7 +41,7 @@ type generator struct {
 // of the configuration, which is given. The routes without variables are in a sitemap per locale. The routes with variables, whose
 // values come from getLocalizedVariables, have one sitemap per locale and per maximum number of URLs.
 // The errors are logged.
-func Generate(taskName string, configuration *config.Configuration, getLocalizedVariables GetLocalizedVariablesFunc) {
+func Generate(taskName string, configuration *config.Configuration, routes *weburl.Configuration, getLocalizedVariables GetLocalizedVariablesFunc) {
 	g := generator{
 		taskName:       taskName,
 		name:           configuration.Sitemap.Name,
@@ -48,6 +49,7 @@ func Generate(taskName string, configuration *config.Configuration, getLocalized
 		staticHost:     configuration.Hosts.Static,
 		locales:        configuration.SupportedLocales,
 		supportsLocale: configuration.SupportsLocale,
+		routes:         routes,
 		maxURLs:        configuration.Sitemap.MaximumURLsPerPage,
 		getVariables:   getLocalizedVariables,
 	}
@@ -71,7 +73,7 @@ func (g *generator) generate() {
 		}
 	}
 
-	for key, route := range weburl.Main.Routes {
+	for key, route := range g.routes.Routes {
 		if !route.Sitemap.Included {
 			continue
 		}

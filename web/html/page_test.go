@@ -425,6 +425,7 @@ func TestPagePrepareWithLocale(t *testing.T) {
 	setup(t)
 
 	page := &Page{
+		conf:  testConf,
 		Title: "home.title",
 		Meta: Meta{
 			Title:       "default.title",

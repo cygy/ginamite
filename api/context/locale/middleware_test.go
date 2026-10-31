@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/cygy/ginamite/common/ctxlocalization"
+
 	"github.com/cygy/ginamite/api/internal/apitest"
 	"github.com/cygy/ginamite/common/request"
 
@@ -33,7 +35,7 @@ func TestInject(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var got string
 			router := gin.New()
-			router.Use(Inject("EN", []string{"en", "fr"}))
+			router.Use(ctxlocalization.Inject(apitest.Localization), Inject("EN", []string{"en", "fr"}))
 			handler := func(c *gin.Context) {
 				got = Get(c)
 				c.Status(http.StatusOK)

@@ -10,9 +10,6 @@ import (
 	"sync"
 	"testing"
 	ttemplate "text/template"
-
-	"github.com/cygy/ginamite/common/template/html"
-	"github.com/cygy/ginamite/common/template/text"
 )
 
 func TestIsEmailAddressValidFunc_check(t *testing.T) {
@@ -151,26 +148,26 @@ func (s *smtpServer) received() []string {
 	return append([]string(nil), s.data...)
 }
 
-// useTemplates sets the templates used to send the mails, for the duration of the test.
-func useTemplates(t *testing.T, htmlTemplate, textTemplate string) {
+// newTestMailer returns a mailer sending its mails to the SMTP server, with the templates.
+func newTestMailer(t *testing.T, server *smtpServer, htmlTemplate, textTemplate string, htmlVars, textVars map[string]map[string]any) *Mailer {
 	t.Helper()
 
-	oldHTML, oldText := html.Main, text.Main
-	t.Cleanup(func() { html.Main, text.Main = oldHTML, oldText })
+	host, port, _ := net.SplitHostPort(server.addr)
+	var portNumber int
+	_, _ = fmt.Sscan(port, &portNumber)
 
-	html.Main = template.Must(template.New("notification.html").Parse(htmlTemplate))
-	text.Main = ttemplate.Must(ttemplate.New("notification.txt").Parse(textTemplate))
+	return New(Settings{
+		Username: "user", Password: "pass", Host: host, Port: portNumber, Sender: testSender,
+		HTMLVars: htmlVars, TextVars: textVars,
+		HTMLTemplates: template.Must(template.New("notification.html").Parse(htmlTemplate)),
+		TextTemplates: ttemplate.Must(ttemplate.New("notification.txt").Parse(textTemplate)),
+	})
 }
 
 // testSender is the sender of the mails of the tests.
 var testSender = Sender{Name: "Sender", EmailAddress: "sender@example.com", NoReplyEmailAddress: "noreply@example.com"}
 
-func TestMessage_Send(t *testing.T) {
-	oldAuth, oldHost, oldHTMLVars, oldTextVars := mailAuth, smtpHost, commonHTMLVars, commonTextVars
-	t.Cleanup(func() {
-		mailAuth, smtpHost, commonHTMLVars, commonTextVars = oldAuth, oldHost, oldHTMLVars, oldTextVars
-	})
-
+func TestMailer_Send(t *testing.T) {
 	message := Message{
 		Subject: "Hello", Recipient: address, Template: TemplateNotification, Locale: "en",
 		HTMLVars: map[string]any{"Title": "html-title"},
@@ -179,17 +176,12 @@ func TestMessage_Send(t *testing.T) {
 
 	t.Run("sent", func(t *testing.T) {
 		hook.Reset()
-		useTemplates(t, "<p>{{.Title}} {{.Host}}</p>", "{{.Title}} {{.Host}}")
 		server := startSMTP(t)
-
-		host, port, _ := net.SplitHostPort(server.addr)
-		var portNumber int
-		_, _ = fmt.Sscan(port, &portNumber)
-		Initialize("", "user", "pass", host, portNumber, testSender,
+		mailer := newTestMailer(t, server, "<p>{{.Title}} {{.Host}}</p>", "{{.Title}} {{.Host}}",
 			map[string]map[string]any{"Host": {"en": "https://html"}},
 			map[string]map[string]any{"Host": {"en": "https://text"}})
 
-		message.Send()
+		mailer.Send(message)
 
 		data := server.received()
 		if len(data) != 1 {
@@ -204,10 +196,13 @@ func TestMessage_Send(t *testing.T) {
 
 	t.Run("SMTP failure", func(t *testing.T) {
 		hook.Reset()
-		useTemplates(t, "{{.Title}}", "{{.Title}}")
-		Initialize("", "user", "pass", "127.0.0.1", 1, testSender, nil, nil)
+		mailer := New(Settings{
+			Username: "user", Password: "pass", Host: "127.0.0.1", Port: 1, Sender: testSender,
+			HTMLTemplates: template.Must(template.New("notification.html").Parse("{{.Title}}")),
+			TextTemplates: ttemplate.Must(ttemplate.New("notification.txt").Parse("{{.Title}}")),
+		})
 
-		message.Send()
+		mailer.Send(message)
 
 		if entry := hook.LastEntry(); entry == nil || entry.Message != "unable to send mail" {
 			t.Errorf("last log = %+v", entry)
@@ -223,11 +218,10 @@ func TestMessage_Send(t *testing.T) {
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
 				hook.Reset()
-				useTemplates(t, tt.html, tt.text)
 				server := startSMTP(t)
-				smtpHost = server.addr
+				mailer := newTestMailer(t, server, tt.html, tt.text, nil, nil)
 
-				message.Send()
+				mailer.Send(message)
 
 				if entry := hook.LastEntry(); entry == nil || entry.Message != "unable to execute the template" {
 					t.Errorf("last log = %+v", entry)
@@ -240,27 +234,18 @@ func TestMessage_Send(t *testing.T) {
 	})
 }
 
-func TestInitialize(t *testing.T) {
-	oldAuth, oldHost, oldHTMLVars, oldTextVars := mailAuth, smtpHost, commonHTMLVars, commonTextVars
-	t.Cleanup(func() {
-		mailAuth, smtpHost, commonHTMLVars, commonTextVars = oldAuth, oldHost, oldHTMLVars, oldTextVars
-	})
+func TestNew(t *testing.T) {
+	settings := Settings{Identity: "id", Username: "user", Password: "pass", Host: "smtp.example.com", Port: 587, Sender: testSender}
 
-	oldAddresses := addresses
-	t.Cleanup(func() { addresses = oldAddresses })
+	mailer := New(settings)
 
-	htmlVars := map[string]map[string]any{"a": {"en": 1}}
-	textVars := map[string]map[string]any{"b": {"en": 2}}
-	Initialize("id", "user", "pass", "smtp.example.com", 587, testSender, htmlVars, textVars)
-
-	if addresses != testSender {
-		t.Errorf("addresses = %+v, want %+v", addresses, testSender)
+	if mailer.auth == nil || mailer.smtpHost != "smtp.example.com:587" {
+		t.Errorf("auth = %v, smtpHost = %q", mailer.auth, mailer.smtpHost)
 	}
-
-	if mailAuth == nil || smtpHost != "smtp.example.com:587" {
-		t.Errorf("mailAuth = %v, smtpHost = %q", mailAuth, smtpHost)
+	if mailer.settings.Sender != testSender {
+		t.Errorf("sender = %+v, want %+v", mailer.settings.Sender, testSender)
 	}
-	if fmt.Sprint(commonHTMLVars) != fmt.Sprint(htmlVars) || fmt.Sprint(commonTextVars) != fmt.Sprint(textVars) {
-		t.Errorf("vars = %v, %v", commonHTMLVars, commonTextVars)
+	if mailer.translate == nil || mailer.routeURL == nil || mailer.deliver == nil {
+		t.Error("the mailer must have its functions")
 	}
 }

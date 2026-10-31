@@ -1,8 +1,11 @@
 package html
 
 import (
+	"html/template"
 	"net/http"
 	"testing"
+
+	"github.com/cygy/ginamite/common/ctxconfig"
 
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/web/internal/webtest"
@@ -72,29 +75,54 @@ var (
 	}
 )
 
-// setup initializes the routes with the test routes file, the translations, the templates and the configuration,
-// and restores the global state at the end of the test. It returns the Gin engine holding the templates.
+// testConf is the configuration of the routes prepared by setup.
+var testConf *Configuration
+
+// loadTestRoutes returns the configuration of the routes of the test file, with the given templates.
+func loadTestRoutes(t *testing.T, file string, templates *template.Template) *Configuration {
+	t.Helper()
+
+	return Load(file, Settings{
+		WebHost:         testWebHost,
+		StaticHost:      testStaticHost,
+		APIHost:         testAPIHost,
+		Timezone:        "Europe/Paris",
+		Locales:         testLocales,
+		FallbackLocales: testFallback,
+		LocaleFormats:   testFormats,
+		Facebook:        FacebookConfiguration{Enabled: true, AppID: "fb"},
+		Google:          GoogleConfiguration{ClientID: "google"},
+		SocialNetworks:  SocialNetworksConfiguration{Twitter: "@site"},
+		BetaVersion:     true,
+		Localization:    webtest.Localization,
+		Templates:       templates,
+	})
+}
+
+// setup prepares the configuration of the routes, see testConf, with the test routes file, the translations, the
+// templates and the configuration of the contexts. It returns the Gin engine holding the templates.
 func setup(t *testing.T) *gin.Engine {
 	t.Helper()
 
+	webtest.SetConfig(t, &config.Configuration{
+		Cookie: config.CookieConfiguration{Name: testCookieName},
+		JWT:    config.JWTConfiguration{Secret: testSecret},
+	})
 	webtest.SetTranslations(t, map[string]map[string]string{
 		"en-us": {"default.title": "Default", "default.description": "Default description", "default.keyword": "default keyword", "site.name": "Site", "home.title": "Home", "hello": "Hello {{.Name}}"},
 		"fr-fr": {"default.title": "Défaut", "default.description": "Description", "default.keyword": "mot-clé", "site.name": "Site", "home.title": "Accueil", "hello": "Bonjour {{.Name}}"},
 	})
 
 	engine := gin.New()
-	webtest.SetTemplates(t, map[string]string{
+	engine.Use(ctxconfig.Inject(webtest.Config))
+	templates := webtest.SetTemplates(t, map[string]string{
 		"decorator.html": `<html>{{.IncludeMainTemplate}}</html>`,
 		"main.html":      `<h1>{{.Content.Title}}</h1>{{.Localize "hello" (.Content.Vars.args)}}`,
 	}, engine)
 
-	oldMain, oldName, oldSecret := Main, jwtCookieName, jwtSecret
-	t.Cleanup(func() { Main, jwtCookieName, jwtSecret = oldMain, oldName, oldSecret })
-
-	file := webtest.WriteFile(t, t.TempDir(), "routes.yaml", routesFile)
-	Initialize(file, testWebHost, testStaticHost, testAPIHost, "Europe/Paris", testLocales, testFallback, testCookieName, testSecret,
-		FacebookConfiguration{Enabled: true, AppID: "fb"}, GoogleConfiguration{ClientID: "google"}, SocialNetworksConfiguration{Twitter: "@site"},
-		testFormats, true, false)
+	testConf = loadTestRoutes(t, webtest.WriteFile(t, t.TempDir(), "routes.yaml", routesFile), templates)
+	t.Cleanup(func() { testConf = nil })
+	webtest.OnContext(t, func(c *gin.Context) { Set(c, testConf) })
 
 	return engine
 }

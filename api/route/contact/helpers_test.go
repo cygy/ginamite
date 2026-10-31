@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/cygy/ginamite/common/ctxlocalization"
+
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/internal/apitest"
 
@@ -23,7 +25,7 @@ func setup(t *testing.T) {
 
 func serve(handler gin.HandlerFunc, method, target, body string, middlewares ...gin.HandlerFunc) int {
 	router := gin.New()
-	router.Use(Inject(&testFunctions), ctxLocale.Inject("en", []string{"en"}))
+	router.Use(Inject(&testFunctions), ctxlocalization.Inject(apitest.Localization), ctxLocale.Inject("en", []string{"en"}))
 	router.Use(middlewares...)
 	router.Any("/:id", handler)
 	router.Any("/", handler)

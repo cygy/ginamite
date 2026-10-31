@@ -18,13 +18,13 @@ import (
 	"github.com/cygy/ginamite/common/authentication"
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/ctxconfig"
+	"github.com/cygy/ginamite/common/ctxlocalization"
 	"github.com/cygy/ginamite/common/ctxqueue"
 	"github.com/cygy/ginamite/common/kafka"
+	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/queue"
 	"github.com/cygy/ginamite/common/template/html"
-	"github.com/cygy/ginamite/common/template/text"
-	"github.com/cygy/ginamite/common/weburl"
 
 	"github.com/fvbock/endless"
 	"github.com/gin-contrib/gzip"
@@ -101,7 +101,7 @@ func (s *Server) Start() {
 	accountFunctions, userFunctions, contactFunctions, termsFunctions := s.routeFunctions()
 
 	// Load the middlewares.
-	server.Use(ctxconfig.Inject(s.Config), ctxqueue.Inject(s.Queue))
+	server.Use(ctxconfig.Inject(s.Config), ctxqueue.Inject(s.Queue), ctxlocalization.Inject(s.Localization))
 	server.Use(s.Middlewares...)
 	server.Use(ctxAuthToken.InjectRevoked(s.RevokedTokens.IsRevoked))
 	server.Use(ctxAuthToken.InjectHooks(authentication.Hooks{
@@ -117,12 +117,8 @@ func (s *Server) Start() {
 	)
 	server.Use(ctxLocale.Inject(s.Config.DefaultLocale, s.Config.SupportedLocales))
 
-	// Load the templates.
+	// Load the HTML templates into the engine, for the custom routes of the application.
 	html.LoadTemplatesWithDelimiters(s.Config.TemplatesPath+"/html", "[[", "]]", server)
-	text.LoadTemplates(s.Config.TemplatesPath + "/text")
-
-	// Initialize the configuration of the HTML routes.
-	weburl.Initialize(s.RoutesFile, s.Config.Hosts.Web)
 
 	// Set up the routes.
 	router := route.NewRouter(
@@ -168,6 +164,7 @@ func (s *Server) AddCustomRoutes(configuration route.ConfigureCustomRoutes) {
 func NewServer() *Server {
 	return &Server{
 		Config:        config.NewConfiguration(),
+		Localization:  localization.NewEngine(),
 		Queue:         queue.New(nil),
 		RevokedTokens: tokencache.NewRevoked(),
 		customRoutes:  []route.ConfigureCustomRoutes{},

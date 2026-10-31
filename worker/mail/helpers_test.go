@@ -22,18 +22,16 @@ func valid(context.Context, string) (bool, error)   { return true, nil }
 func invalid(context.Context, string) (bool, error) { return false, nil }
 func failing(context.Context, string) (bool, error) { return true, errors.New("boom") }
 
-// sender is a function sending a mail from the payload of a message.
-type sender func(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc)
+// sender is a method of the mailer sending a mail from the payload of a message.
+type sender func(m *Mailer, ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc)
 
-// stub replaces the translations, the URLs and the delivery of the mails, for the duration of the test,
-// and returns the delivered messages. A translation is its ID followed by its variables.
-func stub(t *testing.T) *[]Message {
+// stub returns a mailer whose translations and URLs are fake, and the messages it delivers. A translation is its
+// ID followed by its variables.
+func stub(t *testing.T) (*Mailer, *[]Message) {
 	t.Helper()
 
-	oldTranslate, oldRouteURL, oldDeliver := translate, routeURL, deliver
-	t.Cleanup(func() { translate, routeURL, deliver = oldTranslate, oldRouteURL, oldDeliver })
-
-	translate = func(string) localization.TranslateFunc {
+	mailer := New(Settings{})
+	mailer.translate = func(string) localization.TranslateFunc {
 		return func(id string, args ...any) string {
 			if len(args) == 0 {
 				return id
@@ -42,12 +40,12 @@ func stub(t *testing.T) *[]Message {
 			return fmt.Sprintf("%s %v", id, args[0])
 		}
 	}
-	routeURL = func(route, locale string) string { return "https://web/" + locale + "/" + route }
+	mailer.routeURL = func(route, locale string) string { return "https://web/" + locale + "/" + route }
 
 	delivered := &[]Message{}
-	deliver = func(m Message) { *delivered = append(*delivered, m) }
+	mailer.deliver = func(m Message) { *delivered = append(*delivered, m) }
 
-	return delivered
+	return mailer, delivered
 }
 
 // encode returns the JSON of a payload.
@@ -124,8 +122,8 @@ func checkNotification(t *testing.T, send sender, key string, checked bool) {
 	ctx := context.Background()
 
 	t.Run("sent", func(t *testing.T) {
-		delivered := stub(t)
-		send(ctx, notificationPayload(t), valid)
+		mailer, delivered := stub(t)
+		send(mailer, ctx, notificationPayload(t), valid)
 
 		if len(*delivered) != 1 {
 			t.Fatalf("delivered %d messages, want 1", len(*delivered))
@@ -134,8 +132,8 @@ func checkNotification(t *testing.T, send sender, key string, checked bool) {
 	})
 
 	t.Run("invalid payload", func(t *testing.T) {
-		delivered := stub(t)
-		send(ctx, []byte("{"), valid)
+		mailer, delivered := stub(t)
+		send(mailer, ctx, []byte("{"), valid)
 
 		if len(*delivered) != 0 {
 			t.Errorf("delivered %d messages, want none", len(*delivered))
@@ -148,8 +146,8 @@ func checkNotification(t *testing.T, send sender, key string, checked bool) {
 
 	for name, check := range map[string]IsEmailAddressValidFunc{"invalid address": invalid, "failing check": failing, "no check": nil} {
 		t.Run(name, func(t *testing.T) {
-			delivered := stub(t)
-			send(ctx, notificationPayload(t), check)
+			mailer, delivered := stub(t)
+			send(mailer, ctx, notificationPayload(t), check)
 
 			if len(*delivered) != 0 {
 				t.Errorf("delivered %d messages, want none", len(*delivered))
@@ -166,8 +164,8 @@ func checkProcess(t *testing.T, send sender, key, confirmRoute, cancelRoute stri
 	ctx := context.Background()
 
 	t.Run("sent", func(t *testing.T) {
-		delivered := stub(t)
-		send(ctx, processPayload(t), valid)
+		mailer, delivered := stub(t)
+		send(mailer, ctx, processPayload(t), valid)
 
 		if len(*delivered) != 1 {
 			t.Fatalf("delivered %d messages, want 1", len(*delivered))
@@ -204,8 +202,8 @@ func checkProcess(t *testing.T, send sender, key, confirmRoute, cancelRoute stri
 	})
 
 	t.Run("invalid payload", func(t *testing.T) {
-		delivered := stub(t)
-		send(ctx, []byte("{"), valid)
+		mailer, delivered := stub(t)
+		send(mailer, ctx, []byte("{"), valid)
 
 		if len(*delivered) != 0 {
 			t.Errorf("delivered %d messages, want none", len(*delivered))
@@ -213,8 +211,8 @@ func checkProcess(t *testing.T, send sender, key, confirmRoute, cancelRoute stri
 	})
 
 	t.Run("invalid address", func(t *testing.T) {
-		delivered := stub(t)
-		send(ctx, processPayload(t), invalid)
+		mailer, delivered := stub(t)
+		send(mailer, ctx, processPayload(t), invalid)
 
 		if len(*delivered) != 0 {
 			t.Errorf("delivered %d messages, want none", len(*delivered))

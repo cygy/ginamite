@@ -7,7 +7,9 @@ import (
 
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/ctxconfig"
+	"github.com/cygy/ginamite/common/ctxlocalization"
 	"github.com/cygy/ginamite/common/kafka"
+	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/log"
 	htmlTemplate "github.com/cygy/ginamite/common/template/html"
 	"github.com/cygy/ginamite/web/api"
@@ -29,11 +31,15 @@ var (
 // Server is a web server.
 type Server struct {
 	// Config is the configuration of the application, set by the main server before it starts.
-	Config     *config.Configuration
-	RoutesFile string // The path of the routes file.
-	Functions  Handlers
+	Config *config.Configuration
+	// Localization translates the messages of the pages, set by the main server before it starts.
+	Localization *localization.Engine
+	RoutesFile   string // The path of the routes file.
+	Functions    Handlers
 
 	customRoutes []route.ConfigureCustomRoutes
+	apiClient    *api.Client         // The client of the API, created when the server is set up.
+	pages        *html.Configuration // The pages, created when the server is set up.
 }
 
 // Handlers are the functions of the application used by the web server.
@@ -47,6 +53,7 @@ type Handlers struct {
 func NewServer() *Server {
 	return &Server{
 		Config:       config.NewConfiguration(),
+		Localization: localization.NewEngine(),
 		customRoutes: []route.ConfigureCustomRoutes{},
 	}
 }
@@ -83,8 +90,7 @@ func (s *Server) Start() {
 }
 
 // newEngine returns the Gin engine, in debug mode if enabled by the configuration. The requests are logged by the
-// request logger in production, by the default logger else, and the responses are gzipped if enabled. The
-// configuration is saved in the context of the requests, see ctxconfig.
+// request logger in production, by the default logger else, and the responses are gzipped if enabled.
 func (s *Server) newEngine() *gin.Engine {
 	if s.Config.IsDebugModeEnabled() {
 		gin.SetMode(gin.DebugMode)
@@ -105,46 +111,51 @@ func (s *Server) newEngine() *gin.Engine {
 		engine.Use(gzip.Gzip(s.Config.Server.GZip.Level))
 	}
 
-	engine.Use(ctxconfig.Inject(s.Config))
-
 	return engine
 }
 
-// setUp initializes the API client, the HTML templates and pages, and loads the routes into the engine.
+// setUp initializes the API client, the HTML templates and pages, and loads the routes into the engine. The pages are
+// saved in the context of the requests, with the translation engine.
 func (s *Server) setUp(engine *gin.Engine) {
-	api.Initialize(s.Config.API.Host, s.Config.API.Version, s.Config.API.Port, s.Config.API.TimeOut, s.Config.API.RetryCount, s.Config.IsDebugModeEnabled())
-	api.AddResponseHandlers(append([]api.ResponseHandlerFunc{
+	client := api.NewClient(s.Config.API.Host, s.Config.API.Version, s.Config.API.Port, s.Config.API.TimeOut, s.Config.API.RetryCount, s.Config.IsDebugModeEnabled())
+	s.apiClient = client
+	client.AddResponseHandlers(append([]api.ResponseHandlerFunc{
 		response.HandleInternalServerError(),
 		response.HandleInvalidAuthenticationError(),
 		response.HandleLatestTermsVersionMustBeAcceptedError(),
 	}, s.Functions.APIMiddlewares...)...)
 
-	htmlTemplate.LoadTemplates(s.Config.TemplatesPath, engine)
-
-	html.Initialize(s.RoutesFile,
-		s.Config.Hosts.Web, s.Config.Hosts.Static, s.Config.Hosts.API+"/"+s.Config.APIVersion,
-		s.Config.DefaultTimezone, s.Config.SupportedLocales, s.Config.FallbackLocales,
-		s.Config.Cookie.Name, s.Config.JWT.Secret,
-		html.FacebookConfiguration{
+	pages := html.Load(s.RoutesFile, html.Settings{
+		WebHost:         s.Config.Hosts.Web,
+		StaticHost:      s.Config.Hosts.Static,
+		APIHost:         s.Config.Hosts.API + "/" + s.Config.APIVersion,
+		Timezone:        s.Config.DefaultTimezone,
+		Locales:         s.Config.SupportedLocales,
+		FallbackLocales: s.Config.FallbackLocales,
+		LocaleFormats:   s.Config.Locales,
+		Facebook: html.FacebookConfiguration{
 			Enabled:    s.Config.Facebook.Enabled,
 			AppID:      s.Config.Facebook.AppID,
 			APIVersion: s.Config.Facebook.APIVersion,
 		},
-		html.GoogleConfiguration{
+		Google: html.GoogleConfiguration{
 			Enabled:  s.Config.Google.Enabled,
 			ClientID: s.Config.Google.ClientID,
 		},
-		html.SocialNetworksConfiguration{
+		SocialNetworks: html.SocialNetworksConfiguration{
 			Facebook: s.Config.SocialNetworks.Facebook,
 			Twitter:  s.Config.SocialNetworks.Twitter,
 			Google:   s.Config.SocialNetworks.Google,
 		},
-		s.Config.Locales,
-		!s.Config.IsFinalVersion(),
-		s.Config.IsProductionEnvironment(),
-	)
+		BetaVersion:  !s.Config.IsFinalVersion(),
+		Production:   s.Config.IsProductionEnvironment(),
+		Localization: s.Localization,
+		Templates:    htmlTemplate.LoadTemplates(s.Config.TemplatesPath, engine),
+	})
+	s.pages = pages
+	engine.Use(ctxconfig.Inject(s.Config), ctxlocalization.Inject(s.Localization), html.Inject(pages))
 
-	router := route.NewRouter(engine,
+	router := route.NewRouter(engine, pages, client,
 		s.Config.SupportedLocales, s.Config.DefaultLocale,
 		s.Config.Cookie.Name, s.Config.JWT.Secret,
 	)

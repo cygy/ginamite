@@ -7,6 +7,7 @@ import (
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common/ctxconfig"
+	"github.com/cygy/ginamite/common/ctxlocalization"
 	"github.com/cygy/ginamite/common/ctxqueue"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/mongo/session"
@@ -52,7 +53,7 @@ func UpdateAccountPublicProfile(c *gin.Context) {
 	request.DecodeBody(c, &jsonBody)
 
 	locale := ctxLocale.Get(c)
-	t := localization.Translate(locale)
+	t := ctxlocalization.Get(c).Translate(locale)
 
 	// The locale must be present and supported.
 	usedLocale := jsonBody.Locale

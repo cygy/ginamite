@@ -6,7 +6,6 @@ import (
 
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	ctxUser "github.com/cygy/ginamite/api/context/user"
-	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/session"
 	"github.com/cygy/ginamite/common/mongo/store/mock"
@@ -49,7 +48,7 @@ func TestSignedInContext(t *testing.T) {
 func TestInitLocalization(t *testing.T) {
 	InitLocalization(t, map[string]string{"hello": "Hello"})
 
-	translate := localization.Translate("en")
+	translate := Localization.Translate("en")
 	if translate == nil || translate("hello") != "Hello" {
 		t.Error("the messages must be loaded")
 	}

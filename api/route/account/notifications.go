@@ -4,6 +4,8 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/cygy/ginamite/common/ctxlocalization"
+
 	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	ctxUser "github.com/cygy/ginamite/api/context/user"
@@ -90,7 +92,7 @@ func UpdateNotificationRead(c *gin.Context) {
 	ctxAuthToken.Refresh(c)
 
 	locale := ctxLocale.Get(c)
-	response.OkWithStatus(c, localization.Translate(locale)("status.account.notification.read.updated"))
+	response.OkWithStatus(c, ctxlocalization.Get(c).Translate(locale)("status.account.notification.read.updated"))
 }
 
 // UpdateNotificationNotified updates a notification object.
@@ -116,7 +118,7 @@ func UpdateNotificationNotified(c *gin.Context) {
 	}
 
 	locale := ctxLocale.Get(c)
-	response.OkWithStatus(c, localization.Translate(locale)("status.account.notification.notified.updated"))
+	response.OkWithStatus(c, ctxlocalization.Get(c).Translate(locale)("status.account.notification.notified.updated"))
 }
 
 // DeleteNotification deletes a notification object.
@@ -145,7 +147,7 @@ func DeleteNotification(c *gin.Context) {
 	ctxAuthToken.Refresh(c)
 
 	locale := ctxLocale.Get(c)
-	response.OkWithStatus(c, localization.Translate(locale)("status.account.notification.deleted"))
+	response.OkWithStatus(c, ctxlocalization.Get(c).Translate(locale)("status.account.notification.deleted"))
 }
 
 // GetNotificationsSettings returns all the notifications received or not by the user's devices.
@@ -177,7 +179,7 @@ func SaveNotificationsSettings(c *gin.Context) {
 	request.DecodeBody(c, &jsonBody)
 
 	locale := ctxLocale.Get(c)
-	t := localization.Translate(locale)
+	t := ctxlocalization.Get(c).Translate(locale)
 
 	notificationsToSave := jsonBody.Notifications
 	for _, notification := range notificationsToSave {
@@ -203,7 +205,7 @@ func SaveNotificationsSettings(c *gin.Context) {
 // UnsubscribeNotificationByKey unsubscribes from an encrypted key.
 func UnsubscribeNotificationByKey(c *gin.Context) {
 	locale := ctxLocale.Get(c)
-	t := localization.Translate(locale)
+	t := ctxlocalization.Get(c).Translate(locale)
 
 	// The same error is always sent to avoid giving some clues.
 	sendError := func() {

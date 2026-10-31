@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/cygy/ginamite/common/config"
+	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/notifications"
 	"github.com/cygy/ginamite/common/queue"
@@ -30,9 +31,14 @@ type Server struct {
 	// Config is the configuration of the application, set by the main server before it starts.
 	Config *config.Configuration
 	// Queue sends the messages to the other servers, set by the main server before it starts.
-	Queue      *queue.Queue
-	RoutesFile string
-	Functions  Handlers
+	Queue *queue.Queue
+	// Localization translates the emails, set by the main server before it starts.
+	Localization *localization.Engine
+	RoutesFile   string
+	Functions    Handlers
+
+	routes *weburl.Configuration // The routes of the website, loaded when the worker starts.
+	mailer *mail.Mailer          // Sends the emails, created when the worker starts.
 }
 
 // Handlers are the functions of a worker, which depend on the storage of the application.
@@ -104,7 +110,7 @@ type Handlers struct {
 
 // NewServer returns a new worker.
 func NewServer() *Server {
-	return &Server{Config: config.NewConfiguration(), Queue: queue.New(nil)}
+	return &Server{Config: config.NewConfiguration(), Queue: queue.New(nil), Localization: localization.NewEngine()}
 }
 
 // Start starts the worker: it loads the templates and the routes, initializes the emails, runs the start up tasks
@@ -128,17 +134,26 @@ func (s *Server) Start() {
 func (s *Server) setup() {
 	s.warnUndefinedFunctions()
 
-	html.LoadTemplatesWithDelimiters(s.Config.TemplatesPath+"/html", "[[", "]]", nil)
-	text.LoadTemplates(s.Config.TemplatesPath + "/text")
-
-	weburl.Initialize(s.RoutesFile, s.Config.Hosts.Web)
+	s.routes = weburl.Load(s.RoutesFile, s.Config.Hosts.Web)
 
 	commonHTMLVars, commonTextVars := s.commonMailVars(), s.commonMailVars()
-	mail.Initialize("", s.Config.SMTP.Username, s.Config.SMTP.Password, s.Config.SMTP.Host, s.Config.SMTP.Port, mail.Sender{
-		EmailAddress:        s.Config.SenderEmailAddress,
-		Name:                s.Config.SenderName,
-		NoReplyEmailAddress: s.Config.NoReplyEmailAddress,
-	}, commonHTMLVars, commonTextVars)
+	s.mailer = mail.New(mail.Settings{
+		Username: s.Config.SMTP.Username,
+		Password: s.Config.SMTP.Password,
+		Host:     s.Config.SMTP.Host,
+		Port:     s.Config.SMTP.Port,
+		Sender: mail.Sender{
+			EmailAddress:        s.Config.SenderEmailAddress,
+			Name:                s.Config.SenderName,
+			NoReplyEmailAddress: s.Config.NoReplyEmailAddress,
+		},
+		HTMLVars:      commonHTMLVars,
+		TextVars:      commonTextVars,
+		Localization:  s.Localization,
+		Routes:        s.routes,
+		HTMLTemplates: html.LoadTemplatesWithDelimiters(s.Config.TemplatesPath+"/html", "[[", "]]", nil),
+		TextTemplates: text.LoadTemplates(s.Config.TemplatesPath + "/text"),
+	})
 
 	if s.Functions.StartUpTasks != nil && s.Config.RunStartUpTasks {
 		log.Info("check up started")
@@ -222,7 +237,7 @@ func (s *Server) recurringFuncs() map[string]func(taskName string) {
 	// Generate the XML sitemap files.
 	if h.GetLocalizedRouteVariables != nil {
 		funcs[recurring.GenerateSitemaps] = func(taskName string) {
-			sitemap.Generate(taskName, s.Config, h.GetLocalizedRouteVariables)
+			sitemap.Generate(taskName, s.Config, s.routes, h.GetLocalizedRouteVariables)
 		}
 	}
 

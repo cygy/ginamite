@@ -28,7 +28,7 @@ func setUpstream(t *testing.T, status int, body string) *upstream {
 	t.Helper()
 
 	got := &upstream{}
-	apitest.Set(t, func(w http.ResponseWriter, r *http.Request) {
+	testClient = apitest.Set(t, func(w http.ResponseWriter, r *http.Request) {
 		b, _ := io.ReadAll(r.Body)
 		*got = upstream{r.Method, r.URL.RequestURI(), r.Header.Get("Content-Type"), string(b)}
 		w.Header().Set("Content-Type", "application/json")
@@ -92,11 +92,10 @@ func TestAsyncRoutes_APIError(t *testing.T) {
 }
 
 func TestAsyncRoutes_RequestError(t *testing.T) {
-	apitest.Set(t, func(w http.ResponseWriter, r *http.Request) {})
+	// Nothing listens on this port.
+	testClient = apitest.NewClient("http://127.0.0.1", 1)
 	router, engine := newRouter(t)
 	router.LoadDefaultRoutes()
-	// Nothing listens on this port.
-	apitest.SetAddress(t, "http://127.0.0.1", 1)
 
 	rec := do(engine, http.MethodPost, "/en-us/async/like/1")
 
@@ -126,7 +125,7 @@ func (failingReader) Read([]byte) (int, error) { return 0, io.ErrUnexpectedEOF }
 func TestAsyncRoutes_UnsupportedMethod(t *testing.T) {
 	router, engine := newRouter(t)
 	webtest.Hook.Reset()
-	html.Main.Async["bad"] = &html.Async{Paths: map[string]string{"en-us": pagetest.WebHost + "/en-us/bad"}, Method: "head", Target: "/bad"}
+	pagetest.Pages.Async["bad"] = &html.Async{Paths: map[string]string{"en-us": pagetest.WebHost + "/en-us/bad"}, Method: "head", Target: "/bad"}
 
 	router.LoadDefaultRoutes()
 
@@ -143,7 +142,7 @@ func TestAsyncRoutes_Methods(t *testing.T) {
 		t.Run(method, func(t *testing.T) {
 			got := setUpstream(t, http.StatusOK, `{}`)
 			router, engine := newRouter(t)
-			html.Main.Async["verb"] = &html.Async{Paths: map[string]string{"en-us": pagetest.WebHost + "/en-us/verb"}, Method: method, Target: "/verb"}
+			pagetest.Pages.Async["verb"] = &html.Async{Paths: map[string]string{"en-us": pagetest.WebHost + "/en-us/verb"}, Method: method, Target: "/verb"}
 			router.LoadDefaultRoutes()
 
 			rec := do(engine, strings.ToUpper(method), "/en-us/verb")

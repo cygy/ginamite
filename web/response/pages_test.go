@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/cygy/ginamite/common/response"
-	"github.com/cygy/ginamite/web/html"
+	"github.com/cygy/ginamite/web/internal/pagetest"
 
 	"github.com/gin-gonic/gin"
 )
@@ -81,7 +81,7 @@ func TestErrorPages_WithoutPage(t *testing.T) {
 
 func TestAPIError(t *testing.T) {
 	rec := serve(t, "en-us", nil, func(c *gin.Context) {
-		page := html.Main.PageByKey(c, "index")
+		page := pagetest.Pages.PageByKey(c, "index")
 
 		APIError(c, page, response.Error{Message: "It failed"})
 	})

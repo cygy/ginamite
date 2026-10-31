@@ -30,7 +30,7 @@ func TestPage_Render(t *testing.T) {
 			var aborted bool
 			engine.GET(path, func(c *gin.Context) {
 				c.Set("_locale", "fr-fr")
-				page := Main.PageByKey(c, "home")
+				page := testConf.PageByKey(c, "home")
 				page.SetVar("args", map[string]string{"Name": "Marie"})
 				tt.render(page, c)
 				aborted = c.IsAborted()
@@ -55,7 +55,7 @@ func TestPage_Render(t *testing.T) {
 func TestPage_Process(t *testing.T) {
 	setup(t)
 
-	page := Main.PageByKey(requestFor("en-us"), "home")
+	page := testConf.PageByKey(requestFor("en-us"), "home")
 	page.Content.Title = "Hello {{.Vars.name}}"
 	page.Meta.Description = "{{.Vars.name}} page"
 	page.Meta.OpenGraph.Title = ""
@@ -87,7 +87,7 @@ func TestPage_Process(t *testing.T) {
 func TestPage_Process_OpenGraphOverrides(t *testing.T) {
 	setup(t)
 
-	page := Main.PageByKey(requestFor("en-us"), "home")
+	page := testConf.PageByKey(requestFor("en-us"), "home")
 	page.Meta.OpenGraph.Title = "OG {{.Vars.name}}"
 	page.SetVar("name", "Bob")
 
@@ -102,7 +102,7 @@ func TestPage_Process_TemplateError(t *testing.T) {
 	setup(t)
 	webtest.Hook.Reset()
 
-	page := Main.PageByKey(requestFor("en-us"), "home")
+	page := testConf.PageByKey(requestFor("en-us"), "home")
 	page.Template.Main = "missing.html"
 
 	page.Process()

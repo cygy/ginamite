@@ -4,12 +4,13 @@ package terms
 import (
 	"errors"
 
+	"github.com/cygy/ginamite/common/ctxlocalization"
+
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	ctxUser "github.com/cygy/ginamite/api/context/user"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/api/route/terms"
 	termsError "github.com/cygy/ginamite/common/errors/terms"
-	"github.com/cygy/ginamite/common/localization"
 	r "github.com/cygy/ginamite/common/response"
 
 	"github.com/gin-gonic/gin"
@@ -34,7 +35,7 @@ func VerifyLatestVersionOfTermsAcceptedByUser(currentTermsVersion string, getLat
 		}
 
 		locale := ctxLocale.Get(c)
-		t := localization.Translate(locale)
+		t := ctxlocalization.Get(c).Translate(locale)
 
 		response.PreconditionFailedWithError(c, r.Error{
 			Domain:   termsError.Domain,

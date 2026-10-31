@@ -6,7 +6,6 @@ import (
 	"html/template"
 	"strings"
 
-	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/log"
 
 	"github.com/sirupsen/logrus"
@@ -64,7 +63,10 @@ func localeVarKey(name, locale string) string {
 
 // rawString returns the untranslated message key of the locale of the page, or key if there is none.
 func (page *Page) rawString(key string) string {
-	rawString := localization.Source(page.Locale, key)
+	var rawString string
+	if engine := page.settings().Localization; engine != nil {
+		rawString = engine.Source(page.Locale, key)
+	}
 
 	if len(rawString) == 0 {
 		return key

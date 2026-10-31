@@ -8,7 +8,6 @@ import (
 
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/flags"
-	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/log"
 )
 
@@ -47,7 +46,7 @@ func TestServer_SpecializedServer(t *testing.T) {
 		flags flags.Flags
 		want  func(s *Server) SpecializedServer
 	}{
-		{"api", flags.Flags{IsAPIServer: true, RoutesFile: "routes.yaml"}, func(s *Server) SpecializedServer { return s.API }},
+		{"api", flags.Flags{IsAPIServer: true}, func(s *Server) SpecializedServer { return s.API }},
 		{"worker", flags.Flags{IsWorkerServer: true, RoutesFile: "routes.yaml"}, func(s *Server) SpecializedServer { return s.Worker }},
 		{"web", flags.Flags{IsWebServer: true, RoutesFile: "routes.yaml"}, func(s *Server) SpecializedServer { return s.Web }},
 		{"api wins", flags.Flags{IsAPIServer: true, IsWorkerServer: true, IsWebServer: true}, func(s *Server) SpecializedServer { return s.API }},
@@ -65,7 +64,7 @@ func TestServer_SpecializedServer(t *testing.T) {
 				t.Errorf("specializedServer() = %v, want %v", got, want)
 			}
 			if got != nil {
-				if routes := map[string]string{"api": s.API.RoutesFile, "worker": s.Worker.RoutesFile, "web": s.Web.RoutesFile}; routes[tt.name] != tt.flags.RoutesFile && tt.flags.RoutesFile != "" {
+				if routes := map[string]string{"worker": s.Worker.RoutesFile, "web": s.Web.RoutesFile}; routes[tt.name] != tt.flags.RoutesFile && tt.flags.RoutesFile != "" {
 					t.Errorf("routes files = %v", routes)
 				}
 			}
@@ -79,8 +78,8 @@ func TestServer_InitializeConfiguration(t *testing.T) {
 	writeFile(t, filepath.Join(locales, "en-us.all.json"), `{"hello":"Hello"}`)
 	conf := writeFile(t, filepath.Join(dir, "server.yaml"), "localization_path: "+locales+"\nlocales:\n  en-us:\n    default: true\n")
 
-	oldLog, oldLocalization := log.Main, localization.Main
-	t.Cleanup(func() { log.Main, localization.Main = oldLog, oldLocalization })
+	oldLog := log.Main
+	t.Cleanup(func() { log.Main = oldLog })
 
 	var appFile string
 	s := NewServer()
@@ -97,8 +96,11 @@ func TestServer_InitializeConfiguration(t *testing.T) {
 	if appFile != "app.yaml" {
 		t.Errorf("application file = %q", appFile)
 	}
-	if got := localization.Translate("en-us")("hello"); got != "Hello" {
+	if got := s.Localization.Translate("en-us")("hello"); got != "Hello" {
 		t.Errorf("translation = %q", got)
+	}
+	if s.API.Localization != s.Localization || s.Worker.Localization != s.Localization || s.Web.Localization != s.Localization {
+		t.Error("the translations must be shared with the specialized servers")
 	}
 }
 

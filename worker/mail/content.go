@@ -24,8 +24,8 @@ type content struct {
 }
 
 // message returns the email described by the content.
-func (c content) message() Message {
-	t := translate(c.locale)
+func (m *Mailer) message(c content) Message {
+	t := m.translate(c.locale)
 
 	messageVars := localization.H{"Username": c.username}
 	for name, value := range c.vars {
@@ -71,8 +71,8 @@ func (c content) message() Message {
 }
 
 // processURL returns the URL of a route of a process, with the ID and the code of the process.
-func processURL(route, locale, id, code string) string {
-	return fmt.Sprintf("%s?id=%s&key=%s", routeURL(route, locale), id, code)
+func (m *Mailer) processURL(route, locale, id, code string) string {
+	return fmt.Sprintf("%s?id=%s&key=%s", m.routeURL(route, locale), id, code)
 }
 
 // alwaysValid is the check of the emails which are sent whatever the state of the email address.
@@ -82,7 +82,7 @@ func alwaysValid(context.Context, string) (bool, error) {
 
 // sendNotification decodes a notification payload and sends the email "email.<key>.*" to its recipient,
 // if the email address is valid.
-func sendNotification(ctx context.Context, payload []byte, key string, isEmailAddressValid IsEmailAddressValidFunc) {
+func (m *Mailer) sendNotification(ctx context.Context, payload []byte, key string, isEmailAddressValid IsEmailAddressValidFunc) {
 	p := queue.MailNotification{}
 	if err := queue.UnmarshalPayload(payload, &p); err != nil {
 		return
@@ -92,13 +92,13 @@ func sendNotification(ctx context.Context, payload []byte, key string, isEmailAd
 		return
 	}
 
-	deliver(content{
+	m.deliver(m.message(content{
 		key:       key,
 		template:  TemplateNotification,
 		recipient: p.EmailAddress,
 		username:  p.Username,
 		locale:    p.Locale,
-	}.message())
+	}))
 }
 
 // process describes the email asking a user to confirm, and possibly to cancel, a process.
@@ -110,7 +110,7 @@ type process struct {
 
 // sendProcess decodes a process payload and sends the email asking the user to confirm the process,
 // if the email address is valid. The data of the payload is available as NewEmailAddress.
-func sendProcess(ctx context.Context, payload []byte, pr process, isEmailAddressValid IsEmailAddressValidFunc) {
+func (m *Mailer) sendProcess(ctx context.Context, payload []byte, pr process, isEmailAddressValid IsEmailAddressValidFunc) {
 	p := queue.MailProcessConfirmation{}
 	if err := queue.UnmarshalPayload(payload, &p); err != nil {
 		return
@@ -127,12 +127,12 @@ func sendProcess(ctx context.Context, payload []byte, pr process, isEmailAddress
 		username:   p.Username,
 		locale:     p.Locale,
 		vars:       localization.H{"NewEmailAddress": p.Data},
-		confirmURL: processURL(pr.confirm, p.Locale, p.ProcessID, p.ProcessCode),
+		confirmURL: m.processURL(pr.confirm, p.Locale, p.ProcessID, p.ProcessCode),
 	}
 	if pr.cancel != "" {
 		c.template = TemplateConfirmationAndCancel
-		c.cancelURL = processURL(pr.cancel, p.Locale, p.ProcessID, p.ProcessCode)
+		c.cancelURL = m.processURL(pr.cancel, p.Locale, p.ProcessID, p.ProcessCode)
 	}
 
-	deliver(c.message())
+	m.deliver(m.message(c))
 }

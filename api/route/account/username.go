@@ -4,7 +4,7 @@ import (
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
-	"github.com/cygy/ginamite/common/localization"
+	"github.com/cygy/ginamite/common/ctxlocalization"
 	"github.com/gin-gonic/gin"
 )
 
@@ -22,7 +22,7 @@ func GetAvailability(c *gin.Context) {
 	}
 
 	locale := ctxLocale.Get(c)
-	t := localization.Translate(locale)
+	t := ctxlocalization.Get(c).Translate(locale)
 
 	if FunctionsOf(c).DoesAccountWithUsernameExist != nil {
 		exists, err := FunctionsOf(c).DoesAccountWithUsernameExist(c, username)

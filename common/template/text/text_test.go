@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"text/template"
 )
 
 func writeTemplates(t *testing.T, content string) string {
@@ -21,11 +22,11 @@ func writeTemplates(t *testing.T, content string) string {
 	return dir
 }
 
-func render(t *testing.T, name string) string {
+func render(t *testing.T, templates *template.Template, name string) string {
 	t.Helper()
 
 	var out bytes.Buffer
-	if err := Main.ExecuteTemplate(&out, name, map[string]string{"Name": "John"}); err != nil {
+	if err := templates.ExecuteTemplate(&out, name, map[string]string{"Name": "John"}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -33,27 +34,22 @@ func render(t *testing.T, name string) string {
 }
 
 func TestLoadTemplates(t *testing.T) {
-	defer func() { Main = nil }()
+	templates := LoadTemplates(writeTemplates(t, "Hello {{.Name}}"))
 
-	LoadTemplates(writeTemplates(t, "Hello {{.Name}}"))
-
-	if got := render(t, "hello.txt"); got != "Hello John" {
+	if got := render(t, templates, "hello.txt"); got != "Hello John" {
 		t.Errorf("got %q", got)
 	}
 }
 
 func TestLoadTemplatesWithDelimiters(t *testing.T) {
-	defer func() { Main = nil }()
+	templates := LoadTemplatesWithDelimiters(writeTemplates(t, "Hello [[.Name]] {{.Name}}"), "[[", "]]")
 
-	LoadTemplatesWithDelimiters(writeTemplates(t, "Hello [[.Name]] {{.Name}}"), "[[", "]]")
-
-	if got := render(t, "hello.txt"); got != "Hello John {{.Name}}" {
+	if got := render(t, templates, "hello.txt"); got != "Hello John {{.Name}}" {
 		t.Errorf("got %q", got)
 	}
 }
 
 func TestLoadTemplates_InvalidTemplate(t *testing.T) {
-	defer func() { Main = nil }()
 	defer func() {
 		if recover() == nil {
 			t.Error("LoadTemplates() must panic on an invalid template")

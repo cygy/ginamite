@@ -5,6 +5,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cygy/ginamite/common/ctxlocalization"
+
 	"github.com/cygy/ginamite/common/ctxqueue"
 
 	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
@@ -41,7 +43,7 @@ func LoginWithPassword(c *gin.Context) {
 	request.DecodeBody(c, &jsonBody)
 
 	locale := ctxLocale.Get(c)
-	t := localization.Translate(locale)
+	t := ctxlocalization.Get(c).Translate(locale)
 
 	// Identifier is mandatory.
 	identifier := jsonBody.Identifier
@@ -214,7 +216,7 @@ func UpdateAuthToken(c *gin.Context) {
 	}
 
 	locale := ctxLocale.Get(c)
-	t := localization.Translate(locale)
+	t := ctxlocalization.Get(c).Translate(locale)
 
 	tokenID := c.Param("id")
 
@@ -275,7 +277,7 @@ func RefreshAuthToken(c *gin.Context) {
 	signedToken, err := ctxAuthToken.HooksOf(c).RefreshAuthToken(c, ctxconfig.Get(c).JWT.Secret, ctxconfig.Get(c).JWT.SigningMethod, tokenID, time.Duration(ctxconfig.Get(c).JWT.TTL))
 	if err != nil {
 		locale := ctxLocale.Get(c)
-		t := localization.Translate(locale)
+		t := ctxlocalization.Get(c).Translate(locale)
 
 		response.BadRequestWithError(c, res.Error{
 			Domain:   authError.Domain,

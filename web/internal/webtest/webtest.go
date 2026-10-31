@@ -4,16 +4,19 @@ package webtest
 
 import (
 	"encoding/json"
+	"html/template"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/ctxconfig"
+	"github.com/cygy/ginamite/common/ctxlocalization"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/log"
 	htmlTemplate "github.com/cygy/ginamite/common/template/html"
@@ -30,6 +33,30 @@ var Hook *logtest.Hook
 // Config is the configuration saved in the context of the requests created by Context and Serve, see SetConfig.
 var Config *config.Configuration
 
+// contextSetups are the functions preparing the contexts and the requests created by Context and Serve, see OnContext.
+var contextSetups []func(c *gin.Context)
+
+// OnContext adds a function preparing the contexts and the requests created by Context and Serve, for the duration of
+// the test. It lets the test helpers of the packages depending on webtest save their own services.
+func OnContext(t *testing.T, setup func(c *gin.Context)) {
+	t.Helper()
+
+	old := contextSetups
+	contextSetups = append(slices.Clone(old), setup)
+	t.Cleanup(func() { contextSetups = old })
+}
+
+// prepare runs the functions added by OnContext on the context.
+func prepare(c *gin.Context) {
+	for _, setup := range contextSetups {
+		setup(c)
+	}
+}
+
+// Localization is the translation engine saved in the context of the requests created by Context and Serve, see
+// SetTranslations.
+var Localization *localization.Engine
+
 func init() {
 	gin.SetMode(gin.TestMode)
 
@@ -39,7 +66,7 @@ func init() {
 }
 
 // Context returns a Gin context for a request, and the recorder of its response. The context holds the configuration
-// of SetConfig, if any.
+// of SetConfig, the translation engine of SetTranslations and the functions of OnContext, if any.
 func Context(method, target string, body io.Reader) (*gin.Context, *httptest.ResponseRecorder) {
 	rec := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(rec)
@@ -47,17 +74,28 @@ func Context(method, target string, body io.Reader) (*gin.Context, *httptest.Res
 	if Config != nil {
 		ctxconfig.Set(c, Config)
 	}
+	if Localization != nil {
+		ctxlocalization.Set(c, Localization)
+	}
+	prepare(c)
 
 	return c, rec
 }
 
 // Serve sends a request through the handlers, registered for any method on any path, and returns the response.
-// The requests hold the configuration of SetConfig, if any.
+// The requests hold the configuration of SetConfig, the translation engine of SetTranslations and the functions of OnContext, if any.
 func Serve(req *http.Request, handlers ...gin.HandlerFunc) *httptest.ResponseRecorder {
 	router := gin.New()
 	if Config != nil {
 		router.Use(ctxconfig.Inject(Config))
 	}
+	if Localization != nil {
+		router.Use(ctxlocalization.Inject(Localization))
+	}
+	router.Use(func(c *gin.Context) {
+		prepare(c)
+		c.Next()
+	})
 	router.Any("/*path", handlers...)
 
 	rec := httptest.NewRecorder()
@@ -75,7 +113,8 @@ func SetConfig(t *testing.T, conf *config.Configuration) {
 	t.Cleanup(func() { Config = old })
 }
 
-// SetTranslations replaces the main localization engine for the duration of the test, with the messages of each locale.
+// SetTranslations replaces the translation engine saved in the context of the requests, see Localization, for the
+// duration of the test, with the messages of each locale.
 func SetTranslations(t *testing.T, messages map[string]map[string]string) {
 	t.Helper()
 
@@ -93,9 +132,9 @@ func SetTranslations(t *testing.T, messages map[string]map[string]string) {
 		locales = append(locales, locale)
 	}
 
-	old := localization.Main
-	localization.Initialize(dir, locales)
-	t.Cleanup(func() { localization.Main = old })
+	old := Localization
+	Localization = localization.Load(dir, locales)
+	t.Cleanup(func() { Localization = old })
 }
 
 // WriteFile writes a file, and its missing parent directories, in the directory dir and returns its path.
@@ -125,9 +164,8 @@ func SignToken(t *testing.T, secret string, claims map[string]any) string {
 	return signed
 }
 
-// SetTemplates writes the templates, by file name, loads them into the main HTML templates and into the Gin engine,
-// if not nil, and restores the main HTML templates at the end of the test.
-func SetTemplates(t *testing.T, templates map[string]string, e *gin.Engine) {
+// SetTemplates writes the templates, by file name, loads them into the Gin engine, if not nil, and returns them.
+func SetTemplates(t *testing.T, templates map[string]string, e *gin.Engine) *template.Template {
 	t.Helper()
 
 	dir := t.TempDir()
@@ -135,7 +173,5 @@ func SetTemplates(t *testing.T, templates map[string]string, e *gin.Engine) {
 		WriteFile(t, dir, "pages/"+name, content)
 	}
 
-	old := htmlTemplate.Main
-	htmlTemplate.LoadTemplates(dir, e)
-	t.Cleanup(func() { htmlTemplate.Main = old })
+	return htmlTemplate.LoadTemplates(dir, e)
 }

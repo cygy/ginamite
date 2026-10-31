@@ -34,9 +34,6 @@ func NewConfiguration() (conf *Configuration) {
 	return
 }
 
-// Main is the global configuration of the web routes, set by Initialize.
-var Main *Configuration
-
 // GetURL returns the absolute URL of the web route key for the locale.
 // It logs a warning and returns an empty string if the route or the locale is unknown.
 func (conf *Configuration) GetURL(key, locale string) string {
@@ -108,15 +105,11 @@ func (route *Route) HasVariable() bool {
 	return false
 }
 
-// GetURL returns the absolute URL of the web route key for the locale, with the main configuration.
-// See Configuration.GetURL.
-func GetURL(key, locale string) string {
-	return Main.GetURL(key, locale)
-}
+// Load returns the configuration of the web routes read from the YAML file, with the absolute paths computed.
+// See Configuration.Initialize.
+func Load(file, webHost string) *Configuration {
+	conf := NewConfiguration()
+	conf.Initialize(file, webHost)
 
-// Initialize creates the main configuration of the web routes Main and initializes it.
-// It always returns true: failures panic. See Configuration.Initialize.
-func Initialize(file, webHost string) bool {
-	Main = NewConfiguration()
-	return Main.Initialize(file, webHost)
+	return conf
 }

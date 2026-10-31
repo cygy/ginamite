@@ -12,7 +12,7 @@ import (
 
 // NewLogin sends an email to notify a user that a login occurs on their account.
 // The email has a link to cancel the login and a link to unsubscribe from these emails.
-func NewLogin(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
+func (m *Mailer) NewLogin(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) {
 	p := queue.MailNewLogin{}
 	if err := queue.UnmarshalPayload(payload, &p); err != nil {
 		return
@@ -24,11 +24,11 @@ func NewLogin(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAd
 
 	const key = "email.login.new"
 
-	t := translate(p.Locale)
-	unsubscribeURL := fmt.Sprintf("%s?key=%s", routeURL(weburl.AccountUnsubscribe, p.Locale), p.UnsubscribeKey)
+	t := m.translate(p.Locale)
+	unsubscribeURL := fmt.Sprintf("%s?key=%s", m.routeURL(weburl.AccountUnsubscribe, p.Locale), p.UnsubscribeKey)
 	footerVars := localization.H{"UnsubscribeURL": unsubscribeURL}
 
-	msg := content{
+	msg := m.message(content{
 		key:       "login.new",
 		template:  TemplateAlert,
 		recipient: p.EmailAddress,
@@ -39,11 +39,11 @@ func NewLogin(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAd
 			"Source": p.Source,
 			"Device": p.Device,
 		},
-		cancelURL: processURL(weburl.AccountLoginCancel, p.Locale, p.TokenID, p.TokenKey),
-	}.message()
+		cancelURL: m.processURL(weburl.AccountLoginCancel, p.Locale, p.TokenID, p.TokenKey),
+	})
 
 	msg.HTMLVars["Footer"] = template.HTML(t(key+".html.footer", footerVars))
 	msg.TextVars["Footer"] = t(key+".text.footer", footerVars)
 
-	deliver(msg)
+	m.deliver(msg)
 }

@@ -9,7 +9,6 @@ import (
 	"github.com/cygy/ginamite/common/response"
 	"github.com/cygy/ginamite/web/api"
 	"github.com/cygy/ginamite/web/context"
-	"github.com/cygy/ginamite/web/html"
 	"github.com/cygy/ginamite/web/internal/pagetest"
 
 	"github.com/gin-gonic/gin"
@@ -52,7 +51,7 @@ func TestHandleAPICallToPage(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var handled bool
 			rec := serve(t, func(c *gin.Context) {
-				handled = HandleAPICallToPage(c, html.Main.PageByKey(c, "index"), tt.result, tt.ok)
+				handled = HandleAPICallToPage(c, pagetest.Pages.PageByKey(c, "index"), tt.result, tt.ok)
 			})
 
 			if handled != tt.wantHandled {

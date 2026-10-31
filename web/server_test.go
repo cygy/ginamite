@@ -9,11 +9,12 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/cygy/ginamite/web/html"
+
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/config/environment"
 	"github.com/cygy/ginamite/common/response"
 	"github.com/cygy/ginamite/web/api"
-	"github.com/cygy/ginamite/web/html"
 	"github.com/cygy/ginamite/web/internal/webtest"
 	"github.com/cygy/ginamite/web/robots"
 	"github.com/cygy/ginamite/web/route"
@@ -69,8 +70,8 @@ func newTestServer(t *testing.T, environmentName string) (*Server, *config.Confi
 	webtest.WriteFile(t, conf.TemplatesPath, "pages/decorator.html", `<html>{{.IncludeMainTemplate}}</html>`)
 	webtest.WriteFile(t, conf.TemplatesPath, "pages/main.html", `{{.Content.Title}}`)
 
-	old, oldAPI, oldRobots := html.Main, api.Main, robots.Content
-	t.Cleanup(func() { html.Main, api.Main, robots.Content = old, oldAPI, oldRobots })
+	oldRobots := robots.Content
+	t.Cleanup(func() { robots.Content = oldRobots })
 	robots.Content = "User-agent: *"
 
 	server := NewServer()
@@ -168,10 +169,11 @@ func TestServer_SetUp(t *testing.T) {
 
 	t.Run("API client", func(t *testing.T) {
 		c, _ := webtest.Context(http.MethodGet, "/", nil)
+		html.Set(c, server.pages)
 
 		// Nothing listens on the port of the API: the built-in handler of the server errors renders the error page, and
 		// the handlers of the application come after it.
-		result, ok := api.Main.Call(c, api.NewRequest())
+		result, ok := server.apiClient.Call(c, api.NewRequest())
 
 		if ok || result.RequestError == nil || !result.Handled || apiHandled {
 			t.Errorf("result = %+v, ok = %v, application handler called = %v", result, ok, apiHandled)

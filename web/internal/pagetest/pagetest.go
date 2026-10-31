@@ -7,6 +7,7 @@ import (
 
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/ctxconfig"
+	"github.com/cygy/ginamite/common/ctxlocalization"
 	"github.com/cygy/ginamite/web/html"
 	"github.com/cygy/ginamite/web/internal/webtest"
 
@@ -20,6 +21,9 @@ const (
 	CookieName = "auth"
 	Secret     = "secret"
 )
+
+// Pages are the pages prepared by Setup, nil outside of a test using it.
+var Pages *html.Configuration
 
 // Locales are the locales supported by the test pages.
 var Locales = []string{"en-us", "fr-fr"}
@@ -87,8 +91,8 @@ async:
     target: /list
 `
 
-// Setup initializes the pages with the test routes, translations, templates and configuration, and restores the
-// global state at the end of the test. It returns the Gin engine holding the templates, which saves the configuration
+// Setup initializes the pages with the test routes, translations, templates and configuration, see Pages, and restores
+// the test state at the end of the test. The contexts created by webtest.Context hold the pages. It returns the Gin engine holding the templates, which saves the configuration
 // in the context of the requests.
 //
 // A page is rendered as "<html>TITLE|ERROR|INFO|ID</html>", where ID is the variable "ID".
@@ -117,17 +121,28 @@ func Setup(t *testing.T) *gin.Engine {
 
 	engine := gin.New()
 	engine.Use(ctxconfig.Inject(webtest.Config))
-	webtest.SetTemplates(t, map[string]string{
+	templates := webtest.SetTemplates(t, map[string]string{
 		"decorator.html": `<html>{{.IncludeMainTemplate}}</html>`,
 		"main.html":      `{{.Content.Title}}|{{.Content.Error.Message}}|{{.Content.Info.Message}}|{{.Var "ID"}}`,
 	}, engine)
 
-	old := html.Main
-	t.Cleanup(func() { html.Main = old })
-
 	file := webtest.WriteFile(t, t.TempDir(), "routes.yaml", routes)
-	html.Initialize(file, WebHost, StaticHost, "https://api.test", "UTC", Locales, map[string]string{"en": "en-us", "fr": "fr-fr"},
-		CookieName, Secret, html.FacebookConfiguration{}, html.GoogleConfiguration{}, html.SocialNetworksConfiguration{}, nil, false, true)
+	Pages = html.Load(file, html.Settings{
+		WebHost:         WebHost,
+		StaticHost:      StaticHost,
+		APIHost:         "https://api.test",
+		Timezone:        "UTC",
+		Locales:         Locales,
+		FallbackLocales: map[string]string{"en": "en-us", "fr": "fr-fr"},
+		Production:      true,
+		Localization:    webtest.Localization,
+		Templates:       templates,
+	})
+	pages := Pages
+	t.Cleanup(func() { Pages = nil })
+
+	engine.Use(html.Inject(pages), ctxlocalization.Inject(webtest.Localization))
+	webtest.OnContext(t, func(c *gin.Context) { html.Set(c, pages) })
 
 	return engine
 }

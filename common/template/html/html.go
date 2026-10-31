@@ -9,20 +9,17 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// Main holds the HTML templates of the application, set by LoadTemplates.
-var Main *template.Template
-
 // LoadTemplates loads the HTML templates found in the sub-directories of path.
 // See LoadTemplatesWithDelimiters.
-func LoadTemplates(path string, e *gin.Engine) {
-	LoadTemplatesWithDelimiters(path, "", "", e)
+func LoadTemplates(path string, e *gin.Engine) *template.Template {
+	return LoadTemplatesWithDelimiters(path, "", "", e)
 }
 
 // LoadTemplatesWithDelimiters loads the HTML templates found in the sub-directories of path
-// into Main and, if e is not nil, into the Gin engine, with the helpers plus, minus, mult and div.
+// and, if e is not nil, into the Gin engine, with the helpers plus, minus, mult and div, and returns them.
 // The delimiters are the default ones unless both left and right are set.
 // It panics if a template can not be parsed.
-func LoadTemplatesWithDelimiters(path, left, right string, e *gin.Engine) {
+func LoadTemplatesWithDelimiters(path, left, right string, e *gin.Engine) *template.Template {
 	pattern := fmt.Sprintf("%s/**/*", path)
 	customDelimiters := len(left) > 0 && len(right) > 0
 
@@ -39,7 +36,7 @@ func LoadTemplatesWithDelimiters(path, left, right string, e *gin.Engine) {
 		t = t.Delims(left, right)
 	}
 
-	Main = template.Must(t.ParseGlob(pattern))
+	return template.Must(t.ParseGlob(pattern))
 }
 
 // funcMap returns the helpers available in the templates.

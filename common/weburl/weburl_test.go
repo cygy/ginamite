@@ -133,13 +133,10 @@ func TestRoute_HasVariable(t *testing.T) {
 	}
 }
 
-func TestInitializeAndGetURL(t *testing.T) {
-	defer func(old *Configuration) { Main = old }(Main)
+func TestLoad(t *testing.T) {
+	conf := Load(writeRoutes(t, routes), "https://example.com")
 
-	if !Initialize(writeRoutes(t, routes), "https://example.com") {
-		t.Fatal("Initialize() = false")
-	}
-	if got := GetURL("account.profile", "de"); got != "https://example.com/konto" {
+	if got := conf.GetURL("account.profile", "de"); got != "https://example.com/konto" {
 		t.Errorf("GetURL() = %q", got)
 	}
 }

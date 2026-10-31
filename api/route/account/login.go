@@ -3,6 +3,8 @@ package account
 import (
 	"errors"
 
+	"github.com/cygy/ginamite/common/ctxlocalization"
+
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
@@ -10,7 +12,6 @@ import (
 	"github.com/cygy/ginamite/common/authentication"
 	commonErrors "github.com/cygy/ginamite/common/errors"
 	authError "github.com/cygy/ginamite/common/errors/auth"
-	"github.com/cygy/ginamite/common/localization"
 	req "github.com/cygy/ginamite/common/request"
 	res "github.com/cygy/ginamite/common/response"
 
@@ -30,7 +31,7 @@ func loginWithThirdParty(c *gin.Context, v validator.TokenValidator) {
 	isGoogleMethod := (authenticationMethod == authentication.MethodGoogle)
 
 	locale := ctxLocale.Get(c)
-	t := localization.Translate(locale)
+	t := ctxlocalization.Get(c).Translate(locale)
 
 	errorMessageKey := "error.login.unable.message"
 
@@ -150,7 +151,7 @@ func canNotLoginError(c *gin.Context, err error) {
 	}
 
 	locale := ctxLocale.Get(c)
-	t := localization.Translate(locale)
+	t := ctxlocalization.Get(c).Translate(locale)
 
 	response.BadRequestWithError(c, res.Error{
 		Domain:   authError.Domain,

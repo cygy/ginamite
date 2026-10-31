@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cygy/ginamite/common/ctxlocalization"
+
 	tokencache "github.com/cygy/ginamite/api/cache/authtoken"
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/internal/apitest"
@@ -41,7 +43,7 @@ func TestParse(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var gotID string
 			router := gin.New()
-			router.Use(ctxLocale.Inject("en", []string{"en"}), InjectRevoked(revoked.IsRevoked))
+			router.Use(ctxlocalization.Inject(apitest.Localization), ctxLocale.Inject("en", []string{"en"}), InjectRevoked(revoked.IsRevoked))
 			router.Use(Parse(secret, buildUser, tt.mustBeThere))
 			router.GET("/", func(c *gin.Context) {
 				gotID = GetID(c)

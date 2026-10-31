@@ -3,8 +3,6 @@ package html
 import (
 	"fmt"
 	"strings"
-
-	"github.com/cygy/ginamite/common/config"
 )
 
 var (
@@ -37,8 +35,7 @@ type Page struct {
 	Production    bool
 	Vars          map[string]any // Common variables to all the pages.
 
-	staticHost string                     // Defined by the constructor
-	formats    config.LocaleConfiguration // The date and time formats of the locale, defined by the constructor
+	conf *Configuration // The configuration the page belongs to, defined by Load
 }
 
 // NewPage returns an empty page, without nil variables.
@@ -66,8 +63,7 @@ func (page *Page) Copy() (copied *Page) {
 	copied.Key = page.Key
 	copied.BetaVersion = page.BetaVersion
 	copied.Production = page.Production
-	copied.staticHost = page.staticHost
-	copied.formats = page.formats
+	copied.conf = page.conf
 
 	copied.Paths = make(map[string]string, len(page.Paths))
 	for key, value := range page.Paths {
@@ -187,7 +183,6 @@ func (page *Page) PrepareWithLocale(currentLocale, currentTimezone, webHost, sta
 	// Save the locale and the timezone.
 	page.Locale = currentLocale
 	page.Timezone = currentTimezone
-	page.staticHost = staticHost
 
 	// Localize some strings.
 	page.Title = page.rawString(page.Title)

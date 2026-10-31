@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cygy/ginamite/common/ctxlocalization"
+
 	"github.com/cygy/ginamite/common/ctxqueue"
 
 	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
@@ -18,7 +20,6 @@ import (
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common/ctxconfig"
-	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/mongo/session"
 	"github.com/cygy/ginamite/plugins/mongodb/api/context"
@@ -136,7 +137,7 @@ func UpdateAccountPublicImage(c *gin.Context) {
 	})
 
 	response.Ok(c, response.H{
-		"status": localization.Translate(locale)("status.account.public.image.updated"),
+		"status": ctxlocalization.Get(c).Translate(locale)("status.account.public.image.updated"),
 		"image":  model.NewOwnImage(user.PublicInfos.Image),
 	})
 }
@@ -179,5 +180,5 @@ func DeleteAccountPublicImage(c *gin.Context) {
 		UserID: user.ID.Hex(),
 	})
 
-	response.OkWithStatus(c, localization.Translate(locale)("status.account.public.image.deleted"))
+	response.OkWithStatus(c, ctxlocalization.Get(c).Translate(locale)("status.account.public.image.deleted"))
 }

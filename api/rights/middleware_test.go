@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/cygy/ginamite/common/ctxlocalization"
+
 	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/internal/apitest"
@@ -37,7 +39,7 @@ func TestCheck(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			router := gin.New()
-			router.Use(ctxLocale.Inject("en", []string{"en"}), ctxAuthToken.Parse(secret, nil, false))
+			router.Use(ctxlocalization.Inject(apitest.Localization), ctxLocale.Inject("en", []string{"en"}), ctxAuthToken.Parse(secret, nil, false))
 			router.Use(Check(tt.adminRequired, tt.abilities, tt.user))
 			router.GET("/", func(c *gin.Context) { c.Status(http.StatusOK) })
 

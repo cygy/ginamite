@@ -26,12 +26,10 @@ func writeTemplates(t *testing.T, content string) string {
 }
 
 func TestLoadTemplates_WithoutEngine(t *testing.T) {
-	defer func() { Main = nil }()
-
-	LoadTemplates(writeTemplates(t, "<p>{{.Name}}</p>"), nil)
+	templates := LoadTemplates(writeTemplates(t, "<p>{{.Name}}</p>"), nil)
 
 	var out bytes.Buffer
-	if err := Main.ExecuteTemplate(&out, "home.html", map[string]string{"Name": "<John>"}); err != nil {
+	if err := templates.ExecuteTemplate(&out, "home.html", map[string]string{"Name": "<John>"}); err != nil {
 		t.Fatal(err)
 	}
 	if out.String() != "<p>&lt;John&gt;</p>" {
@@ -40,12 +38,10 @@ func TestLoadTemplates_WithoutEngine(t *testing.T) {
 }
 
 func TestLoadTemplatesWithDelimiters(t *testing.T) {
-	defer func() { Main = nil }()
-
-	LoadTemplatesWithDelimiters(writeTemplates(t, "[[.Name]] {{.Name}}"), "[[", "]]", nil)
+	templates := LoadTemplatesWithDelimiters(writeTemplates(t, "[[.Name]] {{.Name}}"), "[[", "]]", nil)
 
 	var out bytes.Buffer
-	if err := Main.ExecuteTemplate(&out, "home.html", map[string]string{"Name": "John"}); err != nil {
+	if err := templates.ExecuteTemplate(&out, "home.html", map[string]string{"Name": "John"}); err != nil {
 		t.Fatal(err)
 	}
 	if out.String() != "John {{.Name}}" {
@@ -54,7 +50,6 @@ func TestLoadTemplatesWithDelimiters(t *testing.T) {
 }
 
 func TestLoadTemplates_WithEngine(t *testing.T) {
-	defer func() { Main = nil }()
 	gin.SetMode(gin.TestMode)
 
 	engine := gin.New()
@@ -69,19 +64,16 @@ func TestLoadTemplates_WithEngine(t *testing.T) {
 	}
 }
 
-func TestLoadTemplates_MainHasTheHelpers(t *testing.T) {
-	defer func() { Main = nil }()
-
-	LoadTemplates(writeTemplates(t, `{{plus 1 2}}`), nil)
+func TestLoadTemplates_HasTheHelpers(t *testing.T) {
+	templates := LoadTemplates(writeTemplates(t, `{{plus 1 2}}`), nil)
 
 	var out bytes.Buffer
-	if err := Main.ExecuteTemplate(&out, "home.html", nil); err != nil || out.String() != "3" {
+	if err := templates.ExecuteTemplate(&out, "home.html", nil); err != nil || out.String() != "3" {
 		t.Errorf("got %q, %v", out.String(), err)
 	}
 }
 
 func TestLoadTemplatesWithDelimiters_Engine(t *testing.T) {
-	defer func() { Main = nil }()
 	gin.SetMode(gin.TestMode)
 
 	engine := gin.New()
@@ -97,17 +89,14 @@ func TestLoadTemplatesWithDelimiters_Engine(t *testing.T) {
 }
 
 func TestDivisionByZero(t *testing.T) {
-	defer func() { Main = nil }()
+	templates := LoadTemplates(writeTemplates(t, `{{div 1 0}}`), nil)
 
-	LoadTemplates(writeTemplates(t, `{{div 1 0}}`), nil)
-
-	if err := Main.ExecuteTemplate(&bytes.Buffer{}, "home.html", nil); err == nil {
+	if err := templates.ExecuteTemplate(&bytes.Buffer{}, "home.html", nil); err == nil {
 		t.Error("expected an error")
 	}
 }
 
 func TestLoadTemplates_InvalidTemplate(t *testing.T) {
-	defer func() { Main = nil }()
 	defer func() {
 		if recover() == nil {
 			t.Error("LoadTemplates() must panic on an invalid template")

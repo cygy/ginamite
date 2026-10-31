@@ -15,8 +15,8 @@ func TestNewLogin(t *testing.T) {
 	})
 
 	t.Run("sent", func(t *testing.T) {
-		delivered := stub(t)
-		NewLogin(context.Background(), payload, valid)
+		mailer, delivered := stub(t)
+		mailer.NewLogin(context.Background(), payload, valid)
 
 		if len(*delivered) != 1 {
 			t.Fatalf("delivered %d messages, want 1", len(*delivered))
@@ -41,8 +41,8 @@ func TestNewLogin(t *testing.T) {
 	})
 
 	t.Run("invalid payload", func(t *testing.T) {
-		delivered := stub(t)
-		NewLogin(context.Background(), []byte("{"), valid)
+		mailer, delivered := stub(t)
+		mailer.NewLogin(context.Background(), []byte("{"), valid)
 
 		if len(*delivered) != 0 {
 			t.Errorf("delivered %d messages, want none", len(*delivered))
@@ -50,8 +50,8 @@ func TestNewLogin(t *testing.T) {
 	})
 
 	t.Run("invalid address", func(t *testing.T) {
-		delivered := stub(t)
-		NewLogin(context.Background(), payload, invalid)
+		mailer, delivered := stub(t)
+		mailer.NewLogin(context.Background(), payload, invalid)
 
 		if len(*delivered) != 0 {
 			t.Errorf("delivered %d messages, want none", len(*delivered))

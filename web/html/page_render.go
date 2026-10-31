@@ -2,11 +2,11 @@ package html
 
 import (
 	"bytes"
+	"errors"
 	"net/http"
 
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/response"
-	htmlTemplate "github.com/cygy/ginamite/common/template/html"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
@@ -51,7 +51,7 @@ func (page *Page) Process() {
 
 	// Parse the main template: it will be included to the decorator template later.
 	var output bytes.Buffer
-	if err := htmlTemplate.Main.ExecuteTemplate(&output, page.Template.Main, page); err != nil {
+	if err := page.executeMainTemplate(&output); err != nil {
 		log.WithFields(logrus.Fields{
 			"template": page.Template.Main,
 			"page":     page.Key,
@@ -60,6 +60,16 @@ func (page *Page) Process() {
 	} else {
 		page.Content.parsedMainTemplate = output.String()
 	}
+}
+
+// executeMainTemplate executes the main template of the page. It fails if the settings have no templates.
+func (page *Page) executeMainTemplate(output *bytes.Buffer) error {
+	templates := page.settings().Templates
+	if templates == nil {
+		return errors.New("no templates")
+	}
+
+	return templates.ExecuteTemplate(output, page.Template.Main, page)
 }
 
 // RenderOk renders the page with the HTTP code 200.

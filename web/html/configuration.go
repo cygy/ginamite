@@ -1,13 +1,15 @@
 // Package html describes the pages of the website from the routes file, and renders them.
 //
-// The routes file defines the default page, the routes and the passthrough asynchronous calls to the API. Initialize
+// The routes file defines the default page, the routes and the passthrough asynchronous calls to the API. Load
 // loads it and prepares, for each route and each locale, a page cloned by Configuration.PageByKey for each request.
 package html
 
 import (
+	"html/template"
 	"os"
 
 	"github.com/cygy/ginamite/common/config"
+	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/web/context"
 
@@ -23,59 +25,43 @@ type Configuration struct {
 	Async             map[string]*Async
 	urls              map[string]map[string]string // The index is the key of the route, then the locale.
 	preprocessedPages map[string]map[string]*Page  // The index is the key of the route, then the locale.
+	settings          Settings
 }
 
-// settings are the properties of the application used to prepare the pages.
-type settings struct {
-	webHost         string
-	staticHost      string
-	apiHost         string
-	timezone        string
-	locales         []string
-	fallbackLocales map[string]string
-	localeFormats   map[string]config.LocaleConfiguration
-	configuration   PageConfiguration
-	betaVersion     bool
-	production      bool
+// Settings are the properties of the application used to prepare and render the pages.
+type Settings struct {
+	WebHost         string
+	StaticHost      string
+	APIHost         string
+	Timezone        string // The timezone of the pages, unless the user has one.
+	Locales         []string
+	FallbackLocales map[string]string
+	LocaleFormats   map[string]config.LocaleConfiguration // The date and time formats, by locale.
+	Facebook        FacebookConfiguration
+	Google          GoogleConfiguration
+	SocialNetworks  SocialNetworksConfiguration
+	BetaVersion     bool
+	Production      bool
+
+	// Localization translates the messages of the pages, and gives their raw strings.
+	Localization *localization.Engine
+
+	// Templates are the HTML templates of the pages.
+	Templates *template.Template
 }
 
-// Main is the configuration of the routes, set by Initialize.
-var Main *Configuration
-
-var (
-	jwtCookieName string
-	jwtSecret     string
-)
-
-// Initialize loads the routes file into Main and prepares the pages for each supported locale.
-// The JWT cookie name and secret are used to find the user of a request, and the formats of the locales to localize the
-// dates and the times in the templates.
+// Load loads the routes file and prepares the pages for each supported locale.
 // It panics, after logging the error, if the file can not be read or parsed.
-func Initialize(file, webHost, staticHost, apiHost, applicationTimezone string, applicationLocales []string, fallbackLocales map[string]string, JWTCookieName, JWTSecret string, facebookConfiguration FacebookConfiguration, googleConfiguration GoogleConfiguration, socialNetworksConfiguration SocialNetworksConfiguration, localeFormats map[string]config.LocaleConfiguration, betaVersion, isProduction bool) {
-	Main = load(file)
-	Main.prepare(settings{
-		webHost:         webHost,
-		staticHost:      staticHost,
-		apiHost:         apiHost,
-		timezone:        applicationTimezone,
-		locales:         applicationLocales,
-		fallbackLocales: fallbackLocales,
-		localeFormats:   localeFormats,
-		configuration: PageConfiguration{
-			Facebook:       facebookConfiguration,
-			Google:         googleConfiguration,
-			SocialNetworks: socialNetworksConfiguration,
-		},
-		betaVersion: betaVersion,
-		production:  isProduction,
-	})
+func Load(file string, settings Settings) *Configuration {
+	conf := read(file)
+	conf.settings = settings
+	conf.prepare()
 
-	jwtCookieName = JWTCookieName
-	jwtSecret = JWTSecret
+	return conf
 }
 
-// load reads the routes file. It panics, after logging the error, if the file can not be read or parsed.
-func load(file string) *Configuration {
+// read reads the routes file. It panics, after logging the error, if the file can not be read or parsed.
+func read(file string) *Configuration {
 	source, err := os.ReadFile(file)
 	if err != nil {
 		log.WithFields(logrus.Fields{
@@ -97,7 +83,9 @@ func load(file string) *Configuration {
 
 // prepare computes the URLs and the localized pages of the routes, and the paths of the async calls.
 // A route without definition inherits everything from the default page.
-func (conf *Configuration) prepare(s settings) {
+func (conf *Configuration) prepare() {
+	s := conf.settings
+
 	if conf.Default == nil {
 		conf.Default = NewPage()
 	}
@@ -113,17 +101,17 @@ func (conf *Configuration) prepare(s settings) {
 		prepared := conf.Default.Copy()
 		prepared.Merge(*page)
 		prepared.UpdateMetaRobots()
-		prepared.PreparePaths(s.webHost, s.locales, s.fallbackLocales)
-		prepared.Configuration = s.configuration
+		prepared.PreparePaths(s.WebHost, s.Locales, s.FallbackLocales)
+		prepared.Configuration = PageConfiguration{Facebook: s.Facebook, Google: s.Google, SocialNetworks: s.SocialNetworks}
+		prepared.conf = conf
 		prepared.Key = key
-		prepared.BetaVersion = s.betaVersion
-		prepared.Production = s.production
+		prepared.BetaVersion = s.BetaVersion
+		prepared.Production = s.Production
 
-		conf.preprocessedPages[key] = make(map[string]*Page, len(s.locales))
-		for _, locale := range s.locales {
+		conf.preprocessedPages[key] = make(map[string]*Page, len(s.Locales))
+		for _, locale := range s.Locales {
 			localized := prepared.Copy()
-			localized.PrepareWithLocale(locale, s.timezone, s.webHost, s.staticHost, s.apiHost, s.locales)
-			localized.formats = s.localeFormats[locale]
+			localized.PrepareWithLocale(locale, s.Timezone, s.WebHost, s.StaticHost, s.APIHost, s.Locales)
 			conf.preprocessedPages[key][locale] = localized
 		}
 
@@ -134,7 +122,7 @@ func (conf *Configuration) prepare(s settings) {
 	}
 
 	for _, async := range conf.Async {
-		async.Prepare(s.webHost, s.locales)
+		async.Prepare(s.WebHost, s.Locales)
 	}
 }
 

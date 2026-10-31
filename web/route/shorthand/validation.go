@@ -46,7 +46,7 @@ func NewValidation(c *gin.Context) (v *Validation) {
 // If the call fails, nothing is left to do when its response was handled; else the error of the API is displayed
 // by the page, or an error page is rendered if the API returned none.
 func (v *Validation) Go(c *gin.Context) {
-	page := html.Main.PageByKey(c, v.PageKey)
+	page := html.Of(c).PageByKey(c, v.PageKey)
 	if page == nil {
 		response.NotFound(c)
 		return

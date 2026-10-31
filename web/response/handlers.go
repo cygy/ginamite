@@ -73,7 +73,7 @@ func HandleLatestTermsVersionMustBeAcceptedError() api.ResponseHandlerFunc {
 	return func(c *gin.Context, statusCode int, requestError error, apiError response.Error) bool {
 		if statusCode == http.StatusPreconditionFailed && apiError.Domain == termsErrors.Domain && apiError.Code == termsErrors.MustAcceptLatestTerms {
 			locale := context.GetLocale(c)
-			c.Redirect(http.StatusFound, html.Main.URL("account.settings.terms", locale))
+			c.Redirect(http.StatusFound, html.Of(c).URL("account.settings.terms", locale))
 			c.Abort()
 			return true
 		}

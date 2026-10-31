@@ -12,6 +12,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cygy/ginamite/common/ctxlocalization"
+
 	"github.com/cygy/ginamite/common/authentication"
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/ctxconfig"
@@ -52,6 +54,9 @@ func NewContext(db *mock.Database, method, target string, body io.Reader) (*gin.
 	ctxconfig.Set(c, config.NewConfiguration())
 	ctxAuthToken.SetHooks(c, authentication.Hooks{})
 	ctxqueue.Set(c, senderInUse)
+	if Localization != nil {
+		ctxlocalization.Set(c, Localization)
+	}
 	ctxLocale.Set(c, "en", "en")
 
 	return c, recorder
@@ -92,7 +97,10 @@ func signToken(t *testing.T, userID, tokenID string) string {
 	return signed
 }
 
-// InitLocalization initializes the translation engine with the "en" messages.
+// Localization is the translation engine of the contexts created by NewContext, set by InitLocalization.
+var Localization *localization.Engine
+
+// InitLocalization sets the translation engine, see Localization, with the "en" messages for the duration of the test.
 func InitLocalization(t *testing.T, messages map[string]string) {
 	t.Helper()
 
@@ -106,7 +114,9 @@ func InitLocalization(t *testing.T, messages map[string]string) {
 		t.Fatalf("unable to write the messages: %v", err)
 	}
 
-	localization.Initialize(dir, []string{"en"})
+	old := Localization
+	Localization = localization.Load(dir, []string{"en"})
+	t.Cleanup(func() { Localization = old })
 }
 
 // Queue captures the messages sent to Kafka.

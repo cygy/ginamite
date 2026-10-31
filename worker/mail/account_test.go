@@ -12,11 +12,11 @@ func TestAccountNotifications(t *testing.T) {
 		send sender
 		key  string
 	}{
-		{"DeleteAccountConfirmed", DeleteAccountConfirmed, "delete_account.confirmed"},
-		{"DeleteAccountCancelled", DeleteAccountCancelled, "delete_account.cancelled"},
-		{"DisableAccountConfirmed", DisableAccountConfirmed, "disable_account.confirmed"},
-		{"DisableAccountCancelled", DisableAccountCancelled, "disable_account.cancelled"},
-		{"EnableAccountConfirmed", EnableAccountConfirmed, "enable_account.confirmed"},
+		{"DeleteAccountConfirmed", (*Mailer).DeleteAccountConfirmed, "delete_account.confirmed"},
+		{"DeleteAccountCancelled", (*Mailer).DeleteAccountCancelled, "delete_account.cancelled"},
+		{"DisableAccountConfirmed", (*Mailer).DisableAccountConfirmed, "disable_account.confirmed"},
+		{"DisableAccountCancelled", (*Mailer).DisableAccountCancelled, "disable_account.cancelled"},
+		{"EnableAccountConfirmed", (*Mailer).EnableAccountConfirmed, "enable_account.confirmed"},
 	}
 
 	for _, tt := range tests {
@@ -33,8 +33,8 @@ func TestAccountConfirmations(t *testing.T) {
 		key             string
 		confirm, cancel string
 	}{
-		{"DeleteAccountConfirmation", DeleteAccountConfirmation, "delete_account.confirm", weburl.AccountDeleteConfirm, weburl.AccountDeleteCancel},
-		{"DisableAccountConfirmation", DisableAccountConfirmation, "disable_account.confirm", weburl.AccountDisableConfirm, weburl.AccountDisableCancel},
+		{"DeleteAccountConfirmation", (*Mailer).DeleteAccountConfirmation, "delete_account.confirm", weburl.AccountDeleteConfirm, weburl.AccountDeleteCancel},
+		{"DisableAccountConfirmation", (*Mailer).DisableAccountConfirmation, "disable_account.confirm", weburl.AccountDisableConfirm, weburl.AccountDisableCancel},
 	}
 
 	for _, tt := range tests {

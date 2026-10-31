@@ -8,19 +8,19 @@ import (
 )
 
 // withoutContext adapts a sender of the registration emails, which have no context and no check.
-func withoutContext(f func(payload []byte)) sender {
-	return func(_ context.Context, payload []byte, _ IsEmailAddressValidFunc) { f(payload) }
+func withoutContext(f func(m *Mailer, payload []byte)) sender {
+	return func(m *Mailer, _ context.Context, payload []byte, _ IsEmailAddressValidFunc) { f(m, payload) }
 }
 
 func TestRegistrationNotifications(t *testing.T) {
 	tests := []struct {
 		name string
-		send func(payload []byte)
+		send func(m *Mailer, payload []byte)
 		key  string
 	}{
-		{"RegistrationWelcome", RegistrationWelcome, "registration.welcome"},
-		{"RegistrationConfirmed", RegistrationConfirmed, "registration.confirmed"},
-		{"RegistrationCancelled", RegistrationCancelled, "registration.cancelled"},
+		{"RegistrationWelcome", (*Mailer).RegistrationWelcome, "registration.welcome"},
+		{"RegistrationConfirmed", (*Mailer).RegistrationConfirmed, "registration.confirmed"},
+		{"RegistrationCancelled", (*Mailer).RegistrationCancelled, "registration.cancelled"},
 	}
 
 	for _, tt := range tests {
@@ -32,8 +32,8 @@ func TestRegistrationNotifications(t *testing.T) {
 
 func TestRegistrationConfirmation(t *testing.T) {
 	t.Run("sent", func(t *testing.T) {
-		delivered := stub(t)
-		RegistrationConfirmation(encode(t, map[string]string{
+		mailer, delivered := stub(t)
+		mailer.RegistrationConfirmation(encode(t, map[string]string{
 			"email": address, "user_id": "uid", "username": "john", "locale": "en", "registration_code": "code",
 		}))
 
@@ -51,8 +51,8 @@ func TestRegistrationConfirmation(t *testing.T) {
 	})
 
 	t.Run("invalid payload", func(t *testing.T) {
-		delivered := stub(t)
-		RegistrationConfirmation([]byte("{"))
+		mailer, delivered := stub(t)
+		mailer.RegistrationConfirmation([]byte("{"))
 
 		if len(*delivered) != 0 {
 			t.Errorf("delivered %d messages, want none", len(*delivered))

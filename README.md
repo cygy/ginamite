@@ -81,18 +81,19 @@ default values. The main sections are:
 | `facebook`, `google` | Sign-in with a social network. |
 | `recurring_tasks`, `run_start_up_tasks` | Tasks executed by the workers. |
 
-### Configuration is injected
+### Shared services are injected
 
-There is no global configuration. `ginamite.Server.Config` is loaded by `Start` from the configuration file, then shared
-with `Server.API`, `Server.Worker`, `Server.Web` (their `Config` field) and the plugins (`Connector.Connect` receives it).
+There is no global service. `ginamite.Server` holds the configuration (`Config`), the translations (`Localization`),
+the Kafka client (`Kafka`) and the queue built on it (`Queue`), loads them in `Start`, and shares them with `Server.API`,
+`Server.Worker`, `Server.Web` (their fields of the same names) and the plugins (`Connector.Connect` receives the
+configuration).
 
-- The handlers of the API and of the web server read it from the Gin context with `ctxconfig.Get(c)`; the servers
-  save it there with the middleware `ctxconfig.Inject`.
-- The packages without a request, such as the tasks of the worker, receive the settings they need as arguments.
-- In the tests, set it with `ctxconfig.Set(c, configuration)`.
-
-The queue sending the messages to the other servers is shared the same way: `ginamite.Server.Queue` (built on the Kafka
-client `Server.Kafka`) is given to `Server.API` and `Server.Worker`, and the handlers read it with `ctxqueue.Get(c)`.
+- The API and web servers save them in the Gin context of the requests, and the handlers read them with
+  `ctxconfig.Get(c)`, `ctxlocalization.Get(c)` and `ctxqueue.Get(c)`. The functions of the application, such as the ones
+  of the storage plugin, are saved the same way: `account.FunctionsOf(c)`, `ctxAuthToken.HooksOf(c)`, etc.
+- The web server also saves its pages, `html.Of(c)`, and the worker builds a `mail.Mailer` from its services.
+- The code without a request receives what it needs as arguments.
+- In the tests, use the `Set` function of the package, for instance `ctxconfig.Set(c, configuration)`.
 
 ## Layout
 

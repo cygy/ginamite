@@ -8,34 +8,34 @@ import (
 )
 
 // RegistrationWelcome sends an email to welcome the user after the registration.
-func RegistrationWelcome(payload []byte) {
-	sendNotification(context.Background(), payload, "registration.welcome", alwaysValid)
+func (m *Mailer) RegistrationWelcome(payload []byte) {
+	m.sendNotification(context.Background(), payload, "registration.welcome", alwaysValid)
 }
 
 // RegistrationConfirmation sends an email asking to confirm, or to cancel, the registration.
-func RegistrationConfirmation(payload []byte) {
+func (m *Mailer) RegistrationConfirmation(payload []byte) {
 	p := queue.MailRegistrationConfirmation{}
 	if err := queue.UnmarshalPayload(payload, &p); err != nil {
 		return
 	}
 
-	deliver(content{
+	m.deliver(m.message(content{
 		key:        "registration.confirm",
 		template:   TemplateConfirmationAndCancel,
 		recipient:  p.EmailAddress,
 		username:   p.Username,
 		locale:     p.Locale,
-		confirmURL: processURL(weburl.AccountRegistrationConfirm, p.Locale, p.UserID, p.RegistrationCode),
-		cancelURL:  processURL(weburl.AccountRegistrationCancel, p.Locale, p.UserID, p.RegistrationCode),
-	}.message())
+		confirmURL: m.processURL(weburl.AccountRegistrationConfirm, p.Locale, p.UserID, p.RegistrationCode),
+		cancelURL:  m.processURL(weburl.AccountRegistrationCancel, p.Locale, p.UserID, p.RegistrationCode),
+	}))
 }
 
 // RegistrationConfirmed sends an email to notify the registration is confirmed.
-func RegistrationConfirmed(payload []byte) {
-	sendNotification(context.Background(), payload, "registration.confirmed", alwaysValid)
+func (m *Mailer) RegistrationConfirmed(payload []byte) {
+	m.sendNotification(context.Background(), payload, "registration.confirmed", alwaysValid)
 }
 
 // RegistrationCancelled sends an email to notify the registration is cancelled.
-func RegistrationCancelled(payload []byte) {
-	sendNotification(context.Background(), payload, "registration.cancelled", alwaysValid)
+func (m *Mailer) RegistrationCancelled(payload []byte) {
+	m.sendNotification(context.Background(), payload, "registration.cancelled", alwaysValid)
 }

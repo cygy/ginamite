@@ -14,6 +14,7 @@ import (
 	"github.com/cygy/ginamite/common/authentication"
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/kafka"
+	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/queue"
 	"github.com/cygy/ginamite/web"
 	"github.com/cygy/ginamite/worker"
@@ -26,8 +27,9 @@ type Server struct {
 	// Config is the configuration of the application, loaded from the configuration file by Start and shared with the
 	// specialized servers and the plugins.
 	Config                   *config.Configuration
-	Kafka                    *kafka.Client // The Kafka client, connected by Start if the configuration has a Kafka service.
-	Queue                    *queue.Queue  // Sends the messages to the other servers through Kafka.
+	Kafka                    *kafka.Client        // The Kafka client, connected by Start if the configuration has a Kafka service.
+	Queue                    *queue.Queue         // Sends the messages to the other servers through Kafka.
+	Localization             *localization.Engine // The translations, loaded by Start.
 	ApplicationConfiguration ApplicationConfiguration
 	Worker                   *worker.Server
 	API                      *api.Server
@@ -63,13 +65,14 @@ type Connector interface {
 func NewServer() *Server {
 	kafkaClient := kafka.NewClient()
 	server := &Server{
-		Config:  config.NewConfiguration(),
-		Kafka:   kafkaClient,
-		Queue:   queue.New(kafkaClient),
-		plugins: []Plugin{},
-		Web:     web.NewServer(),
-		Worker:  worker.NewServer(),
-		API:     api.NewServer(),
+		Config:       config.NewConfiguration(),
+		Kafka:        kafkaClient,
+		Queue:        queue.New(kafkaClient),
+		Localization: localization.NewEngine(),
+		plugins:      []Plugin{},
+		Web:          web.NewServer(),
+		Worker:       worker.NewServer(),
+		API:          api.NewServer(),
 	}
 	server.API.Queue, server.Worker.Queue = server.Queue, server.Queue
 	server.ApplicationConfiguration.FileRequired = false
