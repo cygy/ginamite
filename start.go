@@ -16,7 +16,8 @@ import (
 
 // Start parses the command line arguments, sets up the configuration, the translations and the services needed by the
 // chosen server, configures the plugins, then starts the API, worker or web server. It exits the process if the
-// help is requested or if the set up fails.
+// help is requested or if the set up fails. It returns once the server stopped, after the consumers of Kafka are
+// stopped, the producer is flushed and the plugins are closed.
 func (s *Server) Start() {
 	f := flags.NewFlags()
 	if !f.Parse(s.ApplicationConfiguration.FileRequired) {
@@ -59,6 +60,9 @@ func (s *Server) Start() {
 		s.Kafka.MaxAttempts = max(s.Config.KafkaMaxAttempts, 1)
 		s.Kafka.RetryDelay = time.Duration(s.Config.KafkaRetryDelay) * time.Millisecond
 		s.Kafka.Initialize(kafkaConf.Host, kafkaConf.Port, s.Config.KafkaTopicsPrefix, true, specializedServer.CreateKafkaConsumers())
+		// Registered after the plugins are connected: the consumers stop, and the producer is flushed, before the
+		// plugins close their connections.
+		defer s.Kafka.Close()
 	}
 
 	for _, plugin := range s.plugins {

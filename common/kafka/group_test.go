@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"slices"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -76,6 +77,32 @@ func TestGroupHandler_ConsumeClaim(t *testing.T) {
 
 		if want := []string{"handle:a", "mark:a", "handle:b", "mark:b"}; !slices.Equal(events, want) {
 			t.Errorf("events = %v, want %v", events, want)
+		}
+	})
+
+	t.Run("does not log the body of the messages", func(t *testing.T) {
+		hook := useHook(t)
+
+		handler := groupHandler{topic: "app_mail", attempts: 1, action: func([]byte) error { return nil }}
+		messages := make(chan *sarama.ConsumerMessage, 1)
+		messages <- &sarama.ConsumerMessage{Value: []byte("secret-key"), Partition: 1, Offset: 7}
+		close(messages)
+
+		if err := handler.ConsumeClaim(&fakeSession{ctx: context.Background()}, &fakeClaim{messages: messages}); err != nil {
+			t.Fatal(err)
+		}
+
+		var received bool
+		for _, entry := range hook.AllEntries() {
+			if _, ok := entry.Data["message"]; ok || strings.Contains(entry.Message, "secret-key") {
+				t.Errorf("the body is logged: %+v", entry)
+			}
+			if entry.Message == "kafka message received" {
+				received = entry.Data["size"] == len("secret-key") && entry.Data["partition"] == int32(1) && entry.Data["offset"] == int64(7)
+			}
+		}
+		if !received {
+			t.Errorf("the metadata of the message is not logged: %v", hook.AllEntries())
 		}
 	})
 

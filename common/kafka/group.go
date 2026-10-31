@@ -41,10 +41,15 @@ func (h groupHandler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sa
 				return nil
 			}
 
-			log.WithFields(logrus.Fields{
-				"topic":   h.topic,
-				"message": string(message.Value),
-			}).Info("kafka message received")
+			// The body is not logged above the debug level: it holds secrets, such as the keys of the confirmation links.
+			fields := logrus.Fields{
+				"topic":     h.topic,
+				"partition": message.Partition,
+				"offset":    message.Offset,
+				"size":      len(message.Value),
+			}
+			log.WithFields(fields).Info("kafka message received")
+			log.WithFields(fields).WithField("message", string(message.Value)).Debug("kafka message body")
 
 			if !h.handle(session.Context(), message) {
 				return nil

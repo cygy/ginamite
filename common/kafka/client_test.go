@@ -85,6 +85,11 @@ func TestClient_SendMessageToTopic(t *testing.T) {
 	}
 
 	waitForLog(t, hook, "kafka message sent")
+	for _, entry := range hook.AllEntries() {
+		if _, ok := entry.Data["message"]; ok {
+			t.Errorf("the body is logged: %+v", entry)
+		}
+	}
 }
 
 // blockedProducer is a producer whose input is never read.
@@ -96,7 +101,11 @@ type blockedProducer struct {
 
 func (p *blockedProducer) Input() chan<- *sarama.ProducerMessage { return p.input }
 
-func (p *blockedProducer) AsyncClose() { close(p.closed) }
+func (p *blockedProducer) Close() error {
+	close(p.closed)
+
+	return nil
+}
 
 func TestClient_SendMessageToTopic_Shutdown(t *testing.T) {
 	producer := &blockedProducer{input: make(chan *sarama.ProducerMessage), closed: make(chan struct{})}
@@ -130,6 +139,44 @@ func waitForLog(t *testing.T, hook *logtest.Hook, message string) {
 	}
 
 	t.Fatalf("%q is not logged", message)
+}
+
+func TestClient_Close_Producer(t *testing.T) {
+	producer := &blockedProducer{input: make(chan *sarama.ProducerMessage), closed: make(chan struct{})}
+
+	client := NewClient()
+	client.Producer = producer
+
+	// The producer is closed once, whatever the number of calls.
+	client.Close()
+	client.Close()
+
+	select {
+	case <-producer.closed:
+	default:
+		t.Error("the producer must be closed")
+	}
+}
+
+func TestClient_Close_ConsumerTooLong(t *testing.T) {
+	hook := useHook(t)
+
+	old := closeTimeout
+	closeTimeout = 20 * time.Millisecond
+	t.Cleanup(func() { closeTimeout = old })
+
+	release := make(chan struct{})
+	client := NewClient()
+	client.consumers.Add(1)
+	go func() {
+		defer client.consumers.Done()
+		<-release
+	}()
+
+	client.Close()
+	close(release)
+
+	waitForLog(t, hook, "the kafka consumers did not stop in time")
 }
 
 func TestClient_SendMessageToTopic_ProducerNotConnected(t *testing.T) {

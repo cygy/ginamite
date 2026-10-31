@@ -115,7 +115,8 @@ func NewServer() *Server {
 }
 
 // Start starts the worker: it loads the templates and the routes, initializes the emails, runs the start up tasks
-// and starts the recurring tasks. It returns, exiting the process, when the worker is interrupted or terminated.
+// and starts the recurring tasks. It returns when the worker is interrupted or terminated, so that the caller can stop
+// the consumption of the messages and close the connections.
 func (s *Server) Start() {
 	s.setup()
 
@@ -127,8 +128,6 @@ func (s *Server) Start() {
 	<-signals
 
 	log.Info("shutdown")
-
-	os.Exit(1)
 }
 
 // setup prepares and starts the worker, except the consumption of the messages.

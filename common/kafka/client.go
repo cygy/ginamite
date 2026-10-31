@@ -31,9 +31,10 @@ type Client struct {
 	// RetryDelay is the delay before the second attempt. It doubles at each attempt, up to a minute.
 	RetryDelay time.Duration
 
-	producerMu sync.RWMutex
-	stop       context.CancelFunc // Stops the consumers, see Close.
-	consumers  sync.WaitGroup
+	producerMu   sync.RWMutex
+	producerOnce sync.Once
+	stop         context.CancelFunc // Stops the consumers, see Close.
+	consumers    sync.WaitGroup
 }
 
 // Defaults of the Client.
@@ -72,6 +73,9 @@ var (
 
 	// retryDelay is the delay before a consumer tries again to connect or to consume.
 	retryDelay = time.Second
+
+	// closeTimeout is the longest wait for the consumers to stop when the client is closed.
+	closeTimeout = 30 * time.Second
 )
 
 // UniqueGroup returns the name of a group no other process uses, so its consumer receives every message of the topic:
@@ -178,14 +182,40 @@ func (client *Client) Initialize(host string, port int, prefix string, hasProduc
 	}
 }
 
-// Close stops the consumers and waits for them to leave their group. The message being handled is finished, and
-// committed, first.
+// Close stops the consumers, waits for them to leave their group, then flushes and closes the producer. The message
+// being handled is finished, and committed, first: the consumers have closeTimeout to stop.
 func (client *Client) Close() {
 	if client.stop != nil {
 		client.stop()
 	}
 
-	client.consumers.Wait()
+	stopped := make(chan struct{})
+	go func() {
+		client.consumers.Wait()
+		close(stopped)
+	}()
+
+	select {
+	case <-stopped:
+	case <-time.After(closeTimeout):
+		log.Warn("the kafka consumers did not stop in time")
+	}
+
+	client.closeProducer()
+}
+
+// closeProducer flushes and closes the producer, if it is connected, once.
+func (client *Client) closeProducer() {
+	client.producerOnce.Do(func() {
+		producer := client.producer()
+		if producer == nil {
+			return
+		}
+
+		if err := producer.Close(); err != nil {
+			log.WithField("error", err).Error("unable to close the kafka producer")
+		}
+	})
 }
 
 // consume joins the group of the consumer, then handles the messages of its topic until ctx is done. The connection to
@@ -306,13 +336,16 @@ func (client *Client) SendMessageToTopic(message, topic string) {
 
 		select {
 		case producer.Input() <- producerMessage:
-			log.WithFields(logrus.Fields{
-				"topic":   fullTopicName,
-				"message": message,
-			}).Info("kafka message sent")
+			// The body is not logged above the debug level: it holds secrets, such as the keys of the confirmation links.
+			fields := logrus.Fields{
+				"topic": fullTopicName,
+				"size":  len(message),
+			}
+			log.WithFields(fields).Info("kafka message sent")
+			log.WithFields(fields).WithField("message", message).Debug("kafka message body")
 
 		case <-client.ProducerSignals:
-			producer.AsyncClose()
+			client.closeProducer()
 		}
 	}()
 }

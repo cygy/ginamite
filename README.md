@@ -133,6 +133,14 @@ A message whose handling fails is handled again, then sent to a **dead-letter to
   must not be retried.
 - If the producer is not connected, the failed message is dropped and logged as an error.
 
+#### Shutdown and logs
+
+- When the process is interrupted or terminated, the consumers finish the message they are handling, commit it and
+  leave their group (30 seconds at most), then the producer sends the messages it still holds, then the plugins close
+  their connections. `Start` returns, and the exit code is 0.
+- The logs give the topic, the partition, the offset and the size of the messages, never their body, which holds the
+  keys of the confirmation links: it is logged at the debug level only.
+
 ### Shared services are injected
 
 There is no global service. `ginamite.Server` holds the configuration (`Config`), the translations (`Localization`),
