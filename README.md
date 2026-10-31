@@ -81,6 +81,16 @@ default values. The main sections are:
 | `facebook`, `google` | Sign-in with a social network. |
 | `recurring_tasks`, `run_start_up_tasks` | Tasks executed by the workers. |
 
+### Configuration is injected
+
+There is no global configuration. `ginamite.Server.Config` is loaded by `Start` from the configuration file, then shared
+with `Server.API`, `Server.Worker`, `Server.Web` (their `Config` field) and the plugins (`Connector.Connect` receives it).
+
+- The handlers of the API and of the web server read it from the Gin context with `ctxconfig.Get(c)`; the servers
+  save it there with the middleware `ctxconfig.Inject`.
+- The packages without a request, such as the tasks of the worker, receive the settings they need as arguments.
+- In the tests, set it with `ctxconfig.Set(c, configuration)`.
+
 ## Layout
 
 | Directory | Content |

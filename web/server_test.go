@@ -74,6 +74,7 @@ func newTestServer(t *testing.T, environmentName string) (*Server, *config.Confi
 	robots.Content = "User-agent: *"
 
 	server := NewServer()
+	server.Config = conf
 	server.RoutesFile = webtest.WriteFile(t, t.TempDir(), "routes.yaml", testRoutes)
 
 	return server, conf
@@ -214,10 +215,9 @@ func TestNewEngine(t *testing.T) {
 			conf := testConfiguration(t, tt.environment)
 			conf.Server.GZip.Enabled = tt.gzip
 			conf.Server.GZip.Level = gzip.DefaultCompression
-			webtest.SetConfig(t, conf)
 			webtest.Hook.Reset()
 
-			engine := newEngine()
+			engine := (&Server{Config: conf}).newEngine()
 			engine.GET("/", func(c *gin.Context) { c.String(http.StatusOK, strings.Repeat("hello ", 100)) })
 
 			req := httptest.NewRequest(http.MethodGet, "/", nil)

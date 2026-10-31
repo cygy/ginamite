@@ -25,29 +25,31 @@ type GetLocalizedVariablesFunc = func(routeKey string, offset, limit int) map[st
 
 // generator generates the sitemaps of the routes and their index.
 type generator struct {
-	taskName     string
-	name         string // The prefix of the files.
-	path         string // The directory of the files.
-	staticHost   string
-	locales      []string
-	maxURLs      int // The maximum number of URLs per file of a route with variables.
-	getVariables GetLocalizedVariablesFunc
-	index        *File
+	taskName       string
+	name           string // The prefix of the files.
+	path           string // The directory of the files.
+	staticHost     string
+	locales        []string
+	supportsLocale func(locale string) bool
+	maxURLs        int // The maximum number of URLs per file of a route with variables.
+	getVariables   GetLocalizedVariablesFunc
+	index          *File
 }
 
 // Generate generates the sitemaps of the routes included in the sitemap, and their index, in the directory
-// of the configuration. The routes without variables are in a sitemap per locale. The routes with variables, whose
+// of the configuration, which is given. The routes without variables are in a sitemap per locale. The routes with variables, whose
 // values come from getLocalizedVariables, have one sitemap per locale and per maximum number of URLs.
 // The errors are logged.
-func Generate(taskName string, getLocalizedVariables GetLocalizedVariablesFunc) {
+func Generate(taskName string, configuration *config.Configuration, getLocalizedVariables GetLocalizedVariablesFunc) {
 	g := generator{
-		taskName:     taskName,
-		name:         config.Main.Sitemap.Name,
-		path:         config.Main.Sitemap.Path,
-		staticHost:   config.Main.Hosts.Static,
-		locales:      config.Main.SupportedLocales,
-		maxURLs:      config.Main.Sitemap.MaximumURLsPerPage,
-		getVariables: getLocalizedVariables,
+		taskName:       taskName,
+		name:           configuration.Sitemap.Name,
+		path:           configuration.Sitemap.Path,
+		staticHost:     configuration.Hosts.Static,
+		locales:        configuration.SupportedLocales,
+		supportsLocale: configuration.SupportsLocale,
+		maxURLs:        configuration.Sitemap.MaximumURLsPerPage,
+		getVariables:   getLocalizedVariables,
 	}
 
 	g.generate()
@@ -116,7 +118,7 @@ func (g *generator) addRouteWithVariables(key string, route weburl.Route) {
 		for locale, arrayOfVariables := range localizedVariables {
 			absolutePath, isPathPresent := route.AbsolutePaths[locale]
 			sitemap, isSitemapPresent := sitemaps[locale]
-			if !isPathPresent || !isSitemapPresent || !config.Main.SupportsLocale(locale) {
+			if !isPathPresent || !isSitemapPresent || !g.supportsLocale(locale) {
 				continue
 			}
 

@@ -27,15 +27,15 @@ func (s *Server) Start() {
 	s.initializeConfiguration(f)
 
 	if f.IsAPIServer || f.IsWorkerServer {
-		defer s.connectPlugins()()
+		defer s.connectPlugins(s.Config)()
 
-		if err := timezone.Initialize(config.Main.TimezonesFilePath); err != nil {
+		if err := timezone.Initialize(s.Config.TimezonesFilePath); err != nil {
 			log.WithField("error", err).Fatal("unable to initialize the timezones")
 		}
 	}
 
 	if f.IsWebServer {
-		if err := robots.Initialize(config.Main.RobotsFilePath); err != nil {
+		if err := robots.Initialize(s.Config.RobotsFilePath); err != nil {
 			log.WithField("error", err).Fatal("unable to initialize the robots.txt file")
 		}
 	}
@@ -46,8 +46,8 @@ func (s *Server) Start() {
 		return
 	}
 
-	if kafkaConf, ok := config.Main.KafkaConfiguration(); ok {
-		kafka.Initialize(kafkaConf.Host, kafkaConf.Port, config.Main.KafkaTopicsPrefix, true, specializedServer.CreateKafkaConsumers())
+	if kafkaConf, ok := s.Config.KafkaConfiguration(); ok {
+		kafka.Initialize(kafkaConf.Host, kafkaConf.Port, s.Config.KafkaTopicsPrefix, true, specializedServer.CreateKafkaConsumers())
 	}
 
 	for _, plugin := range s.plugins {
@@ -57,28 +57,31 @@ func (s *Server) Start() {
 	specializedServer.Start()
 }
 
-// initializeConfiguration sets up the main logger, the server and application configurations and the translations.
+// initializeConfiguration sets up the main logger, the server configuration, which is shared with the specialized
+// servers, the application configuration and the translations.
 func (s *Server) initializeConfiguration(f *flags.Flags) {
 	log.Initialize(f.ServerName, f.Environment == environment.Production)
 
-	if err := config.Initialize(f.ServerConfigurationFile, f.Environment, f.Version); err != nil {
+	s.Config = config.NewConfiguration()
+	if err := s.Config.Initialize(f.ServerConfigurationFile, f.Environment, f.Version); err != nil {
 		log.WithField("error", err).Fatal("unable to initialize the server configuration")
 	}
+	s.API.Config, s.Worker.Config, s.Web.Config = s.Config, s.Config, s.Config
 
 	if s.ApplicationConfiguration.InitializeFunc != nil {
 		s.ApplicationConfiguration.InitializeFunc(f.ApplicationConfigurationFile)
 	}
 
-	localization.Initialize(config.Main.LocalizationPath, config.Main.SupportedLocales)
+	localization.Initialize(s.Config.LocalizationPath, s.Config.SupportedLocales)
 }
 
-// connectPlugins connects the plugins which are Connectors, and returns the function which closes them, in the reverse
+// connectPlugins connects, with the configuration, the plugins which are Connectors, and returns the function which closes them, in the reverse
 // order.
-func (s *Server) connectPlugins() (closeAll func()) {
+func (s *Server) connectPlugins(configuration *config.Configuration) (closeAll func()) {
 	var connected []Connector
 	for _, plugin := range s.plugins {
 		if connector, ok := plugin.(Connector); ok {
-			connector.Connect()
+			connector.Connect(configuration)
 			connected = append(connected, connector)
 		}
 	}

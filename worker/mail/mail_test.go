@@ -11,7 +11,6 @@ import (
 	"testing"
 	ttemplate "text/template"
 
-	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/template/html"
 	"github.com/cygy/ginamite/common/template/text"
 )
@@ -152,19 +151,19 @@ func (s *smtpServer) received() []string {
 	return append([]string(nil), s.data...)
 }
 
-// useTemplates sets the templates and the configuration used to send the mails, for the duration of the test.
+// useTemplates sets the templates used to send the mails, for the duration of the test.
 func useTemplates(t *testing.T, htmlTemplate, textTemplate string) {
 	t.Helper()
 
-	oldHTML, oldText, oldConfig := html.Main, text.Main, config.Main
-	t.Cleanup(func() { html.Main, text.Main, config.Main = oldHTML, oldText, oldConfig })
+	oldHTML, oldText := html.Main, text.Main
+	t.Cleanup(func() { html.Main, text.Main = oldHTML, oldText })
 
 	html.Main = template.Must(template.New("notification.html").Parse(htmlTemplate))
 	text.Main = ttemplate.Must(ttemplate.New("notification.txt").Parse(textTemplate))
-	config.Main = &config.Configuration{
-		SenderName: "Sender", SenderEmailAddress: "sender@example.com", NoReplyEmailAddress: "noreply@example.com",
-	}
 }
+
+// testSender is the sender of the mails of the tests.
+var testSender = Sender{Name: "Sender", EmailAddress: "sender@example.com", NoReplyEmailAddress: "noreply@example.com"}
 
 func TestMessage_Send(t *testing.T) {
 	oldAuth, oldHost, oldHTMLVars, oldTextVars := mailAuth, smtpHost, commonHTMLVars, commonTextVars
@@ -186,7 +185,7 @@ func TestMessage_Send(t *testing.T) {
 		host, port, _ := net.SplitHostPort(server.addr)
 		var portNumber int
 		_, _ = fmt.Sscan(port, &portNumber)
-		Initialize("", "user", "pass", host, portNumber,
+		Initialize("", "user", "pass", host, portNumber, testSender,
 			map[string]map[string]any{"Host": {"en": "https://html"}},
 			map[string]map[string]any{"Host": {"en": "https://text"}})
 
@@ -206,7 +205,7 @@ func TestMessage_Send(t *testing.T) {
 	t.Run("SMTP failure", func(t *testing.T) {
 		hook.Reset()
 		useTemplates(t, "{{.Title}}", "{{.Title}}")
-		Initialize("", "user", "pass", "127.0.0.1", 1, nil, nil)
+		Initialize("", "user", "pass", "127.0.0.1", 1, testSender, nil, nil)
 
 		message.Send()
 
@@ -247,9 +246,16 @@ func TestInitialize(t *testing.T) {
 		mailAuth, smtpHost, commonHTMLVars, commonTextVars = oldAuth, oldHost, oldHTMLVars, oldTextVars
 	})
 
+	oldAddresses := addresses
+	t.Cleanup(func() { addresses = oldAddresses })
+
 	htmlVars := map[string]map[string]any{"a": {"en": 1}}
 	textVars := map[string]map[string]any{"b": {"en": 2}}
-	Initialize("id", "user", "pass", "smtp.example.com", 587, htmlVars, textVars)
+	Initialize("id", "user", "pass", "smtp.example.com", 587, testSender, htmlVars, textVars)
+
+	if addresses != testSender {
+		t.Errorf("addresses = %+v, want %+v", addresses, testSender)
+	}
 
 	if mailAuth == nil || smtpHost != "smtp.example.com:587" {
 		t.Errorf("mailAuth = %v, smtpHost = %q", mailAuth, smtpHost)

@@ -3,12 +3,13 @@ package account
 import (
 	"errors"
 
+	"github.com/cygy/ginamite/common/ctxconfig"
+
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	ctxUser "github.com/cygy/ginamite/api/context/user"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common/authentication"
-	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/queue"
 
@@ -64,7 +65,7 @@ func UpdatePassword(c *gin.Context) {
 
 	// The password must be validated by the user.
 	// In Env test, we return the code and the user ID.
-	if config.Main.IsTestEnvironment() {
+	if ctxconfig.Get(c).IsTestEnvironment() {
 		response.Ok(c, response.H{
 			"status": t("status.update_password.email_sent"),
 			"id":     processID,

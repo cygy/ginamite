@@ -21,15 +21,6 @@ import (
 	"github.com/cygy/ginamite/worker/tasks/recurring"
 )
 
-// useConfig sets the configuration, for the duration of the test.
-func useConfig(t *testing.T, c *config.Configuration) {
-	t.Helper()
-
-	old := config.Main
-	t.Cleanup(func() { config.Main = old })
-	config.Main = c
-}
-
 // allHandlers returns handlers which do nothing, except the ones of the tasks which log their count.
 func allHandlers() Handlers {
 	return Handlers{
@@ -106,9 +97,8 @@ func TestCommonMailVars(t *testing.T) {
 	c.Hosts.Static = "https://static"
 	c.SocialNetworks.Facebook = "https://facebook"
 	c.SocialNetworks.Twitter = "https://twitter"
-	useConfig(t, c)
 
-	vars := commonMailVars()
+	vars := (&Server{Config: c}).commonMailVars()
 
 	want := map[string]map[string]any{
 		"StaticHost":  {"en": "https://static", "fr": "https://static"},
@@ -129,7 +119,7 @@ func TestCommonMailVars(t *testing.T) {
 
 	// Each call returns independent maps.
 	vars["HomeURL"]["en"] = "changed"
-	if commonMailVars()["HomeURL"]["en"] != "https://web/en/" {
+	if (&Server{Config: c}).commonMailVars()["HomeURL"]["en"] != "https://web/en/" {
 		t.Error("the variables are shared between the calls")
 	}
 }
@@ -146,9 +136,7 @@ func TestServer_recurringFuncs(t *testing.T) {
 	}
 
 	t.Run("no function", func(t *testing.T) {
-		useConfig(t, &config.Configuration{})
-
-		if got := names(&Server{}); len(got) != 0 {
+		if got := names(&Server{Config: &config.Configuration{}}); len(got) != 0 {
 			t.Errorf("tasks = %v, want none", got)
 		}
 	})
@@ -156,19 +144,16 @@ func TestServer_recurringFuncs(t *testing.T) {
 	t.Run("all the functions", func(t *testing.T) {
 		c := &config.Configuration{}
 		c.Account.EmailAddressMustBeConfirmed = true
-		useConfig(t, c)
 
 		want := []string{recurring.DeleteExpiredTokens, recurring.DeleteInactiveAccounts, recurring.DeleteNeverUsedAccounts, recurring.GenerateSitemaps, recurring.SanitizeAccounts}
 		sort.Strings(want)
-		if got := names(&Server{Functions: allHandlers()}); !slices.Equal(got, want) {
+		if got := names(&Server{Config: c, Functions: allHandlers()}); !slices.Equal(got, want) {
 			t.Errorf("tasks = %v, want %v", got, want)
 		}
 	})
 
 	t.Run("the never used accounts are kept if the email address does not need to be confirmed", func(t *testing.T) {
-		useConfig(t, &config.Configuration{})
-
-		if got := names(&Server{Functions: allHandlers()}); slices.Contains(got, recurring.DeleteNeverUsedAccounts) {
+		if got := names(&Server{Config: &config.Configuration{}, Functions: allHandlers()}); slices.Contains(got, recurring.DeleteNeverUsedAccounts) {
 			t.Errorf("tasks = %v", got)
 		}
 	})
@@ -176,13 +161,12 @@ func TestServer_recurringFuncs(t *testing.T) {
 	t.Run("missing dependencies", func(t *testing.T) {
 		c := &config.Configuration{}
 		c.Account.EmailAddressMustBeConfirmed = true
-		useConfig(t, c)
 
 		h := allHandlers()
 		h.DeleteUserByID = nil
 		h.GetLocalizedRouteVariables = nil
 
-		if got, want := names(&Server{Functions: h}), []string{recurring.DeleteExpiredTokens, recurring.SanitizeAccounts}; !slices.Equal(got, want) {
+		if got, want := names(&Server{Config: c, Functions: h}), []string{recurring.DeleteExpiredTokens, recurring.SanitizeAccounts}; !slices.Equal(got, want) {
 			t.Errorf("tasks = %v, want %v", got, want)
 		}
 	})
@@ -194,14 +178,13 @@ func TestServer_recurringFuncs_run(t *testing.T) {
 	c.Account.DeleteNeverUsedAfter = 10
 	c.Account.DeleteInactiveAfter = 48
 	c.Sitemap = config.SitemapConfiguration{Path: t.TempDir(), Name: "sitemap", MaximumURLsPerPage: 1000}
-	useConfig(t, c)
 
 	oldRoutes := weburl.Main
 	t.Cleanup(func() { weburl.Main = oldRoutes })
 	weburl.Main = weburl.NewConfiguration()
 
 	workertest.CaptureQueue(t)
-	s := &Server{Functions: allHandlers()}
+	s := &Server{Config: c, Functions: allHandlers()}
 
 	// The count logged by each task.
 	wantCounts := map[string]any{
@@ -241,7 +224,6 @@ func TestServer_loadRecurringTasks(t *testing.T) {
 		{Name: recurring.SendRegistrationMails},
 		{Name: "custom"},
 	}
-	useConfig(t, c)
 
 	h := Handlers{DeleteExpiredTokens: allHandlers().DeleteExpiredTokens}
 	var custom bool
@@ -250,7 +232,7 @@ func TestServer_loadRecurringTasks(t *testing.T) {
 		custom = true
 	}
 
-	(&Server{Functions: h}).loadRecurringTasks()
+	(&Server{Config: c, Functions: h}).loadRecurringTasks()
 
 	if !custom {
 		t.Error("the functions of the custom tasks are not set")
@@ -268,7 +250,7 @@ func TestServer_loadRecurringTasks(t *testing.T) {
 	}
 
 	// Without a function to set the custom tasks.
-	(&Server{}).loadRecurringTasks()
+	(&Server{Config: c}).loadRecurringTasks()
 }
 
 func TestServer_setup(t *testing.T) {
@@ -292,14 +274,13 @@ func TestServer_setup(t *testing.T) {
 	c.Hosts.Web = "https://web"
 	c.SupportedLocales = []string{"en"}
 	c.RecurringTasks = []recurring.ScheduledTask{{Name: recurring.DeleteExpiredTokens}}
-	useConfig(t, c)
 
 	oldHTML, oldText, oldRoutes := html.Main, text.Main, weburl.Main
 	t.Cleanup(func() { html.Main, text.Main, weburl.Main = oldHTML, oldText, oldRoutes })
 
 	var env, version string
 	var calls []string
-	s := &Server{RoutesFile: filepath.Join(dir, "routes.yml")}
+	s := &Server{Config: c, RoutesFile: filepath.Join(dir, "routes.yml")}
 	s.Functions.StartUpTasks = func(_ context.Context, environment, v string) {
 		env, version = environment, v
 		calls = append(calls, "start up")
@@ -328,7 +309,7 @@ func TestServer_setup(t *testing.T) {
 	}
 
 	// The start up tasks only run if the configuration asks for it.
-	config.Main.RunStartUpTasks = false
+	c.RunStartUpTasks = false
 	calls = nil
 	s.setup()
 	if slices.Contains(calls, "start up") {

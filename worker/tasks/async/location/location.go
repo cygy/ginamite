@@ -35,8 +35,9 @@ type IPAddressDetails struct {
 }
 
 // GetIPInfo decodes the payload of a location task and calls saveIPAddressDetailsFunc, which saves
-// the location returned by the function it receives. Nothing happens if the function is nil.
-func GetIPInfo(payload []byte, saveIPAddressDetailsFunc func(ctx context.Context, IPAddress, tokenID string, getIPAddressDetailsFunc func(IPAddress string) *IPAddressDetails)) {
+// the location returned by the function it receives, which uses the ipstack API of the configuration.
+// Nothing happens if the function is nil.
+func GetIPInfo(payload []byte, ipStack config.IPStackConfiguration, saveIPAddressDetailsFunc func(ctx context.Context, IPAddress, tokenID string, getIPAddressDetailsFunc func(IPAddress string) *IPAddressDetails)) {
 	if saveIPAddressDetailsFunc == nil {
 		return
 	}
@@ -46,16 +47,18 @@ func GetIPInfo(payload []byte, saveIPAddressDetailsFunc func(ctx context.Context
 		return
 	}
 
-	saveIPAddressDetailsFunc(context.Background(), p.IPAddress, p.TokenID, GetIPAddressDetails)
+	saveIPAddressDetailsFunc(context.Background(), p.IPAddress, p.TokenID, func(IPAddress string) *IPAddressDetails {
+		return GetIPAddressDetails(ipStack, IPAddress)
+	})
 }
 
-// GetIPAddressDetails returns the location of an IP address from the ipstack API.
+// GetIPAddressDetails returns the location of an IP address from the ipstack API of the configuration.
 // It logs the error, and returns nil, if the API fails or does not know the location.
-func GetIPAddressDetails(IPAddress string) *IPAddressDetails {
+func GetIPAddressDetails(ipStack config.IPStackConfiguration, IPAddress string) *IPAddressDetails {
 	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
 	defer cancel()
 
-	endpoint := fmt.Sprintf("%s/%s?access_key=%s", config.Main.IPStack.Host, url.PathEscape(IPAddress), url.QueryEscape(config.Main.IPStack.Key))
+	endpoint := fmt.Sprintf("%s/%s?access_key=%s", ipStack.Host, url.PathEscape(IPAddress), url.QueryEscape(ipStack.Key))
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
 		logError(IPAddress, err)

@@ -5,13 +5,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cygy/ginamite/common/ctxconfig"
+
 	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	ctxUser "github.com/cygy/ginamite/api/context/user"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common/authentication"
-	"github.com/cygy/ginamite/common/config"
 	commonErrors "github.com/cygy/ginamite/common/errors"
 	authError "github.com/cygy/ginamite/common/errors/auth"
 	"github.com/cygy/ginamite/common/localization"
@@ -101,12 +102,12 @@ func LoginWithPassword(c *gin.Context) {
 
 // LoginWithFacebook creates a token to log in an account.
 func LoginWithFacebook(c *gin.Context) {
-	loginWithThirdParty(c, newTokenValidator(authentication.MethodFacebook))
+	loginWithThirdParty(c, newTokenValidator(c, authentication.MethodFacebook))
 }
 
 // LoginWithGoogle creates a token to log in an account.
 func LoginWithGoogle(c *gin.Context) {
-	loginWithThirdParty(c, newTokenValidator(authentication.MethodGoogle))
+	loginWithThirdParty(c, newTokenValidator(c, authentication.MethodGoogle))
 }
 
 // Logout deletes the token and log out.
@@ -119,7 +120,7 @@ func Logout(c *gin.Context) {
 
 	tokenID := ctxAuthToken.GetID(c)
 
-	expirationDate := time.Now().Add(time.Duration(config.Main.JWT.TTL) * time.Second)
+	expirationDate := time.Now().Add(time.Duration(ctxconfig.Get(c).JWT.TTL) * time.Second)
 	if GetTokenExpirationDate != nil {
 		if date, err := GetTokenExpirationDate(c, tokenID); err == nil {
 			expirationDate = date
@@ -271,7 +272,7 @@ func UpdateAuthToken(c *gin.Context) {
 func RefreshAuthToken(c *gin.Context) {
 	tokenID := ctxAuthToken.GetID(c)
 
-	signedToken, err := authentication.RefreshAuthToken(c, config.Main.JWT.Secret, config.Main.JWT.SigningMethod, tokenID, time.Duration(config.Main.JWT.TTL))
+	signedToken, err := authentication.RefreshAuthToken(c, ctxconfig.Get(c).JWT.Secret, ctxconfig.Get(c).JWT.SigningMethod, tokenID, time.Duration(ctxconfig.Get(c).JWT.TTL))
 	if err != nil {
 		locale := ctxLocale.Get(c)
 		t := localization.Translate(locale)

@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/log"
 
 	"github.com/gin-gonic/gin"
@@ -30,8 +31,10 @@ type testConnector struct {
 	events *[]string
 }
 
-func (c *testConnector) Connect() { *c.events = append(*c.events, "connect "+c.name) }
-func (c *testConnector) Close()   { *c.events = append(*c.events, "close "+c.name) }
+func (c *testConnector) Connect(configuration *config.Configuration) {
+	*c.events = append(*c.events, "connect "+c.name+" "+configuration.Database.Service)
+}
+func (c *testConnector) Close() { *c.events = append(*c.events, "close "+c.name) }
 
 func TestNewServer(t *testing.T) {
 	s := NewServer()

@@ -6,7 +6,7 @@ import (
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
-	"github.com/cygy/ginamite/common/config"
+	"github.com/cygy/ginamite/common/ctxconfig"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/mongo/session"
 	"github.com/cygy/ginamite/common/queue"
@@ -56,8 +56,8 @@ func UpdateAccountPublicProfile(c *gin.Context) {
 
 	// The locale must be present and supported.
 	usedLocale := jsonBody.Locale
-	if !config.Main.SupportsLocale(usedLocale) {
-		response.UnsupportedParameterLocale(c, locale, usedLocale, "locale", config.Main.SupportedLocales, errorMessageKey)
+	if !ctxconfig.Get(c).SupportsLocale(usedLocale) {
+		response.UnsupportedParameterLocale(c, locale, usedLocale, "locale", ctxconfig.Get(c).SupportedLocales, errorMessageKey)
 		return
 	}
 

@@ -51,15 +51,12 @@ func TestNewPlugin(t *testing.T) {
 	}
 }
 
-// setMainConfiguration replaces the main configuration for the duration of the test.
-func setMainConfiguration(t *testing.T, service string) {
-	t.Helper()
+// newConfiguration returns a configuration whose database service is the one given.
+func newConfiguration(service string) *config.Configuration {
+	configuration := config.NewConfiguration()
+	configuration.Database.Service = service
 
-	old := config.Main
-	t.Cleanup(func() { config.Main = old })
-
-	config.Main = config.NewConfiguration()
-	config.Main.Database.Service = service
+	return configuration
 }
 
 // setMainSession replaces the main session for the duration of the test.
@@ -72,10 +69,9 @@ func setMainSession(t *testing.T, s *session.Session) {
 }
 
 func TestPlugin_Connect_OtherService(t *testing.T) {
-	setMainConfiguration(t, "postgresql")
 	setMainSession(t, nil)
 
-	NewPlugin().Connect()
+	NewPlugin().Connect(newConfiguration("postgresql"))
 
 	if session.Main != nil {
 		t.Error("the plugin must not connect to MongoDB when the service is another one")
@@ -83,22 +79,22 @@ func TestPlugin_Connect_OtherService(t *testing.T) {
 }
 
 func TestPlugin_Connect_Unreachable(t *testing.T) {
-	setMainConfiguration(t, database.MongoDB)
 	setMainSession(t, nil)
-	config.Main.Database.Host = "127.0.0.1"
-	config.Main.Database.Port = 1
-	config.Main.Database.TimeOut = 1
+	configuration := newConfiguration(database.MongoDB)
+	configuration.Database.Host = "127.0.0.1"
+	configuration.Database.Port = 1
+	configuration.Database.TimeOut = 1
 
 	defer func() {
 		if recover() == nil {
 			t.Error("Connect() must panic when the server is unreachable")
 		}
-		if session.Main == nil || session.Main.DatabaseName != config.Main.Database.Database {
+		if session.Main == nil || session.Main.DatabaseName != configuration.Database.Database {
 			t.Errorf("the main session must be created with the database of the configuration: %+v", session.Main)
 		}
 	}()
 
-	NewPlugin().Connect()
+	NewPlugin().Connect(configuration)
 }
 
 func TestPlugin_Close(t *testing.T) {

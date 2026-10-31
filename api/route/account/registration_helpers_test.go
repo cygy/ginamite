@@ -7,7 +7,6 @@ import (
 
 	"github.com/cygy/ginamite/api/validator"
 	"github.com/cygy/ginamite/common/authentication"
-	"github.com/cygy/ginamite/common/config"
 
 	"github.com/gin-gonic/gin"
 )
@@ -61,7 +60,7 @@ func (r registerStubs) install() {
 func TestRegister_Password(t *testing.T) {
 	handler := func(c *gin.Context) { register(c, authentication.MethodPassword) }
 	body := registrationBody()
-	notConfirmed := func() { config.Main.Account.EmailAddressMustBeConfirmed = false }
+	notConfirmed := func() { testConfig.Account.EmailAddressMustBeConfirmed = false }
 
 	missing := func(name string) testCase {
 		return testCase{name: name + " not defined", body: body, setup: registerStubs{missing: name}.install, want: http.StatusInternalServerError}
@@ -117,7 +116,7 @@ func TestRegister_ThirdParty(t *testing.T) {
 				{name: "user lookup error", body: body, setup: all(registerStubs{identifierErr: errBoom}.install, valid), want: http.StatusInternalServerError},
 				{name: "success", body: body, setup: all(registerStubs{}.install, valid), want: http.StatusCreated, check: contains("status")},
 				{name: "success with automatic login", body: body, setup: all(registerStubs{}.install, valid, func() {
-					config.Main.Account.EmailAddressMustBeConfirmed = false
+					testConfig.Account.EmailAddressMustBeConfirmed = false
 				}, loginStubs), want: http.StatusCreated, check: contains("auth_token")},
 				{
 					name: "social account already registered", body: body, setup: all(registerStubs{socialExists: true}.install, valid),

@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/localization"
 )
 
@@ -27,17 +26,17 @@ func (page *Page) Localize(key string, args ...any) string {
 
 // LocalizeDate returns the date of t formatted for the locale and in the timezone of the page.
 func (page *Page) LocalizeDate(t time.Time) string {
-	return page.formatTime(t, config.Main.Locales[page.Locale].DateFormat)
+	return page.formatTime(t, page.formats.DateFormat)
 }
 
 // LocalizeTime returns the time of t formatted for the locale and in the timezone of the page.
 func (page *Page) LocalizeTime(t time.Time) string {
-	return page.formatTime(t, config.Main.Locales[page.Locale].TimeFormat)
+	return page.formatTime(t, page.formats.TimeFormat)
 }
 
 // LocalizeDateTime returns the date and the time of t formatted for the locale and in the timezone of the page.
 func (page *Page) LocalizeDateTime(t time.Time) string {
-	return page.formatTime(t, config.Main.Locales[page.Locale].DateTimeFormat)
+	return page.formatTime(t, page.formats.DateTimeFormat)
 }
 
 // formatTime formats t with the layout, in the timezone of the page. An unknown timezone leaves t unchanged.
@@ -72,7 +71,7 @@ func (page *Page) AsyncURL(key string, vars ...map[string]string) string {
 
 // StaticURL returns the URL of the static asset at path.
 func (page *Page) StaticURL(path string) string {
-	return fmt.Sprintf("%s/%s", config.Main.Hosts.Static, path)
+	return fmt.Sprintf("%s/%s", page.staticHost, path)
 }
 
 // HTMLSafe returns text as HTML, which is not escaped by the templates.

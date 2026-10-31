@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/cygy/ginamite/common/config"
+	"github.com/cygy/ginamite/common/ctxconfig"
 	"github.com/cygy/ginamite/web/html"
 	"github.com/cygy/ginamite/web/internal/webtest"
 
@@ -87,7 +88,8 @@ async:
 `
 
 // Setup initializes the pages with the test routes, translations, templates and configuration, and restores the
-// global state at the end of the test. It returns the Gin engine holding the templates.
+// global state at the end of the test. It returns the Gin engine holding the templates, which saves the configuration
+// in the context of the requests.
 //
 // A page is rendered as "<html>TITLE|ERROR|INFO|ID</html>", where ID is the variable "ID".
 func Setup(t *testing.T) *gin.Engine {
@@ -114,6 +116,7 @@ func Setup(t *testing.T) *gin.Engine {
 	})
 
 	engine := gin.New()
+	engine.Use(ctxconfig.Inject(webtest.Config))
 	webtest.SetTemplates(t, map[string]string{
 		"decorator.html": `<html>{{.IncludeMainTemplate}}</html>`,
 		"main.html":      `{{.Content.Title}}|{{.Content.Error.Message}}|{{.Content.Info.Message}}|{{.Var "ID"}}`,
@@ -124,7 +127,7 @@ func Setup(t *testing.T) *gin.Engine {
 
 	file := webtest.WriteFile(t, t.TempDir(), "routes.yaml", routes)
 	html.Initialize(file, WebHost, StaticHost, "https://api.test", "UTC", Locales, map[string]string{"en": "en-us", "fr": "fr-fr"},
-		CookieName, Secret, html.FacebookConfiguration{}, html.GoogleConfiguration{}, html.SocialNetworksConfiguration{}, false, true)
+		CookieName, Secret, html.FacebookConfiguration{}, html.GoogleConfiguration{}, html.SocialNetworksConfiguration{}, nil, false, true)
 
 	return engine
 }

@@ -3,6 +3,9 @@ package functions
 import (
 	"errors"
 
+	"github.com/cygy/ginamite/common/ctxconfig"
+	"github.com/cygy/ginamite/common/timezone"
+
 	"github.com/cygy/ginamite/common/queue"
 
 	"github.com/cygy/ginamite/api/validator"
@@ -13,18 +16,23 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// registrationTimezone returns the timezone of the user who registers with the locale.
+func registrationTimezone(c *gin.Context, locale string) string {
+	return model.RegistrationTimezone(locale, timezone.Main, ctxconfig.Get(c).DefaultTimezone)
+}
+
 // RegisterByEmailAddress saves the registration details of a user.
 func RegisterByEmailAddress(c *gin.Context, username, encryptedPassword, emailAddress, locale, termsVersion, registrationCode, privateKey, source, ip string, device authentication.Device) error {
 	mongoSession := session.Get(c)
 	user := model.NewUser()
-	return user.RegisterByEmailAddress(c, username, encryptedPassword, emailAddress, locale, termsVersion, registrationCode, privateKey, source, ip, device, mongoSession)
+	return user.RegisterByEmailAddress(c, username, encryptedPassword, emailAddress, locale, termsVersion, registrationCode, privateKey, source, ip, device, registrationTimezone(c, locale), mongoSession)
 }
 
 // RegisterByThirdPartyToken saves the registration details of a user.
 func RegisterByThirdPartyToken(c *gin.Context, username string, tokenInfos validator.TokenInfos, tokenSource, locale, termsVersion, registrationCode, privateKey, source, ip string, device authentication.Device) error {
 	mongoSession := session.Get(c)
 	user := model.NewUser()
-	return user.RegisterByThirdPartyToken(c, username, tokenInfos, tokenSource, locale, termsVersion, registrationCode, privateKey, source, ip, device, mongoSession)
+	return user.RegisterByThirdPartyToken(c, username, tokenInfos, tokenSource, locale, termsVersion, registrationCode, privateKey, source, ip, device, registrationTimezone(c, locale), mongoSession)
 }
 
 // ValidateUserRegistration validates the registration of a user.

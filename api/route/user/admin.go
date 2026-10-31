@@ -5,12 +5,13 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/cygy/ginamite/common/ctxconfig"
+
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/api/route/account"
 	"github.com/cygy/ginamite/common"
-	"github.com/cygy/ginamite/common/config"
 	commonErrors "github.com/cygy/ginamite/common/errors"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/notifications"
@@ -171,8 +172,8 @@ func AdminUpdateDescription(c *gin.Context) {
 	}
 
 	// Locale not supported.
-	if !config.Main.SupportsLocale(newLocale) {
-		response.UnsupportedParameterLocale(c, locale, newLocale, "locale", config.Main.SupportedLocales, errorMessageKey)
+	if !ctxconfig.Get(c).SupportsLocale(newLocale) {
+		response.UnsupportedParameterLocale(c, locale, newLocale, "locale", ctxconfig.Get(c).SupportedLocales, errorMessageKey)
 		return
 	}
 
@@ -294,8 +295,8 @@ func AdminUpdateSettings(c *gin.Context) {
 	}
 
 	// Locale not supported.
-	if !config.Main.SupportsLocale(newLocale) {
-		response.UnsupportedParameterLocale(c, locale, newLocale, "locale", config.Main.SupportedLocales, errorMessageKey)
+	if !ctxconfig.Get(c).SupportsLocale(newLocale) {
+		response.UnsupportedParameterLocale(c, locale, newLocale, "locale", ctxconfig.Get(c).SupportedLocales, errorMessageKey)
 		return
 	}
 

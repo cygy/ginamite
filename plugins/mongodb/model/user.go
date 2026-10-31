@@ -209,9 +209,9 @@ func (user *User) SetID(id string) error {
 }
 
 // SetAdmin sets or unsets the administrator flag of the user. It is meant for the tests: it does nothing
-// outside of the test environment.
-func (user *User) SetAdmin(ctx context.Context, admin bool, db store.Database) error {
-	if config.Main == nil || config.Main.IsTestEnvironment() {
+// outside of the test environment of the configuration. A nil configuration is the test environment.
+func (user *User) SetAdmin(ctx context.Context, configuration *config.Configuration, admin bool, db store.Database) error {
+	if configuration == nil || configuration.IsTestEnvironment() {
 		return user.Update(ctx, bson.M{"$set": bson.M{"isAdmin": admin}}, db)
 	}
 

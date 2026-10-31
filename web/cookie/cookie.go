@@ -1,10 +1,10 @@
-// Package cookie manages the authentication cookie of the web server, configured by config.Main.Cookie.
+// Package cookie manages the authentication cookie of the web server, configured by the Cookie settings of the configuration in the context, see ctxconfig.
 package cookie
 
 import (
 	"net/http"
 
-	"github.com/cygy/ginamite/common/config"
+	"github.com/cygy/ginamite/common/ctxconfig"
 	"github.com/cygy/ginamite/web/context"
 	"github.com/cygy/ginamite/web/html"
 
@@ -19,7 +19,7 @@ func Create(c *gin.Context, value string) {
 // CreateAndRedirect saves value in the authentication cookie, then redirects to the route key redirect in the locale
 // of the request, if redirect is not empty.
 func CreateAndRedirect(c *gin.Context, value, redirect string) {
-	setCookie(c, value, config.Main.Cookie.TTL)
+	setCookie(c, value, ctxconfig.Get(c).Cookie.TTL)
 	redirectTo(c, redirect)
 }
 
@@ -37,12 +37,12 @@ func InvalidateAndRedirect(c *gin.Context, redirect string) {
 
 // GetValue returns the value of the authentication cookie.
 func GetValue(c *gin.Context) (string, error) {
-	return c.Cookie(config.Main.Cookie.Name)
+	return c.Cookie(ctxconfig.Get(c).Cookie.Name)
 }
 
 // setCookie sends the authentication cookie with the maximum age in seconds, which deletes it if negative.
 func setCookie(c *gin.Context, value string, maxAge int) {
-	cookie := config.Main.Cookie
+	cookie := ctxconfig.Get(c).Cookie
 	c.SetCookie(cookie.Name, value, maxAge, cookie.Path, cookie.Domain, cookie.Secure, cookie.HTTPOnly)
 }
 

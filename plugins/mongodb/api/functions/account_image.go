@@ -9,13 +9,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cygy/ginamite/common/ctxconfig"
+
 	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	ctxUser "github.com/cygy/ginamite/api/context/user"
 	"github.com/cygy/ginamite/api/image"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
-	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/mongo/session"
@@ -97,17 +98,17 @@ func UpdateAccountPublicImage(c *gin.Context) {
 
 	// Set up the new images.
 	user.PublicInfos.Image.Full.Size1x.Path = versions.Full.Size1x.RelativePath
-	user.PublicInfos.Image.Full.Size1x.URL = config.Main.Hosts.Static + versions.Full.Size1x.AbsolutePath
+	user.PublicInfos.Image.Full.Size1x.URL = ctxconfig.Get(c).Hosts.Static + versions.Full.Size1x.AbsolutePath
 	user.PublicInfos.Image.Full.Size2x.Path = versions.Full.Size2x.RelativePath
-	user.PublicInfos.Image.Full.Size2x.URL = config.Main.Hosts.Static + versions.Full.Size2x.AbsolutePath
+	user.PublicInfos.Image.Full.Size2x.URL = ctxconfig.Get(c).Hosts.Static + versions.Full.Size2x.AbsolutePath
 	user.PublicInfos.Image.Small.Size1x.Path = versions.Small.Size1x.RelativePath
-	user.PublicInfos.Image.Small.Size1x.URL = config.Main.Hosts.Static + versions.Small.Size1x.AbsolutePath
+	user.PublicInfos.Image.Small.Size1x.URL = ctxconfig.Get(c).Hosts.Static + versions.Small.Size1x.AbsolutePath
 	user.PublicInfos.Image.Small.Size2x.Path = versions.Small.Size2x.RelativePath
-	user.PublicInfos.Image.Small.Size2x.URL = config.Main.Hosts.Static + versions.Small.Size2x.AbsolutePath
+	user.PublicInfos.Image.Small.Size2x.URL = ctxconfig.Get(c).Hosts.Static + versions.Small.Size2x.AbsolutePath
 	user.PublicInfos.Image.Thumb.Size1x.Path = versions.Thumb.Size1x.RelativePath
-	user.PublicInfos.Image.Thumb.Size1x.URL = config.Main.Hosts.Static + versions.Thumb.Size1x.AbsolutePath
+	user.PublicInfos.Image.Thumb.Size1x.URL = ctxconfig.Get(c).Hosts.Static + versions.Thumb.Size1x.AbsolutePath
 	user.PublicInfos.Image.Thumb.Size2x.Path = versions.Thumb.Size2x.RelativePath
-	user.PublicInfos.Image.Thumb.Size2x.URL = config.Main.Hosts.Static + versions.Thumb.Size2x.AbsolutePath
+	user.PublicInfos.Image.Thumb.Size2x.URL = ctxconfig.Get(c).Hosts.Static + versions.Thumb.Size2x.AbsolutePath
 
 	mongoSession := session.Get(c)
 

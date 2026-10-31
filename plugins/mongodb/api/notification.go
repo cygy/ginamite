@@ -4,7 +4,6 @@ package api
 import (
 	"context"
 
-	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/store"
@@ -12,10 +11,10 @@ import (
 )
 
 // CreateStoredNotification saves a notification for a user, and updates the counts of notifications of the user.
-// The oldest notifications are deleted when the user has more than config.Main.UserNotifications.Limit notifications.
+// The oldest notifications are deleted when the user has more than limit notifications.
 // The image is kept only if it has a URL. Failing to delete the extra notifications or to update the counts is only
 // logged.
-func CreateStoredNotification(ctx context.Context, userID, notificationType, data string, image model.PublicImage, locales map[string]model.NotificationLocale, db store.Database) error {
+func CreateStoredNotification(ctx context.Context, userID, notificationType, data string, image model.PublicImage, locales map[string]model.NotificationLocale, limit int64, db store.Database) error {
 	objectID, err := bson.ObjectIDFromHex(userID)
 	if err != nil {
 		return err
@@ -40,8 +39,8 @@ func CreateStoredNotification(ctx context.Context, userID, notificationType, dat
 	if err != nil {
 		return err
 	}
-	if countOfNotifications > config.Main.UserNotifications.Limit {
-		notificationIDs, err := model.GetOldestUserNotifications(ctx, userID, config.Main.UserNotifications.Limit, db)
+	if countOfNotifications > limit {
+		notificationIDs, err := model.GetOldestUserNotifications(ctx, userID, limit, db)
 		if err == nil {
 			if _, err := model.DeleteUserNotifications(ctx, notificationIDs, db); err != nil {
 				log.WithField("error", err).Error("unable to delete user notifications")

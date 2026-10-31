@@ -12,6 +12,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cygy/ginamite/common/config"
+	"github.com/cygy/ginamite/common/ctxconfig"
+
 	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/common/kafka"
@@ -37,12 +40,14 @@ func init() {
 }
 
 // NewContext returns a gin context bound to a request, to the stub database and to the recorder of the response.
-// The locale of the context is "en", see InitLocalization.
+// The locale of the context is "en", see InitLocalization. The configuration of the context is the default one, and
+// can be changed with ctxconfig.Get.
 func NewContext(db *mock.Database, method, target string, body io.Reader) (*gin.Context, *httptest.ResponseRecorder) {
 	recorder := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(recorder)
 	c.Request = httptest.NewRequest(method, target, body)
 	session.Set(c, db)
+	ctxconfig.Set(c, config.NewConfiguration())
 	ctxLocale.Set(c, "en", "en")
 
 	return c, recorder

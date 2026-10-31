@@ -6,14 +6,15 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/cygy/ginamite/common/ctxconfig"
+
 	"github.com/cygy/ginamite/api/internal/apitest"
 	"github.com/cygy/ginamite/common/config"
 )
 
 func TestGetLocales(t *testing.T) {
-	config.Main = &config.Configuration{SupportedLocales: []string{"en", "fr"}}
-
 	c, recorder := apitest.NewContext("GET", "/", nil)
+	ctxconfig.Set(c, &config.Configuration{SupportedLocales: []string{"en", "fr"}})
 	GetLocales(c)
 
 	if recorder.Code != http.StatusOK {

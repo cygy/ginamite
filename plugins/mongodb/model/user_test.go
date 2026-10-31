@@ -44,15 +44,12 @@ func TestUser_SetAdmin(t *testing.T) {
 	user := NewUser()
 	_ = user.SetID(hex)
 
-	defer func(old *config.Configuration) { config.Main = old }(config.Main)
-
 	// Without configuration, or in the test environment, the flag is saved.
 	for name, conf := range map[string]*config.Configuration{"no configuration": nil, "test environment": {Environment: "test"}} {
 		t.Run(name, func(t *testing.T) {
-			config.Main = conf
 			db := mock.NewDatabase("app")
 
-			if err := user.SetAdmin(ctx, true, db); err != nil {
+			if err := user.SetAdmin(ctx, conf, true, db); err != nil {
 				t.Fatal(err)
 			}
 			checkUpdate(t, db, UserCollection, id, bson.M{"$set": bson.M{"isAdmin": true}})
@@ -61,10 +58,9 @@ func TestUser_SetAdmin(t *testing.T) {
 
 	// Anywhere else it is only meant for the tests: nothing is saved.
 	t.Run("production", func(t *testing.T) {
-		config.Main = &config.Configuration{Environment: "production"}
 		db := mock.NewDatabase("app")
 
-		if err := user.SetAdmin(ctx, true, db); err != nil {
+		if err := user.SetAdmin(ctx, &config.Configuration{Environment: "production"}, true, db); err != nil {
 			t.Fatal(err)
 		}
 		if calls := db.Coll(UserCollection).Calls(); len(calls) != 0 {

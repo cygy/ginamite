@@ -33,8 +33,6 @@ func TestPage_Localize(t *testing.T) {
 }
 
 func TestPage_LocalizeDateTime(t *testing.T) {
-	setup(t)
-
 	at := time.Date(2026, time.July, 1, 23, 30, 0, 0, time.UTC)
 	tests := []struct {
 		name     string
@@ -50,7 +48,7 @@ func TestPage_LocalizeDateTime(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			page := &Page{Locale: tt.locale, Timezone: tt.timezone}
+			page := &Page{Locale: tt.locale, Timezone: tt.timezone, formats: testFormats[tt.locale]}
 
 			if got := page.LocalizeDate(at); got != tt.date {
 				t.Errorf("LocalizeDate() = %q, want %q", got, tt.date)
@@ -88,7 +86,7 @@ func TestPage_FormattedTime(t *testing.T) {
 func TestPage_URLs(t *testing.T) {
 	setup(t)
 
-	page := &Page{Locale: "en-us"}
+	page := &Page{Locale: "en-us", staticHost: testStaticHost}
 
 	tests := []struct{ name, got, want string }{
 		{"URL", page.URL("home"), testWebHost + "/en-us/home"},

@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cygy/ginamite/common/ctxconfig"
+
 	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/internal/apitest"
@@ -52,17 +54,20 @@ type testCase struct {
 	check  func(t *testing.T, body string)
 }
 
+// testConfig is the configuration of the handlers, replaced by setup.
+var testConfig *config.Configuration
+
 // setup initializes the global dependencies of the handlers and resets every injected function at the end of the test.
 func setup(t *testing.T) {
 	t.Helper()
 
 	apitest.InitLocalization(t, map[string]string{"placeholder": "placeholder"})
 
-	config.Main = config.NewConfiguration()
-	config.Main.SupportedLocales = []string{"en"}
-	config.Main.JWT.Secret = testSecret
-	config.Main.Terms.Version = "v1"
-	config.Main.Environment = environment.Development
+	testConfig = config.NewConfiguration()
+	testConfig.SupportedLocales = []string{"en"}
+	testConfig.JWT.Secret = testSecret
+	testConfig.Terms.Version = "v1"
+	testConfig.Environment = environment.Development
 	timezone.Main = timezone.NewConfiguration()
 	timezone.Main.Timezones = []string{"Europe/Paris"}
 	kafka.Main = kafka.NewClient()
@@ -113,7 +118,7 @@ func resetFunctions() {
 // newRouter returns a router with the locale and the auth token middlewares, serving the handler on every path shape.
 func newRouter(handler gin.HandlerFunc) *gin.Engine {
 	router := gin.New()
-	router.Use(ctxLocale.Inject("en", []string{"en"}))
+	router.Use(ctxconfig.Inject(testConfig), ctxLocale.Inject("en", []string{"en"}))
 	router.Use(ctxAuthToken.Parse(testSecret, nil, false))
 	router.Any("/", handler)
 	router.Any("/:id", handler)
@@ -169,6 +174,7 @@ func runCases(t *testing.T, handler gin.HandlerFunc, tests []testCase) {
 func newContext(params gin.Params) (*gin.Context, *httptest.ResponseRecorder) {
 	c, recorder := apitest.NewContext(http.MethodPost, "/", nil)
 	c.Params = params
+	ctxconfig.Set(c, testConfig)
 	ctxLocale.Set(c, "en", "en")
 
 	return c, recorder
@@ -184,7 +190,7 @@ func all(fns ...func()) func() {
 }
 
 // inTestEnvironment switches the application to the test environment.
-func inTestEnvironment() { config.Main.Environment = environment.Test }
+func inTestEnvironment() { testConfig.Environment = environment.Test }
 
 // withUser defines GetUserDetailsByID.
 func withUser(user authentication.User, err error) func() {
@@ -222,6 +228,6 @@ func (v fakeValidator) VerifyTokenAndExtractInfos(string) (validator.TokenInfos,
 // withValidator makes the handlers use the fake validator for every third-party method.
 func withValidator(v fakeValidator) func() {
 	return func() {
-		newTokenValidator = func(string) validator.TokenValidator { return v }
+		newTokenValidator = func(*gin.Context, string) validator.TokenValidator { return v }
 	}
 }

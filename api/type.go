@@ -9,12 +9,15 @@ import (
 	"github.com/cygy/ginamite/api/route/terms"
 	"github.com/cygy/ginamite/api/route/user"
 	"github.com/cygy/ginamite/common/authentication"
+	"github.com/cygy/ginamite/common/config"
 
 	"github.com/gin-gonic/gin"
 )
 
 // Server defines an API server.
 type Server struct {
+	// Config is the configuration of the application, set by the main server before it starts.
+	Config     *config.Configuration
 	RoutesFile string
 	Functions  Handlers
 

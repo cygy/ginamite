@@ -5,24 +5,12 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/store/mock"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
 )
 
 var errBoom = errors.New("boom")
-
-// withLimit sets the limit of notifications by user for the duration of the test.
-func withLimit(t *testing.T, limit int64) {
-	t.Helper()
-
-	old := config.Main
-	t.Cleanup(func() { config.Main = old })
-
-	config.Main = config.NewConfiguration()
-	config.Main.UserNotifications.Limit = limit
-}
 
 func TestCreateStoredNotification(t *testing.T) {
 	ctx := context.Background()
@@ -31,11 +19,11 @@ func TestCreateStoredNotification(t *testing.T) {
 	image := model.PublicImage{Full: model.PublicImageSize{Size1x: "full1"}}
 
 	t.Run("under the limit", func(t *testing.T) {
-		withLimit(t, 10)
+		limit := int64(10)
 		db := mock.NewDatabase("app")
 		db.Coll(model.NotificationCollection).Count = 3
 
-		if err := CreateStoredNotification(ctx, userID.Hex(), "news", "data", image, locales, db); err != nil {
+		if err := CreateStoredNotification(ctx, userID.Hex(), "news", "data", image, locales, limit, db); err != nil {
 			t.Fatal(err)
 		}
 
@@ -60,10 +48,10 @@ func TestCreateStoredNotification(t *testing.T) {
 	})
 
 	t.Run("image without URL is dropped", func(t *testing.T) {
-		withLimit(t, 10)
+		limit := int64(10)
 		db := mock.NewDatabase("app")
 
-		if err := CreateStoredNotification(ctx, userID.Hex(), "news", "", model.PublicImage{}, locales, db); err != nil {
+		if err := CreateStoredNotification(ctx, userID.Hex(), "news", "", model.PublicImage{}, locales, limit, db); err != nil {
 			t.Fatal(err)
 		}
 		if saved := db.Coll(model.NotificationCollection).Calls()[0].Args[0].(*model.Notification); saved.Image.Full.Size1x != "" {
@@ -72,13 +60,13 @@ func TestCreateStoredNotification(t *testing.T) {
 	})
 
 	t.Run("over the limit", func(t *testing.T) {
-		withLimit(t, 2)
+		limit := int64(2)
 		db := mock.NewDatabase("app")
 		oldest := bson.NewObjectID()
 		db.Coll(model.NotificationCollection).Count = 3
 		db.Coll(model.NotificationCollection).Docs = []any{model.Notification{ID: oldest}}
 
-		if err := CreateStoredNotification(ctx, userID.Hex(), "news", "", model.PublicImage{}, locales, db); err != nil {
+		if err := CreateStoredNotification(ctx, userID.Hex(), "news", "", model.PublicImage{}, locales, limit, db); err != nil {
 			t.Fatal(err)
 		}
 
@@ -97,46 +85,46 @@ func TestCreateStoredNotification(t *testing.T) {
 	})
 
 	t.Run("failures to delete the extra notifications are only logged", func(t *testing.T) {
-		withLimit(t, 2)
+		limit := int64(2)
 
 		for _, method := range []string{"Find", "DeleteMany"} {
 			db := mock.NewDatabase("app")
 			db.Coll(model.NotificationCollection).Count = 3
 			db.Coll(model.NotificationCollection).Errs = map[string]error{method: errBoom}
 
-			if err := CreateStoredNotification(ctx, userID.Hex(), "news", "", model.PublicImage{}, locales, db); err != nil {
+			if err := CreateStoredNotification(ctx, userID.Hex(), "news", "", model.PublicImage{}, locales, limit, db); err != nil {
 				t.Errorf("%s failing: err = %v", method, err)
 			}
 		}
 	})
 
 	t.Run("errors", func(t *testing.T) {
-		withLimit(t, 10)
+		limit := int64(10)
 
-		if err := CreateStoredNotification(ctx, "nope", "news", "", model.PublicImage{}, locales, mock.NewDatabase("app")); err == nil {
+		if err := CreateStoredNotification(ctx, "nope", "news", "", model.PublicImage{}, locales, limit, mock.NewDatabase("app")); err == nil {
 			t.Error("an invalid user ID must be rejected")
 		}
 
 		db := mock.NewDatabase("app")
 		db.Coll(model.NotificationCollection).Err = errBoom
-		if err := CreateStoredNotification(ctx, userID.Hex(), "news", "", model.PublicImage{}, locales, db); !errors.Is(err, errBoom) {
+		if err := CreateStoredNotification(ctx, userID.Hex(), "news", "", model.PublicImage{}, locales, limit, db); !errors.Is(err, errBoom) {
 			t.Errorf("save err = %v", err)
 		}
 
 		// The notification is saved, the count fails.
 		db = mock.NewDatabase("app")
 		db.Coll(model.NotificationCollection).Errs = map[string]error{"CountDocuments": errBoom}
-		if err := CreateStoredNotification(ctx, userID.Hex(), "news", "", model.PublicImage{}, locales, db); err == nil {
+		if err := CreateStoredNotification(ctx, userID.Hex(), "news", "", model.PublicImage{}, locales, limit, db); err == nil {
 			t.Error("a count failure must be reported")
 		}
 	})
 
 	t.Run("a failure to update the counts is only logged", func(t *testing.T) {
-		withLimit(t, 10)
+		limit := int64(10)
 		db := mock.NewDatabase("app")
 		db.Coll(model.UserCollection).Err = errBoom
 
-		if err := CreateStoredNotification(ctx, userID.Hex(), "news", "", model.PublicImage{}, locales, db); err != nil {
+		if err := CreateStoredNotification(ctx, userID.Hex(), "news", "", model.PublicImage{}, locales, limit, db); err != nil {
 			t.Errorf("err = %v", err)
 		}
 	})

@@ -79,12 +79,12 @@ var _ ginamite.Connector = (*Plugin)(nil)
 // Connect opens the main MongoDB session with the database settings of the main configuration. It does nothing if
 // the database service of the configuration is not MongoDB. The server calls it before Configure, if it is the API
 // or the worker. If the server is not reachable, it panics after logging the error.
-func (p *Plugin) Connect() {
-	if !config.Main.IsMongoDBDatabase() {
+func (p *Plugin) Connect(configuration *config.Configuration) {
+	if !configuration.IsMongoDBDatabase() {
 		return
 	}
 
-	database := config.Main.Database
+	database := configuration.Database
 	session.Initialize(database.Host+":"+strconv.Itoa(database.Port),
 		database.Database,
 		database.Username,

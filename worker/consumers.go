@@ -37,7 +37,7 @@ func (s *Server) handleTask(value []byte) {
 
 	switch msgType {
 	case queue.MessageTaskIPLocation:
-		location.GetIPInfo(payload, s.Functions.SaveIPAddressDetails)
+		location.GetIPInfo(payload, s.Config.IPStack, s.Functions.SaveIPAddressDetails)
 	case queue.MessageTaskDeleteUser:
 		user.DeleteByID(payload, s.Functions.DeleteUserByID)
 	case queue.MessageTaskDisableUser:

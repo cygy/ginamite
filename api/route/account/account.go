@@ -5,10 +5,11 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/cygy/ginamite/common/ctxconfig"
+
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common/authentication"
-	"github.com/cygy/ginamite/common/config"
 	registrationError "github.com/cygy/ginamite/common/errors/registration"
 	"github.com/cygy/ginamite/common/localization"
 
@@ -54,7 +55,7 @@ func CheckUsernameParameter(c *gin.Context, username, parameterName string) bool
 
 	// Username must not contain invalid strings.
 	// Do not accept some patterns because of spam.
-	if doesUsernameContainForbiddenStrings(username) || !isUsernamePatternAccepted(username) {
+	if doesUsernameContainForbiddenStrings(c, username) || !isUsernamePatternAccepted(username) {
 		// Spoof the error, if it happens it's because of a spam bot.
 		t := localization.Translate(locale)
 		response.PreconditionFailedWithError(c, res.Error{
@@ -70,9 +71,9 @@ func CheckUsernameParameter(c *gin.Context, username, parameterName string) bool
 	return true
 }
 
-func doesUsernameContainForbiddenStrings(username string) bool {
+func doesUsernameContainForbiddenStrings(c *gin.Context, username string) bool {
 	loweredUsername := strings.ToLower(username)
-	for _, invalidString := range config.Main.Account.InvalidStringsForUsername {
+	for _, invalidString := range ctxconfig.Get(c).Account.InvalidStringsForUsername {
 		if strings.Contains(loweredUsername, strings.ToLower(invalidString)) {
 			return true
 		}

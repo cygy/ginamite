@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/cygy/ginamite/common/ctxconfig"
+
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	ctxUser "github.com/cygy/ginamite/api/context/user"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
-	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/log"
 	r "github.com/cygy/ginamite/common/response"
@@ -21,12 +22,12 @@ import (
 // GetTerms returns the current terms and version.
 func GetTerms(c *gin.Context) {
 	locale := ctxLocale.Get(c)
-	version := config.Main.Terms.Version
+	version := ctxconfig.Get(c).Terms.Version
 	filename := fmt.Sprintf("%s/%s", version, locale)
 
 	terms, ok := termsContents[filename]
 	if !ok {
-		filePath := fmt.Sprintf("%s/%s.txt", config.Main.Terms.Path, filename)
+		filePath := fmt.Sprintf("%s/%s.txt", ctxconfig.Get(c).Terms.Path, filename)
 		bytes, err := os.ReadFile(filePath)
 		if err != nil {
 			log.WithFields(logrus.Fields{
@@ -52,7 +53,7 @@ func GetTerms(c *gin.Context) {
 // GetTermsVersion returns the current version of the terms.
 func GetTermsVersion(c *gin.Context) {
 	response.Ok(c, response.H{
-		"version": config.Main.Terms.Version,
+		"version": ctxconfig.Get(c).Terms.Version,
 	})
 }
 
@@ -78,7 +79,7 @@ func AcceptTerms(c *gin.Context) {
 	}
 
 	// The latest version of the terms must be accepted.
-	if termsVersion != config.Main.Terms.Version {
+	if termsVersion != ctxconfig.Get(c).Terms.Version {
 		message := t("error.terms.version.invalid.message")
 		reason := t("error.terms.version.invalid.reason")
 		recovery := t("error.terms.version.invalid.recovery")

@@ -10,7 +10,6 @@ import (
 
 	"github.com/cygy/ginamite/api/validator"
 	"github.com/cygy/ginamite/common/authentication"
-	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/store"
@@ -20,9 +19,28 @@ import (
 	"github.com/gosimple/slug"
 )
 
-// RegisterByEmailAddress registers a new user with an email address.
-func (user *User) RegisterByEmailAddress(ctx context.Context, username, encryptedPassword, emailAddress, locale, termsVersion, registrationCode, privateKey, source, ip string, device authentication.Device, db store.Database) error {
-	user.initializeFromRegistration(username, emailAddress, termsVersion, locale, registrationCode, privateKey, authentication.MethodPassword, source, ip, device)
+// RegistrationTimezone returns the timezone of a new user: the first timezone of the country of the locale, such as
+// "fr-FR", or the default timezone if there is none. The timezones, if nil, are not used. It returns an empty string if
+// the locale has no country.
+func RegistrationTimezone(locale string, timezones *timezone.Configuration, defaultTimezone string) string {
+	parts := strings.SplitN(locale, "-", 2)
+	if len(parts) < 2 {
+		return ""
+	}
+
+	if timezones != nil {
+		if countryTimezones := timezones.GetTimezones(parts[1]); len(countryTimezones) > 0 {
+			return countryTimezones[0]
+		}
+	}
+
+	return defaultTimezone
+}
+
+// RegisterByEmailAddress registers a new user with an email address. The user timezone is the one returned by
+// RegistrationTimezone.
+func (user *User) RegisterByEmailAddress(ctx context.Context, username, encryptedPassword, emailAddress, locale, termsVersion, registrationCode, privateKey, source, ip string, device authentication.Device, userTimezone string, db store.Database) error {
+	user.initializeFromRegistration(username, emailAddress, termsVersion, locale, registrationCode, privateKey, authentication.MethodPassword, source, ip, userTimezone, device)
 	user.IdentificationMethods.Password = encryptedPassword
 
 	_, err := user.Save(ctx, db)
@@ -60,9 +78,10 @@ func (user *User) CancelRegistrationByEmailAddress(ctx context.Context, code str
 	return user.Delete(ctx, db)
 }
 
-// RegisterByThirdPartyToken registers a new user with a third-party identification token.
-func (user *User) RegisterByThirdPartyToken(ctx context.Context, username string, tokenInfos validator.TokenInfos, tokenSource, locale, termsVersion, registrationCode, privateKey, source, ip string, device authentication.Device, db store.Database) error {
-	user.initializeFromRegistration(username, tokenInfos.Email, termsVersion, locale, registrationCode, privateKey, tokenSource, source, ip, device)
+// RegisterByThirdPartyToken registers a new user with a third-party identification token. The user timezone is the one
+// returned by RegistrationTimezone.
+func (user *User) RegisterByThirdPartyToken(ctx context.Context, username string, tokenInfos validator.TokenInfos, tokenSource, locale, termsVersion, registrationCode, privateKey, source, ip string, device authentication.Device, userTimezone string, db store.Database) error {
+	user.initializeFromRegistration(username, tokenInfos.Email, termsVersion, locale, registrationCode, privateKey, tokenSource, source, ip, userTimezone, device)
 
 	userOAuthInfos := UserOAuthInfos{}
 	userOAuthInfos.FromSocialNetworkOAuthInfos(tokenInfos)
@@ -112,20 +131,8 @@ func (user *User) saveThirdPartyInfos(ctx context.Context, source, token, userID
 	return user.Update(ctx, bson.M{"$set": updatedFields}, db)
 }
 
-func (user *User) initializeFromRegistration(username, emailAddress, termsVersion, locale, registrationCode, privateKey, method, source, ip string, device authentication.Device) {
-	parts := strings.SplitN(locale, "-", 2)
-	if len(parts) > 1 {
-		country := parts[1]
-		var timezones []string
-		if timezone.Main != nil {
-			timezones = timezone.Main.GetTimezones(country)
-		}
-		if len(timezones) > 0 {
-			user.Settings.Timezone = timezones[0]
-		} else if config.Main != nil {
-			user.Settings.Timezone = config.Main.DefaultTimezone
-		}
-	}
+func (user *User) initializeFromRegistration(username, emailAddress, termsVersion, locale, registrationCode, privateKey, method, source, ip, userTimezone string, device authentication.Device) {
+	user.Settings.Timezone = userTimezone
 
 	userDevice := Device{}
 	userDevice.FromDevice(device)

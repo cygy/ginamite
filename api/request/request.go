@@ -6,9 +6,10 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/cygy/ginamite/common/ctxconfig"
+
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/response"
-	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/log"
 
@@ -84,8 +85,8 @@ func GetLocaleValue(c *gin.Context, parameterName, errorMessageKey string) (stri
 	}
 
 	// The locale must be supported by the application.
-	if !config.Main.SupportsLocale(localeParameterValue) {
-		response.UnsupportedRequestLocale(c, locale, localeParameterValue, config.Main.SupportedLocales, errorMessageKey)
+	if !ctxconfig.Get(c).SupportsLocale(localeParameterValue) {
+		response.UnsupportedRequestLocale(c, locale, localeParameterValue, ctxconfig.Get(c).SupportedLocales, errorMessageKey)
 		return "", false
 	}
 

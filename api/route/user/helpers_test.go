@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/cygy/ginamite/common/ctxconfig"
+
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/internal/apitest"
 	"github.com/cygy/ginamite/api/route/account"
@@ -16,14 +18,17 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// testConfig is the configuration of the handlers, replaced by setup.
+var testConfig *config.Configuration
+
 // setup initializes the global dependencies of the handlers and resets the injected functions at the end of the test.
 func setup(t *testing.T) {
 	t.Helper()
 
 	apitest.InitLocalization(t, map[string]string{"placeholder": "placeholder"})
 
-	config.Main = config.NewConfiguration()
-	config.Main.SupportedLocales = []string{"en"}
+	testConfig = config.NewConfiguration()
+	testConfig.SupportedLocales = []string{"en"}
 	timezone.Main = timezone.NewConfiguration()
 	timezone.Main.Timezones = []string{"Europe/Paris"}
 	kafka.Main = kafka.NewClient()
@@ -42,7 +47,7 @@ func setup(t *testing.T) {
 // serve sends a request with the given JSON body to the handler, mounted on "/:id", and returns the HTTP status.
 func serve(handler gin.HandlerFunc, body string) int {
 	router := gin.New()
-	router.Use(ctxLocale.Inject("en", []string{"en"}))
+	router.Use(ctxconfig.Inject(testConfig), ctxLocale.Inject("en", []string{"en"}))
 	router.Any("/:id", handler)
 
 	req, _ := http.NewRequest(http.MethodPost, "/42", strings.NewReader(body))
@@ -53,6 +58,7 @@ func serve(handler gin.HandlerFunc, body string) int {
 // newTestContext returns a context carrying the JSON body and the "en" locale.
 func newTestContext(body string) (*gin.Context, *httptest.ResponseRecorder) {
 	c, recorder := apitest.NewContext(http.MethodPost, "/42", strings.NewReader(body))
+	ctxconfig.Set(c, testConfig)
 	ctxLocale.Set(c, "en", "en")
 
 	return c, recorder

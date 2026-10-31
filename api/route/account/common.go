@@ -4,11 +4,12 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/cygy/ginamite/common/ctxconfig"
+
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/api/validator"
 	"github.com/cygy/ginamite/common/authentication"
-	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/queue"
 
@@ -17,12 +18,12 @@ import (
 
 // newTokenValidator returns the validator of the tokens issued by a third-party authentication method.
 // It is a variable so that the tests can replace it.
-var newTokenValidator = func(method string) validator.TokenValidator {
+var newTokenValidator = func(c *gin.Context, method string) validator.TokenValidator {
 	switch method {
 	case authentication.MethodFacebook:
-		return validator.NewFacebookTokenValidator(config.Main.Facebook.AppID, config.Main.Facebook.APIVersion, config.Main.Facebook.TimeOut, config.Main.Facebook.RetryCount, config.Main.IsDebugModeEnabled())
+		return validator.NewFacebookTokenValidator(ctxconfig.Get(c).Facebook.AppID, ctxconfig.Get(c).Facebook.APIVersion, ctxconfig.Get(c).Facebook.TimeOut, ctxconfig.Get(c).Facebook.RetryCount, ctxconfig.Get(c).IsDebugModeEnabled())
 	case authentication.MethodGoogle:
-		return validator.NewGoogleTokenValidator(config.Main.Google.ClientID, config.Main.Google.APIVersion, config.Main.Google.TimeOut, config.Main.Google.RetryCount, config.Main.IsDebugModeEnabled())
+		return validator.NewGoogleTokenValidator(ctxconfig.Get(c).Google.ClientID, ctxconfig.Get(c).Google.APIVersion, ctxconfig.Get(c).Google.TimeOut, ctxconfig.Get(c).Google.RetryCount, ctxconfig.Get(c).IsDebugModeEnabled())
 	}
 
 	return nil

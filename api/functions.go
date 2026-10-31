@@ -16,6 +16,7 @@ import (
 	"github.com/cygy/ginamite/api/route/user"
 	"github.com/cygy/ginamite/common/authentication"
 	"github.com/cygy/ginamite/common/config"
+	"github.com/cygy/ginamite/common/ctxconfig"
 	"github.com/cygy/ginamite/common/kafka"
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/queue"
@@ -71,7 +72,7 @@ func (s *Server) Start() {
 	s.warnUndefinedFunctions()
 
 	// Enable debug mode if needed.
-	if config.Main.IsDebugModeEnabled() {
+	if s.Config.IsDebugModeEnabled() {
 		gin.SetMode(gin.DebugMode)
 	} else {
 		gin.SetMode(gin.ReleaseMode)
@@ -80,7 +81,7 @@ func (s *Server) Start() {
 	// Create the server.
 	var server *gin.Engine
 
-	if config.Main.IsProductionEnvironment() {
+	if s.Config.IsProductionEnvironment() {
 		server = gin.New()
 		server.Use(gin.Recovery())
 		server.Use(log.InjectRequestLogger(true))
@@ -89,8 +90,8 @@ func (s *Server) Start() {
 	}
 
 	// Enable server settings
-	if config.Main.Server.GZip.Enabled {
-		server.Use(gzip.Gzip(config.Main.Server.GZip.Level))
+	if s.Config.Server.GZip.Enabled {
+		server.Use(gzip.Gzip(s.Config.Server.GZip.Level))
 	}
 
 	// Set up some global functions.
@@ -170,19 +171,20 @@ func (s *Server) Start() {
 	contact.GetContact = s.Functions.GetContact
 
 	// Load the middlewares.
+	server.Use(ctxconfig.Inject(s.Config))
 	server.Use(s.Middlewares...)
-	server.Use(ctxLocale.Inject(config.Main.DefaultLocale, config.Main.SupportedLocales))
+	server.Use(ctxLocale.Inject(s.Config.DefaultLocale, s.Config.SupportedLocales))
 
 	// Load the templates.
-	html.LoadTemplatesWithDelimiters(config.Main.TemplatesPath+"/html", "[[", "]]", server)
-	text.LoadTemplates(config.Main.TemplatesPath + "/text")
+	html.LoadTemplatesWithDelimiters(s.Config.TemplatesPath+"/html", "[[", "]]", server)
+	text.LoadTemplates(s.Config.TemplatesPath + "/text")
 
 	// Initialize the configuration of the HTML routes.
-	weburl.Initialize(s.RoutesFile, config.Main.Hosts.Web)
+	weburl.Initialize(s.RoutesFile, s.Config.Hosts.Web)
 
 	// Set up the routes.
 	router := route.NewRouter(
-		server, config.Main.APIVersion, config.Main.IsProductionEnvironment(), config.Main.JWT.Secret, config.Main.Terms.Version,
+		server, s.Config.APIVersion, s.Config.IsProductionEnvironment(), s.Config.JWT.Secret, s.Config.Terms.Version,
 		s.Functions.MiddlewareIsValidAuthToken,
 		s.Functions.MiddlewareGetUserAndLocaleFromAuthToken,
 		s.Functions.MiddlewareGetUserAbilities,
@@ -197,7 +199,7 @@ func (s *Server) Start() {
 	}
 
 	// Start the built-in recurring tasks.
-	tokencache.StartDeletingExpired(time.Duration(config.Main.ExpiredAuthTokens.FlushCacheInterval))
+	tokencache.StartDeletingExpired(time.Duration(s.Config.ExpiredAuthTokens.FlushCacheInterval))
 
 	// Start the custom recurring tasks.
 	if s.Functions.RecurringTasks != nil {
@@ -205,9 +207,9 @@ func (s *Server) Start() {
 	}
 
 	// Start the server.
-	address := fmt.Sprintf(":%d", config.Main.Server.Port)
-	if config.Main.Server.SSL.Enabled {
-		if err := endless.ListenAndServeTLS(address, config.Main.Server.SSL.CertPath, config.Main.Server.SSL.KeyPath, server); err != nil {
+	address := fmt.Sprintf(":%d", s.Config.Server.Port)
+	if s.Config.Server.SSL.Enabled {
+		if err := endless.ListenAndServeTLS(address, s.Config.Server.SSL.CertPath, s.Config.Server.SSL.KeyPath, server); err != nil {
 			log.WithField("error", err).Error("the server stopped")
 		}
 	} else if err := endless.ListenAndServe(address, server); err != nil {
@@ -223,6 +225,7 @@ func (s *Server) AddCustomRoutes(configuration route.ConfigureCustomRoutes) {
 // NewServer returns a new struct 'Server'.
 func NewServer() *Server {
 	return &Server{
+		Config:       config.NewConfiguration(),
 		customRoutes: []route.ConfigureCustomRoutes{},
 	}
 }

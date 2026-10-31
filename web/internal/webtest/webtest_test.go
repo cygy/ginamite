@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/cygy/ginamite/common/ctxconfig"
+
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/log"
@@ -48,17 +50,28 @@ func TestServe(t *testing.T) {
 }
 
 func TestSetConfig(t *testing.T) {
-	original := config.Main
+	original := Config
 
 	t.Run("replaced", func(t *testing.T) {
 		SetConfig(t, &config.Configuration{Environment: "test-env"})
 
-		if config.Main.Environment != "test-env" {
-			t.Errorf("Environment = %q", config.Main.Environment)
+		if Config.Environment != "test-env" {
+			t.Errorf("Environment = %q", Config.Environment)
+		}
+
+		c, _ := Context(http.MethodGet, "/", nil)
+		if got := ctxconfig.Get(c).Environment; got != "test-env" {
+			t.Errorf("Environment in the context = %q", got)
+		}
+
+		var inRequest string
+		Serve(httpRequest(http.MethodGet, "/"), func(c *gin.Context) { inRequest = ctxconfig.Get(c).Environment })
+		if inRequest != "test-env" {
+			t.Errorf("Environment in the request = %q", inRequest)
 		}
 	})
 
-	if config.Main != original {
+	if Config != original {
 		t.Error("the configuration is not restored")
 	}
 }

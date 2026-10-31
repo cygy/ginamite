@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/smtp"
 
-	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/template/html"
@@ -64,6 +63,7 @@ func (f IsEmailAddressValidFunc) check(ctx context.Context, emailAddress string)
 var (
 	mailAuth       smtp.Auth
 	smtpHost       string
+	addresses      Sender
 	commonHTMLVars map[string]map[string]any // i.e. commonHTMLVars["StaticHost"]["fr-fr"] => "http://..."
 	commonTextVars map[string]map[string]any // i.e. commonTextVars["StaticHost"]["fr-fr"] => "http://..."
 )
@@ -75,8 +75,16 @@ var (
 	deliver   = Message.Send
 )
 
+// Sender holds the addresses of the emails sent.
+type Sender struct {
+	EmailAddress        string
+	Name                string
+	NoReplyEmailAddress string
+}
+
 // Initialize initializes the mail session. The variables of the templates are indexed by name, then by locale.
-func Initialize(identity, username, password, host string, port int, HTMLVars, textVars map[string]map[string]any) {
+func Initialize(identity, username, password, host string, port int, sender Sender, HTMLVars, textVars map[string]map[string]any) {
+	addresses = sender
 	mailAuth = smtp.PlainAuth(identity, username, password, host)
 	smtpHost = fmt.Sprintf("%s:%d", host, port)
 	commonHTMLVars = HTMLVars
@@ -104,10 +112,10 @@ func (m Message) Send() {
 
 	message := mailyak.New(smtpHost, mailAuth)
 	message.Subject(m.Subject)
-	message.From(config.Main.SenderEmailAddress)
-	message.FromName(config.Main.SenderName)
+	message.From(addresses.EmailAddress)
+	message.FromName(addresses.Name)
 	message.To(m.Recipient)
-	message.ReplyTo(config.Main.NoReplyEmailAddress)
+	message.ReplyTo(addresses.NoReplyEmailAddress)
 
 	// The variables are not logged: they contain the keys of the confirmation links.
 	if err := html.Main.ExecuteTemplate(message.HTML(), m.Template+".html", fullHTMLVars); err != nil {

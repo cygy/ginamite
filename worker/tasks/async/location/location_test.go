@@ -11,18 +11,14 @@ import (
 	"github.com/cygy/ginamite/worker/internal/workertest"
 )
 
-// useAPI sets the configuration of the API to the server, for the duration of the test.
-func useAPI(t *testing.T, handler http.HandlerFunc) {
+// useAPI starts a server for the handler for the duration of the test, and returns the configuration of the API to it.
+func useAPI(t *testing.T, handler http.HandlerFunc) config.IPStackConfiguration {
 	t.Helper()
 
 	server := httptest.NewServer(handler)
 	t.Cleanup(server.Close)
 
-	old := config.Main
-	t.Cleanup(func() { config.Main = old })
-	config.Main = &config.Configuration{}
-	config.Main.IPStack.Host = server.URL
-	config.Main.IPStack.Key = "secret key"
+	return config.IPStackConfiguration{Host: server.URL, Key: "secret key"}
 }
 
 func TestGetIPInfo(t *testing.T) {
@@ -31,7 +27,7 @@ func TestGetIPInfo(t *testing.T) {
 		var gotCtx context.Context
 		var gotFunc func(string) *IPAddressDetails
 
-		GetIPInfo([]byte(`{"ip":"1.2.3.4","token_id":"tid"}`), func(ctx context.Context, IPAddress, tokenID string, get func(string) *IPAddressDetails) {
+		GetIPInfo([]byte(`{"ip":"1.2.3.4","token_id":"tid"}`), config.IPStackConfiguration{}, func(ctx context.Context, IPAddress, tokenID string, get func(string) *IPAddressDetails) {
 			gotCtx, gotIP, gotToken, gotFunc = ctx, IPAddress, tokenID, get
 		})
 
@@ -41,25 +37,25 @@ func TestGetIPInfo(t *testing.T) {
 	})
 
 	t.Run("invalid payload", func(t *testing.T) {
-		GetIPInfo([]byte("{"), func(context.Context, string, string, func(string) *IPAddressDetails) {
+		GetIPInfo([]byte("{"), config.IPStackConfiguration{}, func(context.Context, string, string, func(string) *IPAddressDetails) {
 			t.Error("the function must not be called")
 		})
 	})
 
 	t.Run("undefined function", func(t *testing.T) {
-		GetIPInfo([]byte(`{"ip":"1.2.3.4"}`), nil)
+		GetIPInfo([]byte(`{"ip":"1.2.3.4"}`), config.IPStackConfiguration{}, nil)
 	})
 }
 
 func TestGetIPAddressDetails(t *testing.T) {
 	t.Run("found", func(t *testing.T) {
 		var gotPath, gotKey string
-		useAPI(t, func(w http.ResponseWriter, r *http.Request) {
+		ipStack := useAPI(t, func(w http.ResponseWriter, r *http.Request) {
 			gotPath, gotKey = r.URL.Path, r.URL.Query().Get("access_key")
 			_, _ = w.Write([]byte(`{"region_name":"Occitanie","city":"Toulouse","country_code":"FR","country_name":"France"}`))
 		})
 
-		details := GetIPAddressDetails("1.2.3.4")
+		details := GetIPAddressDetails(ipStack, "1.2.3.4")
 
 		want := IPAddressDetails{Region: "Occitanie", City: "Toulouse", CountryCode: "FR", CountryName: "France"}
 		if details == nil || *details != want {
@@ -91,9 +87,9 @@ func TestGetIPAddressDetails(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			workertest.Hook.Reset()
-			useAPI(t, tt.handler)
+			ipStack := useAPI(t, tt.handler)
 
-			if details := GetIPAddressDetails("1.2.3.4"); details != nil {
+			if details := GetIPAddressDetails(ipStack, "1.2.3.4"); details != nil {
 				t.Errorf("details = %+v, want nil", details)
 			}
 
@@ -106,10 +102,10 @@ func TestGetIPAddressDetails(t *testing.T) {
 
 	t.Run("API unreachable, the key is not logged", func(t *testing.T) {
 		workertest.Hook.Reset()
-		useAPI(t, func(http.ResponseWriter, *http.Request) {})
-		config.Main.IPStack.Host = "http://127.0.0.1:1"
+		ipStack := useAPI(t, func(http.ResponseWriter, *http.Request) {})
+		ipStack.Host = "http://127.0.0.1:1"
 
-		if details := GetIPAddressDetails("1.2.3.4"); details != nil {
+		if details := GetIPAddressDetails(ipStack, "1.2.3.4"); details != nil {
 			t.Errorf("details = %+v, want nil", details)
 		}
 
@@ -121,10 +117,10 @@ func TestGetIPAddressDetails(t *testing.T) {
 
 	t.Run("invalid URL, the key is not logged", func(t *testing.T) {
 		workertest.Hook.Reset()
-		useAPI(t, func(http.ResponseWriter, *http.Request) {})
-		config.Main.IPStack.Host = "http://[::1"
+		ipStack := useAPI(t, func(http.ResponseWriter, *http.Request) {})
+		ipStack.Host = "http://[::1"
 
-		if details := GetIPAddressDetails("1.2.3.4"); details != nil {
+		if details := GetIPAddressDetails(ipStack, "1.2.3.4"); details != nil {
 			t.Errorf("details = %+v, want nil", details)
 		}
 

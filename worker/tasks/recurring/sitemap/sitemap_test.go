@@ -12,18 +12,21 @@ import (
 	"github.com/cygy/ginamite/worker/internal/workertest"
 )
 
+// testConfig is the configuration of Generate, replaced by setup.
+var testConfig *config.Configuration
+
 // setup sets the configuration and the routes used by Generate, for the duration of the test, and returns
 // the directory of the sitemaps.
 func setup(t *testing.T, maxURLsPerPage int, routes map[string]weburl.Route) string {
 	t.Helper()
 
-	oldConfig, oldRoutes := config.Main, weburl.Main
-	t.Cleanup(func() { config.Main, weburl.Main = oldConfig, oldRoutes })
+	oldRoutes := weburl.Main
+	t.Cleanup(func() { weburl.Main = oldRoutes })
 
 	dir := t.TempDir()
-	config.Main = &config.Configuration{SupportedLocales: []string{"en", "fr"}}
-	config.Main.Sitemap = config.SitemapConfiguration{Path: dir, Name: "sitemap", MaximumURLsPerPage: maxURLsPerPage}
-	config.Main.Hosts.Static = "https://static"
+	testConfig = &config.Configuration{SupportedLocales: []string{"en", "fr"}}
+	testConfig.Sitemap = config.SitemapConfiguration{Path: dir, Name: "sitemap", MaximumURLsPerPage: maxURLsPerPage}
+	testConfig.Hosts.Static = "https://static"
 	weburl.Main = &weburl.Configuration{Routes: routes}
 
 	return dir
@@ -54,7 +57,7 @@ func TestGenerate(t *testing.T) {
 	})
 
 	var requests []string
-	Generate("generate", func(key string, offset, limit int) map[string][]map[string]string {
+	Generate("generate", testConfig, func(key string, offset, limit int) map[string][]map[string]string {
 		requests = append(requests, fmt.Sprintf("%s:%d:%d", key, offset, limit))
 
 		// Three batches: the maximum of 1000 URLs per file is reached at the second one.
@@ -124,7 +127,7 @@ func TestGenerate(t *testing.T) {
 func TestGenerate_NoMaximum(t *testing.T) {
 	dir := setup(t, 0, map[string]weburl.Route{"page": route("/page/:id")})
 
-	Generate("generate", func(_ string, offset, _ int) map[string][]map[string]string {
+	Generate("generate", testConfig, func(_ string, offset, _ int) map[string][]map[string]string {
 		if offset >= 4*batchSize {
 			return nil
 		}
@@ -144,9 +147,9 @@ func TestGenerate_Errors(t *testing.T) {
 	t.Run("no index", func(t *testing.T) {
 		workertest.Hook.Reset()
 		dir := setup(t, 1000, map[string]weburl.Route{"home": route("/home")})
-		config.Main.Sitemap.Path = filepath.Join(dir, "missing")
+		testConfig.Sitemap.Path = filepath.Join(dir, "missing")
 
-		Generate("generate", nil)
+		Generate("generate", testConfig, nil)
 
 		entry := workertest.Hook.LastEntry()
 		if entry == nil || entry.Message != "task error" || entry.Data["filename"] != "sitemap_index" {
@@ -164,7 +167,7 @@ func TestGenerate_Errors(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		Generate("generate", func(string, int, int) map[string][]map[string]string { return nil })
+		Generate("generate", testConfig, func(string, int, int) map[string][]map[string]string { return nil })
 
 		errors := 0
 		for _, entry := range workertest.Hook.AllEntries() {

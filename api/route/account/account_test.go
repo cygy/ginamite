@@ -4,8 +4,6 @@ import (
 	"net/http"
 	"strings"
 	"testing"
-
-	"github.com/cygy/ginamite/common/config"
 )
 
 func TestCheckUsernameParameter(t *testing.T) {
@@ -28,7 +26,7 @@ func TestCheckUsernameParameter(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			setup(t)
-			config.Main.Account.InvalidStringsForUsername = tt.forbid
+			testConfig.Account.InvalidStringsForUsername = tt.forbid
 
 			c, recorder := newContext(nil)
 			if got := CheckUsernameParameter(c, tt.username, "username"); got != tt.want {
@@ -44,7 +42,7 @@ func TestCheckUsernameParameter(t *testing.T) {
 
 func TestDoesUsernameContainForbiddenStrings(t *testing.T) {
 	setup(t)
-	config.Main.Account.InvalidStringsForUsername = []string{"Admin", "root"}
+	testConfig.Account.InvalidStringsForUsername = []string{"Admin", "root"}
 
 	tests := []struct {
 		username string
@@ -56,7 +54,8 @@ func TestDoesUsernameContainForbiddenStrings(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.username, func(t *testing.T) {
-			if got := doesUsernameContainForbiddenStrings(tt.username); got != tt.want {
+			c, _ := newContext(nil)
+			if got := doesUsernameContainForbiddenStrings(c, tt.username); got != tt.want {
 				t.Errorf("doesUsernameContainForbiddenStrings(%q) = %v, want %v", tt.username, got, tt.want)
 			}
 		})

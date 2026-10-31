@@ -4,11 +4,12 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/cygy/ginamite/common/ctxconfig"
+
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common/authentication"
-	"github.com/cygy/ginamite/common/config"
 	registrationError "github.com/cygy/ginamite/common/errors/registration"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/queue"
@@ -149,7 +150,7 @@ func register(c *gin.Context, method string) {
 		return
 	}
 
-	if termsVersion != config.Main.Terms.Version {
+	if termsVersion != ctxconfig.Get(c).Terms.Version {
 		response.InvalidParameterValue(c, "terms_version",
 			t(errorMessageKey),
 			t("error.terms.version.invalid.reason"),
@@ -170,8 +171,8 @@ func register(c *gin.Context, method string) {
 	}
 
 	// Locale not supported.
-	if !config.Main.SupportsLocale(accountLocale) {
-		response.UnsupportedParameterLocale(c, locale, accountLocale, "locale", config.Main.SupportedLocales, errorMessageKey)
+	if !ctxconfig.Get(c).SupportsLocale(accountLocale) {
+		response.UnsupportedParameterLocale(c, locale, accountLocale, "locale", ctxconfig.Get(c).SupportedLocales, errorMessageKey)
 		return
 	}
 
@@ -194,13 +195,13 @@ func register(c *gin.Context, method string) {
 	isEmailAddressVerified := false
 	registrationCode := random.String(authentication.RegisterCodeLength)
 	privateKey := random.String(authentication.PrivateKeyLength)
-	mustBeLoggedin := !config.Main.Account.EmailAddressMustBeConfirmed
+	mustBeLoggedin := !ctxconfig.Get(c).Account.EmailAddressMustBeConfirmed
 	IPAddress := req.GetRealIPAddress(c)
 
 	// Register with a third party service
 	if isThirdPartyTokenMethod {
 		// Create a validator to verify the token and extract informations about the user.
-		tokenValidator := newTokenValidator(method)
+		tokenValidator := newTokenValidator(c, method)
 
 		// First verify if the token is valid, invalid tokens are not accepted of course.
 		tokenInfos, ok := tokenValidator.VerifyTokenAndExtractInfos(token)
@@ -290,7 +291,7 @@ func register(c *gin.Context, method string) {
 	} else {
 		// The email address must be validated by the user.
 		// In Env test, we return the code and the user ID.
-		if config.Main.IsTestEnvironment() {
+		if ctxconfig.Get(c).IsTestEnvironment() {
 			r["key"] = registrationCode
 			r["id"] = user.ID
 		} else {

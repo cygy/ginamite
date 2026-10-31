@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/notifications"
 	"github.com/cygy/ginamite/common/queue"
 	"github.com/cygy/ginamite/worker/internal/workertest"
@@ -80,7 +81,7 @@ func TestServer_handleTask(t *testing.T) {
 		}
 	}
 
-	s := &Server{Functions: Handlers{
+	s := &Server{Config: config.NewConfiguration(), Functions: Handlers{
 		SaveIPAddressDetails: func(_ context.Context, IPAddress, tokenID string, _ func(string) *location.IPAddressDetails) {
 			calls = append(calls, "ip:"+IPAddress+":"+tokenID)
 		},

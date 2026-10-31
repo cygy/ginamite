@@ -66,6 +66,10 @@ const (
 var (
 	testLocales  = []string{"en-us", "fr-fr"}
 	testFallback = map[string]string{"en": "en-us", "fr": "fr-fr"}
+	testFormats  = map[string]config.LocaleConfiguration{
+		"en-us": {DateFormat: "2006-01-02", TimeFormat: "15:04", DateTimeFormat: "2006-01-02 15:04"},
+		"fr-fr": {DateFormat: "02/01/2006", TimeFormat: "15h04", DateTimeFormat: "02/01/2006 15h04"},
+	}
 )
 
 // setup initializes the routes with the test routes file, the translations, the templates and the configuration,
@@ -73,13 +77,6 @@ var (
 func setup(t *testing.T) *gin.Engine {
 	t.Helper()
 
-	webtest.SetConfig(t, &config.Configuration{
-		Hosts: config.HostConfiguration{Static: testStaticHost},
-		Locales: map[string]config.LocaleConfiguration{
-			"en-us": {DateFormat: "2006-01-02", TimeFormat: "15:04", DateTimeFormat: "2006-01-02 15:04"},
-			"fr-fr": {DateFormat: "02/01/2006", TimeFormat: "15h04", DateTimeFormat: "02/01/2006 15h04"},
-		},
-	})
 	webtest.SetTranslations(t, map[string]map[string]string{
 		"en-us": {"default.title": "Default", "default.description": "Default description", "default.keyword": "default keyword", "site.name": "Site", "home.title": "Home", "hello": "Hello {{.Name}}"},
 		"fr-fr": {"default.title": "Défaut", "default.description": "Description", "default.keyword": "mot-clé", "site.name": "Site", "home.title": "Accueil", "hello": "Bonjour {{.Name}}"},
@@ -97,7 +94,7 @@ func setup(t *testing.T) *gin.Engine {
 	file := webtest.WriteFile(t, t.TempDir(), "routes.yaml", routesFile)
 	Initialize(file, testWebHost, testStaticHost, testAPIHost, "Europe/Paris", testLocales, testFallback, testCookieName, testSecret,
 		FacebookConfiguration{Enabled: true, AppID: "fb"}, GoogleConfiguration{ClientID: "google"}, SocialNetworksConfiguration{Twitter: "@site"},
-		true, false)
+		testFormats, true, false)
 
 	return engine
 }

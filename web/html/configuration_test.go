@@ -114,7 +114,7 @@ func TestInitialize_Panics(t *testing.T) {
 				}
 			}()
 
-			Initialize(file, "", "", "", "UTC", testLocales, testFallback, "", "", FacebookConfiguration{}, GoogleConfiguration{}, SocialNetworksConfiguration{}, false, false)
+			Initialize(file, "", "", "", "UTC", testLocales, testFallback, "", "", FacebookConfiguration{}, GoogleConfiguration{}, SocialNetworksConfiguration{}, nil, false, false)
 		})
 	}
 }
@@ -125,7 +125,7 @@ func TestInitialize_WithoutDefaultPage(t *testing.T) {
 	webtest.SetTranslations(t, map[string]map[string]string{"en-us": {"a": "b"}, "fr-fr": {"a": "b"}})
 
 	file := webtest.WriteFile(t, t.TempDir(), "routes.yaml", "routes:\n  home:\n    paths:\n      en-us: /home\n")
-	Initialize(file, testWebHost, "", "", "UTC", testLocales, testFallback, "", "", FacebookConfiguration{}, GoogleConfiguration{}, SocialNetworksConfiguration{}, false, true)
+	Initialize(file, testWebHost, "", "", "UTC", testLocales, testFallback, "", "", FacebookConfiguration{}, GoogleConfiguration{}, SocialNetworksConfiguration{}, nil, false, true)
 
 	page := Main.preprocessedPages["home"]["en-us"]
 	if page == nil || !page.Production || Main.URL("home", "en-us") != testWebHost+"/home" {

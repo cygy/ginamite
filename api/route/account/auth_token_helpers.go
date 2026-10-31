@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/cygy/ginamite/common/ctxconfig"
+
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	ctxUser "github.com/cygy/ginamite/api/context/user"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common/authentication"
-	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/config/environment"
 	commonErrors "github.com/cygy/ginamite/common/errors"
 	"github.com/cygy/ginamite/common/localization"
@@ -113,7 +114,7 @@ func createAuthenticationToken(c *gin.Context, user authentication.User, IPAddre
 		IPAddress:      IPAddress,
 		Key:            random.String(128),
 		CreationDate:   time.Now(),
-		ExpirationDate: time.Now().Add(time.Duration(config.Main.JWT.TTL) * time.Second),
+		ExpirationDate: time.Now().Add(time.Duration(ctxconfig.Get(c).JWT.TTL) * time.Second),
 	}
 
 	tokenID, knownIPAddress, err := SaveAuthenticationToken(c, authDetails)
@@ -131,7 +132,7 @@ func createAuthenticationToken(c *gin.Context, user authentication.User, IPAddre
 	}
 
 	// Sign and get the complete encoded token as a string.
-	signedToken, err := authentication.GetSignedToken(c, config.Main.JWT.SigningMethod, config.Main.JWT.Secret, tokenID)
+	signedToken, err := authentication.GetSignedToken(c, ctxconfig.Get(c).JWT.SigningMethod, ctxconfig.Get(c).JWT.Secret, tokenID)
 	if err != nil {
 		if deleteErr := DeleteTokenByID(c, tokenID); deleteErr != nil {
 			c.Error(deleteErr)
@@ -141,7 +142,7 @@ func createAuthenticationToken(c *gin.Context, user authentication.User, IPAddre
 	}
 
 	var responseContent response.H
-	if config.Main.Environment == environment.Test {
+	if ctxconfig.Get(c).Environment == environment.Test {
 		responseContent = response.H{
 			"auth_token": signedToken,
 			"id":         tokenID,

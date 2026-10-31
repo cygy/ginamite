@@ -3,10 +3,11 @@ package account
 import (
 	"errors"
 
+	"github.com/cygy/ginamite/common/ctxconfig"
+
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
-	"github.com/cygy/ginamite/common/config"
 	commonErrors "github.com/cygy/ginamite/common/errors"
 	authError "github.com/cygy/ginamite/common/errors/auth"
 	"github.com/cygy/ginamite/common/localization"
@@ -79,7 +80,7 @@ func ForgotPassword(c *gin.Context) {
 
 	// The email address must be validated by the user.
 	// In Env test, we return the code and the user ID.
-	if config.Main.IsTestEnvironment() {
+	if ctxconfig.Get(c).IsTestEnvironment() {
 		response.Ok(c, response.H{
 			"status": t("status.forgot_password.email_sent"),
 			"id":     processID,

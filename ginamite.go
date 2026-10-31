@@ -12,6 +12,7 @@ import (
 
 	"github.com/cygy/ginamite/api"
 	"github.com/cygy/ginamite/common/authentication"
+	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/kafka"
 	"github.com/cygy/ginamite/web"
 	"github.com/cygy/ginamite/worker"
@@ -21,6 +22,9 @@ import (
 
 // Server is the main struct of the application, containing all the settings.
 type Server struct {
+	// Config is the configuration of the application, loaded from the configuration file by Start and shared with the
+	// specialized servers and the plugins.
+	Config                   *config.Configuration
 	ApplicationConfiguration ApplicationConfiguration
 	Worker                   *worker.Server
 	API                      *api.Server
@@ -43,11 +47,11 @@ type Plugin interface {
 
 // Connector is a Plugin which holds a connection to a database, or to any other service the API and the worker need.
 //
-// Start calls Connect, before it configures the plugins, only if the API or the worker server runs, then Close when
-// the server stops. Connect does not return if the connection fails: it logs the error and exits or panics.
+// Start calls Connect with the configuration, before it configures the plugins, only if the API or the worker server
+// runs, then Close when the server stops. Connect does not return if the connection fails: it logs the error and exits or panics.
 type Connector interface {
 	Plugin
-	Connect()
+	Connect(configuration *config.Configuration)
 	Close()
 }
 
@@ -55,6 +59,7 @@ type Connector interface {
 // is expected to replace them.
 func NewServer() *Server {
 	server := &Server{
+		Config:  config.NewConfiguration(),
 		plugins: []Plugin{},
 		Web:     web.NewServer(),
 		Worker:  worker.NewServer(),

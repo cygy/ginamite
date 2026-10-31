@@ -43,7 +43,7 @@ func TestLoginWithThirdParty(t *testing.T) {
 			}
 		}
 		notFound := commonErrors.NotFound()
-		handler := func(c *gin.Context) { loginWithThirdParty(c, newTokenValidator(method)) }
+		handler := func(c *gin.Context) { loginWithThirdParty(c, newTokenValidator(c, method)) }
 
 		t.Run(method, func(t *testing.T) {
 			runCases(t, handler, []testCase{

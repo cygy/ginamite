@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/cygy/ginamite/common/ctxconfig"
+
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/internal/apitest"
 	"github.com/cygy/ginamite/common/config"
@@ -100,7 +102,7 @@ func TestGetOffsetAndGetLimit_NothingStored(t *testing.T) {
 
 func TestGetLocaleValue(t *testing.T) {
 	initLocalization(t)
-	config.Main = &config.Configuration{SupportedLocales: []string{"en", "fr"}}
+	testConfig := &config.Configuration{SupportedLocales: []string{"en", "fr"}}
 
 	tests := []struct {
 		name       string
@@ -117,7 +119,7 @@ func TestGetLocaleValue(t *testing.T) {
 			var got string
 			var ok bool
 			router := gin.New()
-			router.Use(ctxLocaleMiddleware())
+			router.Use(ctxconfig.Inject(testConfig), ctxLocaleMiddleware())
 			router.GET("/:locale", func(c *gin.Context) {
 				got, ok = GetLocaleValue(c, "locale", "msg")
 				c.Status(http.StatusOK)
@@ -140,6 +142,7 @@ func TestGetLocaleValue_Missing(t *testing.T) {
 	initLocalization(t)
 
 	c, recorder := apitest.NewContext("GET", "/", nil)
+	ctxconfig.Set(c, config.NewConfiguration())
 	ctxLocale.Set(c, "", "en")
 
 	if got, ok := GetLocaleValue(c, "locale", "msg"); got != "" || ok {

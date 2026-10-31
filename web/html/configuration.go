@@ -7,6 +7,7 @@ package html
 import (
 	"os"
 
+	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/web/context"
 
@@ -32,6 +33,7 @@ type settings struct {
 	timezone        string
 	locales         []string
 	fallbackLocales map[string]string
+	localeFormats   map[string]config.LocaleConfiguration
 	configuration   PageConfiguration
 	betaVersion     bool
 	production      bool
@@ -46,9 +48,10 @@ var (
 )
 
 // Initialize loads the routes file into Main and prepares the pages for each supported locale.
-// The JWT cookie name and secret are used to find the user of a request.
+// The JWT cookie name and secret are used to find the user of a request, and the formats of the locales to localize the
+// dates and the times in the templates.
 // It panics, after logging the error, if the file can not be read or parsed.
-func Initialize(file, webHost, staticHost, apiHost, applicationTimezone string, applicationLocales []string, fallbackLocales map[string]string, JWTCookieName, JWTSecret string, facebookConfiguration FacebookConfiguration, googleConfiguration GoogleConfiguration, socialNetworksConfiguration SocialNetworksConfiguration, betaVersion, isProduction bool) {
+func Initialize(file, webHost, staticHost, apiHost, applicationTimezone string, applicationLocales []string, fallbackLocales map[string]string, JWTCookieName, JWTSecret string, facebookConfiguration FacebookConfiguration, googleConfiguration GoogleConfiguration, socialNetworksConfiguration SocialNetworksConfiguration, localeFormats map[string]config.LocaleConfiguration, betaVersion, isProduction bool) {
 	Main = load(file)
 	Main.prepare(settings{
 		webHost:         webHost,
@@ -57,6 +60,7 @@ func Initialize(file, webHost, staticHost, apiHost, applicationTimezone string, 
 		timezone:        applicationTimezone,
 		locales:         applicationLocales,
 		fallbackLocales: fallbackLocales,
+		localeFormats:   localeFormats,
 		configuration: PageConfiguration{
 			Facebook:       facebookConfiguration,
 			Google:         googleConfiguration,
@@ -119,6 +123,7 @@ func (conf *Configuration) prepare(s settings) {
 		for _, locale := range s.locales {
 			localized := prepared.Copy()
 			localized.PrepareWithLocale(locale, s.timezone, s.webHost, s.staticHost, s.apiHost, s.locales)
+			localized.formats = s.localeFormats[locale]
 			conf.preprocessedPages[key][locale] = localized
 		}
 

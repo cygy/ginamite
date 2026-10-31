@@ -6,23 +6,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cygy/ginamite/common/config"
+	"github.com/cygy/ginamite/common/ctxconfig"
+
 	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/store/mock"
 	"github.com/cygy/ginamite/plugins/mongodb/internal/plugintest"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
 )
-
-// withConfig sets the configuration of the application for the duration of the test.
-func withConfig(t *testing.T, set func(conf *config.Configuration)) {
-	t.Helper()
-
-	old := config.Main
-	t.Cleanup(func() { config.Main = old })
-
-	config.Main = config.NewConfiguration()
-	set(config.Main)
-}
 
 func TestGetOwnedAccountDetails(t *testing.T) {
 	id := bson.NewObjectID()
@@ -62,6 +52,7 @@ func publicProfileRequest(t *testing.T, db *mock.Database, id bson.ObjectID, bod
 	t.Helper()
 
 	c, recorder := plugintest.SignedInContext(t, db, model.User{ID: id})
+	ctxconfig.Get(c).SupportedLocales = []string{"en", "fr"}
 	c.Request = httptest.NewRequest(http.MethodPut, "/", strings.NewReader(body))
 	c.Request.Header.Set("Content-Type", "application/json")
 	c.Request.Header.Set("Authorization", "Bearer x")
@@ -72,7 +63,6 @@ func publicProfileRequest(t *testing.T, db *mock.Database, id bson.ObjectID, bod
 }
 
 func TestUpdateAccountPublicProfile(t *testing.T) {
-	withConfig(t, func(conf *config.Configuration) { conf.SupportedLocales = []string{"en", "fr"} })
 	plugintest.InitLocalization(t, map[string]string{"status.account.public.profile.updated": "updated"})
 	id := bson.NewObjectID()
 

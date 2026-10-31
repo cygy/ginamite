@@ -26,6 +26,8 @@ import (
 
 // Server is a worker.
 type Server struct {
+	// Config is the configuration of the application, set by the main server before it starts.
+	Config     *config.Configuration
 	RoutesFile string
 	Functions  Handlers
 }
@@ -99,7 +101,7 @@ type Handlers struct {
 
 // NewServer returns a new worker.
 func NewServer() *Server {
-	return &Server{}
+	return &Server{Config: config.NewConfiguration()}
 }
 
 // Start starts the worker: it loads the templates and the routes, initializes the emails, runs the start up tasks
@@ -123,17 +125,21 @@ func (s *Server) Start() {
 func (s *Server) setup() {
 	s.warnUndefinedFunctions()
 
-	html.LoadTemplatesWithDelimiters(config.Main.TemplatesPath+"/html", "[[", "]]", nil)
-	text.LoadTemplates(config.Main.TemplatesPath + "/text")
+	html.LoadTemplatesWithDelimiters(s.Config.TemplatesPath+"/html", "[[", "]]", nil)
+	text.LoadTemplates(s.Config.TemplatesPath + "/text")
 
-	weburl.Initialize(s.RoutesFile, config.Main.Hosts.Web)
+	weburl.Initialize(s.RoutesFile, s.Config.Hosts.Web)
 
-	commonHTMLVars, commonTextVars := commonMailVars(), commonMailVars()
-	mail.Initialize("", config.Main.SMTP.Username, config.Main.SMTP.Password, config.Main.SMTP.Host, config.Main.SMTP.Port, commonHTMLVars, commonTextVars)
+	commonHTMLVars, commonTextVars := s.commonMailVars(), s.commonMailVars()
+	mail.Initialize("", s.Config.SMTP.Username, s.Config.SMTP.Password, s.Config.SMTP.Host, s.Config.SMTP.Port, mail.Sender{
+		EmailAddress:        s.Config.SenderEmailAddress,
+		Name:                s.Config.SenderName,
+		NoReplyEmailAddress: s.Config.NoReplyEmailAddress,
+	}, commonHTMLVars, commonTextVars)
 
-	if s.Functions.StartUpTasks != nil && config.Main.RunStartUpTasks {
+	if s.Functions.StartUpTasks != nil && s.Config.RunStartUpTasks {
 		log.Info("check up started")
-		s.Functions.StartUpTasks(context.Background(), config.Main.Environment, config.Main.Version)
+		s.Functions.StartUpTasks(context.Background(), s.Config.Environment, s.Config.Version)
 		log.Info("check up done")
 	}
 
@@ -142,7 +148,7 @@ func (s *Server) setup() {
 }
 
 // commonMailVars returns the variables available in all the emails, by name then by locale.
-func commonMailVars() map[string]map[string]any {
+func (s *Server) commonMailVars() map[string]map[string]any {
 	vars := map[string]map[string]any{
 		"StaticHost":  {},
 		"HomeURL":     {},
@@ -150,11 +156,11 @@ func commonMailVars() map[string]map[string]any {
 		"TwitterURL":  {},
 	}
 
-	for _, locale := range config.Main.SupportedLocales {
-		vars["StaticHost"][locale] = config.Main.Hosts.Static
-		vars["HomeURL"][locale] = fmt.Sprintf("%s/%s/", config.Main.Hosts.Web, locale)
-		vars["FacebookURL"][locale] = config.Main.SocialNetworks.Facebook
-		vars["TwitterURL"][locale] = config.Main.SocialNetworks.Twitter
+	for _, locale := range s.Config.SupportedLocales {
+		vars["StaticHost"][locale] = s.Config.Hosts.Static
+		vars["HomeURL"][locale] = fmt.Sprintf("%s/%s/", s.Config.Hosts.Web, locale)
+		vars["FacebookURL"][locale] = s.Config.SocialNetworks.Facebook
+		vars["TwitterURL"][locale] = s.Config.SocialNetworks.Twitter
 	}
 
 	return vars
@@ -163,10 +169,10 @@ func commonMailVars() map[string]map[string]any {
 // loadRecurringTasks registers the recurring tasks of the configuration and sets the function of each one.
 // A built-in task without the functions it relies on has no function: it is not scheduled.
 func (s *Server) loadRecurringTasks() {
-	recurring.LoadScheduledTasks(config.Main.RecurringTasks)
+	recurring.LoadScheduledTasks(s.Config.RecurringTasks)
 
 	funcs := s.recurringFuncs()
-	for _, task := range config.Main.RecurringTasks {
+	for _, task := range s.Config.RecurringTasks {
 		if f, ok := funcs[task.Name]; ok {
 			recurring.SetFunc(task.Name, f)
 		}
@@ -197,23 +203,23 @@ func (s *Server) recurringFuncs() map[string]func(taskName string) {
 	}
 
 	// Delete the never used accounts.
-	if config.Main.Account.EmailAddressMustBeConfirmed && h.GetNeverUsedAccounts != nil && h.IsUserEmpty != nil && h.DeleteUserByID != nil {
+	if s.Config.Account.EmailAddressMustBeConfirmed && h.GetNeverUsedAccounts != nil && h.IsUserEmpty != nil && h.DeleteUserByID != nil {
 		funcs[recurring.DeleteNeverUsedAccounts] = func(taskName string) {
-			account.DeleteNeverUsed(context.Background(), taskName, config.Main.Account.DeleteNeverUsedAfter, h.GetNeverUsedAccounts, h.IsUserEmpty, h.DeleteUserByID)
+			account.DeleteNeverUsed(context.Background(), taskName, s.Config.Account.DeleteNeverUsedAfter, h.GetNeverUsedAccounts, h.IsUserEmpty, h.DeleteUserByID)
 		}
 	}
 
 	// Delete the inactive accounts.
 	if h.GetInactiveAccounts != nil && h.DeleteUserByID != nil {
 		funcs[recurring.DeleteInactiveAccounts] = func(taskName string) {
-			account.DeleteInactive(context.Background(), taskName, config.Main.Account.DeleteInactiveAfter, h.GetInactiveAccounts, h.DeleteUserByID)
+			account.DeleteInactive(context.Background(), taskName, s.Config.Account.DeleteInactiveAfter, h.GetInactiveAccounts, h.DeleteUserByID)
 		}
 	}
 
 	// Generate the XML sitemap files.
 	if h.GetLocalizedRouteVariables != nil {
 		funcs[recurring.GenerateSitemaps] = func(taskName string) {
-			sitemap.Generate(taskName, h.GetLocalizedRouteVariables)
+			sitemap.Generate(taskName, s.Config, h.GetLocalizedRouteVariables)
 		}
 	}
 

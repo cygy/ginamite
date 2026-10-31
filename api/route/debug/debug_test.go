@@ -6,15 +6,17 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/cygy/ginamite/common/ctxconfig"
+
 	"github.com/cygy/ginamite/api/internal/apitest"
 	"github.com/cygy/ginamite/common/authentication"
 	"github.com/cygy/ginamite/common/config"
 )
 
 func TestGetExpiredToken(t *testing.T) {
-	config.Main = &config.Configuration{}
-	config.Main.JWT.Secret = "secret"
-	config.Main.JWT.SigningMethod = "HS256"
+	testConfig := &config.Configuration{}
+	testConfig.JWT.Secret = "secret"
+	testConfig.JWT.SigningMethod = "HS256"
 
 	t.Cleanup(func() {
 		authentication.BuildTokenFromID = nil
@@ -26,6 +28,7 @@ func TestGetExpiredToken(t *testing.T) {
 		authentication.ExtraPropertiesForTokenWithID = nil
 
 		c, recorder := apitest.NewContext("GET", "/", nil)
+		ctxconfig.Set(c, testConfig)
 		GetExpiredToken(c)
 		c.Writer.WriteHeaderNow()
 
@@ -43,6 +46,7 @@ func TestGetExpiredToken(t *testing.T) {
 		}
 
 		c, recorder := apitest.NewContext("GET", "/", nil)
+		ctxconfig.Set(c, testConfig)
 		GetExpiredToken(c)
 
 		if recorder.Code != http.StatusOK {

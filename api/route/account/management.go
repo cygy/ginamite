@@ -3,12 +3,13 @@ package account
 import (
 	"errors"
 
+	"github.com/cygy/ginamite/common/ctxconfig"
+
 	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	ctxUser "github.com/cygy/ginamite/api/context/user"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
-	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/timezone"
 
@@ -131,8 +132,8 @@ func UpdateSettings(c *gin.Context) {
 	}
 
 	// Locale not supported.
-	if !config.Main.SupportsLocale(accountLocale) {
-		response.UnsupportedParameterLocale(c, locale, accountLocale, "locale", config.Main.SupportedLocales, errorMessageKey)
+	if !ctxconfig.Get(c).SupportsLocale(accountLocale) {
+		response.UnsupportedParameterLocale(c, locale, accountLocale, "locale", ctxconfig.Get(c).SupportedLocales, errorMessageKey)
 		return
 	}
 

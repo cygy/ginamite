@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/cygy/ginamite/common/config"
+	"github.com/cygy/ginamite/common/ctxconfig"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/log"
 	htmlTemplate "github.com/cygy/ginamite/common/template/html"
@@ -26,6 +27,9 @@ import (
 // Hook collects the entries of the main logger, which discards them.
 var Hook *logtest.Hook
 
+// Config is the configuration saved in the context of the requests created by Context and Serve, see SetConfig.
+var Config *config.Configuration
+
 func init() {
 	gin.SetMode(gin.TestMode)
 
@@ -34,18 +38,26 @@ func init() {
 	log.Main = logger.WithField("server", "test")
 }
 
-// Context returns a Gin context for a request, and the recorder of its response.
+// Context returns a Gin context for a request, and the recorder of its response. The context holds the configuration
+// of SetConfig, if any.
 func Context(method, target string, body io.Reader) (*gin.Context, *httptest.ResponseRecorder) {
 	rec := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(rec)
 	c.Request = httptest.NewRequest(method, target, body)
+	if Config != nil {
+		ctxconfig.Set(c, Config)
+	}
 
 	return c, rec
 }
 
 // Serve sends a request through the handlers, registered for any method on any path, and returns the response.
+// The requests hold the configuration of SetConfig, if any.
 func Serve(req *http.Request, handlers ...gin.HandlerFunc) *httptest.ResponseRecorder {
 	router := gin.New()
+	if Config != nil {
+		router.Use(ctxconfig.Inject(Config))
+	}
 	router.Any("/*path", handlers...)
 
 	rec := httptest.NewRecorder()
@@ -54,13 +66,13 @@ func Serve(req *http.Request, handlers ...gin.HandlerFunc) *httptest.ResponseRec
 	return rec
 }
 
-// SetConfig replaces the main configuration for the duration of the test.
+// SetConfig replaces the configuration saved in the context of the requests, see Config, for the duration of the test.
 func SetConfig(t *testing.T, conf *config.Configuration) {
 	t.Helper()
 
-	old := config.Main
-	config.Main = conf
-	t.Cleanup(func() { config.Main = old })
+	old := Config
+	Config = conf
+	t.Cleanup(func() { Config = old })
 }
 
 // SetTranslations replaces the main localization engine for the duration of the test, with the messages of each locale.

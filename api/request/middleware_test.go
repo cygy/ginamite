@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/cygy/ginamite/common/ctxconfig"
+
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/internal/apitest"
 	"github.com/cygy/ginamite/common/config"
@@ -50,11 +52,11 @@ func TestVerifyLimitAndOffset(t *testing.T) {
 
 func TestVerifyLocaleParameter(t *testing.T) {
 	initLocalization(t)
-	config.Main = &config.Configuration{SupportedLocales: []string{"en", "fr"}}
+	testConfig := &config.Configuration{SupportedLocales: []string{"en", "fr"}}
 
 	var stored any
 	router := gin.New()
-	router.Use(ctxLocaleMiddleware(), VerifyLocaleParameter(Config{Name: "locale", StoreKey: "stored", MessageKey: "msg"}))
+	router.Use(ctxconfig.Inject(testConfig), ctxLocaleMiddleware(), VerifyLocaleParameter(Config{Name: "locale", StoreKey: "stored", MessageKey: "msg"}))
 	router.GET("/:locale", func(c *gin.Context) {
 		stored, _ = c.Get("stored")
 		c.Status(http.StatusOK)

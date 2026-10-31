@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/cygy/ginamite/common/ctxconfig"
+
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/internal/apitest"
 	"github.com/cygy/ginamite/common/config"
@@ -15,15 +17,18 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// testConfig is the configuration of the handlers, replaced by setup.
+var testConfig *config.Configuration
+
 func setup(t *testing.T) string {
 	t.Helper()
 
 	apitest.InitLocalization(t, map[string]string{"status.terms.accepted": "accepted", "placeholder": "placeholder"})
 
 	dir := t.TempDir()
-	config.Main = &config.Configuration{}
-	config.Main.Terms.Version = "2"
-	config.Main.Terms.Path = dir
+	testConfig = &config.Configuration{}
+	testConfig.Terms.Version = "2"
+	testConfig.Terms.Path = dir
 	termsContents = map[string]string{}
 	t.Cleanup(func() { UpdateVersionOfTermsAcceptedByUser = nil })
 
@@ -32,7 +37,7 @@ func setup(t *testing.T) string {
 
 func newRouter(handler gin.HandlerFunc) *gin.Engine {
 	router := gin.New()
-	router.Use(ctxLocale.Inject("en", []string{"en"}))
+	router.Use(ctxconfig.Inject(testConfig), ctxLocale.Inject("en", []string{"en"}))
 	router.Any("/", handler)
 
 	return router
@@ -69,6 +74,7 @@ func TestGetTermsVersion(t *testing.T) {
 	setup(t)
 
 	c, recorder := apitest.NewContext("GET", "/", nil)
+	ctxconfig.Set(c, testConfig)
 	GetTermsVersion(c)
 
 	if recorder.Code != http.StatusOK || !strings.Contains(recorder.Body.String(), `"version":"2"`) {

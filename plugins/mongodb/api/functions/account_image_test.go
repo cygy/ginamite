@@ -12,7 +12,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cygy/ginamite/common/config"
+	"github.com/cygy/ginamite/common/ctxconfig"
+
 	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/store/mock"
 	"github.com/cygy/ginamite/plugins/mongodb/internal/plugintest"
@@ -28,7 +29,6 @@ func withImageDirectory(t *testing.T) string {
 	t.Cleanup(func() { model.UserImagePath, model.UserMaxImageSize = old, oldMax })
 	model.UserImagePath = dir
 
-	withConfig(t, func(conf *config.Configuration) { conf.Hosts.Static = "https://static.example.com" })
 	plugintest.InitLocalization(t, map[string]string{"status.account.public.image.updated": "updated", "status.account.public.image.deleted": "deleted"})
 
 	return dir
@@ -66,6 +66,7 @@ func uploadImageRequest(t *testing.T, db *mock.Database, id bson.ObjectID, conte
 	}
 
 	c, recorder := plugintest.SignedInContext(t, db, model.User{ID: id})
+	ctxconfig.Get(c).Hosts.Static = "https://static.example.com"
 	c.Request = httptest.NewRequest(http.MethodPost, "/", &body)
 	c.Request.Header.Set("Content-Type", writer.FormDataContentType())
 

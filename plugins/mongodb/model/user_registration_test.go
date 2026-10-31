@@ -8,25 +8,14 @@ import (
 
 	"github.com/cygy/ginamite/api/validator"
 	"github.com/cygy/ginamite/common/authentication"
-	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/store/mock"
 	"github.com/cygy/ginamite/common/timezone"
 )
 
-// withTimezones sets the timezones of the countries for the duration of the test.
-func withTimezones(t *testing.T, conf *timezone.Configuration) {
-	t.Helper()
-
-	old := timezone.Main
-	t.Cleanup(func() { timezone.Main = old })
-	timezone.Main = conf
-}
-
 func TestUser_RegisterByEmailAddress(t *testing.T) {
 	ctx := context.Background()
 
-	withTimezones(t, &timezone.Configuration{TimezonesByCountries: map[string][]string{"FR": {"Europe/Paris"}}})
 	oldAbilities := DefaultUserAbilities
 	defer func() { DefaultUserAbilities = oldAbilities }()
 	DefaultUserAbilities = []string{"read"}
@@ -35,7 +24,7 @@ func TestUser_RegisterByEmailAddress(t *testing.T) {
 	user := NewUser()
 	device := authentication.Device{Name: "phone", Type: "mobile"}
 
-	err := user.RegisterByEmailAddress(ctx, "John Doe", "hash", "j@example.com", "fr-fr", "v2", "code", "key", "web", "1.2.3.4", device, db)
+	err := user.RegisterByEmailAddress(ctx, "John Doe", "hash", "j@example.com", "fr-fr", "v2", "code", "key", "web", "1.2.3.4", device, "Europe/Paris", db)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -62,37 +51,32 @@ func TestUser_RegisterByEmailAddress(t *testing.T) {
 	}
 
 	db.Coll(UserCollection).Err = errBoom
-	if err := NewUser().RegisterByEmailAddress(ctx, "a", "h", "e", "fr", "v", "c", "k", "s", "ip", device, db); !errors.Is(err, errBoom) {
+	if err := NewUser().RegisterByEmailAddress(ctx, "a", "h", "e", "fr", "v", "c", "k", "s", "ip", device, "", db); !errors.Is(err, errBoom) {
 		t.Errorf("err = %v", err)
 	}
 }
 
-func TestUser_InitializeFromRegistration_Timezone(t *testing.T) {
-	defer func(old *config.Configuration) { config.Main = old }(config.Main)
+func TestRegistrationTimezone(t *testing.T) {
+	timezones := &timezone.Configuration{TimezonesByCountries: map[string][]string{"FR": {"Europe/Paris", "Europe/Other"}}}
 
 	tests := []struct {
-		name   string
-		tz     *timezone.Configuration
-		conf   *config.Configuration
-		locale string
-		want   string
+		name            string
+		timezones       *timezone.Configuration
+		defaultTimezone string
+		locale          string
+		want            string
 	}{
-		{"timezone of the country", &timezone.Configuration{TimezonesByCountries: map[string][]string{"FR": {"Europe/Paris", "Europe/Other"}}}, nil, "fr-FR", "Europe/Paris"},
-		{"default timezone", &timezone.Configuration{TimezonesByCountries: map[string][]string{}}, &config.Configuration{DefaultTimezone: "UTC"}, "fr-fr", "UTC"},
-		{"no timezones configured", nil, &config.Configuration{DefaultTimezone: "UTC"}, "fr-fr", "UTC"},
-		{"no configuration", nil, nil, "fr-fr", ""},
-		{"locale without country", &timezone.Configuration{TimezonesByCountries: map[string][]string{"FR": {"Europe/Paris"}}}, &config.Configuration{DefaultTimezone: "UTC"}, "fr", ""},
+		{"timezone of the country", timezones, "UTC", "fr-FR", "Europe/Paris"},
+		{"default timezone", &timezone.Configuration{TimezonesByCountries: map[string][]string{}}, "UTC", "fr-fr", "UTC"},
+		{"no timezones configured", nil, "UTC", "fr-fr", "UTC"},
+		{"no default timezone", nil, "", "fr-fr", ""},
+		{"locale without country", timezones, "UTC", "fr", ""},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			withTimezones(t, tt.tz)
-			config.Main = tt.conf
-
-			user := NewUser()
-			user.initializeFromRegistration("john", "j@example.com", "v", tt.locale, "code", "key", "method", "source", "ip", authentication.Device{})
-			if user.Settings.Timezone != tt.want {
-				t.Errorf("timezone = %q, want %q", user.Settings.Timezone, tt.want)
+			if got := RegistrationTimezone(tt.locale, tt.timezones, tt.defaultTimezone); got != tt.want {
+				t.Errorf("RegistrationTimezone() = %q, want %q", got, tt.want)
 			}
 		})
 	}
@@ -199,7 +183,6 @@ func TestUser_CancelRegistrationByEmailAddress(t *testing.T) {
 
 func TestUser_RegisterByThirdPartyToken(t *testing.T) {
 	ctx := context.Background()
-	withTimezones(t, nil)
 
 	infos := validator.TokenInfos{Token: "t", UserID: "123", Email: "j@example.com", FirstName: "John", LastName: "Doe"}
 
@@ -216,7 +199,7 @@ func TestUser_RegisterByThirdPartyToken(t *testing.T) {
 			db := mock.NewDatabase("app")
 			user := NewUser()
 
-			if err := user.RegisterByThirdPartyToken(ctx, "john", infos, tt.method, "fr", "v2", "code", "key", "web", "1.2.3.4", authentication.Device{}, db); err != nil {
+			if err := user.RegisterByThirdPartyToken(ctx, "john", infos, tt.method, "fr", "v2", "code", "key", "web", "1.2.3.4", authentication.Device{}, "", db); err != nil {
 				t.Fatal(err)
 			}
 
@@ -237,7 +220,7 @@ func TestUser_RegisterByThirdPartyToken(t *testing.T) {
 
 	t.Run("unknown method", func(t *testing.T) {
 		user := NewUser()
-		if err := user.RegisterByThirdPartyToken(ctx, "john", infos, "twitter", "fr", "v", "c", "k", "s", "ip", authentication.Device{}, mock.NewDatabase("app")); err != nil {
+		if err := user.RegisterByThirdPartyToken(ctx, "john", infos, "twitter", "fr", "v", "c", "k", "s", "ip", authentication.Device{}, "", mock.NewDatabase("app")); err != nil {
 			t.Fatal(err)
 		}
 		if user.IdentificationMethods.Facebook.UserID != "" || user.IdentificationMethods.Google.UserID != "" {
@@ -248,7 +231,7 @@ func TestUser_RegisterByThirdPartyToken(t *testing.T) {
 	t.Run("error", func(t *testing.T) {
 		db := mock.NewDatabase("app")
 		db.Coll(UserCollection).Err = errBoom
-		if err := NewUser().RegisterByThirdPartyToken(ctx, "john", infos, authentication.MethodGoogle, "fr", "v", "c", "k", "s", "ip", authentication.Device{}, db); !errors.Is(err, errBoom) {
+		if err := NewUser().RegisterByThirdPartyToken(ctx, "john", infos, authentication.MethodGoogle, "fr", "v", "c", "k", "s", "ip", authentication.Device{}, "", db); !errors.Is(err, errBoom) {
 			t.Errorf("err = %v", err)
 		}
 	})

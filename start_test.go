@@ -19,15 +19,17 @@ func TestServer_ConnectPlugins(t *testing.T) {
 	s.AddPlugin(&testPlugin{})
 	s.AddPlugin(&testConnector{name: "second", events: &events})
 
-	closeAll := s.connectPlugins()
+	configuration := config.NewConfiguration()
+	configuration.Database.Service = "db"
+	closeAll := s.connectPlugins(configuration)
 
-	if want := []string{"connect first", "connect second"}; !slices.Equal(events, want) {
+	if want := []string{"connect first db", "connect second db"}; !slices.Equal(events, want) {
 		t.Fatalf("events = %v, want %v", events, want)
 	}
 
 	closeAll()
 
-	if want := []string{"connect first", "connect second", "close second", "close first"}; !slices.Equal(events, want) {
+	if want := []string{"connect first db", "connect second db", "close second", "close first"}; !slices.Equal(events, want) {
 		t.Errorf("events = %v, want %v", events, want)
 	}
 }
@@ -36,7 +38,7 @@ func TestServer_ConnectPlugins_NoConnector(t *testing.T) {
 	s := NewServer()
 	s.AddPlugin(&testPlugin{})
 
-	s.connectPlugins()()
+	s.connectPlugins(config.NewConfiguration())()
 }
 
 func TestServer_SpecializedServer(t *testing.T) {
@@ -77,8 +79,8 @@ func TestServer_InitializeConfiguration(t *testing.T) {
 	writeFile(t, filepath.Join(locales, "en-us.all.json"), `{"hello":"Hello"}`)
 	conf := writeFile(t, filepath.Join(dir, "server.yaml"), "localization_path: "+locales+"\nlocales:\n  en-us:\n    default: true\n")
 
-	oldConfig, oldLog, oldLocalization := config.Main, log.Main, localization.Main
-	t.Cleanup(func() { config.Main, log.Main, localization.Main = oldConfig, oldLog, oldLocalization })
+	oldLog, oldLocalization := log.Main, localization.Main
+	t.Cleanup(func() { log.Main, localization.Main = oldLog, oldLocalization })
 
 	var appFile string
 	s := NewServer()
@@ -86,8 +88,11 @@ func TestServer_InitializeConfiguration(t *testing.T) {
 
 	s.initializeConfiguration(&flags.Flags{ServerName: "web", Environment: "test", Version: "final", ServerConfigurationFile: conf, ApplicationConfigurationFile: "app.yaml"})
 
-	if config.Main == nil || config.Main.Environment != "test" {
-		t.Fatalf("config = %+v", config.Main)
+	if s.Config == nil || s.Config.Environment != "test" {
+		t.Fatalf("config = %+v", s.Config)
+	}
+	if s.API.Config != s.Config || s.Worker.Config != s.Config || s.Web.Config != s.Config {
+		t.Error("the configuration must be shared with the specialized servers")
 	}
 	if appFile != "app.yaml" {
 		t.Errorf("application file = %q", appFile)

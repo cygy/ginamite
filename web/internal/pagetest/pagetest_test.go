@@ -5,20 +5,20 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/web/html"
+	"github.com/cygy/ginamite/web/internal/webtest"
 
 	"github.com/gin-gonic/gin"
 )
 
 func TestSetup(t *testing.T) {
-	originalConfig, originalHTML := config.Main, html.Main
+	originalConfig, originalHTML := webtest.Config, html.Main
 
 	t.Run("initialized", func(t *testing.T) {
 		engine := Setup(t)
 
-		if config.Main.Cookie.Name != CookieName {
-			t.Errorf("cookie name = %q", config.Main.Cookie.Name)
+		if webtest.Config.Cookie.Name != CookieName {
+			t.Errorf("cookie name = %q", webtest.Config.Cookie.Name)
 		}
 		if got := html.Main.URL("index", "fr-fr"); got != WebHost+"/fr-fr/accueil" {
 			t.Errorf("URL() = %q", got)
@@ -36,7 +36,7 @@ func TestSetup(t *testing.T) {
 		}
 	})
 
-	if config.Main != originalConfig || html.Main != originalHTML {
+	if webtest.Config != originalConfig || html.Main != originalHTML {
 		t.Error("the global state is not restored")
 	}
 }

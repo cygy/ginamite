@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/cygy/ginamite/common/config"
+	"github.com/cygy/ginamite/common/ctxconfig"
 	"github.com/cygy/ginamite/common/kafka"
 	"github.com/cygy/ginamite/common/log"
 	htmlTemplate "github.com/cygy/ginamite/common/template/html"
@@ -27,6 +28,8 @@ var (
 
 // Server is a web server.
 type Server struct {
+	// Config is the configuration of the application, set by the main server before it starts.
+	Config     *config.Configuration
 	RoutesFile string // The path of the routes file.
 	Functions  Handlers
 
@@ -43,6 +46,7 @@ type Handlers struct {
 // NewServer returns a web server without any route.
 func NewServer() *Server {
 	return &Server{
+		Config:       config.NewConfiguration(),
 		customRoutes: []route.ConfigureCustomRoutes{},
 	}
 }
@@ -61,14 +65,14 @@ func (s *Server) CreateKafkaConsumers() []kafka.MessageConsumer {
 func (s *Server) Start() {
 	s.warnUndefinedFunctions()
 
-	engine := newEngine()
+	engine := s.newEngine()
 	s.setUp(engine)
 
-	address := fmt.Sprintf(":%d", config.Main.Server.Port)
+	address := fmt.Sprintf(":%d", s.Config.Server.Port)
 
 	var err error
-	if config.Main.Server.SSL.Enabled {
-		err = listenAndServeTLS(address, config.Main.Server.SSL.CertPath, config.Main.Server.SSL.KeyPath, engine)
+	if s.Config.Server.SSL.Enabled {
+		err = listenAndServeTLS(address, s.Config.Server.SSL.CertPath, s.Config.Server.SSL.KeyPath, engine)
 	} else {
 		err = listenAndServe(address, engine)
 	}
@@ -79,16 +83,17 @@ func (s *Server) Start() {
 }
 
 // newEngine returns the Gin engine, in debug mode if enabled by the configuration. The requests are logged by the
-// request logger in production, by the default logger else, and the responses are gzipped if enabled.
-func newEngine() *gin.Engine {
-	if config.Main.IsDebugModeEnabled() {
+// request logger in production, by the default logger else, and the responses are gzipped if enabled. The
+// configuration is saved in the context of the requests, see ctxconfig.
+func (s *Server) newEngine() *gin.Engine {
+	if s.Config.IsDebugModeEnabled() {
 		gin.SetMode(gin.DebugMode)
 	} else {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
 	var engine *gin.Engine
-	if config.Main.IsProductionEnvironment() {
+	if s.Config.IsProductionEnvironment() {
 		engine = gin.New()
 		engine.Use(gin.Recovery())
 		engine.Use(log.InjectRequestLogger(false))
@@ -96,49 +101,52 @@ func newEngine() *gin.Engine {
 		engine = gin.Default()
 	}
 
-	if config.Main.Server.GZip.Enabled {
-		engine.Use(gzip.Gzip(config.Main.Server.GZip.Level))
+	if s.Config.Server.GZip.Enabled {
+		engine.Use(gzip.Gzip(s.Config.Server.GZip.Level))
 	}
+
+	engine.Use(ctxconfig.Inject(s.Config))
 
 	return engine
 }
 
 // setUp initializes the API client, the HTML templates and pages, and loads the routes into the engine.
 func (s *Server) setUp(engine *gin.Engine) {
-	api.Initialize(config.Main.API.Host, config.Main.API.Version, config.Main.API.Port, config.Main.API.TimeOut, config.Main.API.RetryCount, config.Main.IsDebugModeEnabled())
+	api.Initialize(s.Config.API.Host, s.Config.API.Version, s.Config.API.Port, s.Config.API.TimeOut, s.Config.API.RetryCount, s.Config.IsDebugModeEnabled())
 	api.AddResponseHandlers(append([]api.ResponseHandlerFunc{
 		response.HandleInternalServerError(),
 		response.HandleInvalidAuthenticationError(),
 		response.HandleLatestTermsVersionMustBeAcceptedError(),
 	}, s.Functions.APIMiddlewares...)...)
 
-	htmlTemplate.LoadTemplates(config.Main.TemplatesPath, engine)
+	htmlTemplate.LoadTemplates(s.Config.TemplatesPath, engine)
 
 	html.Initialize(s.RoutesFile,
-		config.Main.Hosts.Web, config.Main.Hosts.Static, config.Main.Hosts.API+"/"+config.Main.APIVersion,
-		config.Main.DefaultTimezone, config.Main.SupportedLocales, config.Main.FallbackLocales,
-		config.Main.Cookie.Name, config.Main.JWT.Secret,
+		s.Config.Hosts.Web, s.Config.Hosts.Static, s.Config.Hosts.API+"/"+s.Config.APIVersion,
+		s.Config.DefaultTimezone, s.Config.SupportedLocales, s.Config.FallbackLocales,
+		s.Config.Cookie.Name, s.Config.JWT.Secret,
 		html.FacebookConfiguration{
-			Enabled:    config.Main.Facebook.Enabled,
-			AppID:      config.Main.Facebook.AppID,
-			APIVersion: config.Main.Facebook.APIVersion,
+			Enabled:    s.Config.Facebook.Enabled,
+			AppID:      s.Config.Facebook.AppID,
+			APIVersion: s.Config.Facebook.APIVersion,
 		},
 		html.GoogleConfiguration{
-			Enabled:  config.Main.Google.Enabled,
-			ClientID: config.Main.Google.ClientID,
+			Enabled:  s.Config.Google.Enabled,
+			ClientID: s.Config.Google.ClientID,
 		},
 		html.SocialNetworksConfiguration{
-			Facebook: config.Main.SocialNetworks.Facebook,
-			Twitter:  config.Main.SocialNetworks.Twitter,
-			Google:   config.Main.SocialNetworks.Google,
+			Facebook: s.Config.SocialNetworks.Facebook,
+			Twitter:  s.Config.SocialNetworks.Twitter,
+			Google:   s.Config.SocialNetworks.Google,
 		},
-		!config.Main.IsFinalVersion(),
-		config.Main.IsProductionEnvironment(),
+		s.Config.Locales,
+		!s.Config.IsFinalVersion(),
+		s.Config.IsProductionEnvironment(),
 	)
 
 	router := route.NewRouter(engine,
-		config.Main.SupportedLocales, config.Main.DefaultLocale,
-		config.Main.Cookie.Name, config.Main.JWT.Secret,
+		s.Config.SupportedLocales, s.Config.DefaultLocale,
+		s.Config.Cookie.Name, s.Config.JWT.Secret,
 	)
 	if s.Functions.RouterConfigureDefaultRoutes != nil {
 		s.Functions.RouterConfigureDefaultRoutes(&router.DefaultRoutes)

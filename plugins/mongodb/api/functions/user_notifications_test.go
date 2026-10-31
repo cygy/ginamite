@@ -3,8 +3,9 @@ package functions
 import (
 	"testing"
 
+	"github.com/cygy/ginamite/common/ctxconfig"
+
 	apiContextLocale "github.com/cygy/ginamite/api/context/locale"
-	"github.com/cygy/ginamite/common/config"
 	commonErrors "github.com/cygy/ginamite/common/errors"
 	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/store/mock"
@@ -15,17 +16,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// withDefaultLocale sets the default locale of the application for the duration of the test.
-func withDefaultLocale(t *testing.T, locale string) {
-	t.Helper()
-
-	old := config.Main
-	t.Cleanup(func() { config.Main = old })
-
-	config.Main = config.NewConfiguration()
-	config.Main.DefaultLocale = locale
-}
-
 // notificationDocument returns a notification of the user.
 func notificationDocument(id, userID bson.ObjectID, read bool) bson.M {
 	return bson.M{
@@ -35,11 +25,11 @@ func notificationDocument(id, userID bson.ObjectID, read bool) bson.M {
 }
 
 func TestNotificationsReceivedByUser(t *testing.T) {
-	withDefaultLocale(t, "en")
 	userID := bson.NewObjectID()
 	db := mock.NewDatabase("app")
 	db.Coll(model.NotificationCollection).Docs = []any{model.Notification{Type: "a", Locales: map[string]model.NotificationLocale{"en": {Title: "Title"}}}}
 	c, _ := plugintest.NewContext(db, "GET", "/", nil)
+	ctxconfig.Get(c).DefaultLocale = "en"
 	apiContextLocale.Set(c, "", "en")
 
 	got, err := NotificationsReceivedByUser(c, userID.Hex())
@@ -59,12 +49,12 @@ func TestNotificationsReceivedByUser(t *testing.T) {
 }
 
 func TestNotificationReceivedByUser(t *testing.T) {
-	withDefaultLocale(t, "en")
 	id, userID := bson.NewObjectID(), bson.NewObjectID()
 
 	db := mock.NewDatabase("app")
 	db.Coll(model.NotificationCollection).One = mock.Result{Value: notificationDocument(id, userID, false)}
 	c, _ := plugintest.NewContext(db, "GET", "/", nil)
+	ctxconfig.Get(c).DefaultLocale = "en"
 	apiContextLocale.Set(c, "", "en")
 
 	got, err := NotificationReceivedByUser(c, userID.Hex(), id.Hex())
