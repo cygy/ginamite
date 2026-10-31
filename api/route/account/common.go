@@ -4,6 +4,8 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/cygy/ginamite/common/ctxqueue"
+
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/api/validator"
@@ -166,7 +168,7 @@ func validateOrCancelUpdateProperty(c *gin.Context, property string, validate bo
 				return
 			}
 
-			queue.DeleteUser(queue.TaskDeleteUser{
+			ctxqueue.Get(c).DeleteUser(queue.TaskDeleteUser{
 				UserID: userID,
 			})
 		} else if isDisableAccountProcess {
@@ -175,7 +177,7 @@ func validateOrCancelUpdateProperty(c *gin.Context, property string, validate bo
 				return
 			}
 
-			queue.DisableUser(queue.TaskDisableUser{
+			ctxqueue.Get(c).DisableUser(queue.TaskDisableUser{
 				UserID: userID,
 			})
 		}
@@ -192,7 +194,7 @@ func validateOrCancelUpdateProperty(c *gin.Context, property string, validate bo
 	if validate {
 		if isEmailAddressProcess {
 			// The confirmation mail is sent to the previous email address.
-			queue.SendMail(queue.MessageMailUpdateEmailAddressConfirmed, queue.MailUpdateEmailAddressConfirmed{
+			ctxqueue.Get(c).SendMail(queue.MessageMailUpdateEmailAddressConfirmed, queue.MailUpdateEmailAddressConfirmed{
 				EmailAddress: user.EmailAddress,
 				Username:     user.Username,
 				Locale:       user.Locale,
@@ -205,7 +207,7 @@ func validateOrCancelUpdateProperty(c *gin.Context, property string, validate bo
 
 			response.OkWithStatus(c, t("status.update_email_address.confirmed"))
 		} else if isPasswordProcess {
-			queue.SendMail(queue.MessageMailUpdatePasswordConfirmed, queue.MailUpdatePasswordConfirmed{
+			ctxqueue.Get(c).SendMail(queue.MessageMailUpdatePasswordConfirmed, queue.MailUpdatePasswordConfirmed{
 				EmailAddress: user.EmailAddress,
 				Username:     user.Username,
 				Locale:       user.Locale,
@@ -214,14 +216,14 @@ func validateOrCancelUpdateProperty(c *gin.Context, property string, validate bo
 		} else if isValidateEmailAddressProcess {
 			response.OkWithStatus(c, t("status.validate_email_address.confirmed"))
 		} else if isDeleteAccountProcess {
-			queue.SendMail(queue.MessageMailDeleteAccountConfirmed, queue.MailDeleteAccountConfirmed{
+			ctxqueue.Get(c).SendMail(queue.MessageMailDeleteAccountConfirmed, queue.MailDeleteAccountConfirmed{
 				EmailAddress: user.EmailAddress,
 				Username:     user.Username,
 				Locale:       user.Locale,
 			})
 			response.OkWithStatus(c, t("status.delete_account.confirmed"))
 		} else if isDisableAccountProcess {
-			queue.SendMail(queue.MessageMailDisableAccountConfirmed, queue.MailDisableAccountConfirmed{
+			ctxqueue.Get(c).SendMail(queue.MessageMailDisableAccountConfirmed, queue.MailDisableAccountConfirmed{
 				EmailAddress: user.EmailAddress,
 				Username:     user.Username,
 				Locale:       user.Locale,
@@ -230,28 +232,28 @@ func validateOrCancelUpdateProperty(c *gin.Context, property string, validate bo
 		}
 	} else {
 		if isEmailAddressProcess {
-			queue.SendMail(queue.MessageMailUpdateEmailAddressCancelled, queue.MailUpdateEmailAddressCancelled{
+			ctxqueue.Get(c).SendMail(queue.MessageMailUpdateEmailAddressCancelled, queue.MailUpdateEmailAddressCancelled{
 				EmailAddress: user.EmailAddress,
 				Username:     user.Username,
 				Locale:       user.Locale,
 			})
 			response.OkWithStatus(c, t("status.update_email_address.cancelled"))
 		} else if isPasswordProcess {
-			queue.SendMail(queue.MessageMailUpdatePasswordCancelled, queue.MailUpdatePasswordCancelled{
+			ctxqueue.Get(c).SendMail(queue.MessageMailUpdatePasswordCancelled, queue.MailUpdatePasswordCancelled{
 				EmailAddress: user.EmailAddress,
 				Username:     user.Username,
 				Locale:       user.Locale,
 			})
 			response.OkWithStatus(c, t("status.update_password.cancelled"))
 		} else if isDeleteAccountProcess {
-			queue.SendMail(queue.MessageMailDeleteAccountCancelled, queue.MailDeleteAccountCancelled{
+			ctxqueue.Get(c).SendMail(queue.MessageMailDeleteAccountCancelled, queue.MailDeleteAccountCancelled{
 				EmailAddress: user.EmailAddress,
 				Username:     user.Username,
 				Locale:       user.Locale,
 			})
 			response.OkWithStatus(c, t("status.delete_account.cancelled"))
 		} else if isDisableAccountProcess {
-			queue.SendMail(queue.MessageMailDisableAccountCancelled, queue.MailDisableAccountCancelled{
+			ctxqueue.Get(c).SendMail(queue.MessageMailDisableAccountCancelled, queue.MailDisableAccountCancelled{
 				EmailAddress: user.EmailAddress,
 				Username:     user.Username,
 				Locale:       user.Locale,

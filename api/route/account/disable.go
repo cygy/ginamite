@@ -3,6 +3,8 @@ package account
 import (
 	"errors"
 
+	"github.com/cygy/ginamite/common/ctxqueue"
+
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	ctxUser "github.com/cygy/ginamite/api/context/user"
 	"github.com/cygy/ginamite/api/response"
@@ -55,7 +57,7 @@ func DisableAccount(c *gin.Context) {
 		return
 	}
 
-	queue.SendMail(queue.MessageMailDisableAccountConfirmation, queue.MailDisableAccountConfirmation{
+	ctxqueue.Get(c).SendMail(queue.MessageMailDisableAccountConfirmation, queue.MailDisableAccountConfirmation{
 		EmailAddress: user.EmailAddress,
 		Username:     user.Username,
 		Locale:       user.Locale,

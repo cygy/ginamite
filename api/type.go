@@ -11,6 +11,7 @@ import (
 	"github.com/cygy/ginamite/api/route/user"
 	"github.com/cygy/ginamite/common/authentication"
 	"github.com/cygy/ginamite/common/config"
+	"github.com/cygy/ginamite/common/queue"
 
 	"github.com/gin-gonic/gin"
 )
@@ -18,7 +19,9 @@ import (
 // Server defines an API server.
 type Server struct {
 	// Config is the configuration of the application, set by the main server before it starts.
-	Config     *config.Configuration
+	Config *config.Configuration
+	// Queue sends the messages to the other servers, set by the main server before it starts.
+	Queue      *queue.Queue
 	RoutesFile string
 	Functions  Handlers
 

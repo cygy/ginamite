@@ -3,6 +3,8 @@ package account
 import (
 	"errors"
 
+	"github.com/cygy/ginamite/common/ctxqueue"
+
 	"github.com/cygy/ginamite/common/queue"
 
 	"github.com/gin-gonic/gin"
@@ -18,7 +20,7 @@ func startProcessValidateNewEmailAddress(c *gin.Context, userID, emailAddress, u
 		return "", "", err
 	}
 
-	queue.SendMail(queue.MessageMailValidateNewEmailAddress, queue.MailValidateNewEmailAddress{
+	ctxqueue.Get(c).SendMail(queue.MessageMailValidateNewEmailAddress, queue.MailValidateNewEmailAddress{
 		EmailAddress: emailAddress,
 		Username:     username,
 		Locale:       locale,

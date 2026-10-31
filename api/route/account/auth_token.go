@@ -5,6 +5,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cygy/ginamite/common/ctxqueue"
+
 	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	ctxUser "github.com/cygy/ginamite/api/context/user"
@@ -16,7 +18,6 @@ import (
 	authError "github.com/cygy/ginamite/common/errors/auth"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/notifications"
-	"github.com/cygy/ginamite/common/queue"
 	req "github.com/cygy/ginamite/common/request"
 	res "github.com/cygy/ginamite/common/response"
 
@@ -135,7 +136,7 @@ func Logout(c *gin.Context) {
 		return
 	}
 
-	queue.InvalidAuthToken(tokenID, expirationDate)
+	ctxqueue.Get(c).InvalidAuthToken(tokenID, expirationDate)
 
 	response.NoContent(c)
 }

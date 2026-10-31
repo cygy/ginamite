@@ -10,7 +10,6 @@ import (
 	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/session"
 	"github.com/cygy/ginamite/common/mongo/store/mock"
-	"github.com/cygy/ginamite/common/queue"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
 )
 
@@ -63,7 +62,7 @@ func TestCaptureQueue(t *testing.T) {
 		t.Error("nothing was sent")
 	}
 
-	queue.CreateTask("task", map[string]string{"key": "value"})
+	messages.Sender.CreateTask("task", map[string]string{"key": "value"})
 	message, ok := messages.Next()
 	if !ok || message.Type != "task" {
 		t.Errorf("message = %+v, %v", message, ok)

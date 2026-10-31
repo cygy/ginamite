@@ -30,6 +30,9 @@ const maxMessages = 10
 
 // Queue is the capture of the messages sent to Kafka.
 type Queue struct {
+	// Sender is the queue sending its messages to the capture.
+	Sender *queue.Queue
+
 	t        *testing.T
 	producer *mocks.AsyncProducer
 }
@@ -41,8 +44,7 @@ type Message struct {
 	Payload map[string]any
 }
 
-// CaptureQueue replaces the main Kafka client, for the duration of the test, with a client sending its messages to
-// the returned Queue.
+// CaptureQueue returns a Queue capturing the messages sent by its Sender.
 func CaptureQueue(t *testing.T) *Queue {
 	t.Helper()
 
@@ -57,11 +59,7 @@ func CaptureQueue(t *testing.T) *Queue {
 	client.HasProducer = true
 	client.Producer = producer
 
-	old := kafka.Main
-	kafka.Main = client
-	t.Cleanup(func() { kafka.Main = old })
-
-	return &Queue{t: t, producer: producer}
+	return &Queue{Sender: queue.New(client), t: t, producer: producer}
 }
 
 // Next returns the next message sent to Kafka, and ok is false if there is none after a short delay.

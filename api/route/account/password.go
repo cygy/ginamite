@@ -3,6 +3,8 @@ package account
 import (
 	"errors"
 
+	"github.com/cygy/ginamite/common/ctxqueue"
+
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	ctxUser "github.com/cygy/ginamite/api/context/user"
 	"github.com/cygy/ginamite/api/request"
@@ -73,7 +75,7 @@ func UpdatePassword(c *gin.Context) {
 		return
 	}
 
-	queue.SendMail(queue.MessageMailUpdatePasswordConfirmation, queue.MailUpdatePasswordConfirmation{
+	ctxqueue.Get(c).SendMail(queue.MessageMailUpdatePasswordConfirmation, queue.MailUpdatePasswordConfirmation{
 		EmailAddress: user.EmailAddress,
 		Username:     user.Username,
 		Locale:       user.Locale,

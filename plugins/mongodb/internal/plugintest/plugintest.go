@@ -15,6 +15,7 @@ import (
 	"github.com/cygy/ginamite/common/authentication"
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/ctxconfig"
+	"github.com/cygy/ginamite/common/ctxqueue"
 
 	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
@@ -50,6 +51,7 @@ func NewContext(db *mock.Database, method, target string, body io.Reader) (*gin.
 	session.Set(c, db)
 	ctxconfig.Set(c, config.NewConfiguration())
 	ctxAuthToken.SetHooks(c, authentication.Hooks{})
+	ctxqueue.Set(c, senderInUse)
 	ctxLocale.Set(c, "en", "en")
 
 	return c, recorder
@@ -109,12 +111,18 @@ func InitLocalization(t *testing.T, messages map[string]string) {
 
 // Queue captures the messages sent to Kafka.
 type Queue struct {
+	// Sender is the queue sending its messages to the capture.
+	Sender *queue.Queue
+
 	t        *testing.T
 	producer *mocks.AsyncProducer
 }
 
-// CaptureQueue replaces the main Kafka client, for the duration of the test, with a client sending its messages to
-// the returned Queue.
+// senderInUse is the queue of the contexts created by NewContext. It is the one of the capture, if any.
+var senderInUse = queue.New(kafka.NewClient())
+
+// CaptureQueue returns a Queue capturing the messages sent by its Sender, which is the queue of the contexts created
+// by NewContext for the duration of the test.
 func CaptureQueue(t *testing.T) *Queue {
 	t.Helper()
 
@@ -129,11 +137,12 @@ func CaptureQueue(t *testing.T) *Queue {
 	client.HasProducer = true
 	client.Producer = producer
 
-	old := kafka.Main
-	kafka.Main = client
-	t.Cleanup(func() { kafka.Main = old })
+	sender := queue.New(client)
+	old := senderInUse
+	senderInUse = sender
+	t.Cleanup(func() { senderInUse = old })
 
-	return &Queue{t: t, producer: producer}
+	return &Queue{Sender: sender, t: t, producer: producer}
 }
 
 // maxMessages is the number of messages a Queue can capture.

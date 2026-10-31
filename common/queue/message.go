@@ -3,7 +3,6 @@ package queue
 import (
 	"encoding/json"
 
-	"github.com/cygy/ginamite/common/kafka"
 	"github.com/cygy/ginamite/common/log"
 
 	"github.com/sirupsen/logrus"
@@ -90,7 +89,7 @@ func UnmarshalPayload(data []byte, v any) error {
 }
 
 // sendMessage sends a message of the given type and payload to the topic.
-func sendMessage(messageType string, payload any, topic string) {
+func (q *Queue) sendMessage(messageType string, payload any, topic string) {
 	message := Message{
 		Type:    messageType,
 		Payload: payload,
@@ -105,5 +104,5 @@ func sendMessage(messageType string, payload any, topic string) {
 		return
 	}
 
-	kafka.SendMessageToTopic(string(bytes), topic)
+	q.send(string(bytes), topic)
 }

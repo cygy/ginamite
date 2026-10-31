@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/cygy/ginamite/common/ctxqueue"
+
 	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	ctxUser "github.com/cygy/ginamite/api/context/user"
@@ -83,7 +85,7 @@ func deleteAuthenticationToken(c *gin.Context, checkKey bool) {
 		return
 	}
 
-	queue.InvalidAuthToken(tokenID, token.ExpirationDate)
+	ctxqueue.Get(c).InvalidAuthToken(tokenID, token.ExpirationDate)
 
 	// Return a no content error.
 	response.OkWithStatus(c, t("status.login.cancelled"))
@@ -125,7 +127,7 @@ func createAuthenticationToken(c *gin.Context, user authentication.User, IPAddre
 
 	// Tell the workers to retrieve the IP location info.
 	if !knownIPAddress {
-		queue.GetIPLocation(queue.TaskIPLocation{
+		ctxqueue.Get(c).GetIPLocation(queue.TaskIPLocation{
 			IPAddress: IPAddress,
 			TokenID:   tokenID,
 		})
@@ -153,7 +155,7 @@ func createAuthenticationToken(c *gin.Context, user authentication.User, IPAddre
 	}
 
 	if !afterValidatingAccount {
-		queue.NotifyUser(notifications.TypeNewLogin, queue.UserNotificationNewLogin{
+		ctxqueue.Get(c).NotifyUser(notifications.TypeNewLogin, queue.UserNotificationNewLogin{
 			EmailAddress:   user.EmailAddress,
 			UserID:         user.ID,
 			Username:       user.Username,

@@ -11,7 +11,7 @@ import (
 // DeleteByID decodes the payload of a task to delete a user and calls deleteUserByIDFunc, which deletes the user
 // and returns the auth tokens revoked, defined by their ID and their expiration date. The tokens are then invalidated.
 // Nothing happens if the function is nil.
-func DeleteByID(payload []byte, deleteUserByIDFunc func(ctx context.Context, userID string) map[string]time.Time) {
+func DeleteByID(payload []byte, q *queue.Queue, deleteUserByIDFunc func(ctx context.Context, userID string) map[string]time.Time) {
 	if deleteUserByIDFunc == nil {
 		return
 	}
@@ -22,14 +22,14 @@ func DeleteByID(payload []byte, deleteUserByIDFunc func(ctx context.Context, use
 	}
 
 	if revokedAuthTokens := deleteUserByIDFunc(context.Background(), p.UserID); len(revokedAuthTokens) > 0 {
-		queue.InvalidAuthTokens(revokedAuthTokens)
+		q.InvalidAuthTokens(revokedAuthTokens)
 	}
 }
 
 // DisableByID decodes the payload of a task to disable a user and calls disableUserByIDFunc, which disables the user
 // and returns the auth tokens revoked, defined by their ID and their expiration date. The tokens are then invalidated.
 // Nothing happens if the function is nil.
-func DisableByID(payload []byte, disableUserByIDFunc func(ctx context.Context, userID string) map[string]time.Time) {
+func DisableByID(payload []byte, q *queue.Queue, disableUserByIDFunc func(ctx context.Context, userID string) map[string]time.Time) {
 	if disableUserByIDFunc == nil {
 		return
 	}
@@ -40,7 +40,7 @@ func DisableByID(payload []byte, disableUserByIDFunc func(ctx context.Context, u
 	}
 
 	if revokedAuthTokens := disableUserByIDFunc(context.Background(), p.UserID); len(revokedAuthTokens) > 0 {
-		queue.InvalidAuthTokens(revokedAuthTokens)
+		q.InvalidAuthTokens(revokedAuthTokens)
 	}
 }
 

@@ -183,8 +183,8 @@ func TestServer_recurringFuncs_run(t *testing.T) {
 	t.Cleanup(func() { weburl.Main = oldRoutes })
 	weburl.Main = weburl.NewConfiguration()
 
-	workertest.CaptureQueue(t)
-	s := &Server{Config: c, Functions: allHandlers()}
+	q := workertest.CaptureQueue(t)
+	s := &Server{Config: c, Queue: q.Sender, Functions: allHandlers()}
 
 	// The count logged by each task.
 	wantCounts := map[string]any{

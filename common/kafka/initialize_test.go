@@ -94,19 +94,3 @@ func TestClient_Initialize_Producer(t *testing.T) {
 
 	waitForLog(t, hook, "connected to kafka")
 }
-
-func TestInitialize(t *testing.T) {
-	defer func(old *Client) { Main = old }(Main)
-
-	hook := useHook(t)
-	broker := newMockBroker(t, "app_users")
-	host, port := splitAddress(t, broker.Addr())
-
-	Initialize(host, port, "app_", true, nil)
-
-	if Main == nil || !Main.HasProducer || Main.TopicsPrefix != "app_" {
-		t.Fatalf("Main = %+v", Main)
-	}
-
-	waitForLog(t, hook, "connected to kafka")
-}

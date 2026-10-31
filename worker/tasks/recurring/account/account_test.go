@@ -80,7 +80,7 @@ func TestDeleteNeverUsed(t *testing.T) {
 
 	var deleted []string
 	var gotDays uint
-	DeleteNeverUsed(context.Background(), "task", 10,
+	DeleteNeverUsed(context.Background(), q.Sender, "task", 10,
 		func(_ context.Context, days uint) []string {
 			gotDays = days
 			return []string{"u1", "u2", "u3"}
@@ -105,7 +105,7 @@ func TestDeleteInactive(t *testing.T) {
 
 	var deleted []string
 	var gotMonths uint
-	DeleteInactive(context.Background(), "task", 48,
+	DeleteInactive(context.Background(), q.Sender, "task", 48,
 		func(_ context.Context, months uint) []string {
 			gotMonths = months
 			return []string{"u1", "u2"}

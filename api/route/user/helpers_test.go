@@ -6,6 +6,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/cygy/ginamite/common/ctxqueue"
+	"github.com/cygy/ginamite/common/queue"
+
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/internal/apitest"
 	"github.com/cygy/ginamite/api/route/account"
@@ -20,6 +23,9 @@ import (
 var (
 	// testConfig is the configuration of the handlers, replaced by setup.
 	testConfig *config.Configuration
+
+	// testQueue is the queue of the handlers: it has no producer, the messages are only logged.
+	testQueue = queue.New(kafka.NewClient())
 
 	// testFunctions and testAccountFunctions are the functions of the handlers, reset at the end of each test.
 	testFunctions        Functions
@@ -36,7 +42,6 @@ func setup(t *testing.T) {
 	testConfig.SupportedLocales = []string{"en"}
 	timezone.Main = timezone.NewConfiguration()
 	timezone.Main.Timezones = []string{"Europe/Paris"}
-	kafka.Main = kafka.NewClient()
 
 	t.Cleanup(func() {
 		testFunctions = Functions{}
@@ -47,7 +52,7 @@ func setup(t *testing.T) {
 // serve sends a request with the given JSON body to the handler, mounted on "/:id", and returns the HTTP status.
 func serve(handler gin.HandlerFunc, body string) int {
 	router := gin.New()
-	router.Use(ctxconfig.Inject(testConfig), Inject(&testFunctions), account.Inject(&testAccountFunctions), ctxLocale.Inject("en", []string{"en"}))
+	router.Use(ctxconfig.Inject(testConfig), ctxqueue.Inject(testQueue), Inject(&testFunctions), account.Inject(&testAccountFunctions), ctxLocale.Inject("en", []string{"en"}))
 	router.Any("/:id", handler)
 
 	req, _ := http.NewRequest(http.MethodPost, "/42", strings.NewReader(body))
@@ -59,6 +64,7 @@ func serve(handler gin.HandlerFunc, body string) int {
 func newTestContext(body string) (*gin.Context, *httptest.ResponseRecorder) {
 	c, recorder := apitest.NewContext(http.MethodPost, "/42", strings.NewReader(body))
 	ctxconfig.Set(c, testConfig)
+	ctxqueue.Set(c, testQueue)
 	SetFunctions(c, &testFunctions)
 	account.SetFunctions(c, &testAccountFunctions)
 	ctxLocale.Set(c, "en", "en")

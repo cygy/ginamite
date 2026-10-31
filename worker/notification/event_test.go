@@ -57,6 +57,7 @@ func TestEvent_Dispatch(t *testing.T) {
 			q := workertest.CaptureQueue(t)
 
 			e := event
+			e.Queue = q.Sender
 			e.GetNotificationTargetsFunc = targets(tt.target)
 			e.Dispatch(context.Background())
 
@@ -72,6 +73,7 @@ func TestEvent_Dispatch(t *testing.T) {
 		q := workertest.CaptureQueue(t)
 
 		e := event
+		e.Queue = q.Sender
 		e.GetNotificationTargetsFunc = targets(notifications.TargetEmail, notifications.TargetIOS, notifications.TargetAndroid)
 		e.Dispatch(context.Background())
 
@@ -94,7 +96,7 @@ func TestEvent_Dispatch(t *testing.T) {
 	t.Run("targets without handler or unknown", func(t *testing.T) {
 		q := workertest.CaptureQueue(t)
 
-		e := Event{UserID: "u1", Type: "type", GetNotificationTargetsFunc: targets(notifications.TargetEmail, "unknown")}
+		e := Event{Queue: q.Sender, UserID: "u1", Type: "type", GetNotificationTargetsFunc: targets(notifications.TargetEmail, "unknown")}
 		e.Dispatch(context.Background())
 
 		q.Empty()
@@ -118,6 +120,7 @@ func TestEvent_Dispatch(t *testing.T) {
 		workertest.Hook.Reset()
 
 		e := event
+		e.Queue = q.Sender
 		e.GetNotificationTargetsFunc = func(context.Context, string, string) ([]notifications.Target, error) {
 			return []notifications.Target{{Target: notifications.TargetEmail}}, errors.New("boom")
 		}

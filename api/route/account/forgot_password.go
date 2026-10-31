@@ -3,6 +3,8 @@ package account
 import (
 	"errors"
 
+	"github.com/cygy/ginamite/common/ctxqueue"
+
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
@@ -88,7 +90,7 @@ func ForgotPassword(c *gin.Context) {
 		return
 	}
 
-	queue.SendMail(queue.MessageMailForgotPasswordConfirmation, queue.MailForgotPasswordConfirmation{
+	ctxqueue.Get(c).SendMail(queue.MessageMailForgotPasswordConfirmation, queue.MailForgotPasswordConfirmation{
 		EmailAddress: user.EmailAddress,
 		Username:     user.Username,
 		Locale:       user.Locale,

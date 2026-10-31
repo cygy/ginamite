@@ -15,6 +15,7 @@ type Handler func() (string, any)
 // Event is an event to notify to a user, with the message to send to each kind of target.
 // A user is not notified through the targets without handler.
 type Event struct {
+	Queue                      *queue.Queue // The queue sending the messages to the targets.
 	UserID                     string
 	Type                       string
 	EmailFunc                  Handler
@@ -43,12 +44,12 @@ func (event Event) Dispatch(ctx context.Context) {
 		handler Handler
 		send    func(messageType string, payload any)
 	}{
-		notifications.TargetEmail:   {event.EmailFunc, queue.SendMail},
-		notifications.TargetChrome:  {event.ChromeFunc, queue.SendChromeNotification},
-		notifications.TargetSafari:  {event.SafariFunc, queue.SendSafariNotification},
-		notifications.TargetFirefox: {event.FirefoxFunc, queue.SendFirefoxNotification},
-		notifications.TargetIOS:     {event.IOSFunc, queue.SendIOSNotification},
-		notifications.TargetAndroid: {event.AndroidFunc, queue.SendAndroidNotification},
+		notifications.TargetEmail:   {event.EmailFunc, event.Queue.SendMail},
+		notifications.TargetChrome:  {event.ChromeFunc, event.Queue.SendChromeNotification},
+		notifications.TargetSafari:  {event.SafariFunc, event.Queue.SendSafariNotification},
+		notifications.TargetFirefox: {event.FirefoxFunc, event.Queue.SendFirefoxNotification},
+		notifications.TargetIOS:     {event.IOSFunc, event.Queue.SendIOSNotification},
+		notifications.TargetAndroid: {event.AndroidFunc, event.Queue.SendAndroidNotification},
 	}
 
 	for _, target := range targets {

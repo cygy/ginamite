@@ -31,9 +31,9 @@ type sent struct {
 	message Message
 }
 
-// capture replaces the main Kafka client with one using a fake producer, and
-// returns a function that runs send and returns the message it sent.
-func capture(t *testing.T) func(send func()) sent {
+// capture returns a queue using a Kafka client with a fake producer, and a function that runs send and returns the
+// message it sent.
+func capture(t *testing.T) (*Queue, func(send func()) sent) {
 	t.Helper()
 
 	config := mocks.NewTestConfig()
@@ -44,11 +44,7 @@ func capture(t *testing.T) func(send func()) sent {
 	client.HasProducer = true
 	client.Producer = producer
 
-	old := kafka.Main
-	kafka.Main = client
-	t.Cleanup(func() { kafka.Main = old })
-
-	return func(send func()) sent {
+	return New(client), func(send func()) sent {
 		t.Helper()
 		producer.ExpectInputAndSucceed()
 		send()

@@ -14,7 +14,7 @@ func TestNewLogin(t *testing.T) {
 		q := workertest.CaptureQueue(t)
 
 		var gotUser, gotType string
-		NewLogin(context.Background(), []byte(`{"user_id":"u1","email":"john@example.com","ip":"1.2.3.4"}`),
+		NewLogin(context.Background(), q.Sender, []byte(`{"user_id":"u1","email":"john@example.com","ip":"1.2.3.4"}`),
 			func(_ context.Context, userID, notificationType string) ([]notifications.Target, error) {
 				gotUser, gotType = userID, notificationType
 				return []notifications.Target{{Target: notifications.TargetEmail}, {Target: notifications.TargetChrome}}, nil
@@ -32,7 +32,7 @@ func TestNewLogin(t *testing.T) {
 	})
 
 	t.Run("invalid payload", func(t *testing.T) {
-		NewLogin(context.Background(), []byte("{"), func(context.Context, string, string) ([]notifications.Target, error) {
+		NewLogin(context.Background(), nil, []byte("{"), func(context.Context, string, string) ([]notifications.Target, error) {
 			t.Error("the targets must not be requested")
 			return nil, nil
 		})

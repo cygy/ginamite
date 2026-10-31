@@ -3,6 +3,8 @@ package account
 import (
 	"errors"
 
+	"github.com/cygy/ginamite/common/ctxqueue"
+
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
@@ -118,14 +120,14 @@ func validateOrCancelForgotPassword(c *gin.Context, validate bool) {
 
 	// Send mail
 	if validate {
-		queue.SendMail(queue.MessageMailForgotPasswordConfirmed, queue.MailForgotPasswordConfirmed{
+		ctxqueue.Get(c).SendMail(queue.MessageMailForgotPasswordConfirmed, queue.MailForgotPasswordConfirmed{
 			EmailAddress: user.EmailAddress,
 			Username:     user.Username,
 			Locale:       user.Locale,
 		})
 		response.OkWithStatus(c, t("status.forgot_password.confirmed"))
 	} else {
-		queue.SendMail(queue.MessageMailForgotPasswordCancelled, queue.MailForgotPasswordCancelled{
+		ctxqueue.Get(c).SendMail(queue.MessageMailForgotPasswordCancelled, queue.MailForgotPasswordCancelled{
 			EmailAddress: user.EmailAddress,
 			Username:     user.Username,
 			Locale:       user.Locale,

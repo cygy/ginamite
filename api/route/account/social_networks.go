@@ -4,6 +4,8 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/cygy/ginamite/common/ctxqueue"
+
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	ctxUser "github.com/cygy/ginamite/api/context/user"
 	"github.com/cygy/ginamite/api/request"
@@ -74,7 +76,7 @@ func UpdateSocialNetworks(c *gin.Context) {
 		return
 	}
 
-	queue.UpdateUserSocialNetworks(queue.TaskUpdateUserSocialNetworks{
+	ctxqueue.Get(c).UpdateUserSocialNetworks(queue.TaskUpdateUserSocialNetworks{
 		UserID: userID,
 	})
 

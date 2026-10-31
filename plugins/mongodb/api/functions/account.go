@@ -7,9 +7,9 @@ import (
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common/ctxconfig"
+	"github.com/cygy/ginamite/common/ctxqueue"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/mongo/session"
-	"github.com/cygy/ginamite/common/queue"
 	"github.com/cygy/ginamite/plugins/mongodb/api/context"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
 	pluginQueue "github.com/cygy/ginamite/plugins/mongodb/queue"
@@ -80,7 +80,7 @@ func UpdateAccountPublicProfile(c *gin.Context) {
 		return
 	}
 
-	queue.CreateTask(pluginQueue.MessageTaskUpdateUserPublicProfile, pluginQueue.TaskUpdateUserPublicProfile{
+	ctxqueue.Get(c).CreateTask(pluginQueue.MessageTaskUpdateUserPublicProfile, pluginQueue.TaskUpdateUserPublicProfile{
 		UserID: user.ID.Hex(),
 	})
 

@@ -11,7 +11,7 @@ func TestCaptureQueue(t *testing.T) {
 	q := CaptureQueue(t)
 	q.Empty()
 
-	queue.DeleteUser(queue.TaskDeleteUser{UserID: "u"})
+	q.Sender.DeleteUser(queue.TaskDeleteUser{UserID: "u"})
 
 	m, ok := q.Next()
 	if !ok || m.Topic != queue.TopicTasks || m.Type != queue.MessageTaskDeleteUser || m.Payload["user_id"] != "u" {

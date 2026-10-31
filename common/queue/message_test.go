@@ -101,10 +101,10 @@ func TestUnmarshalPayload(t *testing.T) {
 }
 
 func TestSendMessage_UnmarshalablePayload(t *testing.T) {
-	next := capture(t)
+	q, next := capture(t)
 	hook.Reset()
 
-	sendMessage("type", make(chan int), TopicMail)
+	q.sendMessage("type", make(chan int), TopicMail)
 
 	entry := hook.LastEntry()
 	if entry == nil || !strings.Contains(entry.Message, "unable to marshal") {
@@ -112,7 +112,7 @@ func TestSendMessage_UnmarshalablePayload(t *testing.T) {
 	}
 
 	// Nothing was sent: the next message is the one of a valid payload.
-	if got := next(func() { sendMessage("type", "ok", TopicMail) }); got.message.Payload != "ok" {
+	if got := next(func() { q.sendMessage("type", "ok", TopicMail) }); got.message.Payload != "ok" {
 		t.Errorf("got %+v", got)
 	}
 }

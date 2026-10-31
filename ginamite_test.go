@@ -50,6 +50,17 @@ func TestNewServer(t *testing.T) {
 	}
 }
 
+func TestNewServer_SharedServices(t *testing.T) {
+	s := NewServer()
+
+	if s.Config == nil || s.Kafka == nil || s.Queue == nil {
+		t.Fatalf("server = %+v", s)
+	}
+	if s.API.Queue != s.Queue || s.Worker.Queue != s.Queue {
+		t.Error("the queue must be shared with the API and the worker")
+	}
+}
+
 func TestNewServer_Placeholders(t *testing.T) {
 	f := NewServer().API.Functions
 	c, _ := gin.CreateTestContext(nil)

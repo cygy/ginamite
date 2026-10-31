@@ -7,7 +7,6 @@ import (
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/config/environment"
 	"github.com/cygy/ginamite/common/flags"
-	"github.com/cygy/ginamite/common/kafka"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/timezone"
@@ -47,7 +46,7 @@ func (s *Server) Start() {
 	}
 
 	if kafkaConf, ok := s.Config.KafkaConfiguration(); ok {
-		kafka.Initialize(kafkaConf.Host, kafkaConf.Port, s.Config.KafkaTopicsPrefix, true, specializedServer.CreateKafkaConsumers())
+		s.Kafka.Initialize(kafkaConf.Host, kafkaConf.Port, s.Config.KafkaTopicsPrefix, true, specializedServer.CreateKafkaConsumers())
 	}
 
 	for _, plugin := range s.plugins {

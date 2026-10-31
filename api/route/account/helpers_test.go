@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cygy/ginamite/common/ctxqueue"
+
 	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/internal/apitest"
@@ -19,6 +21,7 @@ import (
 	"github.com/cygy/ginamite/common/config/environment"
 	"github.com/cygy/ginamite/common/ctxconfig"
 	"github.com/cygy/ginamite/common/kafka"
+	"github.com/cygy/ginamite/common/queue"
 	"github.com/cygy/ginamite/common/timezone"
 
 	"github.com/gin-gonic/gin"
@@ -55,6 +58,9 @@ type testCase struct {
 // testConfig is the configuration of the handlers, replaced by setup.
 var testConfig *config.Configuration
 
+// testQueue is the queue of the handlers: it has no producer, the messages are only logged.
+var testQueue = queue.New(kafka.NewClient())
+
 // setup initializes the global dependencies of the handlers and resets every injected function at the end of the test.
 func setup(t *testing.T) {
 	t.Helper()
@@ -68,7 +74,6 @@ func setup(t *testing.T) {
 	testConfig.Environment = environment.Development
 	timezone.Main = timezone.NewConfiguration()
 	timezone.Main.Timezones = []string{"Europe/Paris"}
-	kafka.Main = kafka.NewClient()
 
 	testHooks.BuildTokenFromID = func(context.Context, string) (*authentication.Token, error) {
 		return &authentication.Token{UserID: testUserID, ExpirationDate: time.Now().Add(time.Hour), CreationDate: time.Now()}, nil
@@ -100,7 +105,7 @@ func resetFunctions() { testFunctions = Functions{} }
 // newRouter returns a router with the locale and the auth token middlewares, serving the handler on every path shape.
 func newRouter(handler gin.HandlerFunc) *gin.Engine {
 	router := gin.New()
-	router.Use(ctxconfig.Inject(testConfig), Inject(&testFunctions), ctxAuthToken.InjectHooks(testHooks), ctxLocale.Inject("en", []string{"en"}))
+	router.Use(ctxconfig.Inject(testConfig), ctxqueue.Inject(testQueue), Inject(&testFunctions), ctxAuthToken.InjectHooks(testHooks), ctxLocale.Inject("en", []string{"en"}))
 	router.Use(ctxAuthToken.Parse(testSecret, nil, false))
 	router.Any("/", handler)
 	router.Any("/:id", handler)
@@ -157,6 +162,7 @@ func newContext(params gin.Params) (*gin.Context, *httptest.ResponseRecorder) {
 	c, recorder := apitest.NewContext(http.MethodPost, "/", nil)
 	c.Params = params
 	ctxconfig.Set(c, testConfig)
+	ctxqueue.Set(c, testQueue)
 	SetFunctions(c, &testFunctions)
 	ctxAuthToken.SetHooks(c, testHooks)
 	ctxLocale.Set(c, "en", "en")

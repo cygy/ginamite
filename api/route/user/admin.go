@@ -5,6 +5,8 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/cygy/ginamite/common/ctxqueue"
+
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
@@ -253,7 +255,7 @@ func AdminUpdateSocial(c *gin.Context) {
 		return
 	}
 
-	queue.UpdateUserSocialNetworks(queue.TaskUpdateUserSocialNetworks{
+	ctxqueue.Get(c).UpdateUserSocialNetworks(queue.TaskUpdateUserSocialNetworks{
 		UserID: userID,
 	})
 
@@ -414,7 +416,7 @@ func AdminDeleteUserToken(c *gin.Context) {
 			return
 		}
 
-		queue.InvalidAuthToken(tokenID, token.ExpirationDate)
+		ctxqueue.Get(c).InvalidAuthToken(tokenID, token.ExpirationDate)
 	}
 
 	locale := ctxLocale.Get(c)
@@ -454,12 +456,12 @@ func AdminDelete(c *gin.Context) {
 		return
 	}
 
-	queue.DeleteUser(queue.TaskDeleteUser{
+	ctxqueue.Get(c).DeleteUser(queue.TaskDeleteUser{
 		UserID: userID,
 	})
 
 	// Send a mail to warn the user.
-	queue.SendMail(queue.MessageMailDeleteAccountConfirmed, queue.MailDeleteAccountConfirmed{
+	ctxqueue.Get(c).SendMail(queue.MessageMailDeleteAccountConfirmed, queue.MailDeleteAccountConfirmed{
 		EmailAddress: user.EmailAddress,
 		Username:     user.Username,
 		Locale:       user.Locale,
@@ -483,12 +485,12 @@ func AdminDisable(c *gin.Context) {
 		return
 	}
 
-	queue.DisableUser(queue.TaskDisableUser{
+	ctxqueue.Get(c).DisableUser(queue.TaskDisableUser{
 		UserID: userID,
 	})
 
 	// Send a mail to warn the user.
-	queue.SendMail(queue.MessageMailDisableAccountConfirmed, queue.MailDisableAccountConfirmed{
+	ctxqueue.Get(c).SendMail(queue.MessageMailDisableAccountConfirmed, queue.MailDisableAccountConfirmed{
 		EmailAddress: user.EmailAddress,
 		Username:     user.Username,
 		Locale:       user.Locale,
@@ -512,12 +514,12 @@ func AdminEnable(c *gin.Context) {
 		return
 	}
 
-	queue.EnableUser(queue.TaskEnableUser{
+	ctxqueue.Get(c).EnableUser(queue.TaskEnableUser{
 		UserID: user.ID,
 	})
 
 	// Send a mail to warn the user.
-	queue.SendMail(queue.MessageMailEnableAccountConfirmed, queue.MailEnableAccountConfirmed{
+	ctxqueue.Get(c).SendMail(queue.MessageMailEnableAccountConfirmed, queue.MailEnableAccountConfirmed{
 		EmailAddress: user.EmailAddress,
 		Username:     user.Username,
 		Locale:       user.Locale,

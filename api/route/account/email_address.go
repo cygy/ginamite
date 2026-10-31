@@ -4,6 +4,8 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/cygy/ginamite/common/ctxqueue"
+
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	ctxUser "github.com/cygy/ginamite/api/context/user"
 	"github.com/cygy/ginamite/api/request"
@@ -80,7 +82,7 @@ func UpdateEmailAddress(c *gin.Context) {
 		return
 	}
 
-	queue.SendMail(queue.MessageMailUpdateEmailAddressConfirmation, queue.MailUpdateEmailAddressConfirmation{
+	ctxqueue.Get(c).SendMail(queue.MessageMailUpdateEmailAddressConfirmation, queue.MailUpdateEmailAddressConfirmation{
 		EmailAddress: user.EmailAddress,
 		Username:     user.Username,
 		Locale:       user.Locale,

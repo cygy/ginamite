@@ -4,6 +4,8 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/cygy/ginamite/common/ctxqueue"
+
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
@@ -280,7 +282,7 @@ func register(c *gin.Context, method string) {
 
 	if isEmailAddressVerified {
 		// If the email address is valid, a welcome email is sent.
-		queue.SendMail(queue.MessageMailRegistrationWelcome, queue.MailRegistrationWelcome{
+		ctxqueue.Get(c).SendMail(queue.MessageMailRegistrationWelcome, queue.MailRegistrationWelcome{
 			EmailAddress: user.EmailAddress,
 			Username:     user.Username,
 			Locale:       user.Locale,
@@ -294,7 +296,7 @@ func register(c *gin.Context, method string) {
 			r["key"] = registrationCode
 			r["id"] = user.ID
 		} else {
-			queue.SendMail(queue.MessageMailRegistrationConfirmation, queue.MailRegistrationConfirmation{
+			ctxqueue.Get(c).SendMail(queue.MessageMailRegistrationConfirmation, queue.MailRegistrationConfirmation{
 				EmailAddress:     user.EmailAddress,
 				UserID:           user.ID,
 				Username:         user.Username,
@@ -306,7 +308,7 @@ func register(c *gin.Context, method string) {
 		r["status"] = t("status.registration.email_sent")
 	}
 
-	queue.RegistrationDone(queue.TaskRegistrationDone{
+	ctxqueue.Get(c).RegistrationDone(queue.TaskRegistrationDone{
 		UserID: user.ID,
 	})
 
@@ -390,13 +392,13 @@ func validateOrCancelRegistration(c *gin.Context, validate bool) {
 
 	// Send mail.
 	if validate {
-		queue.SendMail(queue.MessageMailRegistrationConfirmed, queue.MailRegistrationConfirmed{
+		ctxqueue.Get(c).SendMail(queue.MessageMailRegistrationConfirmed, queue.MailRegistrationConfirmed{
 			EmailAddress: user.EmailAddress,
 			Username:     user.Username,
 			Locale:       user.Locale,
 		})
 
-		queue.RegistrationValidated(queue.TaskRegistrationValidated{
+		ctxqueue.Get(c).RegistrationValidated(queue.TaskRegistrationValidated{
 			UserID: user.ID,
 		})
 
@@ -406,7 +408,7 @@ func validateOrCancelRegistration(c *gin.Context, validate bool) {
 			return
 		}
 	} else {
-		queue.SendMail(queue.MessageMailRegistrationCancelled, queue.MailRegistrationCancelled{
+		ctxqueue.Get(c).SendMail(queue.MessageMailRegistrationCancelled, queue.MailRegistrationCancelled{
 			EmailAddress: user.EmailAddress,
 			Username:     user.Username,
 			Locale:       user.Locale,

@@ -46,7 +46,7 @@ func TestDeleteByID(t *testing.T) {
 			q := workertest.CaptureQueue(t)
 
 			got := ""
-			DeleteByID([]byte(tt.payload), func(_ context.Context, userID string) map[string]time.Time {
+			DeleteByID([]byte(tt.payload), q.Sender, func(_ context.Context, userID string) map[string]time.Time {
 				got = userID
 				return tt.revoked
 			})
@@ -59,7 +59,7 @@ func TestDeleteByID(t *testing.T) {
 	}
 
 	t.Run("undefined function", func(t *testing.T) {
-		DeleteByID([]byte(`{"user_id":"u"}`), nil)
+		DeleteByID([]byte(`{"user_id":"u"}`), nil, nil)
 	})
 }
 
@@ -80,7 +80,7 @@ func TestDisableByID(t *testing.T) {
 			q := workertest.CaptureQueue(t)
 
 			got := ""
-			DisableByID([]byte(tt.payload), func(_ context.Context, userID string) map[string]time.Time {
+			DisableByID([]byte(tt.payload), q.Sender, func(_ context.Context, userID string) map[string]time.Time {
 				got = userID
 				return tt.revoked
 			})
@@ -93,7 +93,7 @@ func TestDisableByID(t *testing.T) {
 	}
 
 	t.Run("undefined function", func(t *testing.T) {
-		DisableByID([]byte(`{"user_id":"u"}`), nil)
+		DisableByID([]byte(`{"user_id":"u"}`), nil, nil)
 	})
 }
 

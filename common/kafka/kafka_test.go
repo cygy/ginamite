@@ -58,17 +58,3 @@ func TestRecover(t *testing.T) {
 		}
 	})
 }
-
-func TestSendMessageToTopic(t *testing.T) {
-	defer func(old *Client) { Main = old }(Main)
-
-	hook := useHook(t)
-	Main = NewClient()
-
-	SendMessageToTopic("hello", "topic")
-
-	entry := hook.LastEntry()
-	if entry == nil || entry.Level != logrus.ErrorLevel || entry.Data["error"] != "not a producer" {
-		t.Errorf("entry = %+v", entry)
-	}
-}

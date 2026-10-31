@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cygy/ginamite/common/ctxqueue"
+
 	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	ctxUser "github.com/cygy/ginamite/api/context/user"
@@ -19,7 +21,6 @@ import (
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/mongo/session"
-	"github.com/cygy/ginamite/common/queue"
 	"github.com/cygy/ginamite/plugins/mongodb/api/context"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
 	pluginQueue "github.com/cygy/ginamite/plugins/mongodb/queue"
@@ -130,7 +131,7 @@ func UpdateAccountPublicImage(c *gin.Context) {
 	// The auth token is updated too with the updated image of the user.
 	ctxAuthToken.Refresh(c)
 
-	queue.CreateTask(pluginQueue.MessageTaskUpdateUserPublicImage, pluginQueue.TaskUpdateUserPublicImage{
+	ctxqueue.Get(c).CreateTask(pluginQueue.MessageTaskUpdateUserPublicImage, pluginQueue.TaskUpdateUserPublicImage{
 		UserID: user.ID.Hex(),
 	})
 
@@ -174,7 +175,7 @@ func DeleteAccountPublicImage(c *gin.Context) {
 	// The auth token is updated too with the updated image of the user.
 	ctxAuthToken.Refresh(c)
 
-	queue.CreateTask(pluginQueue.MessageTaskUpdateUserPublicImage, pluginQueue.TaskUpdateUserPublicImage{
+	ctxqueue.Get(c).CreateTask(pluginQueue.MessageTaskUpdateUserPublicImage, pluginQueue.TaskUpdateUserPublicImage{
 		UserID: user.ID.Hex(),
 	})
 

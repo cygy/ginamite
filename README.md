@@ -91,6 +91,9 @@ with `Server.API`, `Server.Worker`, `Server.Web` (their `Config` field) and the 
 - The packages without a request, such as the tasks of the worker, receive the settings they need as arguments.
 - In the tests, set it with `ctxconfig.Set(c, configuration)`.
 
+The queue sending the messages to the other servers is shared the same way: `ginamite.Server.Queue` (built on the Kafka
+client `Server.Kafka`) is given to `Server.API` and `Server.Worker`, and the handlers read it with `ctxqueue.Get(c)`.
+
 ## Layout
 
 | Directory | Content |

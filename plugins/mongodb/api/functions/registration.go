@@ -3,6 +3,8 @@ package functions
 import (
 	"errors"
 
+	"github.com/cygy/ginamite/common/ctxqueue"
+
 	"github.com/cygy/ginamite/common/ctxconfig"
 	"github.com/cygy/ginamite/common/timezone"
 
@@ -70,7 +72,7 @@ func CancelUserRegistration(c *gin.Context, userID, registrationKey string) erro
 		return err
 	}
 
-	queue.DeleteUser(queue.TaskDeleteUser{
+	ctxqueue.Get(c).DeleteUser(queue.TaskDeleteUser{
 		UserID: userID,
 	})
 

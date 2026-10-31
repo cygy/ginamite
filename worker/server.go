@@ -13,6 +13,7 @@ import (
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/notifications"
+	"github.com/cygy/ginamite/common/queue"
 	"github.com/cygy/ginamite/common/template/html"
 	"github.com/cygy/ginamite/common/template/text"
 	"github.com/cygy/ginamite/common/weburl"
@@ -27,7 +28,9 @@ import (
 // Server is a worker.
 type Server struct {
 	// Config is the configuration of the application, set by the main server before it starts.
-	Config     *config.Configuration
+	Config *config.Configuration
+	// Queue sends the messages to the other servers, set by the main server before it starts.
+	Queue      *queue.Queue
 	RoutesFile string
 	Functions  Handlers
 }
@@ -101,7 +104,7 @@ type Handlers struct {
 
 // NewServer returns a new worker.
 func NewServer() *Server {
-	return &Server{Config: config.NewConfiguration()}
+	return &Server{Config: config.NewConfiguration(), Queue: queue.New(nil)}
 }
 
 // Start starts the worker: it loads the templates and the routes, initializes the emails, runs the start up tasks
@@ -205,14 +208,14 @@ func (s *Server) recurringFuncs() map[string]func(taskName string) {
 	// Delete the never used accounts.
 	if s.Config.Account.EmailAddressMustBeConfirmed && h.GetNeverUsedAccounts != nil && h.IsUserEmpty != nil && h.DeleteUserByID != nil {
 		funcs[recurring.DeleteNeverUsedAccounts] = func(taskName string) {
-			account.DeleteNeverUsed(context.Background(), taskName, s.Config.Account.DeleteNeverUsedAfter, h.GetNeverUsedAccounts, h.IsUserEmpty, h.DeleteUserByID)
+			account.DeleteNeverUsed(context.Background(), s.Queue, taskName, s.Config.Account.DeleteNeverUsedAfter, h.GetNeverUsedAccounts, h.IsUserEmpty, h.DeleteUserByID)
 		}
 	}
 
 	// Delete the inactive accounts.
 	if h.GetInactiveAccounts != nil && h.DeleteUserByID != nil {
 		funcs[recurring.DeleteInactiveAccounts] = func(taskName string) {
-			account.DeleteInactive(context.Background(), taskName, s.Config.Account.DeleteInactiveAfter, h.GetInactiveAccounts, h.DeleteUserByID)
+			account.DeleteInactive(context.Background(), s.Queue, taskName, s.Config.Account.DeleteInactiveAfter, h.GetInactiveAccounts, h.DeleteUserByID)
 		}
 	}
 

@@ -39,9 +39,9 @@ func (s *Server) handleTask(value []byte) {
 	case queue.MessageTaskIPLocation:
 		location.GetIPInfo(payload, s.Config.IPStack, s.Functions.SaveIPAddressDetails)
 	case queue.MessageTaskDeleteUser:
-		user.DeleteByID(payload, s.Functions.DeleteUserByID)
+		user.DeleteByID(payload, s.Queue, s.Functions.DeleteUserByID)
 	case queue.MessageTaskDisableUser:
-		user.DisableByID(payload, s.Functions.DisableUserByID)
+		user.DisableByID(payload, s.Queue, s.Functions.DisableUserByID)
 	case queue.MessageTaskEnableUser:
 		user.EnableByID(payload, s.Functions.EnableUserByID)
 	case queue.MessageTaskUpdateUserSocialNetworks:
@@ -87,7 +87,7 @@ func (s *Server) handleUserNotification(value []byte) {
 
 	switch msgType {
 	case notifications.TypeNewLogin:
-		notification.NewLogin(context.Background(), payload, s.Functions.GetNotificationTargetsByUserAndType)
+		notification.NewLogin(context.Background(), s.Queue, payload, s.Functions.GetNotificationTargetsByUserAndType)
 	default:
 		if s.Functions.HandleUserNotification == nil || !s.Functions.HandleUserNotification(context.Background(), msgType, payload, s.Functions.GetNotificationTargetsByUserAndType) {
 			warnUnknownMessage(queue.TopicUserNotification, msgType)

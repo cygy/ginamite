@@ -18,6 +18,7 @@ import (
 	"github.com/cygy/ginamite/common/authentication"
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/ctxconfig"
+	"github.com/cygy/ginamite/common/ctxqueue"
 	"github.com/cygy/ginamite/common/kafka"
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/queue"
@@ -100,7 +101,7 @@ func (s *Server) Start() {
 	accountFunctions, userFunctions, contactFunctions, termsFunctions := s.routeFunctions()
 
 	// Load the middlewares.
-	server.Use(ctxconfig.Inject(s.Config))
+	server.Use(ctxconfig.Inject(s.Config), ctxqueue.Inject(s.Queue))
 	server.Use(s.Middlewares...)
 	server.Use(ctxAuthToken.InjectRevoked(s.RevokedTokens.IsRevoked))
 	server.Use(ctxAuthToken.InjectHooks(authentication.Hooks{
@@ -167,6 +168,7 @@ func (s *Server) AddCustomRoutes(configuration route.ConfigureCustomRoutes) {
 func NewServer() *Server {
 	return &Server{
 		Config:        config.NewConfiguration(),
+		Queue:         queue.New(nil),
 		RevokedTokens: tokencache.NewRevoked(),
 		customRoutes:  []route.ConfigureCustomRoutes{},
 	}
