@@ -8,7 +8,7 @@ import (
 	"net/smtp"
 	texttemplate "text/template"
 
-	"github.com/cygy/ginamite/common/kafka"
+	"github.com/cygy/ginamite/common/broker"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/weburl"
@@ -133,7 +133,7 @@ func mergeVars(common map[string]map[string]any, locale string, vars map[string]
 
 // Send sends the HTML and text versions of the message to its recipient.
 // Nothing is sent if a template can not be executed. The errors are logged and returned: the one of a template is
-// marked as permanent, see kafka.Permanent, since sending the message again can not fix it.
+// marked as permanent, see broker.Permanent, since sending the message again can not fix it.
 func (m *Mailer) Send(msg Message) error {
 	fullHTMLVars := mergeVars(m.settings.HTMLVars, msg.Locale, msg.HTMLVars)
 	fullTextVars := mergeVars(m.settings.TextVars, msg.Locale, msg.TextVars)
@@ -152,7 +152,7 @@ func (m *Mailer) Send(msg Message) error {
 			"error":    err.Error(),
 		}).Error("unable to execute the template")
 
-		return kafka.Permanent(fmt.Errorf("unable to execute the template %s: %w", msg.Template, err))
+		return broker.Permanent(fmt.Errorf("unable to execute the template %s: %w", msg.Template, err))
 	}
 
 	if err := m.settings.TextTemplates.ExecuteTemplate(message.Plain(), msg.Template+".txt", fullTextVars); err != nil {
@@ -161,7 +161,7 @@ func (m *Mailer) Send(msg Message) error {
 			"error":    err.Error(),
 		}).Error("unable to execute the template")
 
-		return kafka.Permanent(fmt.Errorf("unable to execute the template %s: %w", msg.Template, err))
+		return broker.Permanent(fmt.Errorf("unable to execute the template %s: %w", msg.Template, err))
 	}
 
 	if err := message.Send(); err != nil {

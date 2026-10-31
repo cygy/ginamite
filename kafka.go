@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cygy/ginamite/common/broker"
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/kafka"
 	"github.com/cygy/ginamite/common/log"
@@ -67,4 +68,42 @@ func createKafkaTopics(c *config.Configuration, host string, port int, options k
 	if err := kafka.EnsureTopics(host, port, options, c.KafkaTopicsPrefix, queue.Topics(), spec); err != nil {
 		log.WithFields(logrus.Fields{"error": err.Error()}).Error("unable to create the kafka topics")
 	}
+}
+
+// startBroker starts the broker with the consumers, and reports whether it did. Kafka, the default broker, starts if
+// the configuration has a Kafka service; any other broker, see UseBroker, always starts.
+func (s *Server) startBroker(consumers []broker.MessageConsumer) bool {
+	if s.Broker == nil {
+		return false
+	}
+
+	client, isKafka := s.Broker.(*kafka.Client)
+	if !isKafka {
+		s.Broker.Start(consumers)
+
+		return true
+	}
+
+	kafkaConf, ok := s.Config.KafkaConfiguration()
+	if !ok {
+		return false
+	}
+
+	options, err := kafkaOptions(s.Config)
+	if err != nil {
+		log.WithField("error", err).Fatal("invalid kafka configuration")
+		return false
+	}
+
+	createKafkaTopics(s.Config, kafkaConf.Host, kafkaConf.Port, options)
+
+	client.Host, client.Port = kafkaConf.Host, kafkaConf.Port
+	client.TopicsPrefix = s.Config.KafkaTopicsPrefix
+	client.Options = options
+	client.Deduplicator = kafka.NewMemoryDeduplicator(dedupSize)
+	client.MaxAttempts = max(s.Config.KafkaMaxAttempts, 1)
+	client.RetryDelay = time.Duration(s.Config.KafkaRetryDelay) * time.Millisecond
+	client.Start(consumers)
+
+	return true
 }

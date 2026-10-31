@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/cygy/ginamite/common/broker"
 	"github.com/cygy/ginamite/common/config"
-	"github.com/cygy/ginamite/common/kafka"
 	"github.com/cygy/ginamite/worker/internal/workertest"
 )
 
@@ -48,7 +48,7 @@ func TestGetIPInfo(t *testing.T) {
 		err := GetIPInfo([]byte(`{"ip":"1.2.3.4"}`), config.IPStackConfiguration{}, func(context.Context, string, string, func(string) *IPAddressDetails) error {
 			return boom
 		})
-		if !errors.Is(err, boom) || kafka.IsPermanent(err) {
+		if !errors.Is(err, boom) || broker.IsPermanent(err) {
 			t.Errorf("GetIPInfo() error = %v, want the error of the function, which a retry can fix", err)
 		}
 	})
@@ -59,7 +59,7 @@ func TestGetIPInfo(t *testing.T) {
 
 			return nil
 		})
-		if !kafka.IsPermanent(err) {
+		if !broker.IsPermanent(err) {
 			t.Errorf("GetIPInfo() error = %v, want a permanent error", err)
 		}
 	})

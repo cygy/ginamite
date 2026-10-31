@@ -52,7 +52,7 @@ type Handlers struct {
 	SanitizeAccounts func() uint
 
 	// The functions handling a message of Kafka return an error if they failed: the message is then handled again,
-	// then dead-lettered if the error persists, see kafka.MessageConsumer. An error marked with kafka.Permanent is not
+	// then dead-lettered if the error persists, see broker.MessageConsumer. An error marked with broker.Permanent is not
 	// retried. The functions must tolerate a message handled twice.
 
 	// DeleteUserByID deletes a user and returns the auth tokens revoked, with their expiration date, by ID.

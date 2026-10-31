@@ -4,13 +4,10 @@ import (
 	"encoding/json"
 	"os"
 	"testing"
-	"time"
 
-	"github.com/cygy/ginamite/common/kafka"
+	"github.com/cygy/ginamite/common/broker"
 	"github.com/cygy/ginamite/common/log"
 
-	"github.com/IBM/sarama"
-	"github.com/IBM/sarama/mocks"
 	"github.com/sirupsen/logrus"
 	logtest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -32,44 +29,28 @@ type sent struct {
 	message Message
 }
 
-// capture returns a queue using a Kafka client with a fake producer, and a function that runs send and returns the
-// message it sent.
+// capture returns a queue using a Memory broker, and a function that runs send and returns the message it sent.
 func capture(t *testing.T) (*Queue, func(send func()) sent) {
 	t.Helper()
 
-	config := mocks.NewTestConfig()
-	config.Producer.Return.Successes = true
-	producer := mocks.NewAsyncProducer(t, config)
+	memory := broker.NewMemory()
 
-	client := kafka.NewClient()
-	client.UseProducer(producer)
-
-	return New(client), func(send func()) sent {
+	return New(memory), func(send func()) sent {
 		t.Helper()
-		captured := make(chan *sarama.ProducerMessage, 1)
-		producer.ExpectInputWithMessageCheckerFunctionAndSucceed(func(m *sarama.ProducerMessage) error {
-			captured <- m
 
-			return nil
-		})
+		before := len(memory.Sent())
 		send()
 
-		select {
-		case msg := <-captured:
-			value, err := msg.Value.Encode()
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			var m Message
-			if err := json.Unmarshal(value, &m); err != nil {
-				t.Fatalf("invalid message %q: %v", value, err)
-			}
-
-			return sent{topic: msg.Topic, message: m}
-		case <-time.After(2 * time.Second):
-			t.Fatal("no message sent")
-			return sent{}
+		messages := memory.Sent()
+		if len(messages) != before+1 {
+			t.Fatalf("%d messages sent, want 1", len(messages)-before)
 		}
+
+		var m Message
+		if err := json.Unmarshal([]byte(messages[before].Message), &m); err != nil {
+			t.Fatalf("invalid message %q: %v", messages[before].Message, err)
+		}
+
+		return sent{topic: messages[before].Topic, message: m}
 	}
 }

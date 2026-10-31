@@ -12,6 +12,7 @@ import (
 
 	"github.com/cygy/ginamite/api"
 	"github.com/cygy/ginamite/common/authentication"
+	"github.com/cygy/ginamite/common/broker"
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/kafka"
 	"github.com/cygy/ginamite/common/localization"
@@ -29,8 +30,8 @@ type Server struct {
 	// Config is the configuration of the application, loaded from the configuration file by Start and shared with the
 	// specialized servers and the plugins.
 	Config                   *config.Configuration
-	Kafka                    *kafka.Client           // The Kafka client, connected by Start if the configuration has a Kafka service.
-	Queue                    *queue.Queue            // Sends the messages to the other servers through Kafka.
+	Broker                   broker.Broker           // The message broker, Kafka by default, started by Start. See UseBroker.
+	Queue                    *queue.Queue            // Sends the messages to the other servers through the broker.
 	Localization             *localization.Engine    // The translations, loaded by Start.
 	Timezones                *timezone.Configuration // The timezones of the countries, loaded by Start for the API and the worker.
 	ApplicationConfiguration ApplicationConfiguration
@@ -44,8 +45,16 @@ type Server struct {
 
 // SpecializedServer is the definition of a specialized server: API, worker or web.
 type SpecializedServer interface {
-	CreateKafkaConsumers() []kafka.MessageConsumer
+	CreateConsumers() []broker.MessageConsumer
 	Start()
+}
+
+// UseBroker replaces the message broker, Kafka by default, and the queue sending the messages through it, which the
+// API and the worker use. It must be called before Start, which starts the broker with the consumers of the server.
+func (s *Server) UseBroker(b broker.Broker) {
+	s.Broker = b
+	s.Queue = queue.New(b)
+	s.API.Queue, s.Worker.Queue = s.Queue, s.Queue
 }
 
 // Plugin is a plugin which configures a server, such as the functions of the API and of the workers.
@@ -69,7 +78,7 @@ func NewServer() *Server {
 	kafkaClient := kafka.NewClient()
 	server := &Server{
 		Config:       config.NewConfiguration(),
-		Kafka:        kafkaClient,
+		Broker:       kafkaClient,
 		Queue:        queue.New(kafkaClient),
 		Localization: localization.NewEngine(),
 		Timezones:    timezone.NewConfiguration(),

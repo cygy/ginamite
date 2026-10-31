@@ -12,7 +12,7 @@ import (
 	_ "github.com/cygy/ginamite/api/internal/apitest"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/route"
-	"github.com/cygy/ginamite/common/kafka"
+	"github.com/cygy/ginamite/common/broker"
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/queue"
 
@@ -118,7 +118,7 @@ func cacheMessage(t *testing.T, messageType string, payload any) []byte {
 	return value
 }
 
-func TestServer_CreateKafkaConsumers(t *testing.T) {
+func TestServer_CreateConsumers(t *testing.T) {
 	expiration := time.Now().Add(time.Hour)
 
 	tests := []struct {
@@ -146,18 +146,18 @@ func TestServer_CreateKafkaConsumers(t *testing.T) {
 			s := NewServer()
 			s.Functions.NewMessageFromQueueCache = tt.handler
 
-			consumers := s.CreateKafkaConsumers()
+			consumers := s.CreateConsumers()
 			if len(consumers) != 1 || consumers[0].Topic != queue.TopicCache {
 				t.Fatalf("consumers = %+v, want one consumer of the topic %q", consumers, queue.TopicCache)
 			}
-			if other := s.CreateKafkaConsumers()[0]; !strings.HasPrefix(consumers[0].Group, queue.TopicCache+"_") || consumers[0].Group == other.Group {
+			if other := s.CreateConsumers()[0]; !strings.HasPrefix(consumers[0].Group, queue.TopicCache+"_") || consumers[0].Group == other.Group {
 				t.Errorf("groups = %q, %q: each instance needs its own group", consumers[0].Group, other.Group)
 			}
 			hook.Reset()
 
 			err := consumers[0].Action(tt.value)
 
-			if (err != nil) != tt.wantFailure || (err != nil && !kafka.IsPermanent(err)) {
+			if (err != nil) != tt.wantFailure || (err != nil && !broker.IsPermanent(err)) {
 				t.Errorf("Action() error = %v, want a permanent error: %v", err, tt.wantFailure)
 			}
 

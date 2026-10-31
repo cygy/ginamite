@@ -1,6 +1,6 @@
 // Package user provides the asynchronous tasks about the users.
 //
-// The tasks return the error of their function, or a permanent error, see kafka.Permanent, if the payload can not be
+// The tasks return the error of their function, or a permanent error, see broker.Permanent, if the payload can not be
 // decoded.
 package user
 
@@ -8,7 +8,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/cygy/ginamite/common/kafka"
+	"github.com/cygy/ginamite/common/broker"
 	"github.com/cygy/ginamite/common/queue"
 )
 
@@ -22,7 +22,7 @@ func DeleteByID(payload []byte, q *queue.Queue, deleteUserByIDFunc func(ctx cont
 
 	p := queue.TaskDeleteUser{}
 	if err := queue.UnmarshalPayload(payload, &p); err != nil {
-		return kafka.Permanent(err)
+		return broker.Permanent(err)
 	}
 
 	revokedAuthTokens, err := deleteUserByIDFunc(context.Background(), p.UserID)
@@ -47,7 +47,7 @@ func DisableByID(payload []byte, q *queue.Queue, disableUserByIDFunc func(ctx co
 
 	p := queue.TaskDisableUser{}
 	if err := queue.UnmarshalPayload(payload, &p); err != nil {
-		return kafka.Permanent(err)
+		return broker.Permanent(err)
 	}
 
 	revokedAuthTokens, err := disableUserByIDFunc(context.Background(), p.UserID)
@@ -71,7 +71,7 @@ func EnableByID(payload []byte, enableUserByIDFunc func(ctx context.Context, use
 
 	p := queue.TaskEnableUser{}
 	if err := queue.UnmarshalPayload(payload, &p); err != nil {
-		return kafka.Permanent(err)
+		return broker.Permanent(err)
 	}
 
 	return enableUserByIDFunc(context.Background(), p.UserID)
@@ -86,7 +86,7 @@ func UpdateSocialNetworksByID(payload []byte, updateUserSocialNetworksByIDFunc f
 
 	p := queue.TaskUpdateUserSocialNetworks{}
 	if err := queue.UnmarshalPayload(payload, &p); err != nil {
-		return kafka.Permanent(err)
+		return broker.Permanent(err)
 	}
 
 	return updateUserSocialNetworksByIDFunc(context.Background(), p.UserID)
@@ -101,7 +101,7 @@ func RegistrationDone(payload []byte, registrationDoneFunc func(ctx context.Cont
 
 	p := queue.TaskRegistrationDone{}
 	if err := queue.UnmarshalPayload(payload, &p); err != nil {
-		return kafka.Permanent(err)
+		return broker.Permanent(err)
 	}
 
 	return registrationDoneFunc(context.Background(), p.UserID)
@@ -116,7 +116,7 @@ func RegistrationValidated(payload []byte, registrationValidatedFunc func(ctx co
 
 	p := queue.TaskRegistrationValidated{}
 	if err := queue.UnmarshalPayload(payload, &p); err != nil {
-		return kafka.Permanent(err)
+		return broker.Permanent(err)
 	}
 
 	return registrationValidatedFunc(context.Background(), p.UserID)

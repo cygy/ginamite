@@ -5,7 +5,7 @@ import (
 	"errors"
 	"slices"
 
-	"github.com/cygy/ginamite/common/kafka"
+	"github.com/cygy/ginamite/common/broker"
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/notifications"
 	"github.com/cygy/ginamite/common/queue"
@@ -17,17 +17,17 @@ import (
 )
 
 // errUndecodable is the error of a message which can not be decoded: it is dead-lettered without being tried again.
-var errUndecodable = kafka.Permanent(errors.New("undecodable message"))
+var errUndecodable = broker.Permanent(errors.New("undecodable message"))
 
-// CreateKafkaConsumers returns the consumers of the topics of the tasks, of the group notifications,
+// CreateConsumers returns the consumers of the topics of the tasks, of the group notifications,
 // of the user notifications and of the mails. A message which can not be decoded is dead-lettered, and so is a message
 // whose handling failed, after some attempts. A panic is handled like an error.
 //
 // A worker consumes all the topics, unless the configuration lists the ones it consumes, with their consumer group:
 // the workers of the same group share the messages of the topic, so several workers can handle the same topic, and
 // each handle different ones.
-func (s *Server) CreateKafkaConsumers() []kafka.MessageConsumer {
-	all := []kafka.MessageConsumer{
+func (s *Server) CreateConsumers() []broker.MessageConsumer {
+	all := []broker.MessageConsumer{
 		{Topic: queue.TopicTasks, Action: s.handleTask},
 		{Topic: queue.TopicGroupNotification, Action: s.handleGroupNotification},
 		{Topic: queue.TopicUserNotification, Action: s.handleUserNotification},
@@ -37,9 +37,9 @@ func (s *Server) CreateKafkaConsumers() []kafka.MessageConsumer {
 		return all
 	}
 
-	consumers := make([]kafka.MessageConsumer, 0, len(s.Config.WorkerConsumers))
+	consumers := make([]broker.MessageConsumer, 0, len(s.Config.WorkerConsumers))
 	for _, wanted := range s.Config.WorkerConsumers {
-		i := slices.IndexFunc(all, func(c kafka.MessageConsumer) bool { return c.Topic == wanted.Topic })
+		i := slices.IndexFunc(all, func(c broker.MessageConsumer) bool { return c.Topic == wanted.Topic })
 		if i < 0 {
 			log.WithField("topic", wanted.Topic).Error("unknown kafka topic of the worker")
 			continue

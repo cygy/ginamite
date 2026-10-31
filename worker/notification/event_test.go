@@ -6,8 +6,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/cygy/ginamite/common/kafka"
-
+	"github.com/cygy/ginamite/common/broker"
 	"github.com/cygy/ginamite/common/notifications"
 	"github.com/cygy/ginamite/common/queue"
 	"github.com/cygy/ginamite/worker/internal/workertest"
@@ -136,7 +135,7 @@ func TestEvent_Dispatch(t *testing.T) {
 		e.GetNotificationTargetsFunc = func(context.Context, string, string) ([]notifications.Target, error) {
 			return []notifications.Target{{Target: notifications.TargetEmail}}, boom
 		}
-		if err := e.Dispatch(context.Background()); !errors.Is(err, boom) || kafka.IsPermanent(err) {
+		if err := e.Dispatch(context.Background()); !errors.Is(err, boom) || broker.IsPermanent(err) {
 			t.Errorf("Dispatch() error = %v, want the error of the targets, which a retry can fix", err)
 		}
 

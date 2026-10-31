@@ -5,7 +5,7 @@ import (
 	"html/template"
 	"testing"
 
-	"github.com/cygy/ginamite/common/kafka"
+	"github.com/cygy/ginamite/common/broker"
 	"github.com/cygy/ginamite/common/weburl"
 )
 
@@ -45,7 +45,7 @@ func TestNewLogin(t *testing.T) {
 
 	t.Run("invalid payload", func(t *testing.T) {
 		mailer, delivered := stub(t)
-		if err := mailer.NewLogin(context.Background(), []byte("{"), valid); !kafka.IsPermanent(err) {
+		if err := mailer.NewLogin(context.Background(), []byte("{"), valid); !broker.IsPermanent(err) {
 			t.Errorf("error = %v, want a permanent error", err)
 		}
 

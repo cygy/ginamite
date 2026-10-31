@@ -5,14 +5,11 @@ package workertest
 import (
 	"encoding/json"
 	"testing"
-	"time"
 
-	"github.com/cygy/ginamite/common/kafka"
+	"github.com/cygy/ginamite/common/broker"
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/queue"
 
-	"github.com/IBM/sarama"
-	"github.com/IBM/sarama/mocks"
 	"github.com/sirupsen/logrus"
 	logtest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -26,19 +23,17 @@ func init() {
 	log.Main = logger.WithField("server", "test")
 }
 
-// maxMessages is the number of messages a Queue can capture.
-const maxMessages = 10
-
-// Queue is the capture of the messages sent to Kafka.
+// Queue is the capture of the messages sent to the broker.
 type Queue struct {
 	// Sender is the queue sending its messages to the capture.
 	Sender *queue.Queue
 
-	t        *testing.T
-	captured chan *sarama.ProducerMessage
+	t      *testing.T
+	broker *broker.Memory
+	next   int
 }
 
-// Message is a message sent to Kafka.
+// Message is a message sent to the broker.
 type Message struct {
 	Topic   string
 	Type    string
@@ -49,47 +44,30 @@ type Message struct {
 func CaptureQueue(t *testing.T) *Queue {
 	t.Helper()
 
-	config := mocks.NewTestConfig()
-	config.Producer.Return.Successes = true
-	producer := mocks.NewAsyncProducer(t, config)
-	captured := make(chan *sarama.ProducerMessage, maxMessages)
-	for range maxMessages {
-		producer.ExpectInputWithMessageCheckerFunctionAndSucceed(func(m *sarama.ProducerMessage) error {
-			captured <- m
+	memory := broker.NewMemory()
 
-			return nil
-		})
-	}
-
-	client := kafka.NewClient()
-	client.UseProducer(producer)
-
-	return &Queue{Sender: queue.New(client), t: t, captured: captured}
+	return &Queue{Sender: queue.New(memory), t: t, broker: memory}
 }
 
-// Next returns the next message sent to Kafka, and ok is false if there is none after a short delay.
+// Next returns the next message sent to the broker, and ok is false if there is none.
 func (q *Queue) Next() (message Message, ok bool) {
 	q.t.Helper()
 
-	select {
-	case sent := <-q.captured:
-		value, err := sent.Value.Encode()
-		if err != nil {
-			q.t.Fatal(err)
-		}
-
-		var m queue.Message
-		if err := json.Unmarshal(value, &m); err != nil {
-			q.t.Fatal(err)
-		}
-
-		message = Message{Topic: sent.Topic, Type: m.Type}
-		message.Payload, _ = m.Payload.(map[string]any)
-
-		return message, true
-	case <-time.After(200 * time.Millisecond):
+	sent := q.broker.Sent()
+	if q.next >= len(sent) {
 		return message, false
 	}
+
+	var m queue.Message
+	if err := json.Unmarshal([]byte(sent[q.next].Message), &m); err != nil {
+		q.t.Fatal(err)
+	}
+
+	message = Message{Topic: sent[q.next].Topic, Type: m.Type}
+	message.Payload, _ = m.Payload.(map[string]any)
+	q.next++
+
+	return message, true
 }
 
 // Empty fails the test if a message has been sent to Kafka.

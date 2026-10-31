@@ -131,8 +131,8 @@ A message whose handling fails is handled again, then sent to a **dead-letter to
 - The functions of `worker.Handlers` handling a message (`DeleteUserByID`, `SaveIPAddressDetails`, `HandleMail`, etc.)
   return an error, and the custom ones return `(handled bool, err error)`; the plugin `plugins/mongodb` returns the
   errors of its database. An email which can not be sent (SMTP error) fails the same way. The functions must tolerate
-  being called again for the same message, and `kafka.Permanent(err)` marks the error which must not be retried. A
-  handler of your own (`kafka.MessageConsumer.Action`) follows the same rule.
+  being called again for the same message, and `broker.Permanent(err)` marks the error which must not be retried. A
+  handler of your own (`broker.MessageConsumer.Action`) follows the same rule.
 - Not covered: the functions the plugin lets you plug in to update the documents referencing a user
   (`UpdateDocumentsReferencingTo...`) have no error to return, and a failing lookup of the location of an IP address
   (the ipstack API) is logged but not retried.
@@ -177,6 +177,17 @@ myapp -name dlq -conf-server server.yaml -dlq purge -dlq-topic mail
   it already handled (counted in `Stats().Duplicates`): `Client.Deduplicator` remembers the last 10 000 in memory, which
   covers the redeliveries of a rebalance. A crash between the handling and the commit, or a restart, can still handle a
   message twice: keep the handlers idempotent, or give `Client.Deduplicator` an implementation backed by a database.
+
+### Using another broker
+
+The servers only depend on the interfaces of `common/broker`: a `Producer` (`SendMessageToTopic`, and
+`SendKeyedMessageToTopic` for the ordering), the `MessageConsumer`s of the topics, and `Broker` (`Start(consumers)`,
+`Close()`). Kafka (`common/kafka`) is the default implementation. To use another broker, implement `broker.Broker` and
+call `server.UseBroker(b)` before `Start`: the queue of the API and of the worker send through it, and `Start` runs it
+with the consumers of the chosen server. The retries, the dead letters and the duplicates are the business of the
+broker: Kafka does them itself (see above), another one can rely on its own mechanisms. `broker.Permanent(err)` marks
+an error which must not be retried. `broker.NewMemory()` is a broker for the tests: it records the messages and
+delivers them to the consumers at once.
 
 ### Kafka connection and topics
 

@@ -6,6 +6,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/cygy/ginamite/common/broker"
 	"github.com/cygy/ginamite/common/log"
 
 	"github.com/sirupsen/logrus"
@@ -64,18 +65,18 @@ func TestRecover(t *testing.T) {
 func TestPermanent(t *testing.T) {
 	boom := errors.New("boom")
 
-	if Permanent(nil) != nil {
-		t.Error("Permanent(nil) must be nil")
+	if broker.Permanent(nil) != nil {
+		t.Error("broker.Permanent(nil) must be nil")
 	}
 
-	err := Permanent(boom)
-	if !IsPermanent(err) || !errors.Is(err, boom) || err.Error() != "boom" {
-		t.Errorf("Permanent() = %v", err)
+	err := broker.Permanent(boom)
+	if !broker.IsPermanent(err) || !errors.Is(err, boom) || err.Error() != "boom" {
+		t.Errorf("broker.Permanent() = %v", err)
 	}
-	if !IsPermanent(fmt.Errorf("wrapped: %w", err)) {
+	if !broker.IsPermanent(fmt.Errorf("wrapped: %w", err)) {
 		t.Error("a wrapped permanent error is permanent")
 	}
-	if IsPermanent(boom) || IsPermanent(nil) {
+	if broker.IsPermanent(boom) || broker.IsPermanent(nil) {
 		t.Error("an ordinary error is not permanent")
 	}
 }

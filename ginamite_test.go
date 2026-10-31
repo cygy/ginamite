@@ -5,8 +5,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cygy/ginamite/common/broker"
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/log"
+	"github.com/cygy/ginamite/common/queue"
 
 	"github.com/gin-gonic/gin"
 	logtest "github.com/sirupsen/logrus/hooks/test"
@@ -53,7 +55,7 @@ func TestNewServer(t *testing.T) {
 func TestNewServer_SharedServices(t *testing.T) {
 	s := NewServer()
 
-	if s.Config == nil || s.Kafka == nil || s.Queue == nil || s.Localization == nil || s.Timezones == nil {
+	if s.Config == nil || s.Broker == nil || s.Queue == nil || s.Localization == nil || s.Timezones == nil {
 		t.Fatalf("server = %+v", s)
 	}
 	if s.API.Queue != s.Queue || s.Worker.Queue != s.Queue {
@@ -94,5 +96,21 @@ func TestServer_AddPlugin(t *testing.T) {
 
 	if len(s.plugins) != 2 || s.plugins[0] != first || s.plugins[1] != second {
 		t.Errorf("plugins = %v", s.plugins)
+	}
+}
+
+func TestServer_UseBroker(t *testing.T) {
+	s := NewServer()
+	memory := broker.NewMemory()
+
+	s.UseBroker(memory)
+
+	if s.Broker != memory || s.API.Queue != s.Queue || s.Worker.Queue != s.Queue {
+		t.Fatal("the broker and the queues are not shared")
+	}
+
+	s.Queue.SendMail("welcome", map[string]string{"email": "a@b.c"})
+	if sent := memory.Sent(); len(sent) != 1 || sent[0].Topic != queue.TopicMail {
+		t.Errorf("sent = %+v", sent)
 	}
 }

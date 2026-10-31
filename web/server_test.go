@@ -83,8 +83,8 @@ func TestNewServer(t *testing.T) {
 	if server.customRoutes == nil || len(server.customRoutes) != 0 {
 		t.Errorf("customRoutes = %v, want empty", server.customRoutes)
 	}
-	if consumers := server.CreateKafkaConsumers(); consumers == nil || len(consumers) != 0 {
-		t.Errorf("CreateKafkaConsumers() = %v, want none", consumers)
+	if consumers := server.CreateConsumers(); consumers == nil || len(consumers) != 0 {
+		t.Errorf("CreateConsumers() = %v, want none", consumers)
 	}
 }
 

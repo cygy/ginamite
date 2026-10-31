@@ -3,7 +3,7 @@ package mail
 import (
 	"context"
 
-	"github.com/cygy/ginamite/common/kafka"
+	"github.com/cygy/ginamite/common/broker"
 	"github.com/cygy/ginamite/common/queue"
 	"github.com/cygy/ginamite/common/weburl"
 )
@@ -17,7 +17,7 @@ func (m *Mailer) RegistrationWelcome(payload []byte) error {
 func (m *Mailer) RegistrationConfirmation(payload []byte) error {
 	p := queue.MailRegistrationConfirmation{}
 	if err := queue.UnmarshalPayload(payload, &p); err != nil {
-		return kafka.Permanent(err)
+		return broker.Permanent(err)
 	}
 
 	return m.deliver(m.message(content{

@@ -17,13 +17,13 @@ import (
 	"github.com/cygy/ginamite/api/route/terms"
 	"github.com/cygy/ginamite/api/route/user"
 	"github.com/cygy/ginamite/common/authentication"
+	"github.com/cygy/ginamite/common/broker"
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/ctxconfig"
 	"github.com/cygy/ginamite/common/ctxlocalization"
 	"github.com/cygy/ginamite/common/ctxnotifications"
 	"github.com/cygy/ginamite/common/ctxqueue"
 	"github.com/cygy/ginamite/common/ctxtimezone"
-	"github.com/cygy/ginamite/common/kafka"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/notifications"
@@ -38,17 +38,17 @@ import (
 )
 
 // errUndecodableCache is the error of a message of the cache which can not be decoded, which no retry can fix.
-var errUndecodableCache = kafka.Permanent(errors.New("undecodable message"))
+var errUndecodableCache = broker.Permanent(errors.New("undecodable message"))
 
-// CreateKafkaConsumers returns an array of kafka consumers.
-func (s *Server) CreateKafkaConsumers() []kafka.MessageConsumer {
-	consumers := []kafka.MessageConsumer{}
+// CreateConsumers returns an array of kafka consumers.
+func (s *Server) CreateConsumers() []broker.MessageConsumer {
+	consumers := []broker.MessageConsumer{}
 
 	// Handle the messages of the cache. Every instance of the API must receive every message, so each one has its own
 	// group. A message which can not be decoded is dead-lettered.
-	consumers = append(consumers, kafka.MessageConsumer{
+	consumers = append(consumers, broker.MessageConsumer{
 		Topic: queue.TopicCache,
-		Group: kafka.UniqueGroup(queue.TopicCache),
+		Group: broker.UniqueGroup(queue.TopicCache),
 		Action: func(value []byte) error {
 			msgType, payload, ok := queue.ParseMessageAndPayload(value, queue.TopicCache)
 			if !ok {
@@ -59,7 +59,7 @@ func (s *Server) CreateKafkaConsumers() []kafka.MessageConsumer {
 			case queue.MessageCacheInvalidAuthToken:
 				p := queue.CacheAuthToken{}
 				if err := queue.UnmarshalPayload(payload, &p); err != nil {
-					return kafka.Permanent(err)
+					return broker.Permanent(err)
 				}
 				s.RevokedTokens.Add(p.Tokens)
 			default:

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/IBM/sarama"
+	"github.com/cygy/ginamite/common/broker"
 )
 
 // fakeGroup is a consumer group which calls consume each time it is asked to consume.
@@ -81,7 +82,7 @@ func TestClient_Initialize_Consumer(t *testing.T) {
 
 	received := make(chan []byte, 1)
 	client := NewClient()
-	client.Initialize("localhost", 9092, "app_", false, []MessageConsumer{{
+	client.Initialize("localhost", 9092, "app_", false, []broker.MessageConsumer{{
 		Topic:  "users",
 		Action: func(value []byte) error { received <- value; return nil },
 	}})
@@ -116,7 +117,7 @@ func TestClient_Initialize_ConsumerGroup(t *testing.T) {
 	names := useGroup(t, func(string) (sarama.ConsumerGroup, error) { return newFakeGroup(blockUntilDone), nil })
 
 	client := NewClient()
-	client.Initialize("localhost", 9092, "app_", false, []MessageConsumer{
+	client.Initialize("localhost", 9092, "app_", false, []broker.MessageConsumer{
 		{Topic: "users", Group: "workers", Action: func([]byte) error { return nil }},
 		{Topic: "mail", Action: func([]byte) error { return nil }},
 	})
@@ -143,7 +144,7 @@ func TestClient_consume_RetriesToConnect(t *testing.T) {
 	})
 
 	client := NewClient()
-	client.Initialize("localhost", 9092, "", false, []MessageConsumer{{Topic: "users", Action: func([]byte) error { return nil }}})
+	client.Initialize("localhost", 9092, "", false, []broker.MessageConsumer{{Topic: "users", Action: func([]byte) error { return nil }}})
 	t.Cleanup(client.Close)
 
 	<-names
@@ -157,7 +158,7 @@ func TestClient_consume_StopsWhileConnecting(t *testing.T) {
 	retryDelay = time.Hour
 
 	client := NewClient()
-	client.Initialize("localhost", 9092, "", false, []MessageConsumer{{Topic: "users", Action: func([]byte) error { return nil }}})
+	client.Initialize("localhost", 9092, "", false, []broker.MessageConsumer{{Topic: "users", Action: func([]byte) error { return nil }}})
 
 	done := make(chan struct{})
 	go func() {
@@ -189,7 +190,7 @@ func TestClient_consume_Errors(t *testing.T) {
 	useGroup(t, func(string) (sarama.ConsumerGroup, error) { return group, nil })
 
 	client := NewClient()
-	client.Initialize("localhost", 9092, "", false, []MessageConsumer{{Topic: "users", Action: func([]byte) error { return nil }}})
+	client.Initialize("localhost", 9092, "", false, []broker.MessageConsumer{{Topic: "users", Action: func([]byte) error { return nil }}})
 
 	// A closed group ends the consumer.
 	client.background.Wait()
@@ -225,7 +226,7 @@ func TestClient_Initialize_DeadLetter(t *testing.T) {
 	client := NewClient()
 	client.MaxAttempts, client.RetryDelay = 2, time.Millisecond
 	client.attachProducer(producer)
-	client.Initialize("localhost", 9092, "app_", false, []MessageConsumer{{
+	client.Initialize("localhost", 9092, "app_", false, []broker.MessageConsumer{{
 		Topic:  "mail",
 		Action: func([]byte) error { attempts.Add(1); return errors.New("smtp down") },
 	}})
@@ -244,7 +245,7 @@ func TestClient_Close_NotInitialized(t *testing.T) {
 }
 
 func TestUniqueGroup(t *testing.T) {
-	a, b := UniqueGroup("cache"), UniqueGroup("cache")
+	a, b := broker.UniqueGroup("cache"), broker.UniqueGroup("cache")
 
 	if !strings.HasPrefix(a, "cache_") || a == b {
 		t.Errorf("groups = %q, %q", a, b)

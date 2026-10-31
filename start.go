@@ -3,12 +3,10 @@ package ginamite
 import (
 	"os"
 	"slices"
-	"time"
 
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/config/environment"
 	"github.com/cygy/ginamite/common/flags"
-	"github.com/cygy/ginamite/common/kafka"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/timezone"
@@ -68,23 +66,10 @@ func (s *Server) Start() {
 		return
 	}
 
-	if kafkaConf, ok := s.Config.KafkaConfiguration(); ok {
-		options, err := kafkaOptions(s.Config)
-		if err != nil {
-			log.WithField("error", err).Fatal("invalid kafka configuration")
-			return
-		}
-
-		createKafkaTopics(s.Config, kafkaConf.Host, kafkaConf.Port, options)
-
-		s.Kafka.Options = options
-		s.Kafka.Deduplicator = kafka.NewMemoryDeduplicator(dedupSize)
-		s.Kafka.MaxAttempts = max(s.Config.KafkaMaxAttempts, 1)
-		s.Kafka.RetryDelay = time.Duration(s.Config.KafkaRetryDelay) * time.Millisecond
-		s.Kafka.Initialize(kafkaConf.Host, kafkaConf.Port, s.Config.KafkaTopicsPrefix, true, specializedServer.CreateKafkaConsumers())
+	if s.startBroker(specializedServer.CreateConsumers()) {
 		// Registered after the plugins are connected: the consumers stop, and the producer is flushed, before the
 		// plugins close their connections.
-		defer s.Kafka.Close()
+		defer s.Broker.Close()
 	}
 
 	for _, plugin := range s.plugins {

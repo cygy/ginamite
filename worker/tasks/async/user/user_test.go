@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cygy/ginamite/common/kafka"
+	"github.com/cygy/ginamite/common/broker"
 	"github.com/cygy/ginamite/common/queue"
 	"github.com/cygy/ginamite/worker/internal/workertest"
 )
@@ -56,7 +56,7 @@ func TestDeleteByID(t *testing.T) {
 			if got != tt.want {
 				t.Errorf("user = %q, want %q", got, tt.want)
 			}
-			if (err != nil) != (tt.want == "") || (err != nil && !kafka.IsPermanent(err)) {
+			if (err != nil) != (tt.want == "") || (err != nil && !broker.IsPermanent(err)) {
 				t.Errorf("error = %v, want a permanent error for an invalid payload only", err)
 			}
 			checkTokens(t, q, got != "" && tt.revoked != nil)
@@ -77,7 +77,7 @@ func TestDeleteByID(t *testing.T) {
 			return tokens, boom
 		})
 
-		if !errors.Is(err, boom) || kafka.IsPermanent(err) {
+		if !errors.Is(err, boom) || broker.IsPermanent(err) {
 			t.Errorf("error = %v, want the error of the function, which a retry can fix", err)
 		}
 		checkTokens(t, q, false)
@@ -109,7 +109,7 @@ func TestDisableByID(t *testing.T) {
 			if got != tt.want {
 				t.Errorf("user = %q, want %q", got, tt.want)
 			}
-			if (err != nil) != (tt.want == "") || (err != nil && !kafka.IsPermanent(err)) {
+			if (err != nil) != (tt.want == "") || (err != nil && !broker.IsPermanent(err)) {
 				t.Errorf("error = %v, want a permanent error for an invalid payload only", err)
 			}
 			checkTokens(t, q, got != "" && tt.revoked != nil)
@@ -130,7 +130,7 @@ func TestDisableByID(t *testing.T) {
 			return tokens, boom
 		})
 
-		if !errors.Is(err, boom) || kafka.IsPermanent(err) {
+		if !errors.Is(err, boom) || broker.IsPermanent(err) {
 			t.Errorf("error = %v, want the error of the function, which a retry can fix", err)
 		}
 		checkTokens(t, q, false)
@@ -157,7 +157,7 @@ func TestUserTasks(t *testing.T) {
 				t.Errorf("user = %q, calls = %d, error = %v", got, calls, err)
 			}
 
-			if err := tt.run([]byte(`{`), record); !kafka.IsPermanent(err) || calls != 1 {
+			if err := tt.run([]byte(`{`), record); !broker.IsPermanent(err) || calls != 1 {
 				t.Errorf("calls = %d, error = %v: the function must not be called for an invalid payload", calls, err)
 			}
 
@@ -166,7 +166,7 @@ func TestUserTasks(t *testing.T) {
 			}
 
 			boom := errors.New("boom")
-			if err := tt.run([]byte(`{"user_id":"u1"}`), func(context.Context, string) error { return boom }); !errors.Is(err, boom) || kafka.IsPermanent(err) {
+			if err := tt.run([]byte(`{"user_id":"u1"}`), func(context.Context, string) error { return boom }); !errors.Is(err, boom) || broker.IsPermanent(err) {
 				t.Errorf("error = %v, want the error of the function, which a retry can fix", err)
 			}
 		})

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/cygy/ginamite/common/broker"
 	"github.com/cygy/ginamite/common/log"
 
 	"github.com/IBM/sarama"
@@ -100,7 +101,7 @@ func (h groupHandler) handle(ctx context.Context, message *sarama.ConsumerMessag
 			"attempt": attempt,
 			"error":   err.Error(),
 		}
-		if IsPermanent(err) || attempt >= h.attempts {
+		if broker.IsPermanent(err) || attempt >= h.attempts {
 			break
 		}
 

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"html/template"
 
-	"github.com/cygy/ginamite/common/kafka"
+	"github.com/cygy/ginamite/common/broker"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/queue"
 	"github.com/cygy/ginamite/common/weburl"
@@ -16,7 +16,7 @@ import (
 func (m *Mailer) NewLogin(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) error {
 	p := queue.MailNewLogin{}
 	if err := queue.UnmarshalPayload(payload, &p); err != nil {
-		return kafka.Permanent(err)
+		return broker.Permanent(err)
 	}
 
 	if !isEmailAddressValid.check(ctx, p.EmailAddress) {

@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cygy/ginamite/common/broker"
+
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/flags"
 	"github.com/cygy/ginamite/common/kafka"
@@ -214,6 +216,42 @@ func TestServer_runDLQ(t *testing.T) {
 		badOptions := writeFile(t, filepath.Join(t.TempDir(), "server.yaml"), "services:\n  kafka: {host: kafka, port: 1}\nkafka: {version: three}\n")
 		if err := NewServer().runDLQ(&flags.Flags{ServerName: "dlq", Environment: "test", Version: "final", ServerConfigurationFile: badOptions, DLQ: flags.DLQList, DLQTopic: "mail"}, &bytes.Buffer{}); err == nil {
 			t.Error("invalid options must be refused")
+		}
+	})
+}
+
+func TestServer_startBroker(t *testing.T) {
+	consumers := []broker.MessageConsumer{{Topic: "mail", Action: func([]byte) error { return nil }}}
+
+	t.Run("another broker always starts", func(t *testing.T) {
+		s := NewServer()
+		memory := broker.NewMemory()
+		s.UseBroker(memory)
+
+		if !s.startBroker(consumers) {
+			t.Fatal("the broker did not start")
+		}
+
+		var handled bool
+		s.startBroker([]broker.MessageConsumer{{Topic: "x", Action: func([]byte) error { handled = true; return nil }}})
+		memory.SendMessageToTopic("m", "x")
+		if !handled {
+			t.Error("the consumers are not started")
+		}
+	})
+
+	t.Run("kafka needs a service", func(t *testing.T) {
+		s := NewServer()
+		if s.startBroker(consumers) {
+			t.Error("kafka must not start without a service")
+		}
+	})
+
+	t.Run("no broker", func(t *testing.T) {
+		s := NewServer()
+		s.Broker = nil
+		if s.startBroker(consumers) {
+			t.Error("nothing to start")
 		}
 	})
 }

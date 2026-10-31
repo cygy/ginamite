@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"html/template"
 
-	"github.com/cygy/ginamite/common/kafka"
+	"github.com/cygy/ginamite/common/broker"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/queue"
 )
@@ -86,7 +86,7 @@ func alwaysValid(context.Context, string) (bool, error) {
 func (m *Mailer) sendNotification(ctx context.Context, payload []byte, key string, isEmailAddressValid IsEmailAddressValidFunc) error {
 	p := queue.MailNotification{}
 	if err := queue.UnmarshalPayload(payload, &p); err != nil {
-		return kafka.Permanent(err)
+		return broker.Permanent(err)
 	}
 
 	if !isEmailAddressValid.check(ctx, p.EmailAddress) {
@@ -114,7 +114,7 @@ type process struct {
 func (m *Mailer) sendProcess(ctx context.Context, payload []byte, pr process, isEmailAddressValid IsEmailAddressValidFunc) error {
 	p := queue.MailProcessConfirmation{}
 	if err := queue.UnmarshalPayload(payload, &p); err != nil {
-		return kafka.Permanent(err)
+		return broker.Permanent(err)
 	}
 
 	if !isEmailAddressValid.check(ctx, p.EmailAddress) {

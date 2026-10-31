@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cygy/ginamite/common/broker"
 	"github.com/cygy/ginamite/common/config"
-	"github.com/cygy/ginamite/common/kafka"
 	"github.com/cygy/ginamite/common/notifications"
 	"github.com/cygy/ginamite/common/queue"
 	"github.com/cygy/ginamite/worker/internal/workertest"
@@ -33,7 +33,7 @@ func message(t *testing.T, messageType string, payload any) []byte {
 func consumerErr(t *testing.T, s *Server, topic string) func([]byte) error {
 	t.Helper()
 
-	for _, c := range s.CreateKafkaConsumers() {
+	for _, c := range s.CreateConsumers() {
 		if c.Topic == topic {
 			return c.Action
 		}
@@ -63,7 +63,7 @@ func consumer(t *testing.T, s *Server, topic string) func([]byte) {
 func checkUndecodable(t *testing.T, s *Server, topic string) {
 	t.Helper()
 
-	if err := consumerErr(t, s, topic)([]byte("{")); !kafka.IsPermanent(err) {
+	if err := consumerErr(t, s, topic)([]byte("{")); !broker.IsPermanent(err) {
 		t.Errorf("error = %v, want a permanent error", err)
 	}
 }
@@ -80,9 +80,9 @@ func warnings(topic string) []string {
 	return types
 }
 
-func TestServer_CreateKafkaConsumers(t *testing.T) {
+func TestServer_CreateConsumers(t *testing.T) {
 	var topics []string
-	for _, c := range NewServer().CreateKafkaConsumers() {
+	for _, c := range NewServer().CreateConsumers() {
 		if c.Action == nil {
 			t.Errorf("the consumer of %q has no action", c.Topic)
 		}
@@ -95,7 +95,7 @@ func TestServer_CreateKafkaConsumers(t *testing.T) {
 	}
 }
 
-func TestServer_CreateKafkaConsumers_Configured(t *testing.T) {
+func TestServer_CreateConsumers_Configured(t *testing.T) {
 	s := NewServer()
 	s.Config.WorkerConsumers = []config.ConsumerConfiguration{
 		{Topic: queue.TopicMail, Group: "mails"},
@@ -104,7 +104,7 @@ func TestServer_CreateKafkaConsumers_Configured(t *testing.T) {
 	}
 
 	workertest.Hook.Reset()
-	consumers := s.CreateKafkaConsumers()
+	consumers := s.CreateConsumers()
 
 	if len(consumers) != 2 {
 		t.Fatalf("consumers = %+v, want the mails and the tasks", consumers)
@@ -127,8 +127,8 @@ func TestServer_CreateKafkaConsumers_Configured(t *testing.T) {
 	}
 }
 
-func TestServer_CreateKafkaConsumers_WithoutConfiguration(t *testing.T) {
-	if consumers := (&Server{}).CreateKafkaConsumers(); len(consumers) != 4 {
+func TestServer_CreateConsumers_WithoutConfiguration(t *testing.T) {
+	if consumers := (&Server{}).CreateConsumers(); len(consumers) != 4 {
 		t.Errorf("consumers = %+v, want the 4 topics", consumers)
 	}
 }
@@ -249,7 +249,7 @@ func TestServer_handleTask_Errors(t *testing.T) {
 
 			err := consumerErr(t, s, queue.TopicTasks)(message(t, tt.messageType, tt.payload))
 
-			if !errors.Is(err, boom) || kafka.IsPermanent(err) {
+			if !errors.Is(err, boom) || broker.IsPermanent(err) {
 				t.Errorf("error = %v, want the error of the function, which a retry can fix", err)
 			}
 		})
@@ -297,7 +297,7 @@ func TestServer_handleOtherTopics_Errors(t *testing.T) {
 		}}}
 
 		value := message(t, notifications.TypeNewLogin, queue.UserNotificationNewLogin{UserID: "u"})
-		if err := consumerErr(t, s, queue.TopicUserNotification)(value); !errors.Is(err, boom) || kafka.IsPermanent(err) {
+		if err := consumerErr(t, s, queue.TopicUserNotification)(value); !errors.Is(err, boom) || broker.IsPermanent(err) {
 			t.Errorf("error = %v, want the error of the targets, which a retry can fix", err)
 		}
 	})
@@ -353,7 +353,7 @@ func TestServer_handleGroupNotification(t *testing.T) {
 		}
 
 		checkUndecodable(t, s, queue.TopicGroupNotification)
-		if err := consumerErr(t, s, queue.TopicGroupNotification)(message(t, "type", "not a group notification")); !kafka.IsPermanent(err) {
+		if err := consumerErr(t, s, queue.TopicGroupNotification)(message(t, "type", "not a group notification")); !broker.IsPermanent(err) {
 			t.Errorf("error = %v, want a permanent error", err)
 		}
 	})
@@ -425,7 +425,7 @@ func TestServer_handleMail(t *testing.T) {
 		}
 
 		// The payload is invalid: the message is handled without sending any mail, and dead-lettered.
-		if err := consumerErr(t, s, queue.TopicMail)(message(t, queue.MessageMailNewLogin, "invalid payload")); !kafka.IsPermanent(err) {
+		if err := consumerErr(t, s, queue.TopicMail)(message(t, queue.MessageMailNewLogin, "invalid payload")); !broker.IsPermanent(err) {
 			t.Errorf("error = %v, want a permanent error", err)
 		}
 

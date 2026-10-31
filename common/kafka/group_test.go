@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/IBM/sarama"
+	"github.com/cygy/ginamite/common/broker"
 )
 
 // fakeSession records the messages marked as consumed.
@@ -218,7 +219,7 @@ func TestGroupHandler_handle(t *testing.T) {
 		{"succeeds at once", 3, 0, boom, 1, false},
 		{"succeeds after retries", 3, 2, boom, 3, false},
 		{"fails every attempt", 3, -1, boom, 3, true},
-		{"a permanent error is not retried", 3, -1, Permanent(boom), 1, true},
+		{"a permanent error is not retried", 3, -1, broker.Permanent(boom), 1, true},
 		{"one attempt at least", 0, -1, boom, 1, true},
 		{"a panic is retried", 2, -1, nil, 2, true},
 	}

@@ -14,6 +14,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/cygy/ginamite/common/broker"
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/random"
 
@@ -21,8 +22,12 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// Client is a Kafka client, which may be a message producer.
+// Client is a Kafka client, which may be a message producer. It is a broker.Broker.
 type Client struct {
+	// Host and Port are the address of a broker, used by Start.
+	Host string
+	Port int
+
 	HasProducer  bool
 	Producer     sarama.AsyncProducer
 	TopicsPrefix string
@@ -53,6 +58,8 @@ type Client struct {
 	stats      stats
 }
 
+var _ broker.Broker = (*Client)(nil)
+
 // Defaults of the Client.
 const (
 	DefaultMaxAttempts = 3
@@ -76,23 +83,6 @@ func DeadLetterTopic(topic string) string {
 	return topic + deadLetterSuffix
 }
 
-// MessageConsumer consumes the messages of a topic and executes Action on each one.
-//
-// The consumers of the same Group share the messages of the topic: each message is handled by one of them, so the
-// workers sharing a group share the load. The consumers of different groups all receive every message, see UniqueGroup.
-type MessageConsumer struct {
-	Topic string
-	// Group is the name of the consumer group, prefixed like the topics. It is the name of the topic if empty.
-	Group string
-	// Action handles a message and returns an error if it failed. The message is committed once Action returns: it is
-	// handled again by the group if the process stops before, so Action must tolerate a message handled twice.
-	//
-	// A failed message is handled again, up to Client.MaxAttempts times, then it is sent to the topic of the dead
-	// letters, see DeadLetterTopic, and the next message is handled. An error marked with Permanent is not retried.
-	// A panic is recovered and handled like an error.
-	Action func(value []byte) error
-}
-
 // Replaced by the tests.
 var (
 	// newConsumerGroup creates a consumer group.
@@ -108,12 +98,6 @@ var (
 	closeTimeout = 30 * time.Second
 )
 
-// UniqueGroup returns the name of a group no other process uses, so its consumer receives every message of the topic:
-// use it for the messages every instance of a server must handle, such as the invalidations of a cache.
-func UniqueGroup(name string) string {
-	return name + "_" + random.String(8)
-}
-
 // NewClient returns a Client ready to be initialized.
 func NewClient() *Client {
 	return &Client{
@@ -124,10 +108,16 @@ func NewClient() *Client {
 	}
 }
 
+// Start connects the client to the broker at Host and Port, as a producer, and starts the consumers: see Initialize.
+// It makes Client a broker.Broker.
+func (client *Client) Start(consumers []broker.MessageConsumer) {
+	client.Initialize(client.Host, client.Port, client.TopicsPrefix, true, consumers)
+}
+
 // Initialize connects the client to Kafka and starts the producer, if hasProducer
-// is true, and one consumer per MessageConsumer, each in its own goroutine and its own consumer group.
+// is true, and one consumer per broker.MessageConsumer, each in its own goroutine and its own consumer group.
 // Topics and groups are prefixed with prefix. Connections are retried every second until they succeed.
-func (client *Client) Initialize(host string, port int, prefix string, hasProducer bool, consumers []MessageConsumer) {
+func (client *Client) Initialize(host string, port int, prefix string, hasProducer bool, consumers []broker.MessageConsumer) {
 	client.TopicsPrefix = prefix
 	client.HasProducer = hasProducer
 
@@ -398,7 +388,7 @@ func (client *Client) producer() sarama.AsyncProducer {
 
 // consume joins the group of the consumer, then handles the messages of its topic until ctx is done. The connection to
 // Kafka is retried every second.
-func (client *Client) consume(ctx context.Context, addresses []string, config *sarama.Config, mc MessageConsumer) {
+func (client *Client) consume(ctx context.Context, addresses []string, config *sarama.Config, mc broker.MessageConsumer) {
 	topic := client.fullTopicName(mc.Topic)
 	groupName := mc.Topic
 	if mc.Group != "" {

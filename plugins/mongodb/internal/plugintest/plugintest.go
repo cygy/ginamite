@@ -27,7 +27,7 @@ import (
 
 	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
-	"github.com/cygy/ginamite/common/kafka"
+	"github.com/cygy/ginamite/common/broker"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/mongo/session"
@@ -36,8 +36,6 @@ import (
 	"github.com/cygy/ginamite/plugins/mongodb/api/ctxsettings"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
 
-	"github.com/IBM/sarama"
-	"github.com/IBM/sarama/mocks"
 	"github.com/gin-gonic/gin"
 	jwt "github.com/golang-jwt/jwt/v5"
 )
@@ -130,65 +128,46 @@ func InitLocalization(t *testing.T, messages map[string]string) {
 	t.Cleanup(func() { Localization = old })
 }
 
-// Queue captures the messages sent to Kafka.
+// Queue captures the messages sent to the broker.
 type Queue struct {
 	// Sender is the queue sending its messages to the capture.
 	Sender *queue.Queue
 
-	t        *testing.T
-	captured chan *sarama.ProducerMessage
+	t      *testing.T
+	broker *broker.Memory
+	next   int
 }
 
 // senderInUse is the queue of the contexts created by NewContext. It is the one of the capture, if any.
-var senderInUse = queue.New(kafka.NewClient())
+var senderInUse = queue.New(broker.NewMemory())
 
 // CaptureQueue returns a Queue capturing the messages sent by its Sender, which is the queue of the contexts created
 // by NewContext for the duration of the test.
 func CaptureQueue(t *testing.T) *Queue {
 	t.Helper()
 
-	config := mocks.NewTestConfig()
-	config.Producer.Return.Successes = true
-	producer := mocks.NewAsyncProducer(t, config)
-	captured := make(chan *sarama.ProducerMessage, maxMessages)
-	for range maxMessages {
-		producer.ExpectInputWithMessageCheckerFunctionAndSucceed(func(m *sarama.ProducerMessage) error {
-			captured <- m
-
-			return nil
-		})
-	}
-
-	client := kafka.NewClient()
-	client.UseProducer(producer)
-
-	sender := queue.New(client)
+	memory := broker.NewMemory()
+	sender := queue.New(memory)
 	old := senderInUse
 	senderInUse = sender
 	t.Cleanup(func() { senderInUse = old })
 
-	return &Queue{Sender: sender, t: t, captured: captured}
+	return &Queue{Sender: sender, t: t, broker: memory}
 }
 
-// maxMessages is the number of messages a Queue can capture.
-const maxMessages = 10
-
-// Next returns the next message sent to Kafka, and ok is false if there is none after a short delay.
+// Next returns the next message sent to the broker, and ok is false if there is none.
 func (q *Queue) Next() (message queue.Message, ok bool) {
 	q.t.Helper()
 
-	select {
-	case sent := <-q.captured:
-		value, err := sent.Value.Encode()
-		if err != nil {
-			q.t.Fatal(err)
-		}
-		if err := json.Unmarshal(value, &message); err != nil {
-			q.t.Fatal(err)
-		}
-
-		return message, true
-	case <-time.After(time.Second):
+	sent := q.broker.Sent()
+	if q.next >= len(sent) {
 		return message, false
 	}
+
+	if err := json.Unmarshal([]byte(sent[q.next].Message), &message); err != nil {
+		q.t.Fatal(err)
+	}
+	q.next++
+
+	return message, true
 }

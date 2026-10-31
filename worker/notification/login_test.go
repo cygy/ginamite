@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/cygy/ginamite/common/kafka"
+	"github.com/cygy/ginamite/common/broker"
 	"github.com/cygy/ginamite/common/notifications"
 	"github.com/cygy/ginamite/common/queue"
 	"github.com/cygy/ginamite/worker/internal/workertest"
@@ -41,7 +41,7 @@ func TestNewLogin(t *testing.T) {
 			t.Error("the targets must not be requested")
 			return nil, nil
 		})
-		if !kafka.IsPermanent(err) {
+		if !broker.IsPermanent(err) {
 			t.Errorf("NewLogin() error = %v, want a permanent error", err)
 		}
 	})
@@ -53,7 +53,7 @@ func TestNewLogin(t *testing.T) {
 		err := NewLogin(context.Background(), q.Sender, []byte(`{"user_id":"u1"}`), func(context.Context, string, string) ([]notifications.Target, error) {
 			return nil, boom
 		})
-		if !errors.Is(err, boom) || kafka.IsPermanent(err) {
+		if !errors.Is(err, boom) || broker.IsPermanent(err) {
 			t.Errorf("NewLogin() error = %v, want the error of the targets, which a retry can fix", err)
 		}
 		q.Empty()

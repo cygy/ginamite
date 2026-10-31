@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cygy/ginamite/common/kafka"
+	"github.com/cygy/ginamite/common/broker"
 	"github.com/cygy/ginamite/common/localization"
 )
 
@@ -140,7 +140,7 @@ func checkNotification(t *testing.T, send sender, key string, checked bool) {
 
 	t.Run("invalid payload", func(t *testing.T) {
 		mailer, delivered := stub(t)
-		if err := send(mailer, ctx, []byte("{"), valid); !kafka.IsPermanent(err) {
+		if err := send(mailer, ctx, []byte("{"), valid); !broker.IsPermanent(err) {
 			t.Errorf("error = %v, want a permanent error", err)
 		}
 
@@ -216,7 +216,7 @@ func checkProcess(t *testing.T, send sender, key, confirmRoute, cancelRoute stri
 
 	t.Run("invalid payload", func(t *testing.T) {
 		mailer, delivered := stub(t)
-		if err := send(mailer, ctx, []byte("{"), valid); !kafka.IsPermanent(err) {
+		if err := send(mailer, ctx, []byte("{"), valid); !broker.IsPermanent(err) {
 			t.Errorf("error = %v, want a permanent error", err)
 		}
 

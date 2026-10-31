@@ -5,10 +5,10 @@ package web
 import (
 	"fmt"
 
+	"github.com/cygy/ginamite/common/broker"
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/ctxconfig"
 	"github.com/cygy/ginamite/common/ctxlocalization"
-	"github.com/cygy/ginamite/common/kafka"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/log"
 	htmlTemplate "github.com/cygy/ginamite/common/template/html"
@@ -65,9 +65,9 @@ func (s *Server) AddCustomRoutes(configuration route.ConfigureCustomRoutes) {
 	s.customRoutes = append(s.customRoutes, configuration)
 }
 
-// CreateKafkaConsumers returns the Kafka consumers of the web server, which has none.
-func (s *Server) CreateKafkaConsumers() []kafka.MessageConsumer {
-	return []kafka.MessageConsumer{}
+// CreateConsumers returns the Kafka consumers of the web server, which has none.
+func (s *Server) CreateConsumers() []broker.MessageConsumer {
+	return []broker.MessageConsumer{}
 }
 
 // Start sets up and starts the web server, which stops on error.

@@ -11,7 +11,7 @@ import (
 	"testing"
 	ttemplate "text/template"
 
-	"github.com/cygy/ginamite/common/kafka"
+	"github.com/cygy/ginamite/common/broker"
 )
 
 func TestIsEmailAddressValidFunc_check(t *testing.T) {
@@ -208,7 +208,7 @@ func TestMailer_Send(t *testing.T) {
 
 		err := mailer.Send(message)
 
-		if err == nil || kafka.IsPermanent(err) {
+		if err == nil || broker.IsPermanent(err) {
 			t.Errorf("Send() error = %v, want an error a retry can fix", err)
 		}
 		if entry := hook.LastEntry(); entry == nil || entry.Message != "unable to send mail" {
@@ -228,7 +228,7 @@ func TestMailer_Send(t *testing.T) {
 				server := startSMTP(t)
 				mailer := newTestMailer(t, server, tt.html, tt.text, nil, nil)
 
-				if err := mailer.Send(message); !kafka.IsPermanent(err) {
+				if err := mailer.Send(message); !broker.IsPermanent(err) {
 					t.Errorf("Send() error = %v, want a permanent error", err)
 				}
 

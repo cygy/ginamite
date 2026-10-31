@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/cygy/ginamite/common/kafka"
+	"github.com/cygy/ginamite/common/broker"
 	"github.com/cygy/ginamite/common/queue"
 )
 
@@ -17,7 +17,7 @@ func TestHandle(t *testing.T) {
 
 			// An invalid payload is enough to know the message is handled.
 			handled, err := mailer.Handle(ctx, messageType, []byte("{"), valid)
-			if !handled || !kafka.IsPermanent(err) {
+			if !handled || !broker.IsPermanent(err) {
 				t.Errorf("%s: handled = %v, error = %v, want a handled message and a permanent error", messageType, handled, err)
 			}
 			if len(*delivered) != 0 {
