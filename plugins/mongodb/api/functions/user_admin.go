@@ -3,6 +3,7 @@ package functions
 import (
 	"github.com/cygy/ginamite/common/errors"
 	"github.com/cygy/ginamite/common/mongo/session"
+	"github.com/cygy/ginamite/plugins/mongodb/api/ctxsettings"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
 
 	"github.com/gin-gonic/gin"
@@ -121,7 +122,7 @@ func SetAbilitiesToUser(c *gin.Context, abilities []string, userID string) error
 		return err
 	}
 
-	return user.SetAbilities(c, abilities, mongoSession)
+	return user.SetAbilities(c, abilities, ctxsettings.GetSettings(c).AllUserAbilities, mongoSession)
 }
 
 // AddAbilitiesToUser adds some abilities to a user.
@@ -132,7 +133,7 @@ func AddAbilitiesToUser(c *gin.Context, abilities []string, userID string) error
 		return err
 	}
 
-	return user.AddAbilities(c, abilities, mongoSession)
+	return user.AddAbilities(c, abilities, ctxsettings.GetSettings(c).AllUserAbilities, mongoSession)
 }
 
 // RemoveAbilitiesFromUser removes some abilities from a user.

@@ -33,6 +33,7 @@ import (
 	"github.com/cygy/ginamite/common/mongo/session"
 	"github.com/cygy/ginamite/common/mongo/store/mock"
 	"github.com/cygy/ginamite/common/queue"
+	"github.com/cygy/ginamite/plugins/mongodb/api/ctxsettings"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
 
 	"github.com/IBM/sarama/mocks"
@@ -62,6 +63,7 @@ func NewContext(db *mock.Database, method, target string, body io.Reader) (*gin.
 	ctxqueue.Set(c, senderInUse)
 	ctxtimezone.Set(c, timezone.NewConfiguration())
 	ctxnotifications.Set(c, notifications.NewRegistry())
+	ctxsettings.SetSettings(c, model.DefaultSettings())
 	if Localization != nil {
 		ctxlocalization.Set(c, Localization)
 	}

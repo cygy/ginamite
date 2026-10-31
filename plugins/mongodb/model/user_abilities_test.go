@@ -2,27 +2,11 @@ package model
 
 import (
 	"context"
-	"slices"
 	"testing"
 
-	"github.com/cygy/ginamite/api/rights"
 	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/store/mock"
 )
-
-func TestAddUserAbilities(t *testing.T) {
-	defer func(all, def []string) { AllUserAbilities, DefaultUserAbilities = all, def }(slices.Clone(AllUserAbilities), slices.Clone(DefaultUserAbilities))
-
-	AddUserAbilities([]string{"custom"})
-	if !slices.Contains(AllUserAbilities, "custom") || !slices.Contains(AllUserAbilities, rights.AbilityToManageUsers) {
-		t.Errorf("AllUserAbilities = %v", AllUserAbilities)
-	}
-
-	AddDefaultUserAbilities([]string{"custom"})
-	if !slices.Contains(DefaultUserAbilities, "custom") {
-		t.Errorf("DefaultUserAbilities = %v", DefaultUserAbilities)
-	}
-}
 
 func TestUser_HasAbility(t *testing.T) {
 	user := &User{Abilities: []string{"a", "b"}}
@@ -38,13 +22,12 @@ func TestUser_Abilities(t *testing.T) {
 	user := NewUser()
 	_ = user.SetID(hex)
 
-	defer func(all []string) { AllUserAbilities = all }(AllUserAbilities)
-	AllUserAbilities = []string{"read", "write"}
+	allAbilities := []string{"read", "write"}
 
 	// The unknown abilities are ignored.
 	t.Run("SetAbilities", func(t *testing.T) {
 		db := mock.NewDatabase("app")
-		if err := user.SetAbilities(ctx, []string{"write", "root", "read"}, db); err != nil {
+		if err := user.SetAbilities(ctx, []string{"write", "root", "read"}, allAbilities, db); err != nil {
 			t.Fatal(err)
 		}
 		checkUpdate(t, db, UserCollection, id, bson.M{"$set": bson.M{"abilities": []string{"write", "read"}}})
@@ -52,7 +35,7 @@ func TestUser_Abilities(t *testing.T) {
 
 	t.Run("AddAbilities", func(t *testing.T) {
 		db := mock.NewDatabase("app")
-		if err := user.AddAbilities(ctx, []string{"root", "read"}, db); err != nil {
+		if err := user.AddAbilities(ctx, []string{"root", "read"}, allAbilities, db); err != nil {
 			t.Fatal(err)
 		}
 		checkUpdate(t, db, UserCollection, id, bson.M{"$addToSet": bson.M{"abilities": bson.M{"$each": []string{"read"}}}})

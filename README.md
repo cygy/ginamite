@@ -92,7 +92,10 @@ configuration).
   `ctxconfig.Get(c)`, `ctxlocalization.Get(c)` and `ctxqueue.Get(c)`. The functions of the application, such as the ones
   of the storage plugin, are saved the same way: `account.FunctionsOf(c)`, `ctxAuthToken.HooksOf(c)`, etc.
 - The web server also saves its pages, `html.Of(c)`, and the worker builds a `mail.Mailer` from its services.
-- The code without a request receives what it needs as arguments.
+- The code without a request receives what it needs as arguments: for instance the worker builds a `recurring.Scheduler`
+  and a `mail.Mailer` from its services.
+- The only process-wide state left is the logger `log.Main`, like the default logger of the standard library, and a few
+  constants and caches of immutable values.
 - In the tests, use the `Set` function of the package, for instance `ctxconfig.Set(c, configuration)`.
 
 ## Layout
@@ -124,7 +127,8 @@ A plugin for another database implements the same extension points. `plugins/mon
 
 `plugins/mongodb` opens its own MongoDB session in `Connect`, with no global state: the functions of the API and of the
 worker work on the database of the plugin, and the middleware of the plugin saves it in the context of the requests.
-It stores the users, their auth tokens, their notifications and the contacts. Create it with
+Its settings (`Plugin.UserMaxImageSize`, etc., see `Plugin.Settings`) are saved in the context of the requests with
+`ctxsettings`. It stores the users, their auth tokens, their notifications and the contacts. Create it with
 `mongodb.NewPlugin()`, set the properties that differ from the defaults (abilities, size of the images, etc.), then
 register it. Its hooks let the application add its own collections, indexes and default documents, and update the
 documents which reference the users.

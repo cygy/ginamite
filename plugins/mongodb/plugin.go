@@ -14,6 +14,7 @@ import (
 	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/session"
 	"github.com/cygy/ginamite/common/mongo/store"
+	"github.com/cygy/ginamite/plugins/mongodb/api/ctxsettings"
 	apiFunctions "github.com/cygy/ginamite/plugins/mongodb/api/functions"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
 	workerFunctions "github.com/cygy/ginamite/plugins/mongodb/worker/functions"
@@ -62,17 +63,19 @@ type Plugin struct {
 
 // NewPlugin returns a Plugin with the default settings of the model package.
 func NewPlugin() *Plugin {
+	settings := model.DefaultSettings()
+
 	return &Plugin{
 		ExtraUserAbilities:                 []string{},
 		ExtraDefaultUserAbilities:          []string{},
-		UserMaxValidateRegistrationAttemps: model.UserMaxValidateRegistrationAttemps,
-		UserMaxDescriptionLength:           model.UserMaxDescriptionLength,
-		UserMaxImageSize:                   model.UserMaxImageSize,
-		UserImagePath:                      model.UserImagePath,
-		UserImageWidth:                     model.UserImageWidth,
-		UserImageHeight:                    model.UserImageHeight,
-		UserImageSmallVersion:              model.UserImageSmallVersion,
-		UserImageThumbVersion:              model.UserImageThumbVersion,
+		UserMaxValidateRegistrationAttemps: settings.UserMaxValidateRegistrationAttemps,
+		UserMaxDescriptionLength:           settings.UserMaxDescriptionLength,
+		UserMaxImageSize:                   settings.UserMaxImageSize,
+		UserImagePath:                      settings.UserImagePath,
+		UserImageWidth:                     settings.UserImageWidth,
+		UserImageHeight:                    settings.UserImageHeight,
+		UserImageSmallVersion:              settings.UserImageSmallVersion,
+		UserImageThumbVersion:              settings.UserImageThumbVersion,
 	}
 }
 
@@ -102,12 +105,28 @@ func (p *Plugin) Close() {
 	}
 }
 
-// Configure applies the settings of the plugin to the model package, and sets the functions of the plugin on the
-// worker and the API of the server. It also adds the routes of the plugin to the API.
+// Configure sets the functions of the plugin on the worker and the API of the server. The API saves the settings of
+// the plugin, see Settings, in the context of the requests, and adds the routes of the plugin.
 func (p *Plugin) Configure(server *ginamite.Server) {
-	p.applySettings()
 	p.configureWorker(server.Worker)
 	p.configureAPI(server.API)
+}
+
+// Settings returns the settings of the plugin, with the extra abilities added to the default ones.
+func (p *Plugin) Settings() model.Settings {
+	settings := model.DefaultSettings()
+	settings.UserMaxValidateRegistrationAttemps = p.UserMaxValidateRegistrationAttemps
+	settings.UserMaxDescriptionLength = p.UserMaxDescriptionLength
+	settings.UserMaxImageSize = p.UserMaxImageSize
+	settings.UserImagePath = p.UserImagePath
+	settings.UserImageWidth = p.UserImageWidth
+	settings.UserImageHeight = p.UserImageHeight
+	settings.UserImageSmallVersion = p.UserImageSmallVersion
+	settings.UserImageThumbVersion = p.UserImageThumbVersion
+	settings.AllUserAbilities = append(settings.AllUserAbilities, p.ExtraUserAbilities...)
+	settings.DefaultUserAbilities = append(settings.DefaultUserAbilities, p.ExtraDefaultUserAbilities...)
+
+	return settings
 }
 
 // database returns the database of the session of the plugin.
@@ -124,21 +143,6 @@ func (p *Plugin) workers() *workerFunctions.Functions {
 func isValidID(id string) bool {
 	_, err := bson.ObjectIDFromHex(id)
 	return err == nil
-}
-
-// applySettings applies the settings of the plugin to the model package, and adds its abilities.
-func (p *Plugin) applySettings() {
-	model.UserMaxValidateRegistrationAttemps = p.UserMaxValidateRegistrationAttemps
-	model.UserMaxDescriptionLength = p.UserMaxDescriptionLength
-	model.UserMaxImageSize = p.UserMaxImageSize
-	model.UserImagePath = p.UserImagePath
-	model.UserImageWidth = p.UserImageWidth
-	model.UserImageHeight = p.UserImageHeight
-	model.UserImageSmallVersion = p.UserImageSmallVersion
-	model.UserImageThumbVersion = p.UserImageThumbVersion
-
-	model.AddUserAbilities(p.ExtraUserAbilities)
-	model.AddDefaultUserAbilities(p.ExtraDefaultUserAbilities)
 }
 
 // configureWorker sets the functions of the worker.
@@ -213,6 +217,7 @@ func (p *Plugin) startUpTasks(ctx context.Context, environment, version string) 
 // database in the context of the requests, if the session is open, and adds its routes.
 func (p *Plugin) configureAPI(a *api.Server) {
 	a.Functions.IsValidID = isValidID
+	a.Middlewares = append(a.Middlewares, ctxsettings.InjectSettings(p.Settings()))
 	if p.session != nil {
 		a.Middlewares = append(a.Middlewares, p.session.Inject())
 	}

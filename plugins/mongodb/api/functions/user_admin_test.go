@@ -3,6 +3,8 @@ package functions
 import (
 	"testing"
 
+	"github.com/cygy/ginamite/plugins/mongodb/api/ctxsettings"
+
 	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/store/mock"
 	"github.com/cygy/ginamite/plugins/mongodb/internal/plugintest"
@@ -104,12 +106,11 @@ func TestUpdateUserPasswordByAdmin(t *testing.T) {
 
 func TestAbilitiesOfUser(t *testing.T) {
 	id := bson.NewObjectID()
-	old := model.AllUserAbilities
-	defer func() { model.AllUserAbilities = old }()
-	model.AllUserAbilities = []string{"read", "write"}
-
 	db := mock.NewDatabase("app")
 	c, _ := plugintest.NewContext(db, "GET", "/", nil)
+	settings := model.DefaultSettings()
+	settings.AllUserAbilities = []string{"read", "write"}
+	ctxsettings.SetSettings(c, settings)
 
 	if err := SetAbilitiesToUser(c, []string{"read", "root"}, id.Hex()); err != nil {
 		t.Fatal(err)

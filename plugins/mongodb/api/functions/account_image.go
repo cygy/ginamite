@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cygy/ginamite/plugins/mongodb/api/ctxsettings"
+
 	"github.com/cygy/ginamite/common/ctxlocalization"
 
 	"github.com/cygy/ginamite/common/ctxqueue"
@@ -30,11 +32,12 @@ import (
 
 // UpdateAccountPublicImage updates the image of the public profile.
 func UpdateAccountPublicImage(c *gin.Context) {
+	settings := ctxsettings.GetSettings(c)
 	errorMessageKey := "error.account.public.image.update.message"
 	logContext := "account image"
 
 	// Get and check the uploaded file.
-	file := request.GetUploadedFile(c, "file", model.UserMaxImageSize, true, logContext, errorMessageKey)
+	file := request.GetUploadedFile(c, "file", settings.UserMaxImageSize, true, logContext, errorMessageKey)
 	if file == nil {
 		return
 	}
@@ -78,10 +81,10 @@ func UpdateAccountPublicImage(c *gin.Context) {
 	locale := ctxLocale.Get(c)
 
 	// Copy the different versions of the image.
-	destinationDirectory := model.UserImagePath
+	destinationDirectory := settings.UserImagePath
 	versions, err := image.SaveFill(tmpFilePath, destinationDirectory,
-		int(model.UserImageWidth), int(model.UserImageHeight),
-		model.UserImageSmallVersion, model.UserImageThumbVersion)
+		int(settings.UserImageWidth), int(settings.UserImageHeight),
+		settings.UserImageSmallVersion, settings.UserImageThumbVersion)
 	if err != nil {
 		response.UnableToSaveFile(c, locale, errorMessageKey)
 		return
@@ -144,6 +147,7 @@ func UpdateAccountPublicImage(c *gin.Context) {
 
 // DeleteAccountPublicImage deletes the image of the public profile.
 func DeleteAccountPublicImage(c *gin.Context) {
+	settings := ctxsettings.GetSettings(c)
 	locale := ctxLocale.Get(c)
 	user := context.GetFullUser(c)
 	if user == nil {
@@ -171,7 +175,7 @@ func DeleteAccountPublicImage(c *gin.Context) {
 	}
 
 	// Delete the files.
-	image.Delete(oldImages, model.UserImagePath)
+	image.Delete(oldImages, settings.UserImagePath)
 
 	// The auth token is updated too with the updated image of the user.
 	ctxAuthToken.Refresh(c)

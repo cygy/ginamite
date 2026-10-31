@@ -3,6 +3,8 @@ package functions
 import (
 	"errors"
 
+	"github.com/cygy/ginamite/plugins/mongodb/api/ctxsettings"
+
 	"github.com/cygy/ginamite/common/ctxnotifications"
 	"github.com/cygy/ginamite/common/ctxtimezone"
 
@@ -25,6 +27,7 @@ func registrationDefaults(c *gin.Context, locale string) model.RegistrationDefau
 	return model.RegistrationDefaults{
 		Timezone:      model.RegistrationTimezone(locale, ctxtimezone.Get(c), ctxconfig.Get(c).DefaultTimezone),
 		Notifications: ctxnotifications.Get(c).Defaults(),
+		Abilities:     ctxsettings.GetSettings(c).DefaultUserAbilities,
 	}
 }
 
@@ -56,7 +59,7 @@ func ValidateUserRegistration(c *gin.Context, userID, registrationKey string) er
 		return err
 	}
 
-	return user.ValidateRegistrationByEmailAddress(c, registrationKey, mongoSession)
+	return user.ValidateRegistrationByEmailAddress(c, registrationKey, ctxsettings.GetSettings(c).UserMaxValidateRegistrationAttemps, mongoSession)
 }
 
 // CancelUserRegistration cancels the registration of a user.

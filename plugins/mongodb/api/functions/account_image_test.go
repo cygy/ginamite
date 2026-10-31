@@ -12,6 +12,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/cygy/ginamite/plugins/mongodb/api/ctxsettings"
+
 	"github.com/cygy/ginamite/common/ctxconfig"
 	"github.com/cygy/ginamite/common/mongo/bson"
 	"github.com/cygy/ginamite/common/mongo/store/mock"
@@ -19,14 +21,16 @@ import (
 	"github.com/cygy/ginamite/plugins/mongodb/model"
 )
 
+// testSettings are the settings of the plugin of the requests, replaced by withImageDirectory.
+var testSettings model.Settings
+
 // withImageDirectory saves the user images in a temporary directory for the duration of the test.
 func withImageDirectory(t *testing.T) string {
 	t.Helper()
 
 	dir := t.TempDir()
-	old, oldMax := model.UserImagePath, model.UserMaxImageSize
-	t.Cleanup(func() { model.UserImagePath, model.UserMaxImageSize = old, oldMax })
-	model.UserImagePath = dir
+	testSettings = model.DefaultSettings()
+	testSettings.UserImagePath = dir
 
 	plugintest.InitLocalization(t, map[string]string{"status.account.public.image.updated": "updated", "status.account.public.image.deleted": "deleted"})
 
@@ -66,6 +70,7 @@ func uploadImageRequest(t *testing.T, db *mock.Database, id bson.ObjectID, conte
 
 	c, recorder := plugintest.SignedInContext(t, db, model.User{ID: id})
 	ctxconfig.Get(c).Hosts.Static = "https://static.example.com"
+	ctxsettings.SetSettings(c, testSettings)
 	c.Request = httptest.NewRequest(http.MethodPost, "/", &body)
 	c.Request.Header.Set("Content-Type", writer.FormDataContentType())
 
@@ -168,7 +173,7 @@ func TestUpdateAccountPublicImage(t *testing.T) {
 
 	t.Run("file too big", func(t *testing.T) {
 		withImageDirectory(t)
-		model.UserMaxImageSize = 10
+		testSettings.UserMaxImageSize = 10
 
 		if recorder := uploadImageRequest(t, mock.NewDatabase("app"), id, pngFile(t)); recorder.Code != http.StatusPreconditionFailed {
 			t.Errorf("status = %d", recorder.Code)
@@ -210,6 +215,7 @@ func TestDeleteAccountPublicImage(t *testing.T) {
 		t.Helper()
 
 		c, recorder := plugintest.SignedInContext(t, db, model.User{ID: id})
+		ctxsettings.SetSettings(c, testSettings)
 		DeleteAccountPublicImage(c)
 
 		return recorder

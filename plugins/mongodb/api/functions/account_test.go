@@ -96,7 +96,7 @@ func TestUpdateAccountPublicProfile(t *testing.T) {
 	t.Run("description too long", func(t *testing.T) {
 		db := mock.NewDatabase("app")
 
-		body := `{"locale":"fr","description":"` + strings.Repeat("a", int(model.UserMaxDescriptionLength)+1) + `"}`
+		body := `{"locale":"fr","description":"` + strings.Repeat("a", int(model.DefaultSettings().UserMaxDescriptionLength)+1) + `"}`
 		if recorder := publicProfileRequest(t, db, id, body); recorder.Code != http.StatusBadRequest {
 			t.Errorf("status = %d", recorder.Code)
 		}

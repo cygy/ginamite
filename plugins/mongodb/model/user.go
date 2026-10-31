@@ -17,32 +17,6 @@ import (
 // UserCollection is the name of the collection of the user documents.
 const UserCollection = "users"
 
-var (
-	// UserMaxValidateRegistrationAttemps is the maximum number of attempts to validate a registration.
-	UserMaxValidateRegistrationAttemps uint = 5
-
-	// UserMaxDescriptionLength is the maximum length of the description of an account.
-	UserMaxDescriptionLength uint = 300
-
-	// UserMaxImageSize is the maximum size of the image of an account, in bytes.
-	UserMaxImageSize int64 = 2000000
-
-	// UserImagePath is the path of the directory containing the user images.
-	UserImagePath = "/images"
-
-	// UserImageWidth is the width of the user images, in pixels.
-	UserImageWidth int64 = 800
-
-	// UserImageHeight is the height of the user images, in pixels.
-	UserImageHeight int64 = 800
-
-	// UserImageSmallVersion reports whether the small version of the user images must be generated.
-	UserImageSmallVersion = true
-
-	// UserImageThumbVersion reports whether the thumbnail version of the user images must be generated.
-	UserImageThumbVersion = true
-)
-
 // User is a user of the application.
 type User struct {
 	ID                     bson.ObjectID             `json:"id" bson:"_id,omitempty"`

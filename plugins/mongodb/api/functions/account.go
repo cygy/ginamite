@@ -12,6 +12,7 @@ import (
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/mongo/session"
 	"github.com/cygy/ginamite/plugins/mongodb/api/context"
+	"github.com/cygy/ginamite/plugins/mongodb/api/ctxsettings"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
 	pluginQueue "github.com/cygy/ginamite/plugins/mongodb/queue"
 
@@ -44,6 +45,7 @@ func UpdatedAccountSettings(c *gin.Context, userID, locale, timezone string) err
 
 // UpdateAccountPublicProfile updates the public profile of an account.
 func UpdateAccountPublicProfile(c *gin.Context) {
+	settings := ctxsettings.GetSettings(c)
 	errorMessageKey := "error.account.public.profile.update.message"
 
 	var jsonBody struct {
@@ -64,11 +66,11 @@ func UpdateAccountPublicProfile(c *gin.Context) {
 
 	// Description must not be too long.
 	description := jsonBody.Description
-	if len(description) > int(model.UserMaxDescriptionLength) {
+	if len(description) > int(settings.UserMaxDescriptionLength) {
 		response.InvalidParameterValue(c, "description",
 			t(errorMessageKey),
-			t("error.account.public.profile.description.too_long.reason", localization.H{"Count": model.UserMaxDescriptionLength}),
-			t("error.account.public.profile.description.too_long.recovery", localization.H{"Count": model.UserMaxDescriptionLength}),
+			t("error.account.public.profile.description.too_long.reason", localization.H{"Count": settings.UserMaxDescriptionLength}),
+			t("error.account.public.profile.description.too_long.recovery", localization.H{"Count": settings.UserMaxDescriptionLength}),
 		)
 		return
 	}

@@ -16,15 +16,13 @@ import (
 func TestUser_RegisterByEmailAddress(t *testing.T) {
 	ctx := context.Background()
 
-	oldAbilities := DefaultUserAbilities
-	defer func() { DefaultUserAbilities = oldAbilities }()
-	DefaultUserAbilities = []string{"read"}
+	defaultAbilities := []string{"read"}
 
 	db := mock.NewDatabase("app")
 	user := NewUser()
 	device := authentication.Device{Name: "phone", Type: "mobile"}
 
-	err := user.RegisterByEmailAddress(ctx, "John Doe", "hash", "j@example.com", "fr-fr", "v2", "code", "key", "web", "1.2.3.4", device, RegistrationDefaults{Timezone: "Europe/Paris", Notifications: []string{"new_login"}}, db)
+	err := user.RegisterByEmailAddress(ctx, "John Doe", "hash", "j@example.com", "fr-fr", "v2", "code", "key", "web", "1.2.3.4", device, RegistrationDefaults{Timezone: "Europe/Paris", Notifications: []string{"new_login"}, Abilities: defaultAbilities}, db)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -49,7 +47,7 @@ func TestUser_RegisterByEmailAddress(t *testing.T) {
 
 	// The default abilities are copied, not shared with the user.
 	user.Abilities[0] = "root"
-	if DefaultUserAbilities[0] != "read" {
+	if defaultAbilities[0] != "read" {
 		t.Error("changing the abilities of a user changed the default abilities")
 	}
 
@@ -86,6 +84,7 @@ func TestRegistrationTimezone(t *testing.T) {
 }
 
 func TestUser_ValidateRegistrationByEmailAddress(t *testing.T) {
+	const maxAttempts = 5
 	ctx := context.Background()
 	id, hex := savedID()
 
@@ -100,7 +99,7 @@ func TestUser_ValidateRegistrationByEmailAddress(t *testing.T) {
 
 	t.Run("right code", func(t *testing.T) {
 		db := mock.NewDatabase("app")
-		if err := newUser(0).ValidateRegistrationByEmailAddress(ctx, "right", db); err != nil {
+		if err := newUser(0).ValidateRegistrationByEmailAddress(ctx, "right", maxAttempts, db); err != nil {
 			t.Fatal(err)
 		}
 
@@ -113,7 +112,7 @@ func TestUser_ValidateRegistrationByEmailAddress(t *testing.T) {
 
 	t.Run("wrong code increments the attempts", func(t *testing.T) {
 		db := mock.NewDatabase("app")
-		if err := newUser(0).ValidateRegistrationByEmailAddress(ctx, "wrong", db); err == nil {
+		if err := newUser(0).ValidateRegistrationByEmailAddress(ctx, "wrong", maxAttempts, db); err == nil {
 			t.Fatal("expected an error")
 		}
 		checkUpdate(t, db, UserCollection, id, bson.M{"$inc": bson.M{"registrationInfos.codeAttempts": 1}})
@@ -121,7 +120,7 @@ func TestUser_ValidateRegistrationByEmailAddress(t *testing.T) {
 
 	t.Run("last allowed attempt increments the attempts", func(t *testing.T) {
 		db := mock.NewDatabase("app")
-		if err := newUser(UserMaxValidateRegistrationAttemps-2).ValidateRegistrationByEmailAddress(ctx, "wrong", db); err == nil {
+		if err := newUser(maxAttempts-2).ValidateRegistrationByEmailAddress(ctx, "wrong", maxAttempts, db); err == nil {
 			t.Fatal("expected an error")
 		}
 		if update := lastCall(db, UserCollection).Args[1].(bson.M); update["$inc"] == nil {
@@ -131,7 +130,7 @@ func TestUser_ValidateRegistrationByEmailAddress(t *testing.T) {
 
 	t.Run("too many attempts clear the registration", func(t *testing.T) {
 		db := mock.NewDatabase("app")
-		if err := newUser(UserMaxValidateRegistrationAttemps-1).ValidateRegistrationByEmailAddress(ctx, "wrong", db); err == nil {
+		if err := newUser(maxAttempts-1).ValidateRegistrationByEmailAddress(ctx, "wrong", maxAttempts, db); err == nil {
 			t.Fatal("expected an error")
 		}
 		if update := lastCall(db, UserCollection).Args[1].(bson.M); update["$unset"] == nil || update["$inc"] != nil {
@@ -140,11 +139,11 @@ func TestUser_ValidateRegistrationByEmailAddress(t *testing.T) {
 	})
 
 	t.Run("update failures are only logged for a wrong code", func(t *testing.T) {
-		for _, attempts := range []uint{0, UserMaxValidateRegistrationAttemps - 1} {
+		for _, attempts := range []uint{0, maxAttempts - 1} {
 			db := mock.NewDatabase("app")
 			db.Coll(UserCollection).Err = errBoom
 
-			err := newUser(attempts).ValidateRegistrationByEmailAddress(ctx, "wrong", db)
+			err := newUser(attempts).ValidateRegistrationByEmailAddress(ctx, "wrong", maxAttempts, db)
 			if err == nil || errors.Is(err, errBoom) {
 				t.Errorf("attempts %d: err = %v, want the wrong code error", attempts, err)
 			}
@@ -154,7 +153,7 @@ func TestUser_ValidateRegistrationByEmailAddress(t *testing.T) {
 	t.Run("right code, update failure", func(t *testing.T) {
 		db := mock.NewDatabase("app")
 		db.Coll(UserCollection).Err = errBoom
-		if err := newUser(0).ValidateRegistrationByEmailAddress(ctx, "right", db); !errors.Is(err, errBoom) {
+		if err := newUser(0).ValidateRegistrationByEmailAddress(ctx, "right", maxAttempts, db); !errors.Is(err, errBoom) {
 			t.Errorf("err = %v", err)
 		}
 	})

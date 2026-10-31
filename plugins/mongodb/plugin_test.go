@@ -9,12 +9,14 @@ import (
 	"testing"
 
 	"github.com/cygy/ginamite"
+	"github.com/cygy/ginamite/api/rights"
 	"github.com/cygy/ginamite/api/route"
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/config/database"
 	"github.com/cygy/ginamite/common/mongo/session"
 	"github.com/cygy/ginamite/common/mongo/store"
 	"github.com/cygy/ginamite/common/mongo/store/mock"
+	"github.com/cygy/ginamite/plugins/mongodb/api/ctxsettings"
 	apiFunctions "github.com/cygy/ginamite/plugins/mongodb/api/functions"
 	_ "github.com/cygy/ginamite/plugins/mongodb/internal/plugintest" // Initializes the logger and gin.
 	"github.com/cygy/ginamite/plugins/mongodb/model"
@@ -23,28 +25,11 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// saveModelSettings restores the settings of the model package at the end of the test.
-func saveModelSettings(t *testing.T) {
-	t.Helper()
-
-	attempts, length, size, path := model.UserMaxValidateRegistrationAttemps, model.UserMaxDescriptionLength, model.UserMaxImageSize, model.UserImagePath
-	width, height, small, thumb := model.UserImageWidth, model.UserImageHeight, model.UserImageSmallVersion, model.UserImageThumbVersion
-	all, defaults := slices.Clone(model.AllUserAbilities), slices.Clone(model.DefaultUserAbilities)
-
-	t.Cleanup(func() {
-		model.UserMaxValidateRegistrationAttemps, model.UserMaxDescriptionLength, model.UserMaxImageSize, model.UserImagePath = attempts, length, size, path
-		model.UserImageWidth, model.UserImageHeight, model.UserImageSmallVersion, model.UserImageThumbVersion = width, height, small, thumb
-		model.AllUserAbilities, model.DefaultUserAbilities = all, defaults
-	})
-}
-
 func TestNewPlugin(t *testing.T) {
 	p := NewPlugin()
 
-	if p.UserMaxValidateRegistrationAttemps != model.UserMaxValidateRegistrationAttemps || p.UserMaxDescriptionLength != model.UserMaxDescriptionLength ||
-		p.UserMaxImageSize != model.UserMaxImageSize || p.UserImagePath != model.UserImagePath || p.UserImageWidth != model.UserImageWidth ||
-		p.UserImageHeight != model.UserImageHeight || p.UserImageSmallVersion != model.UserImageSmallVersion || p.UserImageThumbVersion != model.UserImageThumbVersion {
-		t.Errorf("the plugin does not start with the settings of the model: %+v", p)
+	if got, want := p.Settings(), model.DefaultSettings(); !reflect.DeepEqual(got, want) {
+		t.Errorf("the plugin does not start with the default settings: %+v, want %+v", got, want)
 	}
 	if p.ExtraUserAbilities == nil || p.ExtraDefaultUserAbilities == nil {
 		t.Error("the abilities must be empty lists")
@@ -123,8 +108,6 @@ func TestIsValidID(t *testing.T) {
 }
 
 func TestPlugin_Configure_IsValidID(t *testing.T) {
-	saveModelSettings(t)
-
 	server := ginamite.NewServer()
 	NewPlugin().Configure(server)
 
@@ -134,14 +117,12 @@ func TestPlugin_Configure_IsValidID(t *testing.T) {
 }
 
 func TestPlugin_Configure_Middlewares(t *testing.T) {
-	saveModelSettings(t)
-
 	t.Run("without session", func(t *testing.T) {
 		server := ginamite.NewServer()
 		NewPlugin().Configure(server)
 
-		if len(server.API.Middlewares) != 0 {
-			t.Errorf("len(Middlewares) = %d, want 0", len(server.API.Middlewares))
+		if len(server.API.Middlewares) != 1 {
+			t.Errorf("len(Middlewares) = %d, want only the one of the settings", len(server.API.Middlewares))
 		}
 	})
 
@@ -153,13 +134,13 @@ func TestPlugin_Configure_Middlewares(t *testing.T) {
 		server := ginamite.NewServer()
 		p.Configure(server)
 
-		if len(server.API.Middlewares) != 1 {
-			t.Fatalf("len(Middlewares) = %d, want 1", len(server.API.Middlewares))
+		if len(server.API.Middlewares) != 2 {
+			t.Fatalf("len(Middlewares) = %d, want 2", len(server.API.Middlewares))
 		}
 
 		c, _ := gin.CreateTestContext(httptest.NewRecorder())
 		c.Request = httptest.NewRequest(http.MethodGet, "/", nil)
-		server.API.Middlewares[0](c)
+		server.API.Middlewares[1](c)
 
 		if session.Get(c) != store.Database(db) {
 			t.Error("the middleware must save the database in the context")
@@ -167,9 +148,7 @@ func TestPlugin_Configure_Middlewares(t *testing.T) {
 	})
 }
 
-func TestPlugin_Configure_Settings(t *testing.T) {
-	saveModelSettings(t)
-
+func TestPlugin_Settings(t *testing.T) {
 	p := NewPlugin()
 	p.UserMaxValidateRegistrationAttemps = 9
 	p.UserMaxDescriptionLength = 10
@@ -177,19 +156,44 @@ func TestPlugin_Configure_Settings(t *testing.T) {
 	p.UserImagePath = "/custom"
 	p.UserImageWidth = 12
 	p.UserImageHeight = 13
-	p.UserImageSmallVersion = !model.UserImageSmallVersion
-	p.UserImageThumbVersion = !model.UserImageThumbVersion
+	p.UserImageSmallVersion = false
+	p.UserImageThumbVersion = false
 	p.ExtraUserAbilities = []string{"extra"}
 	p.ExtraDefaultUserAbilities = []string{"default"}
 
-	p.Configure(ginamite.NewServer())
+	got := p.Settings()
 
-	if model.UserMaxValidateRegistrationAttemps != 9 || model.UserMaxDescriptionLength != 10 || model.UserMaxImageSize != 11 || model.UserImagePath != "/custom" ||
-		model.UserImageWidth != 12 || model.UserImageHeight != 13 || model.UserImageSmallVersion != p.UserImageSmallVersion || model.UserImageThumbVersion != p.UserImageThumbVersion {
-		t.Error("the settings of the plugin must be applied to the model")
+	if got.UserMaxValidateRegistrationAttemps != 9 || got.UserMaxDescriptionLength != 10 || got.UserMaxImageSize != 11 || got.UserImagePath != "/custom" ||
+		got.UserImageWidth != 12 || got.UserImageHeight != 13 || got.UserImageSmallVersion || got.UserImageThumbVersion {
+		t.Errorf("settings = %+v", got)
 	}
-	if !slices.Contains(model.AllUserAbilities, "extra") || !slices.Contains(model.DefaultUserAbilities, "default") {
-		t.Errorf("abilities = %v, %v", model.AllUserAbilities, model.DefaultUserAbilities)
+	if !slices.Contains(got.AllUserAbilities, "extra") || !slices.Contains(got.AllUserAbilities, rights.AbilityToManageUsers) || !slices.Equal(got.DefaultUserAbilities, []string{"default"}) {
+		t.Errorf("abilities = %v, %v", got.AllUserAbilities, got.DefaultUserAbilities)
+	}
+
+	// The settings do not share the abilities of the defaults.
+	if slices.Contains(model.DefaultSettings().AllUserAbilities, "extra") {
+		t.Error("the default settings must not change")
+	}
+}
+
+func TestPlugin_Configure_Settings(t *testing.T) {
+	p := NewPlugin()
+	p.UserMaxDescriptionLength = 10
+
+	server := ginamite.NewServer()
+	p.Configure(server)
+
+	if len(server.API.Middlewares) == 0 {
+		t.Fatal("the middleware of the settings is missing")
+	}
+
+	c, _ := gin.CreateTestContext(httptest.NewRecorder())
+	c.Request = httptest.NewRequest(http.MethodGet, "/", nil)
+	server.API.Middlewares[0](c)
+
+	if got := ctxsettings.GetSettings(c).UserMaxDescriptionLength; got != 10 {
+		t.Errorf("UserMaxDescriptionLength = %d, want 10", got)
 	}
 }
 
@@ -199,8 +203,6 @@ func sameFunction(a, b any) bool {
 }
 
 func TestPlugin_Configure_Functions(t *testing.T) {
-	saveModelSettings(t)
-
 	server := ginamite.NewServer()
 	NewPlugin().Configure(server)
 
@@ -245,8 +247,6 @@ func TestPlugin_Configure_Functions(t *testing.T) {
 }
 
 func TestPlugin_Configure_WorkerHooks(t *testing.T) {
-	saveModelSettings(t)
-
 	db := mock.NewDatabase("app")
 
 	var sanitized, deleted, empty bool

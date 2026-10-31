@@ -40,6 +40,7 @@ func RegistrationTimezone(locale string, timezones *timezone.Configuration, defa
 type RegistrationDefaults struct {
 	Timezone      string   // See RegistrationTimezone.
 	Notifications []string // The notifications the user is subscribed to.
+	Abilities     []string // The abilities of the user.
 }
 
 // RegisterByEmailAddress registers a new user with an email address, with the defaults.
@@ -52,11 +53,11 @@ func (user *User) RegisterByEmailAddress(ctx context.Context, username, encrypte
 }
 
 // ValidateRegistrationByEmailAddress validates the registration by email address.
-// A wrong code is counted as an attempt; the registration is cleared when it is the UserMaxValidateRegistrationAttemps-th one.
-func (user *User) ValidateRegistrationByEmailAddress(ctx context.Context, code string, db store.Database) error {
+// A wrong code is counted as an attempt; the registration is cleared when it is the maxAttempts-th one.
+func (user *User) ValidateRegistrationByEmailAddress(ctx context.Context, code string, maxAttempts uint, db store.Database) error {
 	// Wrong verification code.
 	if user.RegistrationInfos.Code != code {
-		if user.RegistrationInfos.CodeAttempts+1 < UserMaxValidateRegistrationAttemps {
+		if user.RegistrationInfos.CodeAttempts+1 < maxAttempts {
 			if err := user.Update(ctx, bson.M{"$inc": bson.M{"registrationInfos.codeAttempts": 1}}, db); err != nil {
 				log.WithField("error", err).Error("unable to update")
 			}
@@ -142,7 +143,7 @@ func (user *User) initializeFromRegistration(username, emailAddress, termsVersio
 
 	user.Username = username
 	user.Slug = slug.Make(username)
-	user.Abilities = slices.Clone(DefaultUserAbilities)
+	user.Abilities = slices.Clone(defaults.Abilities)
 	user.Notifications = defaults.Notifications
 	user.PrivateInfos.Email = emailAddress
 	user.PrivateInfos.IsEmailValid = false
