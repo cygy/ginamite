@@ -50,7 +50,7 @@ func VerifyURLParameter(cfg Config) gin.HandlerFunc {
 		}
 
 		if !cfg.SkipVerifyingInvalidID {
-			if !IsValidID(value) {
+			if !IsValidID(c, value) {
 				response.InvalidRequestParameterWithDetails(c,
 					t(cfg.MessageKey),
 					t(cfg.InvalidIDReasonKey),

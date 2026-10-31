@@ -2,6 +2,8 @@ package api
 
 import (
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"reflect"
 	"testing"
 	"time"
@@ -62,19 +64,23 @@ func TestServer_routeFunctions(t *testing.T) {
 	}
 }
 
-func TestServer_setUpIDValidation(t *testing.T) {
-	old := request.IsValidID
-	t.Cleanup(func() { request.IsValidID = old })
+func TestServer_idValidator(t *testing.T) {
+	validity := func(s *Server) (valid, invalid bool) {
+		router := gin.New()
+		router.Use(s.idValidator())
+		router.GET("/", func(c *gin.Context) { valid, invalid = request.IsValidID(c, "ok"), request.IsValidID(c, "anything") })
+		router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
+
+		return valid, invalid
+	}
 
 	s := NewServer()
-	s.setUpIDValidation()
-	if !request.IsValidID("anything") {
+	if valid, invalid := validity(s); !valid || !invalid {
 		t.Error("without a function, every ID must stay valid")
 	}
 
 	s.Functions.IsValidID = func(id string) bool { return id == "ok" }
-	s.setUpIDValidation()
-	if !request.IsValidID("ok") || request.IsValidID("anything") {
+	if valid, invalid := validity(s); !valid || invalid {
 		t.Error("the function of the server must validate the IDs")
 	}
 }

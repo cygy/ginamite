@@ -7,8 +7,6 @@ import (
 )
 
 func TestSetAndGet(t *testing.T) {
-	defaultLocale = "en"
-
 	tests := []struct {
 		name                                 string
 		userLocale, requestLocale            string
@@ -22,6 +20,7 @@ func TestSetAndGet(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c, _ := apitest.NewContext("GET", "/", nil)
+			c.Set(defaultLocaleKey, "en")
 			Set(c, tt.userLocale, tt.requestLocale)
 
 			if got := Get(c); got != tt.wantLocale {
@@ -46,8 +45,6 @@ func TestGetters_NothingStored(t *testing.T) {
 }
 
 func TestIsSupported(t *testing.T) {
-	supportedLocales = []string{"en", "fr"}
-
 	tests := []struct {
 		locale string
 		want   bool
@@ -59,9 +56,22 @@ func TestIsSupported(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.locale, func(t *testing.T) {
-			if got := IsSupported(tt.locale); got != tt.want {
+			c, _ := apitest.NewContext("GET", "/", nil)
+			c.Set(supportedLocalesKey, []string{"en", "fr"})
+
+			if got := IsSupported(c, tt.locale); got != tt.want {
 				t.Errorf("IsSupported(%q) = %v, want %v", tt.locale, got, tt.want)
 			}
 		})
+	}
+}
+
+func TestSetAndIsSupported_NothingStored(t *testing.T) {
+	c, _ := apitest.NewContext("GET", "/", nil)
+
+	Set(c, "", "")
+
+	if Get(c) != "" || IsSupported(c, "en") {
+		t.Error("without the default and supported locales, no locale is stored or supported")
 	}
 }

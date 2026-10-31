@@ -23,7 +23,7 @@ func checkNotificationID(c *gin.Context, messageKey string) (string, bool) {
 		return "", false
 	}
 
-	if !request.IsValidID(notificationID) {
+	if !request.IsValidID(c, notificationID) {
 		response.InvalidRequestParameterWithDetails(c,
 			t(messageKey),
 			t("error.account.notification.id.invalid.reason"),

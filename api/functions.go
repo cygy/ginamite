@@ -99,12 +99,12 @@ func (s *Server) Start() {
 	}
 
 	// Set up some global functions.
-	s.setUpIDValidation()
 	accountFunctions, userFunctions, contactFunctions, termsFunctions := s.routeFunctions()
 
 	// Load the middlewares.
 	server.Use(ctxconfig.Inject(s.Config), ctxqueue.Inject(s.Queue), ctxlocalization.Inject(s.Localization), ctxtimezone.Inject(s.Timezones))
 	server.Use(s.Middlewares...)
+	server.Use(s.idValidator())
 	server.Use(ctxAuthToken.InjectRevoked(s.RevokedTokens.IsRevoked))
 	server.Use(ctxAuthToken.InjectHooks(authentication.Hooks{
 		BuildTokenFromID:                s.Functions.BuildTokenFromID,
@@ -250,11 +250,14 @@ func (s *Server) routeFunctions() (accountFunctions account.Functions, userFunct
 	return accountFunctions, userFunctions, contactFunctions, termsFunctions
 }
 
-// setUpIDValidation makes the requests use the IsValidID function of the server, if any, to validate the identifiers.
-func (s *Server) setUpIDValidation() {
-	if s.Functions.IsValidID != nil {
-		request.IsValidID = s.Functions.IsValidID
+// idValidator returns the middleware making the requests use the IsValidID function of the server, if any, to validate
+// the identifiers. It does nothing if the function is undefined.
+func (s *Server) idValidator() gin.HandlerFunc {
+	if s.Functions.IsValidID == nil {
+		return func(c *gin.Context) {}
 	}
+
+	return request.InjectIDValidator(s.Functions.IsValidID)
 }
 
 // Helping functions.

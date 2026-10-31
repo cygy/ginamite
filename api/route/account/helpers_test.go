@@ -65,6 +65,9 @@ var testConfig *config.Configuration
 // testTimezones are the timezones of the handlers.
 var testTimezones = &timezone.Configuration{Timezones: []string{"Europe/Paris"}}
 
+// testIDValidator accepts the identifiers of the length of an ObjectID.
+func testIDValidator(id string) bool { return len(id) == len(validNotificationID) }
+
 // testQueue is the queue of the handlers: it has no producer, the messages are only logged.
 var testQueue = queue.New(kafka.NewClient())
 
@@ -86,11 +89,7 @@ func setup(t *testing.T) {
 	testHooks.ExtraPropertiesForTokenWithID = func(string) (map[string]string, error) { return nil, nil }
 	testHooks.ExtendTokenExpirationDateFromID = func(context.Context, string, time.Duration) error { return nil }
 
-	originalIDValidator := request.IsValidID
-	request.IsValidID = func(id string) bool { return len(id) == len(validNotificationID) }
-
 	t.Cleanup(func() {
-		request.IsValidID = originalIDValidator
 		resetFunctions()
 		testHooks = authentication.Hooks{}
 	})
@@ -110,7 +109,7 @@ func resetFunctions() { testFunctions = Functions{} }
 // newRouter returns a router with the locale and the auth token middlewares, serving the handler on every path shape.
 func newRouter(handler gin.HandlerFunc) *gin.Engine {
 	router := gin.New()
-	router.Use(ctxconfig.Inject(testConfig), ctxqueue.Inject(testQueue), ctxtimezone.Inject(testTimezones), Inject(&testFunctions), ctxAuthToken.InjectHooks(testHooks), ctxlocalization.Inject(apitest.Localization), ctxLocale.Inject("en", []string{"en"}))
+	router.Use(ctxconfig.Inject(testConfig), ctxqueue.Inject(testQueue), request.InjectIDValidator(testIDValidator), ctxtimezone.Inject(testTimezones), Inject(&testFunctions), ctxAuthToken.InjectHooks(testHooks), ctxlocalization.Inject(apitest.Localization), ctxLocale.Inject("en", []string{"en"}))
 	router.Use(ctxAuthToken.Parse(testSecret, nil, false))
 	router.Any("/", handler)
 	router.Any("/:id", handler)
@@ -168,6 +167,7 @@ func newContext(params gin.Params) (*gin.Context, *httptest.ResponseRecorder) {
 	c.Params = params
 	ctxconfig.Set(c, testConfig)
 	ctxqueue.Set(c, testQueue)
+	request.SetIDValidator(c, testIDValidator)
 	ctxtimezone.Set(c, testTimezones)
 	SetFunctions(c, &testFunctions)
 	ctxAuthToken.SetHooks(c, testHooks)

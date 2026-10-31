@@ -74,7 +74,7 @@ func Parse(secret string, buildUser GetUserAndLocaleFunc, authTokenMustBePresent
 
 		// Define the user locale.
 		userLocale := ""
-		if ctxLocale.IsSupported(definedLocale) {
+		if ctxLocale.IsSupported(c, definedLocale) {
 			userLocale = definedLocale
 		}
 

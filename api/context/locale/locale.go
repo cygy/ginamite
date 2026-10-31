@@ -45,8 +45,9 @@ func GetRequest(c *gin.Context) string {
 }
 
 // Set stores the user and request locales in the context.
-// The default locale is used when a locale is empty.
+// The default locale of the context, see Inject, is used when a locale is empty.
 func Set(c *gin.Context, userLocale, requestLocale string) {
+	defaultLocale := defaultOf(c)
 	c.Set(localeKey, defaultLocale)
 
 	if len(userLocale) > 0 {
@@ -64,7 +65,20 @@ func Set(c *gin.Context, userLocale, requestLocale string) {
 	}
 }
 
-// IsSupported returns true if the locale is one of the supported locales.
-func IsSupported(locale string) bool {
-	return slices.Contains(supportedLocales, locale)
+// defaultOf returns the default locale saved in the context by Inject, or an empty string if there is none.
+func defaultOf(c *gin.Context) string {
+	if value, ok := c.Get(defaultLocaleKey); ok {
+		return value.(string)
+	}
+
+	return ""
+}
+
+// IsSupported returns true if the locale is one of the supported locales of the context, see Inject.
+func IsSupported(c *gin.Context, locale string) bool {
+	if value, ok := c.Get(supportedLocalesKey); ok {
+		return slices.Contains(value.([]string), locale)
+	}
+
+	return false
 }

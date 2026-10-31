@@ -76,7 +76,6 @@ func TestVerifyURLParameter(t *testing.T) {
 	initLocalization(t)
 
 	const validID = "507f1f77bcf86cd799439011"
-	setIDValidator(t, func(id string) bool { return id == validID })
 
 	tests := []struct {
 		name       string
@@ -93,7 +92,7 @@ func TestVerifyURLParameter(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var stored any
 			router := gin.New()
-			router.Use(ctxLocaleMiddleware(), VerifyURLParameter(tt.cfg))
+			router.Use(InjectIDValidator(func(id string) bool { return id == validID }), ctxLocaleMiddleware(), VerifyURLParameter(tt.cfg))
 			router.GET("/:id", func(c *gin.Context) {
 				stored, _ = c.Get("stored")
 				c.Status(http.StatusOK)
