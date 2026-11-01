@@ -133,7 +133,7 @@ func TestRunDLQ(t *testing.T) {
 	oldLog := log.Main
 	t.Cleanup(func() { log.Main = oldLog })
 
-	conf := writeFile(t, filepath.Join(t.TempDir(), "server.yaml"), "services:\n  kafka: {host: kafka, port: 9093}\nkafka: {topics_prefix: app_, stats_interval: 5}\n")
+	conf := writeFile(t, filepath.Join(t.TempDir(), "server.yaml"), "kafka: {host: kafka, port: 9093, topics_prefix: app_, stats_interval: 5}\n")
 
 	var backend *fakeDLQ
 	var gotHost string
@@ -213,7 +213,7 @@ func TestRunDLQ(t *testing.T) {
 			t.Error("a configuration without kafka service must be refused")
 		}
 
-		badOptions := writeFile(t, filepath.Join(t.TempDir(), "server.yaml"), "services:\n  kafka: {host: kafka, port: 1}\nkafka: {version: three}\n")
+		badOptions := writeFile(t, filepath.Join(t.TempDir(), "server.yaml"), "kafka: {host: kafka, port: 1, version: three}\n")
 		if err := runDLQ(&flags.Flags{ServerName: "dlq", Environment: "test", Version: "final", ServerConfigurationFile: badOptions, DLQ: flags.DLQList, DLQTopic: "mail"}, &bytes.Buffer{}); err == nil {
 			t.Error("invalid options must be refused")
 		}
@@ -253,13 +253,13 @@ func TestPlugin_Configure(t *testing.T) {
 		NewPlugin().Configure(s)
 
 		if s.Broker != nil {
-			t.Errorf("broker = %v, want none without the service kafka", s.Broker)
+			t.Errorf("broker = %v, want none without the address of kafka", s.Broker)
 		}
 	})
 
 	t.Run("with service", func(t *testing.T) {
 		s := ginamite.NewServer()
-		s.Config.Services = map[string]config.ServiceConfiguration{"kafka": {Host: "kafka", Port: 9093}}
+		s.Config.Kafka.Host, s.Config.Kafka.Port = "kafka", 9093
 		s.Config.Kafka.TopicsPrefix = "app_"
 		s.Config.Kafka.MaxAttempts = 4
 		s.Config.Kafka.RetryDelay = 250

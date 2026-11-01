@@ -38,7 +38,6 @@ type Configuration struct {
 	JWT                 JWTConfiguration  `yaml:"jwt"`
 	SMTP                SMTPConfiguration `yaml:"smtp"`
 	API                 APIConfiguration  `yaml:"api"`
-	Services            map[string]ServiceConfiguration
 	Facebook            FacebookConfiguration
 	Google              GoogleConfiguration
 	SocialNetworks      SocialMediaConfiguration       `yaml:"social_networks"`
@@ -50,7 +49,7 @@ type Configuration struct {
 	Account             AccountConfiguration
 	Metrics             MetricsConfiguration      `yaml:"metrics"`          // Prometheus metrics, disabled by default
 	RateLimits          RateLimitsConfiguration   `yaml:"rate_limits"`      // limits of the requests by client, 0 to disable
-	Kafka               KafkaConfiguration        `yaml:"kafka"`            // connection to Kafka and its topics, the address is the service "kafka"
+	Kafka               KafkaConfiguration        `yaml:"kafka"`            // connection to Kafka, its topics and its retries
 	WorkerConsumers     []ConsumerConfiguration   `yaml:"worker_consumers"` // topics consumed by the worker, all if empty
 	RecurringTasks      []recurring.ScheduledTask `yaml:"recurring_tasks"`  // tasks executed by the workers
 	RunStartUpTasks     bool                      `yaml:"run_start_up_tasks"`
@@ -197,11 +196,4 @@ func (config *Configuration) IsFinalVersion() bool {
 // IsMongoDBDatabase reports whether the database is MongoDB.
 func (config *Configuration) IsMongoDBDatabase() bool {
 	return config.Database.Service == database.MongoDB
-}
-
-// KafkaConfiguration returns the configuration of the Kafka service and whether it is
-// usable, i.e. has a host and a port.
-func (config *Configuration) KafkaConfiguration() (ServiceConfiguration, bool) {
-	service, ok := config.Services["kafka"]
-	return service, ok && len(service.Host) > 0 && service.Port > 0
 }

@@ -95,12 +95,6 @@ type ConsumerConfiguration struct {
 	Group string
 }
 
-// ServiceConfiguration holds the address of a hosted service.
-type ServiceConfiguration struct {
-	Host string
-	Port int
-}
-
 // FacebookConfiguration holds the settings of the Facebook developer application.
 type FacebookConfiguration struct {
 	Enabled    bool

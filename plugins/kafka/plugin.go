@@ -9,7 +9,7 @@ import (
 
 // Plugin makes Kafka the message broker of the servers: it creates the topics if the configuration asks for it, and
 // sets a Client as the broker, see ginamite.Server.UseBroker, which the server starts with the consumers of the chosen
-// server. Without the service "kafka" in the configuration, there is no broker.
+// server. Without the host and the port of Kafka in the configuration, there is no broker.
 //
 // It also runs the command on the dead letters, see Command.
 type Plugin struct{}
@@ -22,8 +22,7 @@ func NewPlugin() *Plugin {
 // Configure sets the Kafka client, built from the configuration, as the broker of the server. It stops the process if
 // the Kafka settings are invalid.
 func (p *Plugin) Configure(s *ginamite.Server) {
-	service, ok := s.Config.KafkaConfiguration()
-	if !ok {
+	if !s.Config.Kafka.Enabled() {
 		return
 	}
 
@@ -33,10 +32,10 @@ func (p *Plugin) Configure(s *ginamite.Server) {
 		return
 	}
 
-	createTopics(s.Config, service.Host, service.Port, options)
+	createTopics(s.Config, s.Config.Kafka.Host, s.Config.Kafka.Port, options)
 
 	client := NewClient()
-	client.Host, client.Port = service.Host, service.Port
+	client.Host, client.Port = s.Config.Kafka.Host, s.Config.Kafka.Port
 	client.TopicsPrefix = s.Config.Kafka.TopicsPrefix
 	client.Options = options
 	client.MaxAttempts = max(s.Config.Kafka.MaxAttempts, 1)

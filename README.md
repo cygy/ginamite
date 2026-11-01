@@ -78,12 +78,11 @@ default values. The main sections are:
 | `database` | `service` (for instance `mongodb`), `host`, `port`, `database`, `username`, `password`, `time_out` in seconds. |
 | `jwt`, `cookie` | Settings of the authentication tokens and of the cookie. |
 | `locales`, `default_locale`, `localization_path`, `templates_path` | Languages, translations and templates. |
-| `services` | Addresses of the other services, such as `kafka`. |
 | `smtp`, `sender_*` | Sending of the emails. |
 | `facebook`, `google` | Sign-in with a social network. |
 | `recurring_tasks`, `run_start_up_tasks` | Tasks executed by the workers. |
 | `metrics`, `rate_limits` | Prometheus endpoint and limits of the requests (see Security and Metrics). |
-| `kafka` | Connection to Kafka (version, TLS, SASL), prefix of the topics, attempts and delay of the retries, creation of the topics, statistics (see below). |
+| `kafka` | Connection to Kafka (host, port, version, TLS, SASL), prefix of the topics, attempts and delay of the retries, creation of the topics, statistics (see below). |
 | `worker_consumers` | Kafka topics consumed by a worker, with their consumer group (see below). |
 
 ### Security
@@ -189,7 +188,7 @@ A message whose handling fails is handled again, then sent to a **dead-letter to
 ##### Dead letters command
 
 The binary lists, replays and purges the dead letters of a topic, without starting any server. It only needs the
-server configuration (`-conf-server`) and the name of the process, and the service `kafka` of the configuration:
+server configuration (`-conf-server`) and the name of the process, and the section `kafka` of the configuration:
 
 ```bash
 myapp -name dlq -conf-server server.yaml -dlq list -dlq-topic mail
@@ -236,7 +235,7 @@ myapp -name dlq -conf-server server.yaml -dlq purge -dlq-topic mail
 The servers only depend on the interfaces of `common/broker`: a `Producer` (`SendMessageToTopic`, and
 `SendKeyedMessageToTopic` for the ordering), the `MessageConsumer`s of the topics, and `Broker` (`Start(consumers)`,
 `Close()`). The plugin `plugins/kafka` is the implementation for Kafka: when it is configured, it sets the Kafka client as
-the broker, see `server.UseBroker`, if the configuration has the service `kafka`. Without a broker, the messages are not
+the broker, see `server.UseBroker`, if the configuration has the host and the port of Kafka. Without a broker, the messages are not
 sent and an error is logged for each. To use another broker, implement `broker.Broker` and make a plugin, or the
 application before `Start`, call `server.UseBroker(b)`: the queue of the API and of the worker send through it, and
 `Start` runs it with the consumers of the chosen server. A broker which implements `broker.DeduplicatorUser` receives
@@ -248,14 +247,13 @@ delivers them to the consumers at once.
 
 ### Kafka connection and topics
 
-The address of the broker is the service `kafka`. The other settings are in the section `kafka` of the configuration
-file; `kafka.topics_prefix` is prepended to the names of the topics and of the consumer groups.
+The settings are in the section `kafka` of the configuration file, whose `host` and `port` are the address of the
+broker (Kafka is not used without them); `kafka.topics_prefix` is prepended to the names of the topics and of the consumer groups.
 
 ```yaml
-services:
-  kafka: {host: kafka.example.com, port: 9093}
-
 kafka:
+  host: kafka.example.com
+  port: 9093
   topics_prefix: myapp_
   max_attempts: 3
   retry_delay: 1000            # milliseconds, doubled at each attempt

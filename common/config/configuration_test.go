@@ -26,7 +26,7 @@ func TestNewConfiguration(t *testing.T) {
 	if c.Kafka.MaxAttempts != 3 || c.Kafka.RetryDelay != 1000 {
 		t.Errorf("kafka attempts = %d, delay = %d, want the defaults", c.Kafka.MaxAttempts, c.Kafka.RetryDelay)
 	}
-	if c.Locales == nil || c.SupportedLocales == nil || c.FallbackLocales == nil || len(c.Services) > 0 {
+	if c.Locales == nil || c.SupportedLocales == nil || c.FallbackLocales == nil {
 		t.Error("the collections must be initialized")
 	}
 }
@@ -44,11 +44,9 @@ locales:
   de: {default: true}
 server:
   port: 8080
-services:
-  kafka:
-    host: kafka
-    port: 9092
 kafka:
+  host: kafka
+  port: 9092
   max_attempts: 5
   retry_delay: 250
   version: 3.6.0
@@ -86,6 +84,8 @@ worker_consumers:
 		t.Errorf("kafka attempts = %d, delay = %d", c.Kafka.MaxAttempts, c.Kafka.RetryDelay)
 	}
 	wantKafka := KafkaConfiguration{
+		Host:          "kafka",
+		Port:          9092,
 		Version:       "3.6.0",
 		TLS:           KafkaTLSConfiguration{Enabled: true, CAFile: "ca.pem"},
 		SASL:          KafkaSASLConfiguration{Mechanism: "SCRAM-SHA-256", Username: "user", Password: "secret"},
@@ -181,29 +181,22 @@ func TestConfiguration_Predicates(t *testing.T) {
 	}
 }
 
-func TestConfiguration_KafkaConfiguration(t *testing.T) {
+func TestKafkaConfiguration_Enabled(t *testing.T) {
 	tests := []struct {
-		name     string
-		services map[string]ServiceConfiguration
-		want     bool
+		name  string
+		kafka KafkaConfiguration
+		want  bool
 	}{
-		{"no services", nil, false},
-		{"no host", map[string]ServiceConfiguration{"kafka": {Port: 9092}}, false},
-		{"no port", map[string]ServiceConfiguration{"kafka": {Host: "kafka"}}, false},
-		{"other service", map[string]ServiceConfiguration{"redis": {Host: "r", Port: 1}}, false},
-		{"configured", map[string]ServiceConfiguration{"kafka": {Host: "kafka", Port: 9092}}, true},
+		{"nothing", KafkaConfiguration{}, false},
+		{"no host", KafkaConfiguration{Port: 9092}, false},
+		{"no port", KafkaConfiguration{Host: "kafka"}, false},
+		{"configured", KafkaConfiguration{Host: "kafka", Port: 9092}, true},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &Configuration{Services: tt.services}
-
-			service, ok := c.KafkaConfiguration()
-			if ok != tt.want {
-				t.Errorf("ok = %v, want %v", ok, tt.want)
-			}
-			if tt.want && (service.Host != "kafka" || service.Port != 9092) {
-				t.Errorf("service = %+v", service)
+			if got := tt.kafka.Enabled(); got != tt.want {
+				t.Errorf("Enabled() = %v, want %v", got, tt.want)
 			}
 		})
 	}
