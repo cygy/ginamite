@@ -7,12 +7,18 @@ import (
 	"os"
 )
 
-// KafkaConfiguration holds the settings of the connection to Kafka and of its topics.
-type KafkaConfiguration struct {
-	// Host and Port are the address of the broker. Kafka is not used if one is missing.
-	Host string
-	Port int
+// BrokerConfiguration holds the address of the message broker and the plugin which connects to it.
+type BrokerConfiguration struct {
+	// Service is the name of the broker, such as "kafka": the plugin of this broker is the one which connects. No
+	// message is sent if it is empty.
+	Service string
+	Host    string
+	Port    int
+}
 
+// KafkaConfiguration holds the settings of the connection to Kafka and of its topics. The address of the broker is
+// in BrokerConfiguration.
+type KafkaConfiguration struct {
 	// Version is the version of the brokers, such as "2.8.0". It is the one of the client library if empty.
 	Version string
 	TLS     KafkaTLSConfiguration  `yaml:"tls"`
@@ -32,11 +38,6 @@ type KafkaConfiguration struct {
 	// StatsInterval is the interval, in seconds, of the log of the statistics of the producer and of the consumers.
 	// They are not logged if 0.
 	StatsInterval int `yaml:"stats_interval"`
-}
-
-// Enabled reports whether the address of the broker is set, i.e. it has a host and a port.
-func (k KafkaConfiguration) Enabled() bool {
-	return k.Host != "" && k.Port > 0
 }
 
 // KafkaTLSConfiguration holds the settings of the encrypted connection to Kafka.

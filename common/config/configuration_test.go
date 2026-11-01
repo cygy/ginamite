@@ -44,9 +44,11 @@ locales:
   de: {default: true}
 server:
   port: 8080
-kafka:
+broker:
+  service: kafka
   host: kafka
   port: 9092
+kafka:
   max_attempts: 5
   retry_delay: 250
   version: 3.6.0
@@ -84,8 +86,6 @@ worker_consumers:
 		t.Errorf("kafka attempts = %d, delay = %d", c.Kafka.MaxAttempts, c.Kafka.RetryDelay)
 	}
 	wantKafka := KafkaConfiguration{
-		Host:          "kafka",
-		Port:          9092,
 		Version:       "3.6.0",
 		TLS:           KafkaTLSConfiguration{Enabled: true, CAFile: "ca.pem"},
 		SASL:          KafkaSASLConfiguration{Mechanism: "SCRAM-SHA-256", Username: "user", Password: "secret"},
@@ -93,6 +93,9 @@ worker_consumers:
 		MaxAttempts:   5,
 		RetryDelay:    250,
 		StatsInterval: 30,
+	}
+	if want := (BrokerConfiguration{Service: "kafka", Host: "kafka", Port: 9092}); c.Broker != want {
+		t.Errorf("broker = %+v, want %+v", c.Broker, want)
 	}
 	if c.Kafka != wantKafka {
 		t.Errorf("kafka = %+v, want %+v", c.Kafka, wantKafka)
@@ -176,27 +179,6 @@ func TestConfiguration_Predicates(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := tt.got(&tt.c); got != tt.want {
 				t.Errorf("got %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestKafkaConfiguration_Enabled(t *testing.T) {
-	tests := []struct {
-		name  string
-		kafka KafkaConfiguration
-		want  bool
-	}{
-		{"nothing", KafkaConfiguration{}, false},
-		{"no host", KafkaConfiguration{Port: 9092}, false},
-		{"no port", KafkaConfiguration{Host: "kafka"}, false},
-		{"configured", KafkaConfiguration{Host: "kafka", Port: 9092}, true},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.kafka.Enabled(); got != tt.want {
-				t.Errorf("Enabled() = %v, want %v", got, tt.want)
 			}
 		})
 	}

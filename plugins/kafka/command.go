@@ -39,8 +39,8 @@ func runDLQ(f *flags.Flags, out io.Writer) error {
 		return err
 	}
 
-	if !configuration.Kafka.Enabled() {
-		return errors.New("the configuration has no kafka host and port")
+	if !enabled(configuration) {
+		return errors.New("the configuration has no kafka broker")
 	}
 
 	options, err := optionsFrom(configuration)
@@ -50,7 +50,7 @@ func runDLQ(f *flags.Flags, out io.Writer) error {
 
 	topic := DeadLetterTopic(configuration.Kafka.TopicsPrefix + f.DLQTopic)
 
-	backend, err := openDLQ(configuration.Kafka.Host, configuration.Kafka.Port, options.NewConfig(), topic+"_tool")
+	backend, err := openDLQ(configuration.Broker.Host, configuration.Broker.Port, options.NewConfig(), topic+"_tool")
 	if err != nil {
 		return err
 	}

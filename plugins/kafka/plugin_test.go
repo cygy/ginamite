@@ -133,7 +133,7 @@ func TestRunDLQ(t *testing.T) {
 	oldLog := log.Main
 	t.Cleanup(func() { log.Main = oldLog })
 
-	conf := writeFile(t, filepath.Join(t.TempDir(), "server.yaml"), "kafka: {host: kafka, port: 9093, topics_prefix: app_, stats_interval: 5}\n")
+	conf := writeFile(t, filepath.Join(t.TempDir(), "server.yaml"), "broker: {service: kafka, host: kafka, port: 9093}\nkafka: {topics_prefix: app_, stats_interval: 5}\n")
 
 	var backend *fakeDLQ
 	var gotHost string
@@ -208,12 +208,12 @@ func TestRunDLQ(t *testing.T) {
 			t.Error("a connection failure must be returned")
 		}
 
-		noKafka := writeFile(t, filepath.Join(t.TempDir(), "server.yaml"), "kafka: {topics_prefix: app_}\n")
+		noKafka := writeFile(t, filepath.Join(t.TempDir(), "server.yaml"), "broker: {service: nats, host: nats, port: 4222}\nkafka: {topics_prefix: app_}\n")
 		if err := runDLQ(&flags.Flags{ServerName: "dlq", Environment: "test", Version: "final", ServerConfigurationFile: noKafka, DLQ: flags.DLQList, DLQTopic: "mail"}, &bytes.Buffer{}); err == nil {
 			t.Error("a configuration without kafka service must be refused")
 		}
 
-		badOptions := writeFile(t, filepath.Join(t.TempDir(), "server.yaml"), "kafka: {host: kafka, port: 1, version: three}\n")
+		badOptions := writeFile(t, filepath.Join(t.TempDir(), "server.yaml"), "broker: {service: kafka, host: kafka, port: 1}\nkafka: {version: three}\n")
 		if err := runDLQ(&flags.Flags{ServerName: "dlq", Environment: "test", Version: "final", ServerConfigurationFile: badOptions, DLQ: flags.DLQList, DLQTopic: "mail"}, &bytes.Buffer{}); err == nil {
 			t.Error("invalid options must be refused")
 		}
@@ -247,6 +247,31 @@ func TestPlugin_Command(t *testing.T) {
 	}
 }
 
+func TestEnabled(t *testing.T) {
+	tests := []struct {
+		name   string
+		broker config.BrokerConfiguration
+		want   bool
+	}{
+		{"nothing", config.BrokerConfiguration{}, false},
+		{"another broker", config.BrokerConfiguration{Service: "nats", Host: "nats", Port: 4222}, false},
+		{"no host", config.BrokerConfiguration{Service: "kafka", Port: 9092}, false},
+		{"no port", config.BrokerConfiguration{Service: "kafka", Host: "kafka"}, false},
+		{"configured", config.BrokerConfiguration{Service: "kafka", Host: "kafka", Port: 9092}, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := config.NewConfiguration()
+			c.Broker = tt.broker
+
+			if got := enabled(c); got != tt.want {
+				t.Errorf("enabled() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestPlugin_Configure(t *testing.T) {
 	t.Run("without service", func(t *testing.T) {
 		s := ginamite.NewServer()
@@ -259,7 +284,7 @@ func TestPlugin_Configure(t *testing.T) {
 
 	t.Run("with service", func(t *testing.T) {
 		s := ginamite.NewServer()
-		s.Config.Kafka.Host, s.Config.Kafka.Port = "kafka", 9093
+		s.Config.Broker = config.BrokerConfiguration{Service: "kafka", Host: "kafka", Port: 9093}
 		s.Config.Kafka.TopicsPrefix = "app_"
 		s.Config.Kafka.MaxAttempts = 4
 		s.Config.Kafka.RetryDelay = 250

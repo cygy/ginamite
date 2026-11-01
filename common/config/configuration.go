@@ -49,6 +49,7 @@ type Configuration struct {
 	Account             AccountConfiguration
 	Metrics             MetricsConfiguration      `yaml:"metrics"`          // Prometheus metrics, disabled by default
 	RateLimits          RateLimitsConfiguration   `yaml:"rate_limits"`      // limits of the requests by client, 0 to disable
+	Broker              BrokerConfiguration       `yaml:"broker"`           // address of the message broker, and the plugin which connects to it
 	Kafka               KafkaConfiguration        `yaml:"kafka"`            // connection to Kafka, its topics and its retries
 	WorkerConsumers     []ConsumerConfiguration   `yaml:"worker_consumers"` // topics consumed by the worker, all if empty
 	RecurringTasks      []recurring.ScheduledTask `yaml:"recurring_tasks"`  // tasks executed by the workers
