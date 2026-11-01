@@ -1,0 +1,10 @@
+# Configuration of the example. The API listens on the port 8080 of the container.
+api_version: v1
+default_locale: en-us
+timezones_file_path: data/zone1970.tab
+
+server:
+  port: 8080
+
+jwt:
+  secret: change-me-with-at-least-32-characters-secret

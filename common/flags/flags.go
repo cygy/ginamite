@@ -118,7 +118,7 @@ func (f *Flags) parse(args []string, output io.Writer, applicationConfigurationR
 		return false, "A path to the server configuration file must be defined. Show the help to learn more about."
 	case applicationConfigurationRequired && len(f.ApplicationConfigurationFile) == 0:
 		return false, "A path to the application configuration file must be defined. Show the help to learn more about."
-	case len(f.RoutesFile) == 0:
+	case f.IsWebServer && len(f.RoutesFile) == 0:
 		return false, "A path to the web routes file must be defined. Show the help to learn more about."
 	}
 

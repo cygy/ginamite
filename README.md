@@ -318,6 +318,7 @@ configuration).
 | `web/` | The web server: HTML routes, pages, cookies, calls to the API, `robots.txt`. |
 | `common/` | Shared packages: configuration, flags, logger, localization, templates, broker interfaces, JWT, timezones. |
 | `plugins/` | The plugins: the database (`mongodb`) and the message broker (`kafka`). |
+| `examples/` | Small projects built with ginamite, deployed with a Dockerfile. See [examples](examples/README.md). |
 
 ## Database plugins
 

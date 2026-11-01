@@ -135,7 +135,9 @@ func (s *Server) Start() {
 	server.Use(ctxLocale.Inject(s.Config.DefaultLocale, s.Config.SupportedLocales))
 
 	// Load the HTML templates into the engine, for the custom routes of the application.
-	html.LoadTemplatesWithDelimiters(s.Config.TemplatesPath+"/html", "[[", "]]", server)
+	if s.Config.TemplatesPath != "" {
+		html.LoadTemplatesWithDelimiters(s.Config.TemplatesPath+"/html", "[[", "]]", server)
+	}
 
 	// Set up the routes.
 	router := route.NewRouter(

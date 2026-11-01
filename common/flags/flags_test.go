@@ -57,6 +57,7 @@ func TestFlags_parse(t *testing.T) {
 		{name: "no server configuration", args: []string{"-web", "-name", "n", "-routes", "r"}, wantProblem: "server configuration file"},
 		{name: "no application configuration", args: valid, appConfig: true, wantProblem: "application configuration file"},
 		{name: "no routes", args: []string{"-web", "-name", "n", "-conf-server", "s"}, wantProblem: "routes file"},
+		{name: "api without routes", args: []string{"-api", "-name", "n", "-conf-server", "s"}, wantOK: true},
 		{
 			name:   "dead letters command, which needs no server nor routes",
 			args:   []string{"-dlq", "replay", "-dlq-topic", "mail", "-dlq-limit", "5", "-dlq-body", "-name", "n", "-conf-server", "s.yml"},
