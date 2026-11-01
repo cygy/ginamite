@@ -205,7 +205,7 @@ func TestNewConfiguration_RateLimits(t *testing.T) {
 	if c.RateLimits.Registration.Requests == 0 || c.RateLimits.ForgotPassword.Requests == 0 {
 		t.Errorf("limits = %+v", c.RateLimits)
 	}
-	if c.Server.TrustedProxies != nil {
-		t.Errorf("trusted proxies = %v, want undefined", c.Server.TrustedProxies)
+	if c.Server.TrustedProxies == nil || len(c.Server.TrustedProxies) != 0 {
+		t.Errorf("trusted proxies = %v, want none", c.Server.TrustedProxies)
 	}
 }

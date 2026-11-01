@@ -72,8 +72,6 @@ func (s *Server) CreateConsumers() []broker.MessageConsumer {
 
 // Start sets up and starts the web server, which stops on error.
 func (s *Server) Start() {
-	s.warnUndefinedFunctions()
-
 	engine := s.newEngine()
 	s.setUp(engine)
 
@@ -168,12 +166,5 @@ func (s *Server) setUp(engine *gin.Engine) {
 	router.LoadDefaultRoutes()
 	for _, customRoute := range s.customRoutes {
 		router.LoadCustomRoutes(customRoute)
-	}
-}
-
-// warnUndefinedFunctions logs a warning for each function of the application which is not defined.
-func (s *Server) warnUndefinedFunctions() {
-	if s.Functions.RecurringTasks == nil {
-		log.Warn("The function 'RecurringTasks' is undefined.")
 	}
 }

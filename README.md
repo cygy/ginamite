@@ -63,8 +63,13 @@ go run . -web    -name web    -env production -conf-server conf/server.yaml -rou
 | `-version` | Version: `final` (default), `beta` or `alpha`. |
 | `-conf-server` | Path to the server configuration file (YAML). |
 | `-conf-app` | Path to the application configuration file, see `ApplicationConfiguration`. |
-| `-routes` | Path to the routes file of the web server. |
+| `-routes` | Path to the routes file, required by the web server only. |
 | `-help` | Print the help. |
+
+The functions of `api.Server.Functions` and `worker.Server.Functions` are provided by the plugins or by the application.
+An API only exposes the default routes whose functions are defined: without `CreateContact` there is no contact route,
+and an API without any function only has `/status`, `/locales`, `/timezones`, `/notifications` and `/terms`. A route
+can still be enabled in `RouterConfigureDefaultRoutes`.
 
 ## Configuration
 
@@ -107,8 +112,8 @@ default values. The main sections are:
     trusted_proxies: ["10.0.0.0/8"]  # the proxies allowed to set X-Forwarded-For
   ```
 
-  Set `server.trusted_proxies` behind a reverse proxy, otherwise the client IP, hence the limit, can be forged: Gin
-  trusts every proxy by default, and the API warns in production when the setting is missing.
+  No proxy is trusted by default: the client IP, hence the limit, is the one of the connection. Set
+  `server.trusted_proxies` behind a reverse proxy, otherwise every client has the IP of the proxy.
 
 ### Metrics
 

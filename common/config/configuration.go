@@ -62,6 +62,7 @@ func NewConfiguration() (config *Configuration) {
 	config.Environment = environment.Development
 	config.Version = version.Beta
 	config.Server.Host = "localhost"
+	config.Server.TrustedProxies = []string{}
 	config.Server.Port = 80
 	config.Server.GZip.Enabled = false
 	config.Server.SSL.Enabled = false

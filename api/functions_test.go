@@ -13,7 +13,6 @@ import (
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/route"
 	"github.com/cygy/ginamite/common/broker"
-	"github.com/cygy/ginamite/common/config/environment"
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/queue"
 
@@ -198,65 +197,40 @@ func countWarnings(fn func()) int {
 	return count
 }
 
-func TestServer_warnUndefinedFunctions(t *testing.T) {
-	handlers := reflect.TypeFor[Handlers]().NumField()
-
-	t.Run("every function undefined", func(t *testing.T) {
-		s := NewServer()
-
-		if got := countWarnings(s.warnUndefinedFunctions); got != handlers {
-			t.Errorf("warnings = %d, want one per function (%d)", got, handlers)
-		}
-	})
-
-	t.Run("every function defined", func(t *testing.T) {
-		s := NewServer()
-		values := reflect.ValueOf(&s.Functions).Elem()
-		for i := range values.NumField() {
-			field := values.Field(i)
-			field.Set(reflect.MakeFunc(field.Type(), func([]reflect.Value) []reflect.Value {
-				out := make([]reflect.Value, field.Type().NumOut())
-				for j := range out {
-					out[j] = reflect.Zero(field.Type().Out(j))
-				}
-
-				return out
-			}))
-		}
-
-		if got := countWarnings(s.warnUndefinedFunctions); got != 0 {
-			t.Errorf("warnings = %d, want 0", got)
-		}
-	})
-}
-
 func TestServer_configureProxies(t *testing.T) {
-	t.Run("undefined in production", func(t *testing.T) {
-		s := NewServer()
-		s.Config.Environment = environment.Production
+	tests := []struct {
+		name    string
+		proxies []string
+		remote  string
+		header  string
+		want    string
+	}{
+		{"default: no proxy trusted", []string{}, "10.1.2.3:1234", "1.2.3.4", "10.1.2.3"},
+		{"trusted proxy", []string{"10.0.0.0/8"}, "10.1.2.3:1234", "1.2.3.4", "1.2.3.4"},
+		{"proxy not trusted", []string{"192.168.0.0/16"}, "10.1.2.3:1234", "1.2.3.4", "10.1.2.3"},
+	}
 
-		if got := countWarnings(func() { s.configureProxies(gin.New()) }); got != 1 {
-			t.Errorf("warnings = %d, want 1", got)
-		}
-	})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := NewServer()
+			s.Config.Server.TrustedProxies = tt.proxies
 
-	t.Run("undefined in development", func(t *testing.T) {
-		s := NewServer()
+			engine := gin.New()
+			s.configureProxies(engine)
 
-		if got := countWarnings(func() { s.configureProxies(gin.New()) }); got != 0 {
-			t.Errorf("warnings = %d, want 0", got)
-		}
-	})
+			var got string
+			engine.GET("/", func(c *gin.Context) { got = c.ClientIP() })
 
-	t.Run("defined", func(t *testing.T) {
-		s := NewServer()
-		s.Config.Environment = environment.Production
-		s.Config.Server.TrustedProxies = []string{"10.0.0.0/8"}
+			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			req.RemoteAddr = tt.remote
+			req.Header.Set("X-Forwarded-For", tt.header)
+			engine.ServeHTTP(httptest.NewRecorder(), req)
 
-		if got := countWarnings(func() { s.configureProxies(gin.New()) }); got != 0 {
-			t.Errorf("warnings = %d, want 0", got)
-		}
-	})
+			if got != tt.want {
+				t.Errorf("ClientIP() = %q, want %q", got, tt.want)
+			}
+		})
+	}
 }
 
 func TestServer_warnWeakSecret(t *testing.T) {

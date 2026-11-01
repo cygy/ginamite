@@ -19,7 +19,6 @@ import (
 	"github.com/cygy/ginamite/web/route"
 
 	"github.com/gin-gonic/gin"
-	"github.com/sirupsen/logrus"
 )
 
 const testRoutes = `
@@ -98,33 +97,6 @@ func TestServer_AddCustomRoutes(t *testing.T) {
 
 	if len(server.customRoutes) != 2 {
 		t.Errorf("%d custom routes, want 2", len(server.customRoutes))
-	}
-}
-
-func TestServer_WarnUndefinedFunctions(t *testing.T) {
-	tests := []struct {
-		name     string
-		handlers Handlers
-		want     int
-	}{
-		{"undefined", Handlers{}, 1},
-		{"defined", Handlers{RecurringTasks: func() {}}, 0},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			webtest.Hook.Reset()
-
-			(&Server{Functions: tt.handlers}).warnUndefinedFunctions()
-
-			entries := webtest.Hook.AllEntries()
-			if len(entries) != tt.want {
-				t.Fatalf("%d warnings, want %d", len(entries), tt.want)
-			}
-			if tt.want > 0 && (entries[0].Level != logrus.WarnLevel || !strings.Contains(entries[0].Message, "RecurringTasks")) {
-				t.Errorf("entry = %+v", entries[0])
-			}
-		})
 	}
 }
 
@@ -304,16 +276,11 @@ func TestServer_Start(t *testing.T) {
 			}
 
 			stopped := false
-			warned := false
 			for _, entry := range webtest.Hook.AllEntries() {
 				stopped = stopped || entry.Message == "the server stopped"
-				warned = warned || strings.Contains(entry.Message, "RecurringTasks")
 			}
 			if stopped != (tt.err != nil) {
 				t.Errorf("stop logged = %v, want %v", stopped, tt.err != nil)
-			}
-			if !warned {
-				t.Error("the undefined functions are not warned about")
 			}
 		})
 	}
