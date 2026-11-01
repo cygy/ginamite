@@ -11,7 +11,6 @@ import (
 	"github.com/cygy/ginamite/worker/tasks/recurring"
 
 	"github.com/sirupsen/logrus"
-	yaml "gopkg.in/yaml.v3"
 )
 
 // Configuration is the root configuration object.
@@ -104,6 +103,8 @@ func NewConfiguration() (config *Configuration) {
 
 // Initialize loads the configuration from the YAML file, sets its environment and version,
 // and computes the supported and fallback locales.
+// The values tagged !file or !env are read from a file or from the environment, see resolveExternalValues, and the
+// production refuses the placeholder secret of the examples.
 // It panics, after logging the error, if the file can not be read or parsed.
 func (config *Configuration) Initialize(file, env, ver string) error {
 	var err error
@@ -122,13 +123,18 @@ func (config *Configuration) Initialize(file, env, ver string) error {
 		return err
 	}
 
-	err = yaml.Unmarshal(source, config)
+	err = unmarshal(source, config)
 	if err != nil {
 		return err
 	}
 
 	config.Environment = env
 	config.Version = ver
+
+	if config.IsProductionEnvironment() && strings.HasPrefix(config.JWT.Secret, placeholderSecretPrefix) {
+		err = errPlaceholderSecret
+		return err
+	}
 
 	for locale, c := range config.Locales {
 		config.SupportedLocales = append(config.SupportedLocales, locale)

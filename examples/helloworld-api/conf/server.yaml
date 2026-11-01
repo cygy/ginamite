@@ -7,4 +7,5 @@ server:
   port: 8080
 
 jwt:
-  secret: change-me-with-at-least-32-characters-secret
+  # Never write the secret here: read it from the environment, or from a file with !file /run/secrets/jwt_secret.
+  secret: !env JWT_SECRET

@@ -313,6 +313,23 @@ configuration).
   constants and caches of immutable values.
 - In the tests, use the `Set` function of the package, for instance `ctxconfig.Set(c, configuration)`.
 
+### Secrets
+
+The configuration file should hold no secret (`jwt.secret`, `database.password`, `kafka.sasl.password`, `smtp.password`,
+API keys): it is committed and copied into the images. Any value can be read from outside of the file with a tag:
+
+```yaml
+jwt:
+  secret: !file /run/secrets/jwt_secret   # the content of the file, without its trailing line break
+database:
+  password: !env DB_PASSWORD              # the environment variable
+```
+
+Prefer `!file` with the secrets of Docker or Kubernetes, mounted in memory: the environment variables show up in
+`docker inspect` and in the dumps of the process. The start fails, naming the key and the file or the variable but never
+the value, if the file is unreadable or the variable is not set. In production it also fails if `jwt.secret` still
+starts with `change-me`, the placeholder of the examples.
+
 ## Layout
 
 | Directory | Content |
