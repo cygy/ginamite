@@ -12,7 +12,3 @@ server:
 
 hosts:
   web: http://localhost:8080
-
-jwt:
-  # Never write the secret here: read it from the environment, or from a file with !file /run/secrets/jwt_secret.
-  secret: !env JWT_SECRET

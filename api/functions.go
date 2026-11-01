@@ -145,7 +145,22 @@ func (s *Server) Start() {
 		s.Functions.MiddlewareGetUserAbilities,
 		s.Functions.MiddlewareGetLatestVersionOfTermsAcceptedByUser,
 	)
-	s.disableUndefinedRoutes(&router.DefaultRoutes)
+	needsJWT, err := s.selectRoutes(&router.DefaultRoutes, s.Config.APIFeatures)
+	if err != nil {
+		log.WithField("error", err).Fatal("unable to load the routes of the API")
+		return
+	}
+	if router.DefaultRoutes.Authentication.Paths.LoginWithPassword.Enabled && s.Functions.UpdateEncryptedPasswordByUserID == nil {
+		log.Warn("The function 'UpdateEncryptedPasswordByUserID' is undefined: the weak password hashes are not upgraded.")
+	}
+	if s.Config.JWT.Secret == "" {
+		if needsJWT {
+			log.Fatal("the setting 'jwt.secret' is required by the features of the setting api_features")
+			return
+		}
+
+		router.DisableAuthentication()
+	}
 	if s.Functions.RouterConfigureDefaultRoutes != nil {
 		s.Functions.RouterConfigureDefaultRoutes(&router.DefaultRoutes)
 	}
@@ -298,7 +313,7 @@ const minimumSecretLength = 32
 
 // warnWeakSecret logs a warning if the secret signing the auth tokens is short.
 func (s *Server) warnWeakSecret() {
-	if len(s.Config.JWT.Secret) < minimumSecretLength {
+	if secret := s.Config.JWT.Secret; secret != "" && len(secret) < minimumSecretLength {
 		log.Warn(fmt.Sprintf("The setting 'jwt.secret' is shorter than %d characters: the auth tokens can be forged.", minimumSecretLength))
 	}
 }

@@ -34,6 +34,7 @@ func TestNewConfiguration(t *testing.T) {
 func TestConfiguration_Initialize(t *testing.T) {
 	file := writeFile(t, `
 default_locale: fr-fr
+api_features: [auth, contact]
 locales:
   fr-fr:
     default: true
@@ -69,6 +70,9 @@ worker_consumers:
 
 	if c.Environment != environment.Production || c.Version != version.Final {
 		t.Errorf("environment/version = %s/%s", c.Environment, c.Version)
+	}
+	if !slices.Equal(c.APIFeatures, []string{"auth", "contact"}) {
+		t.Errorf("API features = %v", c.APIFeatures)
 	}
 	if c.Server.Port != 8080 || c.Server.Host != "localhost" {
 		t.Errorf("server = %+v, want the file value merged over the defaults", c.Server)

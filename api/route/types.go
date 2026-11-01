@@ -28,7 +28,8 @@ type Router struct {
 	Notifications *notifications.Registry
 
 	// private properties
-	getUserAbilities rights.GetUserAbilitiesFunc
+	getUserAbilities       rights.GetUserAbilitiesFunc
+	authenticationDisabled bool
 }
 
 // RateLimits are the middlewares limiting the requests of the default routes, by group of routes.

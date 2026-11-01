@@ -6,6 +6,8 @@ timezones_file_path: data/zone1970.tab
 server:
   port: 8080
 
-jwt:
-  # Never write the secret here: read it from the environment, or from a file with !file /run/secrets/jwt_secret.
-  secret: !env JWT_SECRET
+# The default routes loaded, by feature: see the README of ginamite. None here, only /v1/status, /v1/locales and
+# /v1/timezones. The features which authenticate need jwt.secret, which should be read from outside of this file:
+#   jwt:
+#     secret: !env JWT_SECRET
+# api_features: [auth, account]

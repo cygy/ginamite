@@ -66,11 +66,6 @@ go run . -web    -name web    -env production -conf-server conf/server.yaml -rou
 | `-routes` | Path to the routes file, required by the web server only. |
 | `-help` | Print the help. |
 
-The functions of `api.Server.Functions` and `worker.Server.Functions` are provided by the plugins or by the application.
-An API only exposes the default routes whose functions are defined: without `CreateContact` there is no contact route,
-and an API without any function only has `/status`, `/locales`, `/timezones`, `/notifications` and `/terms`. A route
-can still be enabled in `RouterConfigureDefaultRoutes`.
-
 ## Configuration
 
 The server configuration is a YAML file, see `common/config.Configuration` for the complete list of settings and their
@@ -312,6 +307,34 @@ configuration).
 - The only process-wide state left is the logger `log.Main`, like the default logger of the standard library, and a few
   constants and caches of immutable values.
 - In the tests, use the `Set` function of the package, for instance `ctxconfig.Set(c, configuration)`.
+
+### API features
+
+The default routes of the API are grouped by feature, chosen with `api_features`. Each feature owns its routes of
+administration, and needs the functions of `api.Server.Functions` they call (a plugin provides them): the start fails,
+naming the undefined functions, if an enabled feature misses some. `/status`, `/locales` and `/timezones` are always
+loaded.
+
+```yaml
+api_features: [auth, account, contact]
+```
+
+| Feature | Routes |
+| --- | --- |
+| `terms` | The terms of use, their version, their acceptance. |
+| `notifications` | The notifications of the users: list, center, settings, unsubscription, and their administration. |
+| `registration` | The registration with a password, and the availability of the usernames. |
+| `forgot_password` | The reset of a forgotten password. |
+| `auth` | The login with a password, the auth tokens of the users, and their administration. |
+| `facebook`, `google` | The registration and the login with the provider. |
+| `account` | The account of the users, and the administration of the users: list, update, disable, delete, abilities. |
+| `contact` | The contact messages, and their administration. |
+
+`api.Features()` returns the names. A route can still be enabled or moved in `RouterConfigureDefaultRoutes`.
+
+The features sign and verify the auth tokens, so they need `jwt.secret`. Without a secret the API starts if no feature is
+enabled, and the handlers which authenticate (`Handlers.MustBeAuthenticated`, `Rights`, etc.) of the custom routes answer
+an error: set `jwt.secret` as soon as a route authenticates.
 
 ### Secrets
 

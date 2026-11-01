@@ -15,21 +15,24 @@ import (
 
 // Configuration is the root configuration object.
 type Configuration struct {
-	Environment         string
-	Version             string
-	SupportedLocales    []string                       // Filled by Initialize.
-	FallbackLocales     map[string]string              // Maps a language ("fr", "en", ...) to its default locale ("fr-fr", "en-gb", ...). Filled by Initialize.
-	Locales             map[string]LocaleConfiguration `yaml:"locales"`
-	DefaultLocale       string                         `yaml:"default_locale"`
-	DefaultTimezone     string                         `yaml:"default_timezone"`
-	LocalizationPath    string                         `yaml:"localization_path"`
-	TemplatesPath       string                         `yaml:"templates_path"`
-	RobotsFilePath      string                         `yaml:"robots_file_path"`
-	TimezonesFilePath   string                         `yaml:"timezones_file_path"`
-	APIVersion          string                         `yaml:"api_version"`
-	SenderName          string                         `yaml:"sender_name"`
-	SenderEmailAddress  string                         `yaml:"sender_email_address"`
-	NoReplyEmailAddress string                         `yaml:"noreply_email_address"`
+	Environment       string
+	Version           string
+	SupportedLocales  []string                       // Filled by Initialize.
+	FallbackLocales   map[string]string              // Maps a language ("fr", "en", ...) to its default locale ("fr-fr", "en-gb", ...). Filled by Initialize.
+	Locales           map[string]LocaleConfiguration `yaml:"locales"`
+	DefaultLocale     string                         `yaml:"default_locale"`
+	DefaultTimezone   string                         `yaml:"default_timezone"`
+	LocalizationPath  string                         `yaml:"localization_path"`
+	TemplatesPath     string                         `yaml:"templates_path"`
+	RobotsFilePath    string                         `yaml:"robots_file_path"`
+	TimezonesFilePath string                         `yaml:"timezones_file_path"`
+	APIVersion        string                         `yaml:"api_version"`
+	// APIFeatures are the features of the API whose default routes are loaded, see api.Features. The routes which do
+	// not depend on the application (status, locales, timezones) are always loaded.
+	APIFeatures         []string `yaml:"api_features"`
+	SenderName          string   `yaml:"sender_name"`
+	SenderEmailAddress  string   `yaml:"sender_email_address"`
+	NoReplyEmailAddress string   `yaml:"noreply_email_address"`
 	Server              ServerConfiguration
 	Hosts               HostConfiguration
 	Database            DatabaseConfiguration

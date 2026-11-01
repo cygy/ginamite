@@ -1,6 +1,8 @@
 package route
 
 import (
+	"net/http"
+
 	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
 	ctxTerms "github.com/cygy/ginamite/api/context/terms"
 	middleware "github.com/cygy/ginamite/api/request"
@@ -14,6 +16,7 @@ import (
 	"github.com/cygy/ginamite/api/route/terms"
 	"github.com/cygy/ginamite/api/route/timezone"
 	"github.com/cygy/ginamite/api/route/user"
+	"github.com/cygy/ginamite/common/log"
 	notificationsSettings "github.com/cygy/ginamite/common/notifications"
 
 	"github.com/gin-gonic/gin"
@@ -210,7 +213,34 @@ func NewRouter(e *gin.Engine, version string, productionEnvironment bool, jwtTok
 
 // Rights returns the rights for a route.
 func (r *Router) Rights(admin bool, abilities []string) gin.HandlerFunc {
+	if r.authenticationDisabled {
+		return authenticationNotConfigured
+	}
+
 	return rights.Check(admin, abilities, r.getUserAbilities)
+}
+
+// DisableAuthentication replaces the handlers which authenticate, or check the rights of, the requests by handlers
+// which fail: without a secret to sign and verify the auth tokens, nothing can be authenticated, and a token signed with
+// an empty secret would be forgeable. The debug route, which signs a token, is not loaded either.
+func (r *Router) DisableAuthentication() {
+	r.authenticationDisabled = true
+
+	r.Handlers = Middlewares{
+		CanBeAuthenticated:                      authenticationNotConfigured,
+		MustBeAuthenticated:                     authenticationNotConfigured,
+		MustAuthenticationBeValid:               authenticationNotConfigured,
+		MustBeAdmin:                             authenticationNotConfigured,
+		AbleToManageUsers:                       authenticationNotConfigured,
+		AbleToManageContacts:                    authenticationNotConfigured,
+		MustHaveAcceptedTheLatestVersionOfTerms: authenticationNotConfigured,
+	}
+}
+
+// authenticationNotConfigured aborts the request with an internal error: the route needs the setting jwt.secret.
+func authenticationNotConfigured(c *gin.Context) {
+	log.Error("a route needs the authentication, which is disabled: set the setting 'jwt.secret'")
+	c.AbortWithStatus(http.StatusInternalServerError)
 }
 
 // limited returns the handlers preceded by the middleware limiting the requests, if there is one.
@@ -569,7 +599,7 @@ func (r *Router) LoadDefaultRoutes() {
 	}
 
 	// ----- Helper routes fo tests/debug.
-	if !r.ProductionEnvironment {
+	if !r.ProductionEnvironment && !r.authenticationDisabled {
 		v.GET("/debug/expiredToken", debug.GetExpiredToken)
 	}
 }
