@@ -312,15 +312,15 @@ configuration).
 
 The default routes of the API are grouped by feature, chosen with `api_features`. Each feature owns its routes of
 administration, and needs the functions of `api.Server.Functions` they call (a plugin provides them): the start fails,
-naming the undefined functions, if an enabled feature misses some. `/status`, `/locales` and `/timezones` are always
-loaded.
+naming the undefined functions, if an enabled feature misses some. No route is loaded without feature.
 
 ```yaml
-api_features: [auth, account, contact]
+api_features: [status, locales, timezones, auth, account, contact]
 ```
 
 | Feature | Routes |
 | --- | --- |
+| `status`, `locales`, `timezones` | `GET /status`, the supported locales, the timezones of the countries. They need nothing from the application. |
 | `terms` | The terms of use, their version, their acceptance. |
 | `notifications` | The notifications of the users: list, center, settings, unsubscription, and their administration. |
 | `registration` | The registration with a password, and the availability of the usernames. |

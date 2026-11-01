@@ -27,8 +27,7 @@ type Configuration struct {
 	RobotsFilePath    string                         `yaml:"robots_file_path"`
 	TimezonesFilePath string                         `yaml:"timezones_file_path"`
 	APIVersion        string                         `yaml:"api_version"`
-	// APIFeatures are the features of the API whose default routes are loaded, see api.Features. The routes which do
-	// not depend on the application (status, locales, timezones) are always loaded.
+	// APIFeatures are the features of the API whose default routes are loaded, see api.Features.
 	APIFeatures         []string `yaml:"api_features"`
 	SenderName          string   `yaml:"sender_name"`
 	SenderEmailAddress  string   `yaml:"sender_email_address"`

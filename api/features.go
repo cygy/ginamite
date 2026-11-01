@@ -11,9 +11,14 @@ import (
 )
 
 // The features of the API: the sets of default routes the application chooses with the setting api_features. A feature
-// holds its own routes of administration, and needs the functions of the application they call. The routes which depend
-// on nothing from the application (status, locales, timezones) are always loaded.
+// holds its own routes of administration, and needs the functions of the application they call.
 const (
+	// FeatureStatus: the status of the API.
+	FeatureStatus = "status"
+	// FeatureLocales: the locales supported by the API.
+	FeatureLocales = "locales"
+	// FeatureTimezones: the timezones of the countries.
+	FeatureTimezones = "timezones"
 	// FeatureTerms: the terms of use, their version, and their acceptance by the users.
 	FeatureTerms = "terms"
 	// FeatureNotifications: the notifications of the users, their center and their settings.
@@ -66,6 +71,9 @@ func (s *Server) features(routes *route.DefaultRoutes) []feature {
 	forgotPassword, admin, terms := &routes.ForgotPassword.Paths, &routes.Admin.Paths, &routes.Terms.Paths
 
 	return []feature{
+		{FeatureStatus, []requirement{{&routes.Status.Paths.Get, nil}}, false},
+		{FeatureLocales, []requirement{{&routes.Locales.Paths.Get, nil}}, false},
+		{FeatureTimezones, []requirement{{&routes.Timezones.Paths.Get, nil}}, false},
 		{FeatureTerms, []requirement{
 			{&terms.GetTerms, nil},
 			{&terms.GetVersion, nil},

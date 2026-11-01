@@ -23,7 +23,7 @@ docker build -f examples/helloworld-api/Dockerfile -t ginamite-helloworld-api .
 docker run --rm -p 8080:8080 ginamite-helloworld-api
 ```
 
-The API loads no feature of the default routes, so it needs no `jwt.secret`.
+The API loads the `status` feature only (`GET /v1/status`), so it needs no `jwt.secret`.
 
 ## helloworld-web
 

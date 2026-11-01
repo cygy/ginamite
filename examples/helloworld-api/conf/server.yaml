@@ -6,8 +6,8 @@ timezones_file_path: data/zone1970.tab
 server:
   port: 8080
 
-# The default routes loaded, by feature: see the README of ginamite. None here, only /v1/status, /v1/locales and
-# /v1/timezones. The features which authenticate need jwt.secret, which should be read from outside of this file:
+# The default routes loaded, by feature: see the README of ginamite. Only /v1/status here. The features which
+# authenticate need jwt.secret, which should be read from outside of this file:
 #   jwt:
 #     secret: !env JWT_SECRET
-# api_features: [auth, account]
+api_features: [status]

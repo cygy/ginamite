@@ -47,11 +47,23 @@ func TestServer_selectRoutes(t *testing.T) {
 			t.Fatalf("selectRoutes() = %v, %v, want no error and no need of the secret", needsJWT, err)
 		}
 
-		if !routes.Status.Paths.Get.Enabled || !routes.Locales.Paths.Get.Enabled || !routes.Timezones.Paths.Get.Enabled {
-			t.Error("the routes which depend on nothing must be loaded")
+		if routes.Status.Paths.Get.Enabled || routes.Locales.Paths.Get.Enabled || routes.Timezones.Paths.Get.Enabled {
+			t.Error("without feature, no route is loaded")
 		}
 		if routes.Contact.Paths.Post.Enabled || routes.Admin.Paths.GetContacts.Enabled || routes.Authentication.Paths.LoginWithPassword.Enabled {
 			t.Error("the routes of the features which are not enabled must not be loaded")
+		}
+	})
+
+	t.Run("the features which depend on nothing need no secret", func(t *testing.T) {
+		routes := newDefaultRoutes()
+
+		needsJWT, err := NewServer().selectRoutes(&routes, []string{FeatureStatus, FeatureLocales, FeatureTimezones})
+		if err != nil || needsJWT {
+			t.Fatalf("selectRoutes() = %v, %v, want no error and no need of the secret", needsJWT, err)
+		}
+		if !routes.Status.Paths.Get.Enabled || !routes.Locales.Paths.Get.Enabled || !routes.Timezones.Paths.Get.Enabled {
+			t.Error("the routes of the features must be loaded")
 		}
 	})
 
@@ -97,7 +109,7 @@ func TestServer_selectRoutes(t *testing.T) {
 func TestFeatures(t *testing.T) {
 	names := Features()
 
-	for _, want := range []string{FeatureTerms, FeatureAuth, FeatureAccount, FeatureContact} {
+	for _, want := range []string{FeatureStatus, FeatureTerms, FeatureAuth, FeatureAccount, FeatureContact} {
 		if !slices.Contains(names, want) {
 			t.Errorf("Features() = %v, want %q", names, want)
 		}
@@ -125,16 +137,11 @@ func TestServer_features_areConsistent(t *testing.T) {
 		}
 	}
 
-	// The routes which depend on nothing from the application are always loaded.
-	always := map[*route.PathProperties]bool{
-		&routes.Status.Paths.Get: true, &routes.Locales.Paths.Get: true, &routes.Timezones.Paths.Get: true,
-	}
-
 	var walk func(reflect.Value)
 	walk = func(v reflect.Value) {
 		if v.Type() == reflect.TypeFor[route.PathProperties]() {
 			path := v.Addr().Interface().(*route.PathProperties)
-			if _, ok := listed[path]; !ok && !always[path] {
+			if _, ok := listed[path]; !ok {
 				t.Errorf("the route %q is in no feature: add it to one of them in features", path.Path)
 			}
 
