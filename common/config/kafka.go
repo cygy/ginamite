@@ -16,6 +16,16 @@ type KafkaConfiguration struct {
 	SASL    KafkaSASLConfiguration `yaml:"sasl"`
 	Topics  KafkaTopicsConfiguration
 
+	// TopicsPrefix is prepended to the names of the topics and of the consumer groups.
+	TopicsPrefix string `yaml:"topics_prefix"`
+
+	// MaxAttempts is the number of attempts to handle a message before it is dead-lettered.
+	MaxAttempts int `yaml:"max_attempts"`
+
+	// RetryDelay is the delay, in milliseconds, before the second attempt to handle a message. It is doubled at each
+	// attempt.
+	RetryDelay int `yaml:"retry_delay"`
+
 	// StatsInterval is the interval, in seconds, of the log of the statistics of the producer and of the consumers.
 	// They are not logged if 0.
 	StatsInterval int `yaml:"stats_interval"`

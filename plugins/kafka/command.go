@@ -49,7 +49,7 @@ func runDLQ(f *flags.Flags, out io.Writer) error {
 		return err
 	}
 
-	topic := DeadLetterTopic(configuration.KafkaTopicsPrefix + f.DLQTopic)
+	topic := DeadLetterTopic(configuration.Kafka.TopicsPrefix + f.DLQTopic)
 
 	backend, err := openDLQ(kafkaConf.Host, kafkaConf.Port, options.NewConfig(), topic+"_tool")
 	if err != nil {

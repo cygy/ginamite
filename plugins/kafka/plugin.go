@@ -37,9 +37,9 @@ func (p *Plugin) Configure(s *ginamite.Server) {
 
 	client := NewClient()
 	client.Host, client.Port = service.Host, service.Port
-	client.TopicsPrefix = s.Config.KafkaTopicsPrefix
+	client.TopicsPrefix = s.Config.Kafka.TopicsPrefix
 	client.Options = options
-	client.MaxAttempts = max(s.Config.KafkaMaxAttempts, 1)
-	client.RetryDelay = time.Duration(s.Config.KafkaRetryDelay) * time.Millisecond
+	client.MaxAttempts = max(s.Config.Kafka.MaxAttempts, 1)
+	client.RetryDelay = time.Duration(s.Config.Kafka.RetryDelay) * time.Millisecond
 	s.UseBroker(client)
 }

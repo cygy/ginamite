@@ -133,7 +133,7 @@ func TestRunDLQ(t *testing.T) {
 	oldLog := log.Main
 	t.Cleanup(func() { log.Main = oldLog })
 
-	conf := writeFile(t, filepath.Join(t.TempDir(), "server.yaml"), "kafka_topics_prefix: app_\nservices:\n  kafka: {host: kafka, port: 9093}\nkafka: {stats_interval: 5}\n")
+	conf := writeFile(t, filepath.Join(t.TempDir(), "server.yaml"), "services:\n  kafka: {host: kafka, port: 9093}\nkafka: {topics_prefix: app_, stats_interval: 5}\n")
 
 	var backend *fakeDLQ
 	var gotHost string
@@ -208,7 +208,7 @@ func TestRunDLQ(t *testing.T) {
 			t.Error("a connection failure must be returned")
 		}
 
-		noKafka := writeFile(t, filepath.Join(t.TempDir(), "server.yaml"), "kafka_topics_prefix: app_\n")
+		noKafka := writeFile(t, filepath.Join(t.TempDir(), "server.yaml"), "kafka: {topics_prefix: app_}\n")
 		if err := runDLQ(&flags.Flags{ServerName: "dlq", Environment: "test", Version: "final", ServerConfigurationFile: noKafka, DLQ: flags.DLQList, DLQTopic: "mail"}, &bytes.Buffer{}); err == nil {
 			t.Error("a configuration without kafka service must be refused")
 		}
@@ -240,7 +240,7 @@ func TestPlugin_Command(t *testing.T) {
 		t.Errorf("Command() = %v, %v, want nothing to do without a command", handled, err)
 	}
 
-	noKafka := writeFile(t, filepath.Join(t.TempDir(), "server.yaml"), "kafka_topics_prefix: app_\n")
+	noKafka := writeFile(t, filepath.Join(t.TempDir(), "server.yaml"), "kafka: {topics_prefix: app_}\n")
 	handled, err := p.Command(&flags.Flags{ServerName: "dlq", Environment: "test", Version: "final", ServerConfigurationFile: noKafka, DLQ: flags.DLQList, DLQTopic: "mail"}, &bytes.Buffer{})
 	if !handled || err == nil {
 		t.Errorf("Command() = %v, %v, want the command handled and its failure", handled, err)
@@ -260,9 +260,9 @@ func TestPlugin_Configure(t *testing.T) {
 	t.Run("with service", func(t *testing.T) {
 		s := ginamite.NewServer()
 		s.Config.Services = map[string]config.ServiceConfiguration{"kafka": {Host: "kafka", Port: 9093}}
-		s.Config.KafkaTopicsPrefix = "app_"
-		s.Config.KafkaMaxAttempts = 4
-		s.Config.KafkaRetryDelay = 250
+		s.Config.Kafka.TopicsPrefix = "app_"
+		s.Config.Kafka.MaxAttempts = 4
+		s.Config.Kafka.RetryDelay = 250
 		NewPlugin().Configure(s)
 
 		client, ok := s.Broker.(*Client)

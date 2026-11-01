@@ -82,9 +82,8 @@ default values. The main sections are:
 | `smtp`, `sender_*` | Sending of the emails. |
 | `facebook`, `google` | Sign-in with a social network. |
 | `recurring_tasks`, `run_start_up_tasks` | Tasks executed by the workers. |
-| `kafka_max_attempts`, `kafka_retry_delay` | Attempts to handle a Kafka message and delay in milliseconds between them (see below). |
 | `metrics`, `rate_limits` | Prometheus endpoint and limits of the requests (see Security and Metrics). |
-| `kafka` | Connection to Kafka (version, TLS, SASL), creation of the topics, statistics (see below). |
+| `kafka` | Connection to Kafka (version, TLS, SASL), prefix of the topics, attempts and delay of the retries, creation of the topics, statistics (see below). |
 | `worker_consumers` | Kafka topics consumed by a worker, with their consumer group (see below). |
 
 ### Security
@@ -167,7 +166,7 @@ worker_consumers:
 
 A message whose handling fails is handled again, then sent to a **dead-letter topic** instead of blocking the others.
 
-- Failures are retried up to `kafka_max_attempts` times (3 by default), waiting `kafka_retry_delay` milliseconds
+- Failures are retried up to `kafka.max_attempts` times (3 by default), waiting `kafka.retry_delay` milliseconds
   (1000 by default) before the second attempt, then twice as long each time, a minute at most. The partition waits
   meanwhile, which keeps the order of its messages.
 - The failed message is then published, as it is, to the topic named like its own with the suffix `_dlq`
@@ -250,17 +249,16 @@ delivers them to the consumers at once.
 ### Kafka connection and topics
 
 The address of the broker is the service `kafka`. The other settings are in the section `kafka` of the configuration
-file; `kafka_topics_prefix` is prepended to the names of the topics and of the consumer groups.
+file; `kafka.topics_prefix` is prepended to the names of the topics and of the consumer groups.
 
 ```yaml
 services:
   kafka: {host: kafka.example.com, port: 9093}
 
-kafka_topics_prefix: myapp_
-kafka_max_attempts: 3
-kafka_retry_delay: 1000        # milliseconds
-
 kafka:
+  topics_prefix: myapp_
+  max_attempts: 3
+  retry_delay: 1000            # milliseconds, doubled at each attempt
   version: 3.6.0               # the version of the brokers, the one of the client library if absent
   tls:
     enabled: true

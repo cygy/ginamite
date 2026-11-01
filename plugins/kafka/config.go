@@ -63,7 +63,7 @@ func createTopics(c *config.Configuration, host string, port int, options Option
 		Retention:           time.Duration(c.Kafka.Topics.RetentionHours) * time.Hour,
 		DeadLetterRetention: time.Duration(c.Kafka.Topics.DeadLetterRetentionHours) * time.Hour,
 	}
-	if err := EnsureTopics(host, port, options, c.KafkaTopicsPrefix, queue.Topics(), spec); err != nil {
+	if err := EnsureTopics(host, port, options, c.Kafka.TopicsPrefix, queue.Topics(), spec); err != nil {
 		log.WithFields(logrus.Fields{"error": err.Error()}).Error("unable to create the kafka topics")
 	}
 }

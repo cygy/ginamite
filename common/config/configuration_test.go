@@ -23,8 +23,8 @@ func TestNewConfiguration(t *testing.T) {
 	if topics := c.Kafka.Topics; topics.Create || topics.Partitions != 1 || topics.ReplicationFactor != 1 || topics.RetentionHours != 168 || topics.DeadLetterRetentionHours != 720 {
 		t.Errorf("kafka topics = %+v, want the defaults", topics)
 	}
-	if c.KafkaMaxAttempts != 3 || c.KafkaRetryDelay != 1000 {
-		t.Errorf("kafka attempts = %d, delay = %d, want the defaults", c.KafkaMaxAttempts, c.KafkaRetryDelay)
+	if c.Kafka.MaxAttempts != 3 || c.Kafka.RetryDelay != 1000 {
+		t.Errorf("kafka attempts = %d, delay = %d, want the defaults", c.Kafka.MaxAttempts, c.Kafka.RetryDelay)
 	}
 	if c.Locales == nil || c.SupportedLocales == nil || c.FallbackLocales == nil || len(c.Services) > 0 {
 		t.Error("the collections must be initialized")
@@ -48,9 +48,9 @@ services:
   kafka:
     host: kafka
     port: 9092
-kafka_max_attempts: 5
-kafka_retry_delay: 250
 kafka:
+  max_attempts: 5
+  retry_delay: 250
   version: 3.6.0
   tls: {enabled: true, ca_file: ca.pem}
   sasl: {mechanism: SCRAM-SHA-256, username: user, password: secret}
@@ -82,14 +82,16 @@ worker_consumers:
 	if _, ok := c.FallbackLocales["de"]; ok {
 		t.Error("a locale without region must not be a fallback")
 	}
-	if c.KafkaMaxAttempts != 5 || c.KafkaRetryDelay != 250 {
-		t.Errorf("kafka attempts = %d, delay = %d", c.KafkaMaxAttempts, c.KafkaRetryDelay)
+	if c.Kafka.MaxAttempts != 5 || c.Kafka.RetryDelay != 250 {
+		t.Errorf("kafka attempts = %d, delay = %d", c.Kafka.MaxAttempts, c.Kafka.RetryDelay)
 	}
 	wantKafka := KafkaConfiguration{
 		Version:       "3.6.0",
 		TLS:           KafkaTLSConfiguration{Enabled: true, CAFile: "ca.pem"},
 		SASL:          KafkaSASLConfiguration{Mechanism: "SCRAM-SHA-256", Username: "user", Password: "secret"},
 		Topics:        KafkaTopicsConfiguration{Create: true, Partitions: 6, ReplicationFactor: 3, RetentionHours: 24, DeadLetterRetentionHours: 720},
+		MaxAttempts:   5,
+		RetryDelay:    250,
 		StatsInterval: 30,
 	}
 	if c.Kafka != wantKafka {

@@ -28,9 +28,6 @@ type Configuration struct {
 	RobotsFilePath      string                         `yaml:"robots_file_path"`
 	TimezonesFilePath   string                         `yaml:"timezones_file_path"`
 	APIVersion          string                         `yaml:"api_version"`
-	KafkaTopicsPrefix   string                         `yaml:"kafka_topics_prefix"`
-	KafkaMaxAttempts    int                            `yaml:"kafka_max_attempts"` // attempts to handle a message before it is dead-lettered
-	KafkaRetryDelay     int                            `yaml:"kafka_retry_delay"`  // in milliseconds, doubled at each attempt
 	SenderName          string                         `yaml:"sender_name"`
 	SenderEmailAddress  string                         `yaml:"sender_email_address"`
 	NoReplyEmailAddress string                         `yaml:"noreply_email_address"`
@@ -81,8 +78,8 @@ func NewConfiguration() (config *Configuration) {
 	config.RateLimits.Authentication = RateLimitConfiguration{Requests: 10, Seconds: 60}
 	config.RateLimits.Registration = RateLimitConfiguration{Requests: 5, Seconds: 60}
 	config.RateLimits.ForgotPassword = RateLimitConfiguration{Requests: 5, Seconds: 60}
-	config.KafkaMaxAttempts = 3
-	config.KafkaRetryDelay = 1000
+	config.Kafka.MaxAttempts = 3
+	config.Kafka.RetryDelay = 1000
 	config.Kafka.Topics.Partitions = 1
 	config.Kafka.Topics.ReplicationFactor = 1
 	config.Kafka.Topics.RetentionHours = 168
