@@ -1,4 +1,4 @@
-// Command hello is the smallest API built with ginamite: a single route, GET /v1/hello, which answers {"hello":"world"}.
+// Command helloworld-api is the smallest API built with ginamite: a single route, GET /v1/hello, which answers {"hello":"world"}.
 package main
 
 import (

@@ -1,0 +1,17 @@
+# Configuration of the example. The web server listens on the port 8080 of the container.
+default_locale: en-us
+locales:
+  en-us:
+    default: true
+localization_path: localization
+templates_path: templates
+robots_file_path: conf/robots.txt
+
+server:
+  port: 8080
+
+hosts:
+  web: http://localhost:8080
+
+jwt:
+  secret: change-me-with-at-least-32-characters-secret

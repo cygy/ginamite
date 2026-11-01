@@ -1,0 +1,10 @@
+default:
+  template:
+    decorator: decorator.html
+    main: hello.html
+
+routes:
+  index:
+    title: hello.title
+    paths:
+      en-us: "/{{.Locale}}/hello"
