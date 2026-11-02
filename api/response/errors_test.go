@@ -3,6 +3,7 @@ package response
 import (
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/cygy/ginamite/api/internal/apitest"
 	"github.com/cygy/ginamite/common/response"
@@ -39,6 +40,33 @@ func TestErrors_Status(t *testing.T) {
 
 			if recorder.Code != tt.want {
 				t.Errorf("status = %d, want %d", recorder.Code, tt.want)
+			}
+		})
+	}
+}
+
+func TestTooManyRequests(t *testing.T) {
+	tests := []struct {
+		name       string
+		retryAfter time.Duration
+		want       string
+	}{
+		{"whole seconds", 30 * time.Second, "30"},
+		{"rounded up", 29500 * time.Millisecond, "30"},
+		{"under a second", 500 * time.Millisecond, "1"},
+		{"zero", 0, "0"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c, recorder := apitest.NewContext("GET", "/", nil)
+			TooManyRequests(c, tt.retryAfter)
+			c.Writer.WriteHeaderNow()
+
+			if recorder.Code != http.StatusTooManyRequests {
+				t.Errorf("status = %d, want %d", recorder.Code, http.StatusTooManyRequests)
+			}
+			if got := recorder.Header().Get("Retry-After"); got != tt.want {
+				t.Errorf("Retry-After = %q, want %q", got, tt.want)
 			}
 		})
 	}
