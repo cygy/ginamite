@@ -46,3 +46,37 @@ type TokensStorage interface {
 	// UpdateTokenByID updates the name and the notifications of an auth token.
 	UpdateTokenByID(ctx context.Context, tokenID, name string, enableNotifications bool, notifications []string) error
 }
+
+// ProcessesStorage is the storage of the processes bound to a user, such as the forgot password ones or the ones
+// confirming the update of the account, provided by the application, such as the one of the storage plugin.
+// The context is the one of the request.
+type ProcessesStorage interface {
+	// NewForgotPasswordProcessForUser creates a forgot password process for the user, replacing the existing one, and
+	// returns its ID. The private key is the code to give to the user.
+	NewForgotPasswordProcessForUser(ctx context.Context, userID, processPrivateKey string) (processID string, err error)
+	// GetForgotPasswordProcessDetailsByID returns the ID of the user and the private key of a forgot password process.
+	GetForgotPasswordProcessDetailsByID(ctx context.Context, processID string) (userID, processPrivateKey string, err error)
+	// WrongAccessToForgotPasswordProcess records a wrong access to a forgot password process, to avoid brute force:
+	// it increments the tries or deletes the process.
+	WrongAccessToForgotPasswordProcess(ctx context.Context, processID string)
+	// DeleteForgotPasswordProcess deletes a forgot password process.
+	DeleteForgotPasswordProcess(ctx context.Context, processID string) error
+	// CreateNewDeleteAccountProcess starts a process to delete the account of the user, replacing the existing one.
+	CreateNewDeleteAccountProcess(ctx context.Context, userID string) (processID, processKey string, err error)
+	// CreateNewDisableAccountProcess starts a process to disable the account of the user, replacing the existing one.
+	CreateNewDisableAccountProcess(ctx context.Context, userID string) (processID, processKey string, err error)
+	// CreateNewUpdatePasswordProcess starts a process to update the password of the user to the encrypted one,
+	// replacing the existing one.
+	CreateNewUpdatePasswordProcess(ctx context.Context, userID, encryptedPassword string) (processID, processKey string, err error)
+	// CreateNewUpdateEmailAddressProcess starts a process to update the email address of the user, replacing the
+	// existing one.
+	CreateNewUpdateEmailAddressProcess(ctx context.Context, userID, emailAddress string) (processID, processKey string, err error)
+	// CreateNewVerifyEmailAddressProcess starts a process to verify the email address of the user, replacing the
+	// existing one.
+	CreateNewVerifyEmailAddressProcess(ctx context.Context, userID string) (processID, processKey string, err error)
+	// VerifyProcess verifies the key of a process and returns the ID of its user and its value. It returns a "not
+	// found" error if the process does not exist or if the key is wrong.
+	VerifyProcess(ctx context.Context, processID, key string) (userID, newValue string, err error)
+	// DeleteProcessByID deletes a process.
+	DeleteProcessByID(ctx context.Context, processID string) error
+}

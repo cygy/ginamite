@@ -23,8 +23,8 @@ func UpdatePassword(c *gin.Context) {
 		return
 	}
 
-	if FunctionsOf(c).CreateNewUpdatePasswordProcess == nil {
-		c.Error(errors.New("undefined function 'CreateNewUpdatePasswordProcess'"))
+	if FunctionsOf(c).Processes == nil {
+		c.Error(errNoProcesses)
 		response.InternalServerError(c)
 		return
 	}
@@ -56,7 +56,7 @@ func UpdatePassword(c *gin.Context) {
 		return
 	}
 
-	processID, processKey, err := FunctionsOf(c).CreateNewUpdatePasswordProcess(c, userID, encryptedPassword)
+	processID, processKey, err := FunctionsOf(c).Processes.CreateNewUpdatePasswordProcess(c, userID, encryptedPassword)
 	if err != nil {
 		response.InternalServerError(c)
 		return

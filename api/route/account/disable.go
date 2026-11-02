@@ -22,8 +22,8 @@ func DisableAccount(c *gin.Context) {
 		return
 	}
 
-	if FunctionsOf(c).CreateNewDisableAccountProcess == nil {
-		c.Error(errors.New("undefined function 'CreateNewDisableAccountProcess'"))
+	if FunctionsOf(c).Processes == nil {
+		c.Error(errNoProcesses)
 		response.InternalServerError(c)
 		return
 	}
@@ -38,7 +38,7 @@ func DisableAccount(c *gin.Context) {
 		return
 	}
 
-	processID, processKey, err := FunctionsOf(c).CreateNewDisableAccountProcess(c, userID)
+	processID, processKey, err := FunctionsOf(c).Processes.CreateNewDisableAccountProcess(c, userID)
 	if err != nil {
 		response.InternalServerError(c)
 		return

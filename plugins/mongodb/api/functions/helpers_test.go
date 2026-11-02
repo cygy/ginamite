@@ -17,6 +17,11 @@ func tokensOn(db store.Database) *Tokens {
 	return NewTokens(func() store.Database { return db })
 }
 
+// processesOn returns the functions of the processes working on the database.
+func processesOn(db store.Database) *Processes {
+	return NewProcesses(func() store.Database { return db })
+}
+
 // checkCall checks the method and the first arguments of the last call received by the collection.
 func checkCall(t *testing.T, db *mock.Database, collection, method string, args ...any) {
 	t.Helper()

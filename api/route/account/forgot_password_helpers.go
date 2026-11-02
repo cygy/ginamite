@@ -40,20 +40,14 @@ func validateOrCancelForgotPassword(c *gin.Context, validate bool) {
 		return
 	}
 
-	if FunctionsOf(c).GetForgotPasswordProcessDetailsByID == nil {
-		c.Error(errors.New("undefined function 'GetForgotPasswordProcessDetailsByID'"))
+	if FunctionsOf(c).Processes == nil {
+		c.Error(errNoProcesses)
 		sendError()
 		return
 	}
 
 	if FunctionsOf(c).UpdateUserPassword == nil {
 		c.Error(errors.New("undefined function 'UpdateUserPassword'"))
-		sendError()
-		return
-	}
-
-	if FunctionsOf(c).DeleteForgotPasswordProcess == nil {
-		c.Error(errors.New("undefined function 'DeleteForgotPasswordProcess'"))
 		sendError()
 		return
 	}
@@ -80,16 +74,14 @@ func validateOrCancelForgotPassword(c *gin.Context, validate bool) {
 		}
 	}
 
-	userID, processPrivateKey, err := FunctionsOf(c).GetForgotPasswordProcessDetailsByID(c, processID)
+	userID, processPrivateKey, err := FunctionsOf(c).Processes.GetForgotPasswordProcessDetailsByID(c, processID)
 	if err != nil {
 		sendError()
 		return
 	}
 
 	if processPrivateKey != key {
-		if FunctionsOf(c).WrongAccessToForgotPasswordProcess != nil {
-			FunctionsOf(c).WrongAccessToForgotPasswordProcess(c, processID)
-		}
+		FunctionsOf(c).Processes.WrongAccessToForgotPasswordProcess(c, processID)
 		sendError()
 		return
 	}
@@ -112,7 +104,7 @@ func validateOrCancelForgotPassword(c *gin.Context, validate bool) {
 		}
 	}
 
-	if err := FunctionsOf(c).DeleteForgotPasswordProcess(c, processID); err != nil && !validate {
+	if err := FunctionsOf(c).Processes.DeleteForgotPasswordProcess(c, processID); err != nil && !validate {
 		sendError()
 		return
 	}

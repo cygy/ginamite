@@ -1,24 +1,23 @@
 package account
 
 import (
+	"context"
 	"net/http"
 	"testing"
-
-	"github.com/gin-gonic/gin"
 )
 
-func newProcess(err error) func(*gin.Context, string) (string, string, error) {
-	return func(*gin.Context, string) (string, string, error) { return "process-id", "process-key", err }
+func newProcess(err error) func(context.Context, string) (string, string, error) {
+	return func(context.Context, string) (string, string, error) { return "process-id", "process-key", err }
 }
 
 func TestDeleteAccount(t *testing.T) {
 	create := func(err error) func() {
-		return func() { testFunctions.CreateNewDeleteAccountProcess = newProcess(err) }
+		return func() { testProcesses.CreateNewDeleteAccountProcessFn = newProcess(err) }
 	}
 
 	runCases(t, DeleteAccount, []testCase{
 		{name: "GetUserDetailsByID not defined", userID: testUserID, setup: create(nil), want: http.StatusInternalServerError},
-		{name: "process function not defined", userID: testUserID, setup: withUser(testUser, nil), want: http.StatusInternalServerError},
+		{name: "storage of the processes not defined", userID: testUserID, setup: all(withUser(testUser, nil), withoutProcesses), want: http.StatusInternalServerError},
 		{name: "user error", userID: testUserID, setup: all(withUser(testUser, errBoom), create(nil)), want: http.StatusInternalServerError},
 		{name: "process error", userID: testUserID, setup: all(withUser(testUser, nil), create(errBoom)), want: http.StatusInternalServerError},
 		{name: "success", userID: testUserID, setup: all(withUser(testUser, nil), create(nil)), want: http.StatusOK},

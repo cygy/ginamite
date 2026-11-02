@@ -17,6 +17,9 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// errNoProcesses is logged when a route needing the processes is called without storage of the processes.
+var errNoProcesses = errors.New("undefined storage of the processes")
+
 // ForgotPassword sends a mail to reset the password.
 func ForgotPassword(c *gin.Context) {
 	if FunctionsOf(c).GetUserDetailsByIdentifier == nil {
@@ -25,8 +28,8 @@ func ForgotPassword(c *gin.Context) {
 		return
 	}
 
-	if FunctionsOf(c).NewForgotPasswordProcessForUser == nil {
-		c.Error(errors.New("undefined function 'NewForgotPasswordProcessForUser'"))
+	if FunctionsOf(c).Processes == nil {
+		c.Error(errNoProcesses)
 		response.InternalServerError(c)
 		return
 	}
@@ -71,7 +74,7 @@ func ForgotPassword(c *gin.Context) {
 	}
 
 	processPrivateKey := random.String(64)
-	processID, err := FunctionsOf(c).NewForgotPasswordProcessForUser(c, user.ID, processPrivateKey)
+	processID, err := FunctionsOf(c).Processes.NewForgotPasswordProcessForUser(c, user.ID, processPrivateKey)
 	if err != nil {
 		response.InternalServerError(c)
 		return

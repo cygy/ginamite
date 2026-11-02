@@ -22,6 +22,9 @@ type Functions struct {
 	// Tokens is the storage of the auth tokens.
 	Tokens TokensStorage
 
+	// Processes is the storage of the processes bound to a user.
+	Processes ProcessesStorage
+
 	// GetUserDetailsByIdentifier is a function to get the user details from its identifier (username, email addresse, what you want.)
 	GetUserDetailsByIdentifier GetUserDetailsByIdentifierFunc
 
@@ -41,15 +44,6 @@ type Functions struct {
 	// defined, the password of a user signing in is encrypted again when its hash is weaker than the current one.
 	UpdateEncryptedPasswordByUserID UpdateEncryptedPasswordByUserIDFunc
 
-	// NewForgotPasswordProcessForUser is a function to create a new forgot password process for a user. Return the unique identifier of the process.
-	NewForgotPasswordProcessForUser NewForgotPasswordProcessForUserFunc
-
-	// GetForgotPasswordProcessDetailsByID is a function to get the forgot password process details from its identifier.
-	GetForgotPasswordProcessDetailsByID GetForgotPasswordProcessDetailsByIDFunc
-
-	// WrongAccessToForgotPasswordProcess is a function to avoid brute force, increment tries or delete the process.
-	WrongAccessToForgotPasswordProcess WrongAccessToForgotPasswordProcessFunc
-
 	// UpdateUserPassword is a function to update the password of an user.
 	UpdateUserPassword UpdateUserPasswordFunc
 
@@ -61,9 +55,6 @@ type Functions struct {
 
 	// UpdateUserSocialNetworks updates the social network accounts of the user.
 	UpdateUserSocialNetworks UpdateUserSocialNetworksFunc
-
-	// DeleteForgotPasswordProcess is a function to delete a forgot password process by ID.
-	DeleteForgotPasswordProcess DeleteForgotPasswordProcessFunc
 
 	// ValidateUserRegistration is a function to validate the registration of a user by its ID.
 	ValidateUserRegistration ValidateUserRegistrationFunc
@@ -106,27 +97,6 @@ type Functions struct {
 
 	// UpdatedAccountSettings is a function to update the user settings.
 	UpdatedAccountSettings UpdatedAccountSettingsFunc
-
-	// CreateNewDeleteAccountProcess is a function to start a new process to delete an account.
-	CreateNewDeleteAccountProcess CreateNewProcessFunc
-
-	// CreateNewDisableAccountProcess is a function to start a new process to disable an account.
-	CreateNewDisableAccountProcess CreateNewProcessFunc
-
-	// CreateNewUpdatePasswordProcess is a function to start a new process to update the password of an account.
-	CreateNewUpdatePasswordProcess CreateNewProcessWithValueFunc
-
-	// CreateNewUpdateEmailAddressProcess is a function to start a new process to update the email address of an account.
-	CreateNewUpdateEmailAddressProcess CreateNewProcessWithValueFunc
-
-	// CreateNewVerifyEmailAddressProcess is a function to start a new process to verify the email address of an account.
-	CreateNewVerifyEmailAddressProcess CreateNewProcessFunc
-
-	// VerifyProcess is a function to verify a process and get the ID of the bound user.
-	VerifyProcess VerifyProcessFunc
-
-	// DeleteProcessByID deletes a process by its ID.
-	DeleteProcessByID DeleteProcessByIDFunc
 
 	// DeleteUserByID deletes a user by its ID.
 	DeleteUserByID DeleteUserByIDFunc

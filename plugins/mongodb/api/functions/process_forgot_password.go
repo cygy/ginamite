@@ -1,23 +1,22 @@
 package functions
 
 import (
+	"context"
 	"errors"
 
 	commonErrors "github.com/cygy/ginamite/common/errors"
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
 	"github.com/cygy/ginamite/plugins/mongodb/mongo/bson"
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/session"
-	"github.com/gin-gonic/gin"
 )
 
 // NewForgotPasswordProcessForUser creates a forgot password process for the user, replacing the existing one, and
 // returns its unique ID. The private key is the code to give to the user.
-func NewForgotPasswordProcessForUser(c *gin.Context, userID, processPrivateKey string) (string, error) {
-	mongoSession := session.Get(c)
+func (p *Processes) NewForgotPasswordProcessForUser(ctx context.Context, userID, processPrivateKey string) (string, error) {
+	mongoSession := p.database()
 
 	// Delete the existing forgot password process.
-	if err := model.DeleteForgotPasswordProcessByUserID(c, userID, mongoSession); err != nil && !commonErrors.IsNotFound(err) {
+	if err := model.DeleteForgotPasswordProcessByUserID(ctx, userID, mongoSession); err != nil && !commonErrors.IsNotFound(err) {
 		return "", err
 	}
 
@@ -27,7 +26,7 @@ func NewForgotPasswordProcessForUser(c *gin.Context, userID, processPrivateKey s
 		return "", err
 	}
 	fpp.Code = processPrivateKey
-	fppID, err := fpp.Save(c, mongoSession)
+	fppID, err := fpp.Save(ctx, mongoSession)
 	if err != nil {
 		return "", err
 	}
@@ -36,15 +35,15 @@ func NewForgotPasswordProcessForUser(c *gin.Context, userID, processPrivateKey s
 }
 
 // GetForgotPasswordProcessDetailsByID returns the ID of the user and the private key of a forgot password process.
-func GetForgotPasswordProcessDetailsByID(c *gin.Context, processID string) (userID, processPrivateKey string, err error) {
+func (p *Processes) GetForgotPasswordProcessDetailsByID(ctx context.Context, processID string) (userID, processPrivateKey string, err error) {
 	if _, err := bson.ObjectIDFromHex(processID); err != nil {
 		return "", "", errors.New("wrong forgot password process ID")
 	}
 
-	mongoSession := session.Get(c)
+	mongoSession := p.database()
 
 	fpp := &model.ForgotPasswordProcess{}
-	if err := fpp.GetByID(c, processID, mongoSession); err != nil || !fpp.IsSaved() {
+	if err := fpp.GetByID(ctx, processID, mongoSession); err != nil || !fpp.IsSaved() {
 		return "", "", errors.New("unable to find the forgot password process")
 	}
 
@@ -53,37 +52,37 @@ func GetForgotPasswordProcessDetailsByID(c *gin.Context, processID string) (user
 
 // WrongAccessToForgotPasswordProcess records a wrong access to a forgot password process: it counts as a try, and
 // the process is deleted after three wrong tries.
-func WrongAccessToForgotPasswordProcess(c *gin.Context, processID string) {
-	mongoSession := session.Get(c)
+func (p *Processes) WrongAccessToForgotPasswordProcess(ctx context.Context, processID string) {
+	mongoSession := p.database()
 
 	fpp := &model.ForgotPasswordProcess{}
-	if err := fpp.GetByID(c, processID, mongoSession); err != nil || !fpp.IsSaved() {
+	if err := fpp.GetByID(ctx, processID, mongoSession); err != nil || !fpp.IsSaved() {
 		return
 	}
 
 	if fpp.Tries >= 2 {
-		if err := fpp.Delete(c, mongoSession); err != nil {
+		if err := fpp.Delete(ctx, mongoSession); err != nil {
 			log.WithField("error", err).Error("unable to delete")
 		}
 	} else {
-		if err := fpp.Increment(c, mongoSession); err != nil {
+		if err := fpp.Increment(ctx, mongoSession); err != nil {
 			log.WithField("error", err).Error("unable to increment")
 		}
 	}
 }
 
 // DeleteForgotPasswordProcess deletes a forgot password process.
-func DeleteForgotPasswordProcess(c *gin.Context, processID string) error {
+func (p *Processes) DeleteForgotPasswordProcess(ctx context.Context, processID string) error {
 	objectID, err := bson.ObjectIDFromHex(processID)
 	if err != nil {
 		return err
 	}
 
-	mongoSession := session.Get(c)
+	mongoSession := p.database()
 
 	process := &model.ForgotPasswordProcess{
 		ID: objectID,
 	}
 
-	return process.Delete(c, mongoSession)
+	return process.Delete(ctx, mongoSession)
 }

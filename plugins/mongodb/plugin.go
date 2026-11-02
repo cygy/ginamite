@@ -238,6 +238,7 @@ func (p *Plugin) configureAPI(a *api.Server) {
 	a.Hooks.BuildTokenFromID = tokens.BuildTokenFromID
 	a.Hooks.ExtendTokenExpirationDateFromID = tokens.ExtendTokenExpirationDateFromID
 	a.Account.Tokens = tokens
+	a.Account.Processes = apiFunctions.NewProcesses(p.database)
 
 	a.Hooks.MiddlewareIsValidAuthToken = apiFunctions.IsValidAuthToken
 	a.Hooks.MiddlewareGetUserAndLocaleFromAuthToken = apiFunctions.GetUserAndLocaleFromAuthToken
@@ -250,10 +251,6 @@ func (p *Plugin) configureAPI(a *api.Server) {
 	a.Account.GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser = apiFunctions.GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser
 
 	a.Account.UpdateEncryptedPasswordByUserID = apiFunctions.UpdateEncryptedPasswordByUserID
-	a.Account.NewForgotPasswordProcessForUser = apiFunctions.NewForgotPasswordProcessForUser
-	a.Account.GetForgotPasswordProcessDetailsByID = apiFunctions.GetForgotPasswordProcessDetailsByID
-	a.Account.WrongAccessToForgotPasswordProcess = apiFunctions.WrongAccessToForgotPasswordProcess
-	a.Account.DeleteForgotPasswordProcess = apiFunctions.DeleteForgotPasswordProcess
 
 	a.Account.UpdateUserPassword = apiFunctions.UpdateUserPassword
 	a.Account.UpdateUserEmailAddress = apiFunctions.UpdateUserEmailAddress
@@ -280,14 +277,6 @@ func (p *Plugin) configureAPI(a *api.Server) {
 	a.Account.GetOwnedAccountDetails = apiFunctions.GetOwnedAccountDetails
 	a.Account.UpdatedAccountInfos = apiFunctions.UpdatedAccountInfos
 	a.Account.UpdatedAccountSettings = apiFunctions.UpdatedAccountSettings
-
-	a.Account.CreateNewDeleteAccountProcess = apiFunctions.CreateNewDeleteAccountProcess
-	a.Account.CreateNewDisableAccountProcess = apiFunctions.CreateNewDisableAccountProcess
-	a.Account.CreateNewUpdatePasswordProcess = apiFunctions.CreateNewUpdatePasswordProcess
-	a.Account.CreateNewUpdateEmailAddressProcess = apiFunctions.CreateNewUpdateEmailAddressProcess
-	a.Account.CreateNewVerifyEmailAddressProcess = apiFunctions.CreateNewVerifyEmailAddressProcess
-	a.Account.VerifyProcess = apiFunctions.VerifyProcess
-	a.Account.DeleteProcessByID = apiFunctions.DeleteProcessByID
 
 	a.Account.DeleteUserByID = apiFunctions.DeleteUserByID
 	a.Account.DisableUserByID = apiFunctions.DisableUserByID

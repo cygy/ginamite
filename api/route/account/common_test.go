@@ -1,6 +1,7 @@
 package account
 
 import (
+	"context"
 	"net/http"
 	"testing"
 
@@ -16,27 +17,23 @@ type processStubs struct {
 }
 
 func (p processStubs) install() {
-	testFunctions.VerifyProcess = func(*gin.Context, string, string) (string, string, error) { return testUserID, "value", p.verifyErr }
+	testProcesses.VerifyProcessFn = func(context.Context, string, string) (string, string, error) { return testUserID, "value", p.verifyErr }
 	testFunctions.GetUserDetailsByID = func(*gin.Context, string) (authentication.User, error) { return testUser, p.userErr }
-	testFunctions.DeleteProcessByID = func(*gin.Context, string) error { return p.deleteProcessErr }
+	testProcesses.DeleteProcessByIDFn = func(context.Context, string) error { return p.deleteProcessErr }
 	testFunctions.UpdateUserEmailAddress = func(*gin.Context, string, string) error { return p.updateErr }
 	testFunctions.UpdateUserPassword = func(*gin.Context, string, string, bool) error { return p.updateErr }
 	testFunctions.UserEmailAddressIsVerified = func(*gin.Context, string) error { return p.updateErr }
 	testFunctions.DeleteUserByID = func(*gin.Context, string) error { return p.updateErr }
 	testFunctions.DisableUserByID = func(*gin.Context, string) (authentication.User, error) { return testUser, p.updateErr }
-	testFunctions.CreateNewVerifyEmailAddressProcess = func(*gin.Context, string) (string, string, error) { return "id", "key", nil }
+	testProcesses.CreateNewVerifyEmailAddressProcessFn = func(context.Context, string) (string, string, error) { return "id", "key", nil }
 
 	switch p.missing {
 	case "GetUserDetailsByID":
 		testFunctions.GetUserDetailsByID = nil
-	case "VerifyProcess":
-		testFunctions.VerifyProcess = nil
-	case "DeleteProcessByID":
-		testFunctions.DeleteProcessByID = nil
+	case "Processes":
+		withoutProcesses()
 	case "update":
 		testFunctions.UpdateUserEmailAddress, testFunctions.UpdateUserPassword, testFunctions.UserEmailAddressIsVerified, testFunctions.DeleteUserByID, testFunctions.DisableUserByID = nil, nil, nil, nil, nil
-	case "CreateNewVerifyEmailAddressProcess":
-		testFunctions.CreateNewVerifyEmailAddressProcess = nil
 	}
 }
 
@@ -61,8 +58,7 @@ func TestValidateOrCancelUpdateProperty(t *testing.T) {
 		{"validate missing key", true, processStubs{}, params[:1], http.StatusBadRequest},
 		{"validate missing process", true, processStubs{}, nil, http.StatusBadRequest},
 		{"validate without GetUserDetailsByID", true, processStubs{missing: "GetUserDetailsByID"}, params, http.StatusBadRequest},
-		{"validate without VerifyProcess", true, processStubs{missing: "VerifyProcess"}, params, http.StatusBadRequest},
-		{"validate without DeleteProcessByID", true, processStubs{missing: "DeleteProcessByID"}, params, http.StatusBadRequest},
+		{"validate without the processes", true, processStubs{missing: "Processes"}, params, http.StatusBadRequest},
 		{"validate without update function", true, processStubs{missing: "update"}, params, http.StatusBadRequest},
 		{"validate verify error", true, processStubs{verifyErr: errBoom}, params, http.StatusBadRequest},
 		{"validate user error", true, processStubs{userErr: errBoom}, params, http.StatusBadRequest},
@@ -88,22 +84,6 @@ func TestValidateOrCancelUpdateProperty(t *testing.T) {
 				}
 			})
 		}
-	}
-}
-
-func TestValidateOrCancelUpdateProperty_VerifyEmailAddressWithoutProcessFunction(t *testing.T) {
-	setup(t)
-	processStubs{missing: "CreateNewVerifyEmailAddressProcess"}.install()
-
-	c, recorder := newContext(gin.Params{{Key: "id", Value: "process"}, {Key: "key", Value: "secret"}})
-	validateOrCancelUpdateProperty(c, authentication.ProcessUpdateEmailAddress, true)
-	c.Writer.WriteHeaderNow()
-
-	if recorder.Code != http.StatusOK {
-		t.Errorf("status = %d, want %d", recorder.Code, http.StatusOK)
-	}
-	if len(c.Errors) != 1 {
-		t.Errorf("errors = %v, want the error of the missing function", c.Errors)
 	}
 }
 

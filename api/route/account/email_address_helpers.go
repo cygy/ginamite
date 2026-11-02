@@ -1,8 +1,6 @@
 package account
 
 import (
-	"errors"
-
 	"github.com/cygy/ginamite/common/ctxkey"
 
 	"github.com/cygy/ginamite/common/queue"
@@ -11,11 +9,11 @@ import (
 )
 
 func startProcessValidateNewEmailAddress(c *gin.Context, userID, emailAddress, username, locale string) (string, string, error) {
-	if FunctionsOf(c).CreateNewVerifyEmailAddressProcess == nil {
-		return "", "", errors.New("undefined function 'CreateNewVerifyEmailAddressProcess'")
+	if FunctionsOf(c).Processes == nil {
+		return "", "", errNoProcesses
 	}
 
-	processID, processKey, err := FunctionsOf(c).CreateNewVerifyEmailAddressProcess(c, userID)
+	processID, processKey, err := FunctionsOf(c).Processes.CreateNewVerifyEmailAddressProcess(c, userID)
 	if err != nil {
 		return "", "", err
 	}

@@ -1,17 +1,16 @@
 package account
 
 import (
+	"context"
 	"net/http"
 	"testing"
-
-	"github.com/gin-gonic/gin"
 )
 
 func TestUpdateEmailAddress(t *testing.T) {
 	const body = `{"email_address":"new@example.com"}`
 	create := func(err error) func() {
 		return func() {
-			testFunctions.CreateNewUpdateEmailAddressProcess = func(*gin.Context, string, string) (string, string, error) {
+			testProcesses.CreateNewUpdateEmailAddressProcessFn = func(context.Context, string, string) (string, string, error) {
 				return "process-id", "process-key", err
 			}
 		}
@@ -19,7 +18,7 @@ func TestUpdateEmailAddress(t *testing.T) {
 
 	runCases(t, UpdateEmailAddress, []testCase{
 		{name: "GetUserDetailsByID not defined", userID: testUserID, body: body, setup: create(nil), want: http.StatusInternalServerError},
-		{name: "process function not defined", userID: testUserID, body: body, setup: withUser(testUser, nil), want: http.StatusInternalServerError},
+		{name: "storage of the processes not defined", userID: testUserID, body: body, setup: all(withUser(testUser, nil), withoutProcesses), want: http.StatusInternalServerError},
 		{name: "missing email address", userID: testUserID, body: `{}`, setup: all(withUser(testUser, nil), create(nil)), want: http.StatusBadRequest},
 		{name: "invalid email address", userID: testUserID, body: `{"email_address":"new"}`, setup: all(withUser(testUser, nil), create(nil)), want: http.StatusBadRequest},
 		{name: "user error", userID: testUserID, body: body, setup: all(withUser(testUser, errBoom), create(nil)), want: http.StatusInternalServerError},
@@ -61,7 +60,7 @@ func TestConfirmEmailAddress(t *testing.T) {
 	verified.IsEmailValid = true
 	create := func(err error) func() {
 		return func() {
-			testFunctions.CreateNewVerifyEmailAddressProcess = func(*gin.Context, string) (string, string, error) {
+			testProcesses.CreateNewVerifyEmailAddressProcessFn = func(context.Context, string) (string, string, error) {
 				return "process-id", "process-key", err
 			}
 		}
@@ -71,7 +70,7 @@ func TestConfirmEmailAddress(t *testing.T) {
 		{name: "GetUserDetailsByID not defined", userID: testUserID, want: http.StatusInternalServerError},
 		{name: "user error", userID: testUserID, setup: withUser(testUser, errBoom), want: http.StatusInternalServerError},
 		{name: "already confirmed", userID: testUserID, setup: withUser(verified, nil), want: http.StatusPreconditionFailed},
-		{name: "process function not defined", userID: testUserID, setup: withUser(testUser, nil), want: http.StatusInternalServerError},
+		{name: "storage of the processes not defined", userID: testUserID, setup: all(withUser(testUser, nil), withoutProcesses), want: http.StatusInternalServerError},
 		{name: "process error", userID: testUserID, setup: all(withUser(testUser, nil), create(errBoom)), want: http.StatusInternalServerError},
 		{name: "success", userID: testUserID, setup: all(withUser(testUser, nil), create(nil)), want: http.StatusOK},
 		{

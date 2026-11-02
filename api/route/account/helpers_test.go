@@ -101,22 +101,25 @@ var (
 	testHooks authentication.Hooks
 )
 
-// testNotifications and testTokens are the storages of the handlers, reset at the end of each test.
+// testNotifications, testTokens and testProcesses are the storages of the handlers, reset at the end of each test.
 var (
 	testNotifications = &fakeNotifications{}
 	testTokens        = &fakeTokens{}
+	testProcesses     = &fakeProcesses{}
 )
 
 // resetFunctions removes every function of the handlers and resets the storages.
 func resetFunctions() {
 	*testNotifications = fakeNotifications{}
 	*testTokens = fakeTokens{}
-	testFunctions = Functions{Notifications: testNotifications, Tokens: testTokens}
+	*testProcesses = fakeProcesses{}
+	testFunctions = Functions{Notifications: testNotifications, Tokens: testTokens, Processes: testProcesses}
 }
 
-// withoutNotifications and withoutTokens remove the storages.
+// withoutNotifications, withoutTokens and withoutProcesses remove the storages.
 func withoutNotifications() { testFunctions.Notifications = nil }
 func withoutTokens()        { testFunctions.Tokens = nil }
+func withoutProcesses()     { testFunctions.Processes = nil }
 
 // fakeTokens is a TokensStorage whose methods call the function set by the test, if any.
 type fakeTokens struct {
@@ -183,6 +186,107 @@ func (f *fakeTokens) UpdateTokenByID(ctx context.Context, tokenID, name string, 
 	}
 
 	return f.updateFn(ctx, tokenID, name, enableNotifications, notifications)
+}
+
+// fakeProcesses is a ProcessesStorage whose methods call the function set by the test, if any.
+type fakeProcesses struct {
+	NewForgotPasswordProcessForUserFn     func(ctx context.Context, userID, processPrivateKey string) (string, error)
+	GetForgotPasswordProcessDetailsByIDFn func(ctx context.Context, processID string) (string, string, error)
+	WrongAccessToForgotPasswordProcessFn  func(ctx context.Context, processID string)
+	DeleteForgotPasswordProcessFn         func(ctx context.Context, processID string) error
+	CreateNewDeleteAccountProcessFn       func(ctx context.Context, userID string) (string, string, error)
+	CreateNewDisableAccountProcessFn      func(ctx context.Context, userID string) (string, string, error)
+	CreateNewUpdatePasswordProcessFn      func(ctx context.Context, userID, encryptedPassword string) (string, string, error)
+	CreateNewUpdateEmailAddressProcessFn  func(ctx context.Context, userID, emailAddress string) (string, string, error)
+	CreateNewVerifyEmailAddressProcessFn  func(ctx context.Context, userID string) (string, string, error)
+	VerifyProcessFn                       func(ctx context.Context, processID, key string) (string, string, error)
+	DeleteProcessByIDFn                   func(ctx context.Context, processID string) error
+}
+
+func (f *fakeProcesses) NewForgotPasswordProcessForUser(ctx context.Context, userID, processPrivateKey string) (string, error) {
+	if f.NewForgotPasswordProcessForUserFn == nil {
+		return "", nil
+	}
+
+	return f.NewForgotPasswordProcessForUserFn(ctx, userID, processPrivateKey)
+}
+
+func (f *fakeProcesses) GetForgotPasswordProcessDetailsByID(ctx context.Context, processID string) (string, string, error) {
+	if f.GetForgotPasswordProcessDetailsByIDFn == nil {
+		return "", "", nil
+	}
+
+	return f.GetForgotPasswordProcessDetailsByIDFn(ctx, processID)
+}
+
+func (f *fakeProcesses) WrongAccessToForgotPasswordProcess(ctx context.Context, processID string) {
+	if f.WrongAccessToForgotPasswordProcessFn != nil {
+		f.WrongAccessToForgotPasswordProcessFn(ctx, processID)
+	}
+}
+
+func (f *fakeProcesses) DeleteForgotPasswordProcess(ctx context.Context, processID string) error {
+	if f.DeleteForgotPasswordProcessFn == nil {
+		return nil
+	}
+
+	return f.DeleteForgotPasswordProcessFn(ctx, processID)
+}
+
+func (f *fakeProcesses) CreateNewDeleteAccountProcess(ctx context.Context, userID string) (string, string, error) {
+	if f.CreateNewDeleteAccountProcessFn == nil {
+		return "", "", nil
+	}
+
+	return f.CreateNewDeleteAccountProcessFn(ctx, userID)
+}
+
+func (f *fakeProcesses) CreateNewDisableAccountProcess(ctx context.Context, userID string) (string, string, error) {
+	if f.CreateNewDisableAccountProcessFn == nil {
+		return "", "", nil
+	}
+
+	return f.CreateNewDisableAccountProcessFn(ctx, userID)
+}
+
+func (f *fakeProcesses) CreateNewUpdatePasswordProcess(ctx context.Context, userID, encryptedPassword string) (string, string, error) {
+	if f.CreateNewUpdatePasswordProcessFn == nil {
+		return "", "", nil
+	}
+
+	return f.CreateNewUpdatePasswordProcessFn(ctx, userID, encryptedPassword)
+}
+
+func (f *fakeProcesses) CreateNewUpdateEmailAddressProcess(ctx context.Context, userID, emailAddress string) (string, string, error) {
+	if f.CreateNewUpdateEmailAddressProcessFn == nil {
+		return "", "", nil
+	}
+
+	return f.CreateNewUpdateEmailAddressProcessFn(ctx, userID, emailAddress)
+}
+
+func (f *fakeProcesses) CreateNewVerifyEmailAddressProcess(ctx context.Context, userID string) (string, string, error) {
+	if f.CreateNewVerifyEmailAddressProcessFn == nil {
+		return "", "", nil
+	}
+
+	return f.CreateNewVerifyEmailAddressProcessFn(ctx, userID)
+}
+
+func (f *fakeProcesses) VerifyProcess(ctx context.Context, processID, key string) (string, string, error) {
+	if f.VerifyProcessFn == nil {
+		return "", "", nil
+	}
+
+	return f.VerifyProcessFn(ctx, processID, key)
+}
+
+func (f *fakeProcesses) DeleteProcessByID(ctx context.Context, processID string) error {
+	if f.DeleteProcessByIDFn == nil {
+		return nil
+	}
+
+	return f.DeleteProcessByIDFn(ctx, processID)
 }
 
 // fakeNotifications is a NotificationsStorage whose methods call the function set by the test, if any.

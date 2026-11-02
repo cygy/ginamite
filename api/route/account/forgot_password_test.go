@@ -1,6 +1,7 @@
 package account
 
 import (
+	"context"
 	"net/http"
 	"testing"
 
@@ -19,13 +20,13 @@ func TestForgotPassword(t *testing.T) {
 	}
 	create := func(err error) func() {
 		return func() {
-			testFunctions.NewForgotPasswordProcessForUser = func(*gin.Context, string, string) (string, error) { return "process-id", err }
+			testProcesses.NewForgotPasswordProcessForUserFn = func(context.Context, string, string) (string, error) { return "process-id", err }
 		}
 	}
 
 	runCases(t, ForgotPassword, []testCase{
 		{name: "lookup function not defined", body: body, setup: create(nil), want: http.StatusInternalServerError},
-		{name: "process function not defined", body: body, setup: lookup(nil), want: http.StatusInternalServerError},
+		{name: "storage of the processes not defined", body: body, setup: all(lookup(nil), withoutProcesses), want: http.StatusInternalServerError},
 		{name: "missing identifier", body: `{}`, setup: all(lookup(nil), create(nil)), want: http.StatusBadRequest},
 		{name: "unknown account", body: body, setup: all(lookup(commonErrors.NotFound()), create(nil)), want: http.StatusNotFound},
 		{name: "lookup error", body: body, setup: all(lookup(errBoom), create(nil)), want: http.StatusInternalServerError},
@@ -39,14 +40,14 @@ func TestForgotPassword(t *testing.T) {
 }
 
 func (f forgotPasswordStubs) install() {
-	testFunctions.GetForgotPasswordProcessDetailsByID = func(*gin.Context, string) (string, string, error) {
+	testProcesses.GetForgotPasswordProcessDetailsByIDFn = func(context.Context, string) (string, string, error) {
 		return testUserID, f.key, f.detailsErr
 	}
 	testFunctions.GetUserDetailsByID = func(*gin.Context, string) (authentication.User, error) { return testUser, f.userErr }
 	testFunctions.UpdateUserPassword = func(*gin.Context, string, string, bool) error { return f.updateErr }
-	testFunctions.DeleteForgotPasswordProcess = func(*gin.Context, string) error { return f.deleteErr }
+	testProcesses.DeleteForgotPasswordProcessFn = func(context.Context, string) error { return f.deleteErr }
 	if !f.skipWrongAccessFunctionDefinition {
-		testFunctions.WrongAccessToForgotPasswordProcess = func(*gin.Context, string) {
+		testProcesses.WrongAccessToForgotPasswordProcessFn = func(context.Context, string) {
 			if f.wrongAccessCalls != nil {
 				*f.wrongAccessCalls++
 			}
@@ -57,10 +58,10 @@ func (f forgotPasswordStubs) install() {
 	case "GetUserDetailsByID":
 		testFunctions.GetUserDetailsByID = nil
 	case "GetForgotPasswordProcessDetailsByID":
-		testFunctions.GetForgotPasswordProcessDetailsByID = nil
+		withoutProcesses()
 	case "UpdateUserPassword":
 		testFunctions.UpdateUserPassword = nil
 	case "DeleteForgotPasswordProcess":
-		testFunctions.DeleteForgotPasswordProcess = nil
+		withoutProcesses()
 	}
 }

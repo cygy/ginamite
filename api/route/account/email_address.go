@@ -26,8 +26,8 @@ func UpdateEmailAddress(c *gin.Context) {
 		return
 	}
 
-	if FunctionsOf(c).CreateNewUpdateEmailAddressProcess == nil {
-		c.Error(errors.New("undefined function 'CreateNewUpdateEmailAddressProcess'"))
+	if FunctionsOf(c).Processes == nil {
+		c.Error(errNoProcesses)
 		response.InternalServerError(c)
 		return
 	}
@@ -63,7 +63,7 @@ func UpdateEmailAddress(c *gin.Context) {
 		return
 	}
 
-	processID, processKey, err := FunctionsOf(c).CreateNewUpdateEmailAddressProcess(c, userID, emailAddress)
+	processID, processKey, err := FunctionsOf(c).Processes.CreateNewUpdateEmailAddressProcess(c, userID, emailAddress)
 	if err != nil {
 		response.InternalServerError(c)
 		return

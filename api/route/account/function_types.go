@@ -23,15 +23,6 @@ type UpdateEncryptedPasswordByUserIDFunc func(c *gin.Context, userID, encryptedP
 // GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUserFunc is a function to get the user details and its encrypted password from its identifier (username, email addresse, what you want.)
 type GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUserFunc func(c *gin.Context, identifier string) (authentication.User, string, error)
 
-// NewForgotPasswordProcessForUserFunc is a function to create a new forgot password process for a user. Return the unique identifier of the process.
-type NewForgotPasswordProcessForUserFunc func(c *gin.Context, userID, processPrivateKey string) (string, error)
-
-// GetForgotPasswordProcessDetailsByIDFunc is a function to get the forgot password process details from its identifier.
-type GetForgotPasswordProcessDetailsByIDFunc func(c *gin.Context, processID string) (userID, processPrivateKey string, err error)
-
-// WrongAccessToForgotPasswordProcessFunc is a function to avoid brute force, increment tries or delete the process.
-type WrongAccessToForgotPasswordProcessFunc func(c *gin.Context, processID string)
-
 // UpdateUserPasswordFunc is a function to update the password of an user.
 type UpdateUserPasswordFunc func(c *gin.Context, userID, password string, isPasswordEncrypted bool) error
 
@@ -43,9 +34,6 @@ type UserEmailAddressIsVerifiedFunc func(c *gin.Context, userID string) error
 
 // UpdateUserSocialNetworksFunc updates the social network accounts of the user.
 type UpdateUserSocialNetworksFunc func(c *gin.Context, userID, facebook, twitter, instagram string) error
-
-// DeleteForgotPasswordProcessFunc is a function to delete a forgot password process by ID.
-type DeleteForgotPasswordProcessFunc func(c *gin.Context, processID string) error
 
 // ValidateUserRegistrationFunc is a function to validate the registration of a user by its ID.
 type ValidateUserRegistrationFunc func(c *gin.Context, userID, registrationKey string) error
@@ -88,12 +76,6 @@ type CreateNewProcessFunc func(c *gin.Context, userID string) (processID, proces
 
 // CreateNewProcessWithValueFunc is a function to start a new process bound to a user.
 type CreateNewProcessWithValueFunc func(c *gin.Context, userID, value string) (processID, processKey string, err error)
-
-// VerifyProcessFunc is a function to verify a process and get the ID of the bound user.
-type VerifyProcessFunc func(c *gin.Context, processID, key string) (userID, newValue string, err error)
-
-// DeleteProcessByIDFunc deletes a process by its ID.
-type DeleteProcessByIDFunc func(c *gin.Context, processID string) error
 
 // DeleteUserByIDFunc deletes a user by its ID.
 type DeleteUserByIDFunc func(c *gin.Context, userID string) error

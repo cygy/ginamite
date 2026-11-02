@@ -22,8 +22,8 @@ func DeleteAccount(c *gin.Context) {
 		return
 	}
 
-	if FunctionsOf(c).CreateNewDeleteAccountProcess == nil {
-		c.Error(errors.New("undefined function 'CreateNewDeleteAccountProcess'"))
+	if FunctionsOf(c).Processes == nil {
+		c.Error(errNoProcesses)
 		response.InternalServerError(c)
 		return
 	}
@@ -38,7 +38,7 @@ func DeleteAccount(c *gin.Context) {
 		return
 	}
 
-	processID, processKey, err := FunctionsOf(c).CreateNewDeleteAccountProcess(c, userID)
+	processID, processKey, err := FunctionsOf(c).Processes.CreateNewDeleteAccountProcess(c, userID)
 	if err != nil {
 		response.InternalServerError(c)
 		return

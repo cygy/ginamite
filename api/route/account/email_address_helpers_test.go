@@ -1,25 +1,26 @@
 package account
 
 import (
+	"context"
 	"testing"
-
-	"github.com/gin-gonic/gin"
 )
 
 func TestStartProcessValidateNewEmailAddress(t *testing.T) {
 	setup(t)
 	c, _ := newContext(nil)
 
+	withoutProcesses()
 	if _, _, err := startProcessValidateNewEmailAddress(c, testUserID, "john@example.com", "john", "en"); err == nil {
-		t.Error("error = nil, want an error when CreateNewVerifyEmailAddressProcess is not defined")
+		t.Error("error = nil, want an error when the storage of the processes is not defined")
 	}
 
-	testFunctions.CreateNewVerifyEmailAddressProcess = func(*gin.Context, string) (string, string, error) { return "", "", errBoom }
+	testFunctions.Processes = testProcesses
+	testProcesses.CreateNewVerifyEmailAddressProcessFn = func(context.Context, string) (string, string, error) { return "", "", errBoom }
 	if _, _, err := startProcessValidateNewEmailAddress(c, testUserID, "john@example.com", "john", "en"); err == nil {
 		t.Error("error = nil, want the error of the process creation")
 	}
 
-	testFunctions.CreateNewVerifyEmailAddressProcess = func(*gin.Context, string) (string, string, error) { return "id", "key", nil }
+	testProcesses.CreateNewVerifyEmailAddressProcessFn = func(context.Context, string) (string, string, error) { return "id", "key", nil }
 	id, key, err := startProcessValidateNewEmailAddress(c, testUserID, "john@example.com", "john", "en")
 	if err != nil || id != "id" || key != "key" {
 		t.Errorf("startProcessValidateNewEmailAddress() = %q, %q, %v, want id, key, nil", id, key, err)

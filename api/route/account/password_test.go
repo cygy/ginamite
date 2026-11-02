@@ -1,17 +1,16 @@
 package account
 
 import (
+	"context"
 	"net/http"
 	"testing"
-
-	"github.com/gin-gonic/gin"
 )
 
 func TestUpdatePassword(t *testing.T) {
 	const body = `{"password":"Abcdefghij1"}`
 	create := func(err error) func() {
 		return func() {
-			testFunctions.CreateNewUpdatePasswordProcess = func(*gin.Context, string, string) (string, string, error) {
+			testProcesses.CreateNewUpdatePasswordProcessFn = func(context.Context, string, string) (string, string, error) {
 				return "process-id", "process-key", err
 			}
 		}
@@ -19,7 +18,7 @@ func TestUpdatePassword(t *testing.T) {
 
 	runCases(t, UpdatePassword, []testCase{
 		{name: "GetUserDetailsByID not defined", userID: testUserID, body: body, setup: create(nil), want: http.StatusInternalServerError},
-		{name: "process function not defined", userID: testUserID, body: body, setup: withUser(testUser, nil), want: http.StatusInternalServerError},
+		{name: "storage of the processes not defined", userID: testUserID, body: body, setup: all(withUser(testUser, nil), withoutProcesses), want: http.StatusInternalServerError},
 		{name: "invalid password", userID: testUserID, body: `{"password":"weak"}`, setup: all(withUser(testUser, nil), create(nil)), want: http.StatusBadRequest},
 		{name: "user error", userID: testUserID, body: body, setup: all(withUser(testUser, errBoom), create(nil)), want: http.StatusInternalServerError},
 		{name: "process error", userID: testUserID, body: body, setup: all(withUser(testUser, nil), create(errBoom)), want: http.StatusInternalServerError},

@@ -110,7 +110,7 @@ func validateOrCancelUpdateProperty(c *gin.Context, property string, validate bo
 	}
 
 	// Some functions must be verified.
-	undefined := FunctionsOf(c).GetUserDetailsByID == nil || FunctionsOf(c).VerifyProcess == nil || FunctionsOf(c).DeleteProcessByID == nil
+	undefined := FunctionsOf(c).GetUserDetailsByID == nil || FunctionsOf(c).Processes == nil
 
 	if validate {
 		if isEmailAddressProcess {
@@ -132,7 +132,7 @@ func validateOrCancelUpdateProperty(c *gin.Context, property string, validate bo
 	}
 
 	// Verify the process.
-	userID, value, err := FunctionsOf(c).VerifyProcess(c, processID, key)
+	userID, value, err := FunctionsOf(c).Processes.VerifyProcess(c, processID, key)
 	if err != nil {
 		sendError(err)
 		return
@@ -183,7 +183,7 @@ func validateOrCancelUpdateProperty(c *gin.Context, property string, validate bo
 	}
 
 	// Now delete the process.
-	err = FunctionsOf(c).DeleteProcessByID(c, processID)
+	err = FunctionsOf(c).Processes.DeleteProcessByID(c, processID)
 	if err != nil && !validate {
 		sendError(err)
 		return
