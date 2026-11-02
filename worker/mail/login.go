@@ -43,7 +43,7 @@ func (m *Mailer) NewLogin(ctx context.Context, payload []byte, isEmailAddressVal
 		cancelURL: m.processURL(weburl.AccountLoginCancel, p.Locale, p.TokenID, p.TokenKey),
 	})
 
-	msg.HTMLVars["Footer"] = template.HTML(t(key+".html.footer", footerVars))
+	msg.HTMLVars["Footer"] = template.HTML(t(key+".html.footer", escapeHTML(footerVars))) //nolint:gosec // The translation is trusted and its variables are escaped.
 	msg.TextVars["Footer"] = t(key+".text.footer", footerVars)
 
 	return m.deliver(msg)

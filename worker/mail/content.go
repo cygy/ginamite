@@ -35,7 +35,7 @@ func (m *Mailer) message(c content) Message {
 
 	htmlVars := localization.H{
 		"Title":   t("email." + c.key + ".title"),
-		"Message": template.HTML(t("email."+c.key+".html.message", messageVars)),
+		"Message": template.HTML(t("email."+c.key+".html.message", escapeHTML(messageVars))), //nolint:gosec // The translation is trusted and its variables are escaped.
 		"Footer":  t("email." + c.key + ".html.footer"),
 	}
 	textVars := localization.H{
@@ -69,6 +69,20 @@ func (m *Mailer) message(c content) Message {
 		TextVars:  textVars,
 		Locale:    c.locale,
 	}
+}
+
+// escapeHTML returns the variables with their strings escaped for HTML. The translations do not escape their variables:
+// the ones inserted in an HTML message, such as the username or the device given by the user, must be escaped first.
+func escapeHTML(vars localization.H) localization.H {
+	escaped := make(localization.H, len(vars))
+	for name, value := range vars {
+		if text, ok := value.(string); ok {
+			value = template.HTMLEscapeString(text)
+		}
+		escaped[name] = value
+	}
+
+	return escaped
 }
 
 // processURL returns the URL of a route of a process, with the ID and the code of the process.

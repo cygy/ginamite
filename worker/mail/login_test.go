@@ -43,6 +43,22 @@ func TestNewLogin(t *testing.T) {
 		contains(t, "text footer", m.TextVars["Footer"], "email.login.new.text.footer", "UnsubscribeURL:"+unsubscribeURL)
 	})
 
+	t.Run("the values given by the user are escaped in HTML", func(t *testing.T) {
+		mailer, delivered := stub(t)
+		injected := encode(t, map[string]string{
+			"email": address, "username": "<b>john</b>", "locale": "en", "unsubscribe_key": "ukey",
+			"ip": "1.2.3.4", "source": "web", "device": `<a href="https://evil">phone</a>`, "token_id": "tid", "token_key": "tkey",
+		})
+		if err := mailer.NewLogin(context.Background(), injected, valid); err != nil {
+			t.Fatalf("error = %v", err)
+		}
+
+		m := (*delivered)[0]
+		contains(t, "HTML message", m.HTMLVars["Message"], "Username:&lt;b&gt;john&lt;/b&gt;", "Device:&lt;a href=&#34;https://evil&#34;&gt;phone&lt;/a&gt;")
+		contains(t, "HTML footer", m.HTMLVars["Footer"], "?key=ukey")
+		contains(t, "text message", m.TextVars["Message"], `Device:<a href="https://evil">phone</a>`)
+	})
+
 	t.Run("invalid payload", func(t *testing.T) {
 		mailer, delivered := stub(t)
 		if err := mailer.NewLogin(context.Background(), []byte("{"), valid); !broker.IsPermanent(err) {
