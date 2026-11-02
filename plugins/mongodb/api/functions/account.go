@@ -81,7 +81,9 @@ func (p *PublicAccount) UpdateProfile(c *gin.Context) {
 		Locale      string `json:"locale"`
 		Description string `json:"description"`
 	}
-	request.DecodeBody(c, &jsonBody)
+	if !request.DecodeBody(c, &jsonBody) {
+		return
+	}
 
 	locale := ctxLocale.Get(c)
 	t := ctxkey.Localization.Get(c).Translate(locale)

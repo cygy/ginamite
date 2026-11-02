@@ -72,7 +72,9 @@ func AdminUpdatePassword(c *gin.Context) {
 	var jsonBody struct {
 		Password string `json:"password"`
 	}
-	request.DecodeBody(c, &jsonBody)
+	if !request.DecodeBody(c, &jsonBody) {
+		return
+	}
 
 	locale := ctxLocale.Get(c)
 	t := ctxkey.Localization.Get(c).Translate(locale)
@@ -114,7 +116,9 @@ func AdminUpdateInformations(c *gin.Context) {
 		EmailAddress      string `json:"email_address"`
 		ValidEmailAddress bool   `json:"valid_email_address"`
 	}
-	request.DecodeBody(c, &jsonBody)
+	if !request.DecodeBody(c, &jsonBody) {
+		return
+	}
 
 	locale := ctxLocale.Get(c)
 	t := ctxkey.Localization.Get(c).Translate(locale)
@@ -164,7 +168,9 @@ func AdminUpdateDescription(c *gin.Context) {
 		Description string `json:"description"`
 		Locale      string `json:"locale"`
 	}
-	request.DecodeBody(c, &jsonBody)
+	if !request.DecodeBody(c, &jsonBody) {
+		return
+	}
 
 	locale := ctxLocale.Get(c)
 	t := ctxkey.Localization.Get(c).Translate(locale)
@@ -211,7 +217,9 @@ func AdminUpdateSocial(c *gin.Context) {
 		Twitter   string `json:"twitter"`
 		Instagram string `json:"instagram"`
 	}
-	request.DecodeBody(c, &jsonBody)
+	if !request.DecodeBody(c, &jsonBody) {
+		return
+	}
 
 	locale := ctxLocale.Get(c)
 	t := ctxkey.Localization.Get(c).Translate(locale)
@@ -279,7 +287,9 @@ func AdminUpdateSettings(c *gin.Context) {
 		Locale   string `json:"locale"`
 		Timezone string `json:"timezone"`
 	}
-	request.DecodeBody(c, &jsonBody)
+	if !request.DecodeBody(c, &jsonBody) {
+		return
+	}
 
 	locale := ctxLocale.Get(c)
 	t := ctxkey.Localization.Get(c).Translate(locale)
@@ -344,7 +354,9 @@ func AdminUpdateNotifications(c *gin.Context) {
 	var jsonBody struct {
 		Notifications []string `json:"notifications"`
 	}
-	request.DecodeBody(c, &jsonBody)
+	if !request.DecodeBody(c, &jsonBody) {
+		return
+	}
 
 	locale := ctxLocale.Get(c)
 	t := ctxkey.Localization.Get(c).Translate(locale)

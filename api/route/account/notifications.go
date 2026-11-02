@@ -183,7 +183,9 @@ func SaveNotificationsSettings(c *gin.Context) {
 	var jsonBody struct {
 		Notifications []string `json:"notifications"`
 	}
-	request.DecodeBody(c, &jsonBody)
+	if !request.DecodeBody(c, &jsonBody) {
+		return
+	}
 
 	locale := ctxLocale.Get(c)
 	t := ctxkey.Localization.Get(c).Translate(locale)

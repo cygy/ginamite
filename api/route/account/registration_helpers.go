@@ -60,7 +60,9 @@ func register(c *gin.Context, method string) {
 		Locale       string                `json:"locale"`
 		TermsVersion string                `json:"terms_version"`
 	}
-	request.DecodeBody(c, &jsonBody)
+	if !request.DecodeBody(c, &jsonBody) {
+		return
+	}
 
 	isPasswordMethod := (method == authentication.MethodPassword)
 	isFacebookMethod := (method == authentication.MethodFacebook)

@@ -34,23 +34,41 @@ func TestDecodeBody(t *testing.T) {
 		Name string `json:"name"`
 	}
 
+	initLocalization(t)
+
 	tests := []struct {
-		name string
-		body string
-		want string
+		name       string
+		body       string
+		limit      int64
+		want       string
+		wantOK     bool
+		wantStatus int
 	}{
-		{"valid json", `{"name":"john"}`, "john"},
-		{"invalid json is ignored", `{"name":`, ""},
-		{"empty body", ``, ""},
+		{"valid json", `{"name":"john"}`, 0, "john", true, http.StatusOK},
+		{"empty body", ``, 0, "", true, http.StatusOK},
+		{"invalid json", `{"name":`, 0, "", false, http.StatusBadRequest},
+		{"wrong type", `{"name":1}`, 0, "", false, http.StatusBadRequest},
+		{"over the limit", `{"name":"john"}`, 5, "", false, http.StatusRequestEntityTooLarge},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c, _ := apitest.NewContext("POST", "/", strings.NewReader(tt.body))
+			c, recorder := apitest.NewContext("POST", "/", strings.NewReader(tt.body))
+			ctxLocale.Set(c, "", "en")
+			if tt.limit > 0 {
+				c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, tt.limit)
+			}
 			p := &payload{}
-			DecodeBody(c, p)
+
+			if ok := DecodeBody(c, p); ok != tt.wantOK {
+				t.Fatalf("DecodeBody() = %v, want %v", ok, tt.wantOK)
+			}
+			c.Writer.WriteHeaderNow()
 
 			if p.Name != tt.want {
 				t.Errorf("Name = %q, want %q", p.Name, tt.want)
+			}
+			if recorder.Code != tt.wantStatus {
+				t.Errorf("status = %d, want %d", recorder.Code, tt.wantStatus)
 			}
 		})
 	}

@@ -64,7 +64,9 @@ func validateOrCancelForgotPassword(c *gin.Context, validate bool) {
 		var jsonBody struct {
 			Password string `json:"password"`
 		}
-		request.DecodeBody(c, &jsonBody)
+		if !request.DecodeBody(c, &jsonBody) {
+			return
+		}
 
 		password = jsonBody.Password
 		if !validatePassword(c, password, "error.forgot_password.validate.message") {

@@ -13,7 +13,9 @@ func GetAvailability(c *gin.Context) {
 	var jsonBody struct {
 		Username string `json:"username"`
 	}
-	request.DecodeBody(c, &jsonBody)
+	if !request.DecodeBody(c, &jsonBody) {
+		return
+	}
 
 	username := jsonBody.Username
 

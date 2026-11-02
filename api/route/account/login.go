@@ -21,7 +21,9 @@ func loginWithThirdParty(c *gin.Context, v validator.TokenValidator) {
 		Source string                `json:"source"`
 		Device authentication.Device `json:"device"`
 	}
-	request.DecodeBody(c, &jsonBody)
+	if !request.DecodeBody(c, &jsonBody) {
+		return
+	}
 
 	authenticationMethod := v.SourceName()
 	isFacebookMethod := (authenticationMethod == authentication.MethodFacebook)

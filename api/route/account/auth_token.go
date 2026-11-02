@@ -36,7 +36,9 @@ func LoginWithPassword(c *gin.Context) {
 		Source     string                `json:"source"`
 		Device     authentication.Device `json:"device"`
 	}
-	request.DecodeBody(c, &jsonBody)
+	if !request.DecodeBody(c, &jsonBody) {
+		return
+	}
 
 	locale := ctxLocale.Get(c)
 	t := ctxkey.Localization.Get(c).Translate(locale)
@@ -224,7 +226,9 @@ func UpdateAuthToken(c *gin.Context) {
 		EnableNotification bool     `json:"enable_notification"`
 		Notifications      []string `json:"notifications"`
 	}
-	request.DecodeBody(c, &jsonBody)
+	if !request.DecodeBody(c, &jsonBody) {
+		return
+	}
 
 	// Name is mandatory.
 	name := jsonBody.Name

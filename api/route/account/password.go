@@ -30,7 +30,9 @@ func UpdatePassword(c *gin.Context) {
 	var jsonBody struct {
 		Password string `json:"password"`
 	}
-	request.DecodeBody(c, &jsonBody)
+	if !request.DecodeBody(c, &jsonBody) {
+		return
+	}
 
 	locale := ctxLocale.Get(c)
 	t := ctxkey.Localization.Get(c).Translate(locale)

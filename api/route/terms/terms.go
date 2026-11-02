@@ -75,7 +75,9 @@ func AcceptTerms(c *gin.Context) {
 	var jsonBody struct {
 		Version string `json:"version"`
 	}
-	request.DecodeBody(c, &jsonBody)
+	if !request.DecodeBody(c, &jsonBody) {
+		return
+	}
 
 	locale := ctxLocale.Get(c)
 	t := ctxkey.Localization.Get(c).Translate(locale)

@@ -47,7 +47,9 @@ func UpdateInfos(c *gin.Context) {
 		FirstName string `json:"first_name"`
 		LastName  string `json:"last_name"`
 	}
-	request.DecodeBody(c, &jsonBody)
+	if !request.DecodeBody(c, &jsonBody) {
+		return
+	}
 
 	locale := ctxLocale.Get(c)
 	t := ctxkey.Localization.Get(c).Translate(locale)
@@ -101,7 +103,9 @@ func UpdateSettings(c *gin.Context) {
 		Locale   string `json:"locale"`
 		Timezone string `json:"timezone"`
 	}
-	request.DecodeBody(c, &jsonBody)
+	if !request.DecodeBody(c, &jsonBody) {
+		return
+	}
 
 	locale := ctxLocale.Get(c)
 	t := ctxkey.Localization.Get(c).Translate(locale)

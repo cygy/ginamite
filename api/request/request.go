@@ -3,6 +3,9 @@ package request
 
 import (
 	"encoding/json"
+	"errors"
+	"io"
+	"net/http"
 	"strconv"
 	"strings"
 
@@ -16,11 +19,25 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// DecodeBody decodes the JSON-formatted body of a request to a struct.
-func DecodeBody(c *gin.Context, v any) {
-	if err := json.NewDecoder(c.Request.Body).Decode(&v); err != nil {
-		log.Warn("unable to decode the request body", "error", err)
+// DecodeBody decodes the JSON-formatted body of a request to v, a pointer to a struct. An empty body leaves v as is.
+// It reports false after sending the error response if the body is not valid JSON (400), or is larger than the limit
+// of the request body (413, see request.LimitBodySize): the handler must then return.
+func DecodeBody(c *gin.Context, v any) bool {
+	err := json.NewDecoder(c.Request.Body).Decode(v)
+	if err == nil || errors.Is(err, io.EOF) {
+		return true
 	}
+
+	log.Warn("unable to decode the request body", "error", err)
+
+	if maxBytesErr := (*http.MaxBytesError)(nil); errors.As(err, &maxBytesErr) {
+		c.AbortWithStatus(http.StatusRequestEntityTooLarge)
+		return false
+	}
+
+	response.InvalidRequestParameter(c, ctxLocale.Get(c))
+
+	return false
 }
 
 // Unescape unescapes a string.

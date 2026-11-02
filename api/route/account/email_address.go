@@ -34,7 +34,9 @@ func UpdateEmailAddress(c *gin.Context) {
 	var jsonBody struct {
 		EmailAddress string `json:"email_address"`
 	}
-	request.DecodeBody(c, &jsonBody)
+	if !request.DecodeBody(c, &jsonBody) {
+		return
+	}
 
 	locale := ctxLocale.Get(c)
 	t := ctxkey.Localization.Get(c).Translate(locale)

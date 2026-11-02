@@ -71,7 +71,9 @@ func Update(c *gin.Context) {
 	var jsonBody struct {
 		Done bool `json:"done"`
 	}
-	request.DecodeBody(c, &jsonBody)
+	if !request.DecodeBody(c, &jsonBody) {
+		return
+	}
 
 	contactID := getContactID(c)
 

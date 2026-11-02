@@ -26,7 +26,9 @@ func updateAbilities(c *gin.Context, action string) {
 	var jsonBody struct {
 		Abilities []string `json:"abilities"`
 	}
-	request.DecodeBody(c, &jsonBody)
+	if !request.DecodeBody(c, &jsonBody) {
+		return
+	}
 
 	locale := ctxLocale.Get(c)
 	t := ctxkey.Localization.Get(c).Translate(locale)

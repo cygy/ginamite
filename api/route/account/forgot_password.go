@@ -40,7 +40,9 @@ func ForgotPassword(c *gin.Context) {
 	var jsonBody struct {
 		Identifier string `json:"identifier"` // must be the username or the email address
 	}
-	request.DecodeBody(c, &jsonBody)
+	if !request.DecodeBody(c, &jsonBody) {
+		return
+	}
 
 	locale := ctxLocale.Get(c)
 	t := ctxkey.Localization.Get(c).Translate(locale)

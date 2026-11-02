@@ -21,7 +21,9 @@ func Post(c *gin.Context) {
 		Subject      string `json:"subject"`
 		Text         string `json:"text"`
 	}
-	request.DecodeBody(c, &jsonBody)
+	if !request.DecodeBody(c, &jsonBody) {
+		return
+	}
 
 	locale := ctxLocale.Get(c)
 	t := ctxkey.Localization.Get(c).Translate(locale)

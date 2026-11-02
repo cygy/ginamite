@@ -29,7 +29,9 @@ func UpdateSocialNetworks(c *gin.Context) {
 		Twitter   string `json:"twitter"`
 		Instagram string `json:"instagram"`
 	}
-	request.DecodeBody(c, &jsonBody)
+	if !request.DecodeBody(c, &jsonBody) {
+		return
+	}
 
 	locale := ctxLocale.Get(c)
 	t := ctxkey.Localization.Get(c).Translate(locale)
