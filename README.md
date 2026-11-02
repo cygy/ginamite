@@ -354,6 +354,23 @@ the extension points below, and is registered with `server.AddPlugin`.
 
 A plugin for another database implements the same extension points. `plugins/mongodb` is the reference.
 
+The interfaces a plugin implements, by feature. A feature whose storage is left `nil` is disabled, with a warning at
+startup. Each method takes the `context.Context` of the request (or of the task, in the worker) and returns an error:
+`errors.ErrNotFound` when the document does not exist.
+
+| Server | Field | Interface |
+| --- | --- | --- |
+| API | `Contacts` | `contact.Storage` |
+| API | `Terms` | `terms.Storage` |
+| API | `Users` | `user.Storage` (administration of the users) |
+| API | `Account` | `account.Storage`: `Accounts`, `Tokens`, `Notifications` and `Processes` (`AccountsStorage`, `TokensStorage`, `NotificationsStorage`, `ProcessesStorage`) |
+| API | `Hooks` | `IsValidID`, `MiddlewareIsValidAuthToken`, `MiddlewareGetUserAndLocaleFromAuthToken`, `MiddlewareGetUserAbilities`, `BuildTokenFromID`, `ExtendTokenExpirationDateFromID`, etc. |
+| Worker | `Storage` | `worker.Storage`: `Tokens`, `Accounts`, `Users`, `Notifications`, `Locations`, `Emails` and `Sitemap` |
+| Worker | `Hooks` | `worker.Hooks`: the tasks, mails and notifications of the application |
+
+The rate limiters of the requests (`api.Server.Hooks.NewRateLimiter`) keep their counters in memory by default: a plugin
+can provide limiters shared between the instances by implementing `request.RateLimiter`.
+
 ### MongoDB
 
 The packages `plugins/mongodb/mongo/session`, `store`, `document` and `bson` are the MongoDB helpers (session, driver,
