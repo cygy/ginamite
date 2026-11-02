@@ -15,10 +15,14 @@ const (
 	// compute for long.
 	sha512CryptMaxRounds = 1_000_000
 	sha512CryptMaxSalt   = 16
-	sha512CryptAlphabet  = "./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+	// sha512CryptMaxPassword bounds the length of a password, in bytes: the time of the algorithm grows with its
+	// square, so a long password sent to an account with a legacy hash must not make the server compute for long.
+	sha512CryptMaxPassword = 1024
+	sha512CryptAlphabet    = "./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 )
 
-// errInvalidSHA512Crypt is returned for a setting which is not a SHA-512 crypt one, or with too many rounds.
+// errInvalidSHA512Crypt is returned for a setting which is not a SHA-512 crypt one, with too many rounds, or for a
+// password longer than sha512CryptMaxPassword.
 var errInvalidSHA512Crypt = errors.New("invalid SHA-512 crypt setting")
 
 // sha512CryptPermutation is the order in which the bytes of the digest are encoded, three at a time.
@@ -50,7 +54,7 @@ var sha512CryptPermutation = [21][3]int{
 // "$6$rounds=5000$salt$". Only the legacy hashes are verified with it: the new ones use Argon2id.
 func sha512Crypt(password, setting string) (string, error) {
 	rest, ok := strings.CutPrefix(setting, legacyPrefix)
-	if !ok {
+	if !ok || len(password) > sha512CryptMaxPassword {
 		return "", errInvalidSHA512Crypt
 	}
 

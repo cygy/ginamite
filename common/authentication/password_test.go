@@ -139,4 +139,9 @@ func TestSHA512Crypt_InvalidSettings(t *testing.T) {
 			t.Errorf("sha512Crypt(%q) must return an error", setting)
 		}
 	}
+
+	// The time grows with the square of the length of the password: a long one is refused at once.
+	if _, err := sha512Crypt(strings.Repeat("a", sha512CryptMaxPassword+1), "$6$salt$"); err == nil {
+		t.Error("a password longer than the maximum must be refused")
+	}
 }

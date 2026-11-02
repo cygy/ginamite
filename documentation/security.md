@@ -1,7 +1,8 @@
 # Security
 
 - **Passwords** are hashed with Argon2id (PHC format, random salt, constant-time comparison). The legacy SHA-512 crypt
-  hashes (`$6$`) are still accepted, and replaced by an Argon2id hash after a successful login. Logging in with an
+  hashes (`$6$`) are still accepted, up to 1024 bytes of password, and replaced by an Argon2id hash after a successful
+  login. Logging in with an
   unknown email costs as much time as with a wrong password.
 - **JWT**: only HS256, HS384 and HS512 are accepted, and the `exp` claim is required. The tokens are never logged.
   A `jwt` secret shorter than 32 characters logs a warning.

@@ -35,10 +35,11 @@ var sensitiveHeaders = map[string]bool{
 }
 
 var (
-	// sensitiveValueRegExp matches the JSON string values whose key contains password, token or secret, such as
+	// pairRegExp matches the JSON pairs whose value is a string: the key with its colon, then the value. The escaped
+	// characters, such as \", are part of the strings.
+	pairRegExp = regexp.MustCompile(`("(?:[^"\\]|\\.)*"\s*:\s*)"(?:[^"\\]|\\.)*"`)
+	// sensitiveKeyRegExp matches the names of the JSON keys and of the query parameters holding a secret, such as
 	// "password", "new_password", "auth_token" or "client_secret".
-	sensitiveValueRegExp = regexp.MustCompile(`(?i)("[^"]*(?:password|token|secret)[^"]*"\s*:\s*)"(?:[^"\\]|\\.)*"`)
-	// sensitiveKeyRegExp matches the names of the query parameters holding a secret.
 	sensitiveKeyRegExp = regexp.MustCompile(`(?i)password|token|secret`)
 	// emailRegExp matches the local part of the email addresses.
 	emailRegExp = regexp.MustCompile(`([^\/\"]*)@`)
@@ -46,7 +47,14 @@ var (
 
 // obfuscateBody masks the secrets and the local part of the email addresses of a body.
 func obfuscateBody(body []byte) []byte {
-	body = sensitiveValueRegExp.ReplaceAll(body, []byte(`${1}"`+obfuscatorReplacingString+`"`))
+	body = pairRegExp.ReplaceAllFunc(body, func(pair []byte) []byte {
+		key := pairRegExp.FindSubmatch(pair)[1]
+		if !sensitiveKeyRegExp.Match(key) {
+			return pair
+		}
+
+		return append(key, `"`+obfuscatorReplacingString+`"`...)
+	})
 	return emailRegExp.ReplaceAll(body, []byte(obfuscatorReplacingString+"@"))
 }
 

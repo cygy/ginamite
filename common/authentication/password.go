@@ -111,8 +111,9 @@ func parseArgon2(hash string) (memory, iterations uint32, parallelism uint8, sal
 
 func compareArgon2(password, hash string) bool {
 	memory, iterations, parallelism, salt, key, ok := parseArgon2(hash)
-	// A hash with huge parameters must not make the server compute for long or allocate gigabytes.
-	if !ok || memory > 4*argon2Memory || iterations > 10 || parallelism == 0 {
+	// A hash with huge parameters must not make the server compute for long or allocate gigabytes, and argon2 panics
+	// without iteration.
+	if !ok || memory > 4*argon2Memory || iterations == 0 || iterations > 10 || parallelism == 0 {
 		return false
 	}
 

@@ -17,7 +17,11 @@ Requirements: Go (see `go.mod`), [gofumpt](https://github.com/mvdan/gofumpt) and
 make check   # build, formatting, go vet, golangci-lint and the tests with the race detector
 make fmt     # format the code
 make cover   # tests and total coverage
+make fuzz    # each fuzz test for 30 seconds, FUZZTIME=5m for longer
 ```
+
+A failing input found by `make fuzz` is saved under `testdata/fuzz`: commit it with the fix, it becomes a regression
+test.
 
 A pull request is merged once `make check` passes, as the CI runs it.
 

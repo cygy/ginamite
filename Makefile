@@ -3,10 +3,11 @@ GIT      ?= git
 REMOTE   ?= origin
 VERSION  := $(shell cat VERSION)
 COVERAGE ?= coverage.out
+FUZZTIME ?= 30s
 
 .DEFAULT_GOAL := help
 
-.PHONY: help fmt fmt-check vet lint test cover build tidy check clean \
+.PHONY: help fmt fmt-check vet lint test cover fuzz build tidy check clean \
 	bump_major bump_minor bump_patch release ensure-clean
 
 help: ## List the targets
@@ -32,6 +33,14 @@ test: ## Run the tests with the race detector
 cover: ## Run the tests and print the coverage per function
 	$(GO) test -race -count=1 -coverprofile=$(COVERAGE) ./...
 	$(GO) tool cover -func=$(COVERAGE) | tail -n 1
+
+fuzz: ## Run each fuzz test for FUZZTIME (30s by default)
+	@for pkg in $$($(GO) list ./...); do \
+		for name in $$($(GO) test -list '^Fuzz' $$pkg | grep '^Fuzz'); do \
+			echo "$$pkg $$name"; \
+			$(GO) test -run '^$$' -fuzz "^$$name$$" -fuzztime $(FUZZTIME) $$pkg || exit 1; \
+		done; \
+	done
 
 build: ## Compile every package
 	$(GO) build ./...
