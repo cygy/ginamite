@@ -230,8 +230,9 @@ command line with `RegisterFlags`.
   A `jwt` secret shorter than 32 characters logs a warning.
 - **Rate limiting**: the sign-in, registration and forgot-password routes are limited per client IP. A refused request
   gets a `429` and a `Retry-After` header. By default the counters are a token bucket in the memory of each instance,
-  so the limit applies per API instance: with several instances, set `api.Server.Hooks.NewRateLimiter` to a
-  `request.RateLimiter` sharing them. A failure of the limiter lets the request through.
+  so the limit applies per API instance. The MongoDB plugin replaces them with counters in the database
+  (`rateLimits`, fixed windows), shared by the instances; another plugin can set `api.Server.Hooks.NewRateLimiter`
+  to its own `request.RateLimiter`. A failure of the limiter lets the request through.
 
   ```yaml
   rate_limits:
@@ -375,7 +376,7 @@ startup. Each method takes the `context.Context` of the request (or of the task,
 | Worker | `Hooks` | `worker.Hooks`: the tasks, mails and notifications of the application |
 
 The rate limiters of the requests (`api.Server.Hooks.NewRateLimiter`) keep their counters in memory by default: a plugin
-can provide limiters shared between the instances by implementing `request.RateLimiter`.
+can provide limiters shared between the instances by implementing `request.RateLimiter`, as the MongoDB plugin does.
 
 ### MongoDB
 

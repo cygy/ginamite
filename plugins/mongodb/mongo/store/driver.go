@@ -69,6 +69,10 @@ func (c driverCollection) FindOne(ctx context.Context, filter any, opts ...optio
 	return c.coll.FindOne(ctx, filter, opts...)
 }
 
+func (c driverCollection) FindOneAndUpdate(ctx context.Context, filter, update any, opts ...options.Lister[options.FindOneAndUpdateOptions]) SingleResult {
+	return c.coll.FindOneAndUpdate(ctx, filter, update, opts...)
+}
+
 // Find returns a nil Cursor, not a typed nil, if the query fails.
 func (c driverCollection) Find(ctx context.Context, filter any, opts ...options.Lister[options.FindOptions]) (Cursor, error) {
 	cursor, err := c.coll.Find(ctx, filter, opts...)

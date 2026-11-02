@@ -254,6 +254,18 @@ func (c *Collection) FindOne(_ context.Context, filter any, opts ...options.List
 	return Result{Error: mongo.ErrNoDocuments}
 }
 
+// FindOneAndUpdate records the call and returns One, or Err, or a result without document.
+func (c *Collection) FindOneAndUpdate(_ context.Context, filter, update any, opts ...options.Lister[options.FindOneAndUpdateOptions]) store.SingleResult {
+	if err := c.record("FindOneAndUpdate", []any{filter, update}, listerArgs(opts)); err != nil {
+		return Result{Error: err}
+	}
+	if c.One != nil {
+		return c.One
+	}
+
+	return Result{Error: mongo.ErrNoDocuments}
+}
+
 // Find records the call and returns a cursor over Docs, or Err.
 func (c *Collection) Find(_ context.Context, filter any, opts ...options.Lister[options.FindOptions]) (store.Cursor, error) {
 	if err := c.record("Find", []any{filter}, listerArgs(opts)); err != nil {
@@ -328,6 +340,11 @@ func FindOptions(opts []any) *options.FindOptions {
 // FindOneOptions applies the options of a FindOne call, e.g. to check the sort.
 func FindOneOptions(opts []any) *options.FindOneOptions {
 	return applyOptions[options.FindOneOptions](opts)
+}
+
+// FindOneAndUpdateOptions applies the options of a FindOneAndUpdate call, e.g. to check the upsert.
+func FindOneAndUpdateOptions(opts []any) *options.FindOneAndUpdateOptions {
+	return applyOptions[options.FindOneAndUpdateOptions](opts)
 }
 
 // UpdateOneOptions applies the options of an UpdateOne call, e.g. to check the upsert.

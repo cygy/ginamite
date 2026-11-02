@@ -86,6 +86,9 @@ func (f *Functions) CreateAllCollections(ctx context.Context) {
 			Name: model.ProcessedMessageCollection,
 		},
 		{
+			Name: model.RateLimitCollection,
+		},
+		{
 			Name: model.UpdatePropertyProcessCollection,
 		},
 		{
