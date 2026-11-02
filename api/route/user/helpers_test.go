@@ -6,14 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cygy/ginamite/common/ctxnotifications"
+	"github.com/cygy/ginamite/common/ctxkey"
 	"github.com/cygy/ginamite/common/notifications"
 
-	"github.com/cygy/ginamite/common/ctxtimezone"
-
-	"github.com/cygy/ginamite/common/ctxlocalization"
-
-	"github.com/cygy/ginamite/common/ctxqueue"
 	"github.com/cygy/ginamite/common/queue"
 
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
@@ -21,7 +16,6 @@ import (
 	"github.com/cygy/ginamite/api/route/account"
 	"github.com/cygy/ginamite/common/broker"
 	"github.com/cygy/ginamite/common/config"
-	"github.com/cygy/ginamite/common/ctxconfig"
 	"github.com/cygy/ginamite/common/timezone"
 
 	"github.com/gin-gonic/gin"
@@ -60,7 +54,7 @@ func setup(t *testing.T) {
 // serve sends a request with the given JSON body to the handler, mounted on "/:id", and returns the HTTP status.
 func serve(handler gin.HandlerFunc, body string) int {
 	router := gin.New()
-	router.Use(ctxconfig.Inject(testConfig), ctxqueue.Inject(testQueue), ctxtimezone.Inject(testTimezones), ctxnotifications.Inject(notifications.NewRegistry()), Inject(&testFunctions), account.Inject(&testAccountFunctions), ctxlocalization.Inject(apitest.Localization), ctxLocale.Inject("en", []string{"en"}))
+	router.Use(ctxkey.Config.Inject(testConfig), ctxkey.Queue.Inject(testQueue), ctxkey.Timezones.Inject(testTimezones), ctxkey.Notifications.Inject(notifications.NewRegistry()), Inject(&testFunctions), account.Inject(&testAccountFunctions), ctxkey.Localization.Inject(apitest.Localization), ctxLocale.Inject("en", []string{"en"}))
 	router.Any("/:id", handler)
 
 	req, _ := http.NewRequest(http.MethodPost, "/42", strings.NewReader(body))
@@ -71,10 +65,10 @@ func serve(handler gin.HandlerFunc, body string) int {
 // newTestContext returns a context carrying the JSON body and the "en" locale.
 func newTestContext(body string) (*gin.Context, *httptest.ResponseRecorder) {
 	c, recorder := apitest.NewContext(http.MethodPost, "/42", strings.NewReader(body))
-	ctxconfig.Set(c, testConfig)
-	ctxqueue.Set(c, testQueue)
-	ctxtimezone.Set(c, testTimezones)
-	ctxnotifications.Set(c, notifications.NewRegistry())
+	ctxkey.Config.Set(c, testConfig)
+	ctxkey.Queue.Set(c, testQueue)
+	ctxkey.Timezones.Set(c, testTimezones)
+	ctxkey.Notifications.Set(c, notifications.NewRegistry())
 	SetFunctions(c, &testFunctions)
 	account.SetFunctions(c, &testAccountFunctions)
 	ctxLocale.Set(c, "en", "en")

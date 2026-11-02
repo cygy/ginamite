@@ -4,15 +4,12 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/cygy/ginamite/common/ctxlocalization"
-
-	"github.com/cygy/ginamite/common/ctxqueue"
+	"github.com/cygy/ginamite/common/ctxkey"
 
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/api/validator"
 	"github.com/cygy/ginamite/common/authentication"
-	"github.com/cygy/ginamite/common/ctxconfig"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/queue"
 
@@ -28,9 +25,9 @@ func newTokenValidator(c *gin.Context, method string) validator.TokenValidator {
 
 	switch method {
 	case authentication.MethodFacebook:
-		return validator.NewFacebookTokenValidator(ctxconfig.Get(c).Facebook.AppID, ctxconfig.Get(c).Facebook.APIVersion, ctxconfig.Get(c).Facebook.TimeOut, ctxconfig.Get(c).Facebook.RetryCount, ctxconfig.Get(c).IsDebugModeEnabled())
+		return validator.NewFacebookTokenValidator(ctxkey.Config.Get(c).Facebook.AppID, ctxkey.Config.Get(c).Facebook.APIVersion, ctxkey.Config.Get(c).Facebook.TimeOut, ctxkey.Config.Get(c).Facebook.RetryCount, ctxkey.Config.Get(c).IsDebugModeEnabled())
 	case authentication.MethodGoogle:
-		return validator.NewGoogleTokenValidator(ctxconfig.Get(c).Google.ClientID, ctxconfig.Get(c).Google.APIVersion, ctxconfig.Get(c).Google.TimeOut, ctxconfig.Get(c).Google.RetryCount, ctxconfig.Get(c).IsDebugModeEnabled())
+		return validator.NewGoogleTokenValidator(ctxkey.Config.Get(c).Google.ClientID, ctxkey.Config.Get(c).Google.APIVersion, ctxkey.Config.Get(c).Google.TimeOut, ctxkey.Config.Get(c).Google.RetryCount, ctxkey.Config.Get(c).IsDebugModeEnabled())
 	}
 
 	return nil
@@ -45,7 +42,7 @@ func validateOrCancelUpdateProperty(c *gin.Context, property string, validate bo
 	isDisableAccountProcess := property == authentication.ProcessDisableAccount
 
 	locale := ctxLocale.Get(c)
-	t := ctxlocalization.Get(c).Translate(locale)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 
 	// Here is a local function that returns an error. This route does only return a single error.
 	sendError := func(err error) {
@@ -170,7 +167,7 @@ func validateOrCancelUpdateProperty(c *gin.Context, property string, validate bo
 				return
 			}
 
-			ctxqueue.Get(c).DeleteUser(queue.TaskDeleteUser{
+			ctxkey.Queue.Get(c).DeleteUser(queue.TaskDeleteUser{
 				UserID: userID,
 			})
 		} else if isDisableAccountProcess {
@@ -179,7 +176,7 @@ func validateOrCancelUpdateProperty(c *gin.Context, property string, validate bo
 				return
 			}
 
-			ctxqueue.Get(c).DisableUser(queue.TaskDisableUser{
+			ctxkey.Queue.Get(c).DisableUser(queue.TaskDisableUser{
 				UserID: userID,
 			})
 		}
@@ -196,7 +193,7 @@ func validateOrCancelUpdateProperty(c *gin.Context, property string, validate bo
 	if validate {
 		if isEmailAddressProcess {
 			// The confirmation mail is sent to the previous email address.
-			ctxqueue.Get(c).SendMail(queue.MessageMailUpdateEmailAddressConfirmed, queue.MailUpdateEmailAddressConfirmed{
+			ctxkey.Queue.Get(c).SendMail(queue.MessageMailUpdateEmailAddressConfirmed, queue.MailUpdateEmailAddressConfirmed{
 				EmailAddress: user.EmailAddress,
 				Username:     user.Username,
 				Locale:       user.Locale,
@@ -209,7 +206,7 @@ func validateOrCancelUpdateProperty(c *gin.Context, property string, validate bo
 
 			response.OkWithStatus(c, t("status.update_email_address.confirmed"))
 		} else if isPasswordProcess {
-			ctxqueue.Get(c).SendMail(queue.MessageMailUpdatePasswordConfirmed, queue.MailUpdatePasswordConfirmed{
+			ctxkey.Queue.Get(c).SendMail(queue.MessageMailUpdatePasswordConfirmed, queue.MailUpdatePasswordConfirmed{
 				EmailAddress: user.EmailAddress,
 				Username:     user.Username,
 				Locale:       user.Locale,
@@ -218,14 +215,14 @@ func validateOrCancelUpdateProperty(c *gin.Context, property string, validate bo
 		} else if isValidateEmailAddressProcess {
 			response.OkWithStatus(c, t("status.validate_email_address.confirmed"))
 		} else if isDeleteAccountProcess {
-			ctxqueue.Get(c).SendMail(queue.MessageMailDeleteAccountConfirmed, queue.MailDeleteAccountConfirmed{
+			ctxkey.Queue.Get(c).SendMail(queue.MessageMailDeleteAccountConfirmed, queue.MailDeleteAccountConfirmed{
 				EmailAddress: user.EmailAddress,
 				Username:     user.Username,
 				Locale:       user.Locale,
 			})
 			response.OkWithStatus(c, t("status.delete_account.confirmed"))
 		} else if isDisableAccountProcess {
-			ctxqueue.Get(c).SendMail(queue.MessageMailDisableAccountConfirmed, queue.MailDisableAccountConfirmed{
+			ctxkey.Queue.Get(c).SendMail(queue.MessageMailDisableAccountConfirmed, queue.MailDisableAccountConfirmed{
 				EmailAddress: user.EmailAddress,
 				Username:     user.Username,
 				Locale:       user.Locale,
@@ -234,28 +231,28 @@ func validateOrCancelUpdateProperty(c *gin.Context, property string, validate bo
 		}
 	} else {
 		if isEmailAddressProcess {
-			ctxqueue.Get(c).SendMail(queue.MessageMailUpdateEmailAddressCancelled, queue.MailUpdateEmailAddressCancelled{
+			ctxkey.Queue.Get(c).SendMail(queue.MessageMailUpdateEmailAddressCancelled, queue.MailUpdateEmailAddressCancelled{
 				EmailAddress: user.EmailAddress,
 				Username:     user.Username,
 				Locale:       user.Locale,
 			})
 			response.OkWithStatus(c, t("status.update_email_address.cancelled"))
 		} else if isPasswordProcess {
-			ctxqueue.Get(c).SendMail(queue.MessageMailUpdatePasswordCancelled, queue.MailUpdatePasswordCancelled{
+			ctxkey.Queue.Get(c).SendMail(queue.MessageMailUpdatePasswordCancelled, queue.MailUpdatePasswordCancelled{
 				EmailAddress: user.EmailAddress,
 				Username:     user.Username,
 				Locale:       user.Locale,
 			})
 			response.OkWithStatus(c, t("status.update_password.cancelled"))
 		} else if isDeleteAccountProcess {
-			ctxqueue.Get(c).SendMail(queue.MessageMailDeleteAccountCancelled, queue.MailDeleteAccountCancelled{
+			ctxkey.Queue.Get(c).SendMail(queue.MessageMailDeleteAccountCancelled, queue.MailDeleteAccountCancelled{
 				EmailAddress: user.EmailAddress,
 				Username:     user.Username,
 				Locale:       user.Locale,
 			})
 			response.OkWithStatus(c, t("status.delete_account.cancelled"))
 		} else if isDisableAccountProcess {
-			ctxqueue.Get(c).SendMail(queue.MessageMailDisableAccountCancelled, queue.MailDisableAccountCancelled{
+			ctxkey.Queue.Get(c).SendMail(queue.MessageMailDisableAccountCancelled, queue.MailDisableAccountCancelled{
 				EmailAddress: user.EmailAddress,
 				Username:     user.Username,
 				Locale:       user.Locale,
@@ -267,7 +264,7 @@ func validateOrCancelUpdateProperty(c *gin.Context, property string, validate bo
 
 func validatePassword(c *gin.Context, password, messageKey string) bool {
 	locale := ctxLocale.Get(c)
-	t := ctxlocalization.Get(c).Translate(locale)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 
 	message := t(messageKey)
 
@@ -317,7 +314,7 @@ func validatePassword(c *gin.Context, password, messageKey string) bool {
 
 func validateEmailAddress(c *gin.Context, emailAddress, messageKey string) bool {
 	locale := ctxLocale.Get(c)
-	t := ctxlocalization.Get(c).Translate(locale)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 
 	message := t(messageKey)
 

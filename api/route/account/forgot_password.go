@@ -3,14 +3,11 @@ package account
 import (
 	"errors"
 
-	"github.com/cygy/ginamite/common/ctxlocalization"
-
-	"github.com/cygy/ginamite/common/ctxqueue"
+	"github.com/cygy/ginamite/common/ctxkey"
 
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
-	"github.com/cygy/ginamite/common/ctxconfig"
 	commonErrors "github.com/cygy/ginamite/common/errors"
 	authError "github.com/cygy/ginamite/common/errors/auth"
 	"github.com/cygy/ginamite/common/queue"
@@ -40,7 +37,7 @@ func ForgotPassword(c *gin.Context) {
 	request.DecodeBody(c, &jsonBody)
 
 	locale := ctxLocale.Get(c)
-	t := ctxlocalization.Get(c).Translate(locale)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 
 	// Identifier is mandatory.
 	identifier := jsonBody.Identifier
@@ -82,7 +79,7 @@ func ForgotPassword(c *gin.Context) {
 
 	// The email address must be validated by the user.
 	// In Env test, we return the code and the user ID.
-	if ctxconfig.Get(c).IsTestEnvironment() {
+	if ctxkey.Config.Get(c).IsTestEnvironment() {
 		response.Ok(c, response.H{
 			"status": t("status.forgot_password.email_sent"),
 			"id":     processID,
@@ -91,7 +88,7 @@ func ForgotPassword(c *gin.Context) {
 		return
 	}
 
-	ctxqueue.Get(c).SendMail(queue.MessageMailForgotPasswordConfirmation, queue.MailForgotPasswordConfirmation{
+	ctxkey.Queue.Get(c).SendMail(queue.MessageMailForgotPasswordConfirmation, queue.MailForgotPasswordConfirmation{
 		EmailAddress: user.EmailAddress,
 		Username:     user.Username,
 		Locale:       user.Locale,

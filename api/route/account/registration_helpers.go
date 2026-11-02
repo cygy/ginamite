@@ -4,15 +4,12 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/cygy/ginamite/common/ctxlocalization"
-
-	"github.com/cygy/ginamite/common/ctxqueue"
+	"github.com/cygy/ginamite/common/ctxkey"
 
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common/authentication"
-	"github.com/cygy/ginamite/common/ctxconfig"
 	registrationError "github.com/cygy/ginamite/common/errors/registration"
 	"github.com/cygy/ginamite/common/queue"
 	"github.com/cygy/ginamite/common/random"
@@ -78,7 +75,7 @@ func register(c *gin.Context, method string) {
 	}
 
 	locale := ctxLocale.Get(c)
-	t := ctxlocalization.Get(c).Translate(locale)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 
 	// Verify that the username follows some rules.
 	username := jsonBody.Username
@@ -152,7 +149,7 @@ func register(c *gin.Context, method string) {
 		return
 	}
 
-	if termsVersion != ctxconfig.Get(c).Terms.Version {
+	if termsVersion != ctxkey.Config.Get(c).Terms.Version {
 		response.InvalidParameterValue(c, "terms_version",
 			t(errorMessageKey),
 			t("error.terms.version.invalid.reason"),
@@ -173,8 +170,8 @@ func register(c *gin.Context, method string) {
 	}
 
 	// Locale not supported.
-	if !ctxconfig.Get(c).SupportsLocale(accountLocale) {
-		response.UnsupportedParameterLocale(c, locale, accountLocale, "locale", ctxconfig.Get(c).SupportedLocales, errorMessageKey)
+	if !ctxkey.Config.Get(c).SupportsLocale(accountLocale) {
+		response.UnsupportedParameterLocale(c, locale, accountLocale, "locale", ctxkey.Config.Get(c).SupportedLocales, errorMessageKey)
 		return
 	}
 
@@ -197,7 +194,7 @@ func register(c *gin.Context, method string) {
 	isEmailAddressVerified := false
 	registrationCode := random.String(authentication.RegisterCodeLength)
 	privateKey := random.String(authentication.PrivateKeyLength)
-	mustBeLoggedin := !ctxconfig.Get(c).Account.EmailAddressMustBeConfirmed
+	mustBeLoggedin := !ctxkey.Config.Get(c).Account.EmailAddressMustBeConfirmed
 	IPAddress := req.GetRealIPAddress(c)
 
 	// Register with a third party service
@@ -283,7 +280,7 @@ func register(c *gin.Context, method string) {
 
 	if isEmailAddressVerified {
 		// If the email address is valid, a welcome email is sent.
-		ctxqueue.Get(c).SendMail(queue.MessageMailRegistrationWelcome, queue.MailRegistrationWelcome{
+		ctxkey.Queue.Get(c).SendMail(queue.MessageMailRegistrationWelcome, queue.MailRegistrationWelcome{
 			EmailAddress: user.EmailAddress,
 			Username:     user.Username,
 			Locale:       user.Locale,
@@ -293,11 +290,11 @@ func register(c *gin.Context, method string) {
 	} else {
 		// The email address must be validated by the user.
 		// In Env test, we return the code and the user ID.
-		if ctxconfig.Get(c).IsTestEnvironment() {
+		if ctxkey.Config.Get(c).IsTestEnvironment() {
 			r["key"] = registrationCode
 			r["id"] = user.ID
 		} else {
-			ctxqueue.Get(c).SendMail(queue.MessageMailRegistrationConfirmation, queue.MailRegistrationConfirmation{
+			ctxkey.Queue.Get(c).SendMail(queue.MessageMailRegistrationConfirmation, queue.MailRegistrationConfirmation{
 				EmailAddress:     user.EmailAddress,
 				UserID:           user.ID,
 				Username:         user.Username,
@@ -309,7 +306,7 @@ func register(c *gin.Context, method string) {
 		r["status"] = t("status.registration.email_sent")
 	}
 
-	ctxqueue.Get(c).RegistrationDone(queue.TaskRegistrationDone{
+	ctxkey.Queue.Get(c).RegistrationDone(queue.TaskRegistrationDone{
 		UserID: user.ID,
 	})
 
@@ -318,7 +315,7 @@ func register(c *gin.Context, method string) {
 
 func validateOrCancelRegistration(c *gin.Context, validate bool) {
 	locale := ctxLocale.Get(c)
-	t := ctxlocalization.Get(c).Translate(locale)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 
 	// Here is a local function that returns an error. This route does only return a single error.
 	sendError := func() {
@@ -393,13 +390,13 @@ func validateOrCancelRegistration(c *gin.Context, validate bool) {
 
 	// Send mail.
 	if validate {
-		ctxqueue.Get(c).SendMail(queue.MessageMailRegistrationConfirmed, queue.MailRegistrationConfirmed{
+		ctxkey.Queue.Get(c).SendMail(queue.MessageMailRegistrationConfirmed, queue.MailRegistrationConfirmed{
 			EmailAddress: user.EmailAddress,
 			Username:     user.Username,
 			Locale:       user.Locale,
 		})
 
-		ctxqueue.Get(c).RegistrationValidated(queue.TaskRegistrationValidated{
+		ctxkey.Queue.Get(c).RegistrationValidated(queue.TaskRegistrationValidated{
 			UserID: user.ID,
 		})
 
@@ -409,7 +406,7 @@ func validateOrCancelRegistration(c *gin.Context, validate bool) {
 			return
 		}
 	} else {
-		ctxqueue.Get(c).SendMail(queue.MessageMailRegistrationCancelled, queue.MailRegistrationCancelled{
+		ctxkey.Queue.Get(c).SendMail(queue.MessageMailRegistrationCancelled, queue.MailRegistrationCancelled{
 			EmailAddress: user.EmailAddress,
 			Username:     user.Username,
 			Locale:       user.Locale,

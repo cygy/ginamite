@@ -12,18 +12,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cygy/ginamite/common/ctxnotifications"
+	"github.com/cygy/ginamite/common/ctxkey"
 	"github.com/cygy/ginamite/common/notifications"
 
-	"github.com/cygy/ginamite/common/ctxtimezone"
 	"github.com/cygy/ginamite/common/timezone"
-
-	"github.com/cygy/ginamite/common/ctxlocalization"
 
 	"github.com/cygy/ginamite/common/authentication"
 	"github.com/cygy/ginamite/common/config"
-	"github.com/cygy/ginamite/common/ctxconfig"
-	"github.com/cygy/ginamite/common/ctxqueue"
 
 	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
@@ -51,20 +46,20 @@ func init() {
 
 // NewContext returns a gin context bound to a request, to the stub database and to the recorder of the response.
 // The locale of the context is "en", see InitLocalization. The configuration of the context is the default one, and
-// can be changed with ctxconfig.Get, and has no auth token hooks and no timezones.
+// can be changed with ctxkey.Config.Get, and has no auth token hooks and no timezones.
 func NewContext(db *mock.Database, method, target string, body io.Reader) (*gin.Context, *httptest.ResponseRecorder) {
 	recorder := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(recorder)
 	c.Request = httptest.NewRequest(method, target, body)
 	session.Set(c, db)
-	ctxconfig.Set(c, config.NewConfiguration())
+	ctxkey.Config.Set(c, config.NewConfiguration())
 	ctxAuthToken.SetHooks(c, authentication.Hooks{})
-	ctxqueue.Set(c, senderInUse)
-	ctxtimezone.Set(c, timezone.NewConfiguration())
-	ctxnotifications.Set(c, notifications.NewRegistry())
+	ctxkey.Queue.Set(c, senderInUse)
+	ctxkey.Timezones.Set(c, timezone.NewConfiguration())
+	ctxkey.Notifications.Set(c, notifications.NewRegistry())
 	ctxsettings.SetSettings(c, model.DefaultSettings())
 	if Localization != nil {
-		ctxlocalization.Set(c, Localization)
+		ctxkey.Localization.Set(c, Localization)
 	}
 	ctxLocale.Set(c, "en", "en")
 

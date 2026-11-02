@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/cygy/ginamite/common/ctxconfig"
+	"github.com/cygy/ginamite/common/ctxkey"
 
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/web/internal/webtest"
@@ -119,7 +119,7 @@ func setup(t *testing.T) *gin.Engine {
 	})
 
 	engine := gin.New()
-	engine.Use(ctxconfig.Inject(webtest.Config))
+	engine.Use(ctxkey.Config.Inject(webtest.Config))
 	templates := webtest.SetTemplates(t, map[string]string{
 		"decorator.html": `<html>{{.IncludeMainTemplate}}</html>`,
 		"main.html":      `<h1>{{.Content.Title}}</h1>{{.Localize "hello" (.Content.Vars.args)}}`,

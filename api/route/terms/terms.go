@@ -6,13 +6,12 @@ import (
 	"os"
 	"sync"
 
-	"github.com/cygy/ginamite/common/ctxlocalization"
+	"github.com/cygy/ginamite/common/ctxkey"
 
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	ctxUser "github.com/cygy/ginamite/api/context/user"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
-	"github.com/cygy/ginamite/common/ctxconfig"
 	"github.com/cygy/ginamite/common/log"
 	r "github.com/cygy/ginamite/common/response"
 
@@ -37,12 +36,12 @@ func GetTerms() gin.HandlerFunc {
 // getTerms sends the terms, read from the file if they are not in the cache.
 func getTerms(c *gin.Context, termsContents map[string]string) {
 	locale := ctxLocale.Get(c)
-	version := ctxconfig.Get(c).Terms.Version
+	version := ctxkey.Config.Get(c).Terms.Version
 	filename := fmt.Sprintf("%s/%s", version, locale)
 
 	terms, ok := termsContents[filename]
 	if !ok {
-		filePath := fmt.Sprintf("%s/%s.txt", ctxconfig.Get(c).Terms.Path, filename)
+		filePath := fmt.Sprintf("%s/%s.txt", ctxkey.Config.Get(c).Terms.Path, filename)
 		bytes, err := os.ReadFile(filePath)
 		if err != nil {
 			log.WithFields(logrus.Fields{
@@ -68,7 +67,7 @@ func getTerms(c *gin.Context, termsContents map[string]string) {
 // GetTermsVersion returns the current version of the terms.
 func GetTermsVersion(c *gin.Context) {
 	response.Ok(c, response.H{
-		"version": ctxconfig.Get(c).Terms.Version,
+		"version": ctxkey.Config.Get(c).Terms.Version,
 	})
 }
 
@@ -80,7 +79,7 @@ func AcceptTerms(c *gin.Context) {
 	request.DecodeBody(c, &jsonBody)
 
 	locale := ctxLocale.Get(c)
-	t := ctxlocalization.Get(c).Translate(locale)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 
 	// Terms version is mandatory.
 	termsVersion := jsonBody.Version
@@ -94,7 +93,7 @@ func AcceptTerms(c *gin.Context) {
 	}
 
 	// The latest version of the terms must be accepted.
-	if termsVersion != ctxconfig.Get(c).Terms.Version {
+	if termsVersion != ctxkey.Config.Get(c).Terms.Version {
 		message := t("error.terms.version.invalid.message")
 		reason := t("error.terms.version.invalid.reason")
 		recovery := t("error.terms.version.invalid.recovery")

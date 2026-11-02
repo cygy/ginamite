@@ -6,7 +6,7 @@ import (
 
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common/authentication"
-	"github.com/cygy/ginamite/common/ctxconfig"
+	"github.com/cygy/ginamite/common/ctxkey"
 
 	"github.com/gin-gonic/gin"
 	jwt "github.com/golang-jwt/jwt/v5"
@@ -43,7 +43,7 @@ func GetID(c *gin.Context) string {
 // Refresh refreshes the auth token with the latest properties of the user.
 func Refresh(c *gin.Context) {
 	tokenID := GetID(c)
-	signedToken, err := HooksOf(c).RefreshAuthToken(c, ctxconfig.Get(c).JWT.Secret, ctxconfig.Get(c).JWT.SigningMethod, tokenID, time.Duration(ctxconfig.Get(c).JWT.TTL))
+	signedToken, err := HooksOf(c).RefreshAuthToken(c, ctxkey.Config.Get(c).JWT.Secret, ctxkey.Config.Get(c).JWT.SigningMethod, tokenID, time.Duration(ctxkey.Config.Get(c).JWT.TTL))
 	if err == nil {
 		response.AddRenewedAuthToken(c, signedToken)
 	}

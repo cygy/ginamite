@@ -19,11 +19,7 @@ import (
 	"github.com/cygy/ginamite/common/authentication"
 	"github.com/cygy/ginamite/common/broker"
 	"github.com/cygy/ginamite/common/config"
-	"github.com/cygy/ginamite/common/ctxconfig"
-	"github.com/cygy/ginamite/common/ctxlocalization"
-	"github.com/cygy/ginamite/common/ctxnotifications"
-	"github.com/cygy/ginamite/common/ctxqueue"
-	"github.com/cygy/ginamite/common/ctxtimezone"
+	"github.com/cygy/ginamite/common/ctxkey"
 	"github.com/cygy/ginamite/common/httpserver"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/log"
@@ -118,7 +114,7 @@ func (s *Server) Run() error {
 	if s.Requests != nil {
 		server.Use(s.Requests.Middleware())
 	}
-	server.Use(ctxconfig.Inject(s.Config), ctxqueue.Inject(s.Queue), ctxlocalization.Inject(s.Localization), ctxtimezone.Inject(s.Timezones), ctxnotifications.Inject(s.Notifications))
+	server.Use(ctxkey.Config.Inject(s.Config), ctxkey.Queue.Inject(s.Queue), ctxkey.Localization.Inject(s.Localization), ctxkey.Timezones.Inject(s.Timezones), ctxkey.Notifications.Inject(s.Notifications))
 	server.Use(s.Middlewares...)
 	server.Use(s.idValidator())
 	server.Use(ctxAuthToken.InjectRevoked(s.RevokedTokens.IsRevoked))

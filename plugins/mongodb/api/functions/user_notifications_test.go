@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	apiContextLocale "github.com/cygy/ginamite/api/context/locale"
-	"github.com/cygy/ginamite/common/ctxconfig"
+	"github.com/cygy/ginamite/common/ctxkey"
 	commonErrors "github.com/cygy/ginamite/common/errors"
 	"github.com/cygy/ginamite/common/notifications"
 	"github.com/cygy/ginamite/plugins/mongodb/internal/plugintest"
@@ -28,7 +28,7 @@ func TestNotificationsReceivedByUser(t *testing.T) {
 	db := mock.NewDatabase("app")
 	db.Coll(model.NotificationCollection).Docs = []any{model.Notification{Type: "a", Locales: map[string]model.NotificationLocale{"en": {Title: "Title"}}}}
 	c, _ := plugintest.NewContext(db, "GET", "/", nil)
-	ctxconfig.Get(c).DefaultLocale = "en"
+	ctxkey.Config.Get(c).DefaultLocale = "en"
 	apiContextLocale.Set(c, "", "en")
 
 	got, err := NotificationsReceivedByUser(c, userID.Hex())
@@ -53,7 +53,7 @@ func TestNotificationReceivedByUser(t *testing.T) {
 	db := mock.NewDatabase("app")
 	db.Coll(model.NotificationCollection).One = mock.Result{Value: notificationDocument(id, userID, false)}
 	c, _ := plugintest.NewContext(db, "GET", "/", nil)
-	ctxconfig.Get(c).DefaultLocale = "en"
+	ctxkey.Config.Get(c).DefaultLocale = "en"
 	apiContextLocale.Set(c, "", "en")
 
 	got, err := NotificationReceivedByUser(c, userID.Hex(), id.Hex())

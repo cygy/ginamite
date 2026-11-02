@@ -4,7 +4,7 @@ package response
 import (
 	"net/http"
 
-	"github.com/cygy/ginamite/common/ctxlocalization"
+	"github.com/cygy/ginamite/common/ctxkey"
 
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/log"
@@ -25,7 +25,7 @@ func InternalServerError(c *gin.Context) {
 
 	requestID := c.Request.Header.Get(log.RequestIDHeaderName)
 	locale := context.GetLocale(c)
-	page.SetVar("ID", ctxlocalization.Get(c).Translate(locale)("tpl.error.internal_server.id", localization.H{"ErrorID": requestID}))
+	page.SetVar("ID", ctxkey.Localization.Get(c).Translate(locale)("tpl.error.internal_server.id", localization.H{"ErrorID": requestID}))
 
 	page.RenderError(c)
 }

@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cygy/ginamite/common/ctxlocalization"
+	"github.com/cygy/ginamite/common/ctxkey"
 
 	tokencache "github.com/cygy/ginamite/api/cache/authtoken"
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
@@ -48,7 +48,7 @@ func TestParse(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var gotID string
 			router := gin.New()
-			router.Use(ctxlocalization.Inject(apitest.Localization), ctxLocale.Inject("en", []string{"en"}), InjectRevoked(revoked.IsRevoked))
+			router.Use(ctxkey.Localization.Inject(apitest.Localization), ctxLocale.Inject("en", []string{"en"}), InjectRevoked(revoked.IsRevoked))
 			router.Use(Parse(secret, buildUser, tt.mustBeThere))
 			router.GET("/", func(c *gin.Context) {
 				gotID = GetID(c)
@@ -106,7 +106,7 @@ func TestParse_ExpiredTokenAndLogs(t *testing.T) {
 	defer hook.Reset()
 
 	router := gin.New()
-	router.Use(ctxlocalization.Inject(apitest.Localization), ctxLocale.Inject("en", []string{"en"}), InjectRevoked(func(string) bool { return false }))
+	router.Use(ctxkey.Localization.Inject(apitest.Localization), ctxLocale.Inject("en", []string{"en"}), InjectRevoked(func(string) bool { return false }))
 	router.Use(Parse(secret, nil, true))
 	router.GET("/", func(c *gin.Context) { c.Status(http.StatusOK) })
 

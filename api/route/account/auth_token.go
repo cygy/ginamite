@@ -5,11 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cygy/ginamite/common/ctxnotifications"
-
-	"github.com/cygy/ginamite/common/ctxlocalization"
-
-	"github.com/cygy/ginamite/common/ctxqueue"
+	"github.com/cygy/ginamite/common/ctxkey"
 
 	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
@@ -17,7 +13,6 @@ import (
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common/authentication"
-	"github.com/cygy/ginamite/common/ctxconfig"
 	commonErrors "github.com/cygy/ginamite/common/errors"
 	authError "github.com/cygy/ginamite/common/errors/auth"
 	"github.com/cygy/ginamite/common/localization"
@@ -46,7 +41,7 @@ func LoginWithPassword(c *gin.Context) {
 	request.DecodeBody(c, &jsonBody)
 
 	locale := ctxLocale.Get(c)
-	t := ctxlocalization.Get(c).Translate(locale)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 
 	// Identifier is mandatory.
 	identifier := jsonBody.Identifier
@@ -133,7 +128,7 @@ func Logout(c *gin.Context) {
 
 	tokenID := ctxAuthToken.GetID(c)
 
-	expirationDate := time.Now().Add(time.Duration(ctxconfig.Get(c).JWT.TTL) * time.Second)
+	expirationDate := time.Now().Add(time.Duration(ctxkey.Config.Get(c).JWT.TTL) * time.Second)
 	if FunctionsOf(c).GetTokenExpirationDate != nil {
 		if date, err := FunctionsOf(c).GetTokenExpirationDate(c, tokenID); err == nil {
 			expirationDate = date
@@ -149,7 +144,7 @@ func Logout(c *gin.Context) {
 		return
 	}
 
-	ctxqueue.Get(c).InvalidAuthToken(tokenID, expirationDate)
+	ctxkey.Queue.Get(c).InvalidAuthToken(tokenID, expirationDate)
 
 	response.NoContent(c)
 }
@@ -227,7 +222,7 @@ func UpdateAuthToken(c *gin.Context) {
 	}
 
 	locale := ctxLocale.Get(c)
-	t := ctxlocalization.Get(c).Translate(locale)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 
 	tokenID := c.Param("id")
 
@@ -251,10 +246,10 @@ func UpdateAuthToken(c *gin.Context) {
 
 	subscribedNotifications := jsonBody.Notifications
 	for _, notification := range subscribedNotifications {
-		if !ctxnotifications.Get(c).IsSupported(notification) {
+		if !ctxkey.Notifications.Get(c).IsSupported(notification) {
 			message := t("error.auth_token.update.unable.message")
 			reason := t("error.auth_token.update.notifications.invalid.reason", localization.H{"Value": notification})
-			recovery := t("error.auth_token.update.notifications.invalid.recovery", localization.H{"Value": strings.Join(ctxnotifications.Get(c).Supported(), ",")})
+			recovery := t("error.auth_token.update.notifications.invalid.recovery", localization.H{"Value": strings.Join(ctxkey.Notifications.Get(c).Supported(), ",")})
 
 			response.InvalidParameterValue(c, "notifications", message, reason, recovery)
 			return
@@ -285,10 +280,10 @@ func UpdateAuthToken(c *gin.Context) {
 func RefreshAuthToken(c *gin.Context) {
 	tokenID := ctxAuthToken.GetID(c)
 
-	signedToken, err := ctxAuthToken.HooksOf(c).RefreshAuthToken(c, ctxconfig.Get(c).JWT.Secret, ctxconfig.Get(c).JWT.SigningMethod, tokenID, time.Duration(ctxconfig.Get(c).JWT.TTL))
+	signedToken, err := ctxAuthToken.HooksOf(c).RefreshAuthToken(c, ctxkey.Config.Get(c).JWT.Secret, ctxkey.Config.Get(c).JWT.SigningMethod, tokenID, time.Duration(ctxkey.Config.Get(c).JWT.TTL))
 	if err != nil {
 		locale := ctxLocale.Get(c)
-		t := ctxlocalization.Get(c).Translate(locale)
+		t := ctxkey.Localization.Get(c).Translate(locale)
 
 		response.BadRequestWithError(c, res.Error{
 			Domain:   authError.Domain,

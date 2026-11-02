@@ -5,7 +5,7 @@ import (
 	"errors"
 
 	apiContextLocale "github.com/cygy/ginamite/api/context/locale"
-	"github.com/cygy/ginamite/common/ctxconfig"
+	"github.com/cygy/ginamite/common/ctxkey"
 	commonErrors "github.com/cygy/ginamite/common/errors"
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/notifications"
@@ -35,7 +35,7 @@ func NotificationsReceivedByUser(c *gin.Context, userID string) (any, error) {
 
 	summarizedNotifications := make([]model.OwnSummarizedNotification, len(notifications))
 	for i, notification := range notifications {
-		summarizedNotifications[i] = model.NewOwnSummarizedNotification(notification, locale, ctxconfig.Get(c).DefaultLocale)
+		summarizedNotifications[i] = model.NewOwnSummarizedNotification(notification, locale, ctxkey.Config.Get(c).DefaultLocale)
 	}
 
 	return summarizedNotifications, nil
@@ -50,7 +50,7 @@ func NotificationReceivedByUser(c *gin.Context, userID, notificationID string) (
 
 	locale := apiContextLocale.Get(c)
 
-	return model.NewOwnNotification(*notification, locale, ctxconfig.Get(c).DefaultLocale), nil
+	return model.NewOwnNotification(*notification, locale, ctxkey.Config.Get(c).DefaultLocale), nil
 }
 
 // UpdateUserNotificationRead updates the read flag of a notification received by the user.

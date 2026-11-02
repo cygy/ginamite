@@ -8,12 +8,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cygy/ginamite/common/ctxlocalization"
+	"github.com/cygy/ginamite/common/ctxkey"
 
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/internal/apitest"
 	"github.com/cygy/ginamite/common/config"
-	"github.com/cygy/ginamite/common/ctxconfig"
 
 	"github.com/gin-gonic/gin"
 )
@@ -42,7 +41,7 @@ func setup(t *testing.T) string {
 
 func newRouter(handler gin.HandlerFunc) *gin.Engine {
 	router := gin.New()
-	router.Use(ctxconfig.Inject(testConfig), Inject(&testFunctions), ctxlocalization.Inject(apitest.Localization), ctxLocale.Inject("en", []string{"en"}))
+	router.Use(ctxkey.Config.Inject(testConfig), Inject(&testFunctions), ctxkey.Localization.Inject(apitest.Localization), ctxLocale.Inject("en", []string{"en"}))
 	router.Any("/", handler)
 
 	return router
@@ -80,7 +79,7 @@ func TestGetTermsVersion(t *testing.T) {
 	setup(t)
 
 	c, recorder := apitest.NewContext("GET", "/", nil)
-	ctxconfig.Set(c, testConfig)
+	ctxkey.Config.Set(c, testConfig)
 	SetFunctions(c, &testFunctions)
 	GetTermsVersion(c)
 

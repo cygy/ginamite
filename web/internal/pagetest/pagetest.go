@@ -6,8 +6,7 @@ import (
 	"testing"
 
 	"github.com/cygy/ginamite/common/config"
-	"github.com/cygy/ginamite/common/ctxconfig"
-	"github.com/cygy/ginamite/common/ctxlocalization"
+	"github.com/cygy/ginamite/common/ctxkey"
 	"github.com/cygy/ginamite/web/html"
 	"github.com/cygy/ginamite/web/internal/webtest"
 
@@ -120,7 +119,7 @@ func Setup(t *testing.T) *gin.Engine {
 	})
 
 	engine := gin.New()
-	engine.Use(ctxconfig.Inject(webtest.Config))
+	engine.Use(ctxkey.Config.Inject(webtest.Config))
 	templates := webtest.SetTemplates(t, map[string]string{
 		"decorator.html": `<html>{{.IncludeMainTemplate}}</html>`,
 		"main.html":      `{{.Content.Title}}|{{.Content.Error.Message}}|{{.Content.Info.Message}}|{{.Var "ID"}}`,
@@ -144,7 +143,7 @@ func Setup(t *testing.T) *gin.Engine {
 	Pages = pages
 	t.Cleanup(func() { Pages = nil })
 
-	engine.Use(html.Inject(pages), ctxlocalization.Inject(webtest.Localization))
+	engine.Use(html.Inject(pages), ctxkey.Localization.Inject(webtest.Localization))
 	webtest.OnContext(t, func(c *gin.Context) { html.Set(c, pages) })
 
 	return engine

@@ -5,20 +5,13 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/cygy/ginamite/common/ctxnotifications"
-
-	"github.com/cygy/ginamite/common/ctxtimezone"
-
-	"github.com/cygy/ginamite/common/ctxlocalization"
-
-	"github.com/cygy/ginamite/common/ctxqueue"
+	"github.com/cygy/ginamite/common/ctxkey"
 
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/api/route/account"
 	"github.com/cygy/ginamite/common"
-	"github.com/cygy/ginamite/common/ctxconfig"
 	commonErrors "github.com/cygy/ginamite/common/errors"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/queue"
@@ -74,7 +67,7 @@ func AdminUpdatePassword(c *gin.Context) {
 	request.DecodeBody(c, &jsonBody)
 
 	locale := ctxLocale.Get(c)
-	t := ctxlocalization.Get(c).Translate(locale)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 
 	// Password is mandatory.
 	newPassword := jsonBody.Password
@@ -115,7 +108,7 @@ func AdminUpdateInformations(c *gin.Context) {
 	request.DecodeBody(c, &jsonBody)
 
 	locale := ctxLocale.Get(c)
-	t := ctxlocalization.Get(c).Translate(locale)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 
 	// EmailAddress is mandatory.
 	newEmailAddress := jsonBody.EmailAddress
@@ -164,7 +157,7 @@ func AdminUpdateDescription(c *gin.Context) {
 	request.DecodeBody(c, &jsonBody)
 
 	locale := ctxLocale.Get(c)
-	t := ctxlocalization.Get(c).Translate(locale)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 
 	// Locale is mandatory.
 	newLocale := jsonBody.Locale
@@ -177,8 +170,8 @@ func AdminUpdateDescription(c *gin.Context) {
 	}
 
 	// Locale not supported.
-	if !ctxconfig.Get(c).SupportsLocale(newLocale) {
-		response.UnsupportedParameterLocale(c, locale, newLocale, "locale", ctxconfig.Get(c).SupportedLocales, errorMessageKey)
+	if !ctxkey.Config.Get(c).SupportsLocale(newLocale) {
+		response.UnsupportedParameterLocale(c, locale, newLocale, "locale", ctxkey.Config.Get(c).SupportedLocales, errorMessageKey)
 		return
 	}
 
@@ -210,7 +203,7 @@ func AdminUpdateSocial(c *gin.Context) {
 	request.DecodeBody(c, &jsonBody)
 
 	locale := ctxLocale.Get(c)
-	t := ctxlocalization.Get(c).Translate(locale)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 
 	// The facebook profile must begin with a valid url.
 	facebook := jsonBody.Facebook
@@ -259,7 +252,7 @@ func AdminUpdateSocial(c *gin.Context) {
 		return
 	}
 
-	ctxqueue.Get(c).UpdateUserSocialNetworks(queue.TaskUpdateUserSocialNetworks{
+	ctxkey.Queue.Get(c).UpdateUserSocialNetworks(queue.TaskUpdateUserSocialNetworks{
 		UserID: userID,
 	})
 
@@ -277,7 +270,7 @@ func AdminUpdateSettings(c *gin.Context) {
 	request.DecodeBody(c, &jsonBody)
 
 	locale := ctxLocale.Get(c)
-	t := ctxlocalization.Get(c).Translate(locale)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 
 	// Locale is mandatory.
 	newLocale := jsonBody.Locale
@@ -300,13 +293,13 @@ func AdminUpdateSettings(c *gin.Context) {
 	}
 
 	// Locale not supported.
-	if !ctxconfig.Get(c).SupportsLocale(newLocale) {
-		response.UnsupportedParameterLocale(c, locale, newLocale, "locale", ctxconfig.Get(c).SupportedLocales, errorMessageKey)
+	if !ctxkey.Config.Get(c).SupportsLocale(newLocale) {
+		response.UnsupportedParameterLocale(c, locale, newLocale, "locale", ctxkey.Config.Get(c).SupportedLocales, errorMessageKey)
 		return
 	}
 
 	// Timezone not supported.
-	if !ctxtimezone.Get(c).SupportsTimezone(newTimezone) {
+	if !ctxkey.Timezones.Get(c).SupportsTimezone(newTimezone) {
 		response.InvalidParameterValue(c, "timezone",
 			t(errorMessageKey),
 			t("error.admin.user.settings.update.timezone.not_supported.reason"),
@@ -341,15 +334,15 @@ func AdminUpdateNotifications(c *gin.Context) {
 	request.DecodeBody(c, &jsonBody)
 
 	locale := ctxLocale.Get(c)
-	t := ctxlocalization.Get(c).Translate(locale)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 
 	notificationsToSave := jsonBody.Notifications
 	for _, notification := range notificationsToSave {
-		if !ctxnotifications.Get(c).IsSupported(notification) {
+		if !ctxkey.Notifications.Get(c).IsSupported(notification) {
 			response.InvalidParameterValue(c, "notifications",
 				t(errorMessageKey),
 				t("error.admin.user.notifications.update.invalid.reason", localization.H{"Value": notification}),
-				t("error.admin.user.notifications.update.invalid.recovery", localization.H{"Value": strings.Join(ctxnotifications.Get(c).Supported(), ",")}))
+				t("error.admin.user.notifications.update.invalid.recovery", localization.H{"Value": strings.Join(ctxkey.Notifications.Get(c).Supported(), ",")}))
 			return
 		}
 	}
@@ -420,11 +413,11 @@ func AdminDeleteUserToken(c *gin.Context) {
 			return
 		}
 
-		ctxqueue.Get(c).InvalidAuthToken(tokenID, token.ExpirationDate)
+		ctxkey.Queue.Get(c).InvalidAuthToken(tokenID, token.ExpirationDate)
 	}
 
 	locale := ctxLocale.Get(c)
-	response.OkWithStatus(c, ctxlocalization.Get(c).Translate(locale)("status.admin.user.token.deleted"))
+	response.OkWithStatus(c, ctxkey.Localization.Get(c).Translate(locale)("status.admin.user.token.deleted"))
 }
 
 // SetAbilities set abilities to a user.
@@ -460,19 +453,19 @@ func AdminDelete(c *gin.Context) {
 		return
 	}
 
-	ctxqueue.Get(c).DeleteUser(queue.TaskDeleteUser{
+	ctxkey.Queue.Get(c).DeleteUser(queue.TaskDeleteUser{
 		UserID: userID,
 	})
 
 	// Send a mail to warn the user.
-	ctxqueue.Get(c).SendMail(queue.MessageMailDeleteAccountConfirmed, queue.MailDeleteAccountConfirmed{
+	ctxkey.Queue.Get(c).SendMail(queue.MessageMailDeleteAccountConfirmed, queue.MailDeleteAccountConfirmed{
 		EmailAddress: user.EmailAddress,
 		Username:     user.Username,
 		Locale:       user.Locale,
 	})
 
 	locale := ctxLocale.Get(c)
-	t := ctxlocalization.Get(c).Translate(locale)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 
 	response.OkWithStatus(c, t("status.admin.account.deleted"))
 }
@@ -489,19 +482,19 @@ func AdminDisable(c *gin.Context) {
 		return
 	}
 
-	ctxqueue.Get(c).DisableUser(queue.TaskDisableUser{
+	ctxkey.Queue.Get(c).DisableUser(queue.TaskDisableUser{
 		UserID: userID,
 	})
 
 	// Send a mail to warn the user.
-	ctxqueue.Get(c).SendMail(queue.MessageMailDisableAccountConfirmed, queue.MailDisableAccountConfirmed{
+	ctxkey.Queue.Get(c).SendMail(queue.MessageMailDisableAccountConfirmed, queue.MailDisableAccountConfirmed{
 		EmailAddress: user.EmailAddress,
 		Username:     user.Username,
 		Locale:       user.Locale,
 	})
 
 	locale := ctxLocale.Get(c)
-	t := ctxlocalization.Get(c).Translate(locale)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 
 	response.OkWithStatus(c, t("status.admin.account.disabled"))
 }
@@ -518,19 +511,19 @@ func AdminEnable(c *gin.Context) {
 		return
 	}
 
-	ctxqueue.Get(c).EnableUser(queue.TaskEnableUser{
+	ctxkey.Queue.Get(c).EnableUser(queue.TaskEnableUser{
 		UserID: user.ID,
 	})
 
 	// Send a mail to warn the user.
-	ctxqueue.Get(c).SendMail(queue.MessageMailEnableAccountConfirmed, queue.MailEnableAccountConfirmed{
+	ctxkey.Queue.Get(c).SendMail(queue.MessageMailEnableAccountConfirmed, queue.MailEnableAccountConfirmed{
 		EmailAddress: user.EmailAddress,
 		Username:     user.Username,
 		Locale:       user.Locale,
 	})
 
 	locale := ctxLocale.Get(c)
-	t := ctxlocalization.Get(c).Translate(locale)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 
 	response.OkWithStatus(c, t("status.admin.account.enabled"))
 }

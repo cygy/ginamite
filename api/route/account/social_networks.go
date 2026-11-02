@@ -4,9 +4,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/cygy/ginamite/common/ctxlocalization"
-
-	"github.com/cygy/ginamite/common/ctxqueue"
+	"github.com/cygy/ginamite/common/ctxkey"
 
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	ctxUser "github.com/cygy/ginamite/api/context/user"
@@ -35,7 +33,7 @@ func UpdateSocialNetworks(c *gin.Context) {
 	request.DecodeBody(c, &jsonBody)
 
 	locale := ctxLocale.Get(c)
-	t := ctxlocalization.Get(c).Translate(locale)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 
 	errorMessageKey := "error.account.social.update.message"
 
@@ -78,7 +76,7 @@ func UpdateSocialNetworks(c *gin.Context) {
 		return
 	}
 
-	ctxqueue.Get(c).UpdateUserSocialNetworks(queue.TaskUpdateUserSocialNetworks{
+	ctxkey.Queue.Get(c).UpdateUserSocialNetworks(queue.TaskUpdateUserSocialNetworks{
 		UserID: userID,
 	})
 

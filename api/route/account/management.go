@@ -3,16 +3,13 @@ package account
 import (
 	"errors"
 
-	"github.com/cygy/ginamite/common/ctxtimezone"
-
-	"github.com/cygy/ginamite/common/ctxlocalization"
+	"github.com/cygy/ginamite/common/ctxkey"
 
 	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	ctxUser "github.com/cygy/ginamite/api/context/user"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
-	"github.com/cygy/ginamite/common/ctxconfig"
 
 	"github.com/gin-gonic/gin"
 )
@@ -52,7 +49,7 @@ func UpdateInfos(c *gin.Context) {
 	request.DecodeBody(c, &jsonBody)
 
 	locale := ctxLocale.Get(c)
-	t := ctxlocalization.Get(c).Translate(locale)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 
 	errorMessageKey := "error.account.infos.update.unable.message"
 
@@ -106,7 +103,7 @@ func UpdateSettings(c *gin.Context) {
 	request.DecodeBody(c, &jsonBody)
 
 	locale := ctxLocale.Get(c)
-	t := ctxlocalization.Get(c).Translate(locale)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 
 	errorMessageKey := "error.account.settings.update.unable.message"
 
@@ -133,13 +130,13 @@ func UpdateSettings(c *gin.Context) {
 	}
 
 	// Locale not supported.
-	if !ctxconfig.Get(c).SupportsLocale(accountLocale) {
-		response.UnsupportedParameterLocale(c, locale, accountLocale, "locale", ctxconfig.Get(c).SupportedLocales, errorMessageKey)
+	if !ctxkey.Config.Get(c).SupportsLocale(accountLocale) {
+		response.UnsupportedParameterLocale(c, locale, accountLocale, "locale", ctxkey.Config.Get(c).SupportedLocales, errorMessageKey)
 		return
 	}
 
 	// Timezone not supported.
-	if !ctxtimezone.Get(c).SupportsTimezone(accountTimezone) {
+	if !ctxkey.Timezones.Get(c).SupportsTimezone(accountTimezone) {
 		response.InvalidParameterValue(c, "timezone",
 			t(errorMessageKey),
 			t("error.account.settings.update.timezone.not_supported.reason"),

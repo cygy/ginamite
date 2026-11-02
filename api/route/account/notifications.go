@@ -4,9 +4,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/cygy/ginamite/common/ctxnotifications"
-
-	"github.com/cygy/ginamite/common/ctxlocalization"
+	"github.com/cygy/ginamite/common/ctxkey"
 
 	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
@@ -93,7 +91,7 @@ func UpdateNotificationRead(c *gin.Context) {
 	ctxAuthToken.Refresh(c)
 
 	locale := ctxLocale.Get(c)
-	response.OkWithStatus(c, ctxlocalization.Get(c).Translate(locale)("status.account.notification.read.updated"))
+	response.OkWithStatus(c, ctxkey.Localization.Get(c).Translate(locale)("status.account.notification.read.updated"))
 }
 
 // UpdateNotificationNotified updates a notification object.
@@ -119,7 +117,7 @@ func UpdateNotificationNotified(c *gin.Context) {
 	}
 
 	locale := ctxLocale.Get(c)
-	response.OkWithStatus(c, ctxlocalization.Get(c).Translate(locale)("status.account.notification.notified.updated"))
+	response.OkWithStatus(c, ctxkey.Localization.Get(c).Translate(locale)("status.account.notification.notified.updated"))
 }
 
 // DeleteNotification deletes a notification object.
@@ -148,7 +146,7 @@ func DeleteNotification(c *gin.Context) {
 	ctxAuthToken.Refresh(c)
 
 	locale := ctxLocale.Get(c)
-	response.OkWithStatus(c, ctxlocalization.Get(c).Translate(locale)("status.account.notification.deleted"))
+	response.OkWithStatus(c, ctxkey.Localization.Get(c).Translate(locale)("status.account.notification.deleted"))
 }
 
 // GetNotificationsSettings returns all the notifications received or not by the user's devices.
@@ -180,14 +178,14 @@ func SaveNotificationsSettings(c *gin.Context) {
 	request.DecodeBody(c, &jsonBody)
 
 	locale := ctxLocale.Get(c)
-	t := ctxlocalization.Get(c).Translate(locale)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 
 	notificationsToSave := jsonBody.Notifications
 	for _, notification := range notificationsToSave {
-		if !ctxnotifications.Get(c).IsSupported(notification) {
+		if !ctxkey.Notifications.Get(c).IsSupported(notification) {
 			message := t("error.notifications.update.unable.message")
 			reason := t("error.notifications.update.invalid.reason", localization.H{"Value": notification})
-			recovery := t("error.notifications.update.invalid.recovery", localization.H{"Value": strings.Join(ctxnotifications.Get(c).Supported(), ",")})
+			recovery := t("error.notifications.update.invalid.recovery", localization.H{"Value": strings.Join(ctxkey.Notifications.Get(c).Supported(), ",")})
 
 			response.InvalidParameterValue(c, "notifications", message, reason, recovery)
 			return
@@ -206,7 +204,7 @@ func SaveNotificationsSettings(c *gin.Context) {
 // UnsubscribeNotificationByKey unsubscribes from an encrypted key.
 func UnsubscribeNotificationByKey(c *gin.Context) {
 	locale := ctxLocale.Get(c)
-	t := ctxlocalization.Get(c).Translate(locale)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 
 	// The same error is always sent to avoid giving some clues.
 	sendError := func() {
@@ -241,7 +239,7 @@ func UnsubscribeNotificationByKey(c *gin.Context) {
 
 	// Verify that the notification is supported.
 	notification := parts[1]
-	if !ctxnotifications.Get(c).IsSupported(notification) {
+	if !ctxkey.Notifications.Get(c).IsSupported(notification) {
 		sendError()
 		return
 	}

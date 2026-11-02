@@ -7,7 +7,7 @@ import (
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/internal/apitest"
 	"github.com/cygy/ginamite/common/config"
-	"github.com/cygy/ginamite/common/ctxconfig"
+	"github.com/cygy/ginamite/common/ctxkey"
 
 	"github.com/gin-gonic/gin"
 )
@@ -55,7 +55,7 @@ func TestVerifyLocaleParameter(t *testing.T) {
 
 	var stored any
 	router := gin.New()
-	router.Use(ctxconfig.Inject(testConfig), ctxLocaleMiddleware(), VerifyLocaleParameter(Config{Name: "locale", StoreKey: "stored", MessageKey: "msg"}))
+	router.Use(ctxkey.Config.Inject(testConfig), ctxLocaleMiddleware(), VerifyLocaleParameter(Config{Name: "locale", StoreKey: "stored", MessageKey: "msg"}))
 	router.GET("/:locale", func(c *gin.Context) {
 		stored, _ = c.Get("stored")
 		c.Status(http.StatusOK)

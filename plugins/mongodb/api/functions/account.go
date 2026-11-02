@@ -6,9 +6,7 @@ import (
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
-	"github.com/cygy/ginamite/common/ctxconfig"
-	"github.com/cygy/ginamite/common/ctxlocalization"
-	"github.com/cygy/ginamite/common/ctxqueue"
+	"github.com/cygy/ginamite/common/ctxkey"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/plugins/mongodb/api/context"
 	"github.com/cygy/ginamite/plugins/mongodb/api/ctxsettings"
@@ -55,12 +53,12 @@ func UpdateAccountPublicProfile(c *gin.Context) {
 	request.DecodeBody(c, &jsonBody)
 
 	locale := ctxLocale.Get(c)
-	t := ctxlocalization.Get(c).Translate(locale)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 
 	// The locale must be present and supported.
 	usedLocale := jsonBody.Locale
-	if !ctxconfig.Get(c).SupportsLocale(usedLocale) {
-		response.UnsupportedParameterLocale(c, locale, usedLocale, "locale", ctxconfig.Get(c).SupportedLocales, errorMessageKey)
+	if !ctxkey.Config.Get(c).SupportsLocale(usedLocale) {
+		response.UnsupportedParameterLocale(c, locale, usedLocale, "locale", ctxkey.Config.Get(c).SupportedLocales, errorMessageKey)
 		return
 	}
 
@@ -83,7 +81,7 @@ func UpdateAccountPublicProfile(c *gin.Context) {
 		return
 	}
 
-	ctxqueue.Get(c).CreateTask(pluginQueue.MessageTaskUpdateUserPublicProfile, pluginQueue.TaskUpdateUserPublicProfile{
+	ctxkey.Queue.Get(c).CreateTask(pluginQueue.MessageTaskUpdateUserPublicProfile, pluginQueue.TaskUpdateUserPublicProfile{
 		UserID: user.ID.Hex(),
 	})
 

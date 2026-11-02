@@ -3,7 +3,7 @@ package route
 import (
 	"net/http"
 
-	"github.com/cygy/ginamite/common/ctxlocalization"
+	"github.com/cygy/ginamite/common/ctxkey"
 
 	"github.com/cygy/ginamite/common/errors/auth"
 	apiResponse "github.com/cygy/ginamite/common/response"
@@ -114,7 +114,7 @@ func mustBeAuthenticated(partial bool) gin.HandlerFunc {
 			return
 		}
 
-		t := ctxlocalization.Get(c).Translate(context.GetLocale(c))
+		t := ctxkey.Localization.Get(c).Translate(context.GetLocale(c))
 		c.AbortWithStatusJSON(http.StatusUnauthorized, apiResponse.NewError(apiResponse.Error{
 			Domain:   auth.Domain,
 			Code:     auth.InsufficientRights,

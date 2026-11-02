@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/cygy/ginamite/common/ctxlocalization"
+	"github.com/cygy/ginamite/common/ctxkey"
 
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/log"
@@ -33,7 +33,7 @@ func NewContext(method, target string, body io.Reader) (*gin.Context, *httptest.
 	c, _ := gin.CreateTestContext(recorder)
 	c.Request = httptest.NewRequest(method, target, body)
 	if Localization != nil {
-		ctxlocalization.Set(c, Localization)
+		ctxkey.Localization.Set(c, Localization)
 	}
 
 	return c, recorder

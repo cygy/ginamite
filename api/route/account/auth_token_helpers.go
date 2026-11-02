@@ -5,11 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/cygy/ginamite/common/ctxnotifications"
-
-	"github.com/cygy/ginamite/common/ctxlocalization"
-
-	"github.com/cygy/ginamite/common/ctxqueue"
+	"github.com/cygy/ginamite/common/ctxkey"
 
 	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
@@ -17,7 +13,6 @@ import (
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common/authentication"
 	"github.com/cygy/ginamite/common/config/environment"
-	"github.com/cygy/ginamite/common/ctxconfig"
 	commonErrors "github.com/cygy/ginamite/common/errors"
 	"github.com/cygy/ginamite/common/notifications"
 	"github.com/cygy/ginamite/common/queue"
@@ -29,7 +24,7 @@ import (
 
 func deleteAuthenticationToken(c *gin.Context, checkKey bool) {
 	locale := ctxLocale.Get(c)
-	t := ctxlocalization.Get(c).Translate(locale)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 
 	// Closure to send an invalid request error.
 	sendError := func() {
@@ -88,7 +83,7 @@ func deleteAuthenticationToken(c *gin.Context, checkKey bool) {
 		return
 	}
 
-	ctxqueue.Get(c).InvalidAuthToken(tokenID, token.ExpirationDate)
+	ctxkey.Queue.Get(c).InvalidAuthToken(tokenID, token.ExpirationDate)
 
 	// Return a no content error.
 	response.OkWithStatus(c, t("status.login.cancelled"))
@@ -108,7 +103,7 @@ func createAuthenticationToken(c *gin.Context, user authentication.User, IPAddre
 	}
 
 	// Create the details of the authentication to save.
-	device.NotificationSettings.Notifications = ctxnotifications.Get(c).Defaults()
+	device.NotificationSettings.Notifications = ctxkey.Notifications.Get(c).Defaults()
 	device.SetUpNameAndDetails()
 
 	authDetails := authentication.Details{
@@ -119,7 +114,7 @@ func createAuthenticationToken(c *gin.Context, user authentication.User, IPAddre
 		IPAddress:      IPAddress,
 		Key:            random.String(128),
 		CreationDate:   time.Now(),
-		ExpirationDate: time.Now().Add(time.Duration(ctxconfig.Get(c).JWT.TTL) * time.Second),
+		ExpirationDate: time.Now().Add(time.Duration(ctxkey.Config.Get(c).JWT.TTL) * time.Second),
 	}
 
 	tokenID, knownIPAddress, err := FunctionsOf(c).SaveAuthenticationToken(c, authDetails)
@@ -130,14 +125,14 @@ func createAuthenticationToken(c *gin.Context, user authentication.User, IPAddre
 
 	// Tell the workers to retrieve the IP location info.
 	if !knownIPAddress {
-		ctxqueue.Get(c).GetIPLocation(queue.TaskIPLocation{
+		ctxkey.Queue.Get(c).GetIPLocation(queue.TaskIPLocation{
 			IPAddress: IPAddress,
 			TokenID:   tokenID,
 		})
 	}
 
 	// Sign and get the complete encoded token as a string.
-	signedToken, err := ctxAuthToken.HooksOf(c).GetSignedToken(c, ctxconfig.Get(c).JWT.SigningMethod, ctxconfig.Get(c).JWT.Secret, tokenID)
+	signedToken, err := ctxAuthToken.HooksOf(c).GetSignedToken(c, ctxkey.Config.Get(c).JWT.SigningMethod, ctxkey.Config.Get(c).JWT.Secret, tokenID)
 	if err != nil {
 		if deleteErr := FunctionsOf(c).DeleteTokenByID(c, tokenID); deleteErr != nil {
 			c.Error(deleteErr)
@@ -147,7 +142,7 @@ func createAuthenticationToken(c *gin.Context, user authentication.User, IPAddre
 	}
 
 	var responseContent response.H
-	if ctxconfig.Get(c).Environment == environment.Test {
+	if ctxkey.Config.Get(c).Environment == environment.Test {
 		responseContent = response.H{
 			"auth_token": signedToken,
 			"id":         tokenID,
@@ -158,7 +153,7 @@ func createAuthenticationToken(c *gin.Context, user authentication.User, IPAddre
 	}
 
 	if !afterValidatingAccount {
-		ctxqueue.Get(c).NotifyUser(notifications.TypeNewLogin, queue.UserNotificationNewLogin{
+		ctxkey.Queue.Get(c).NotifyUser(notifications.TypeNewLogin, queue.UserNotificationNewLogin{
 			EmailAddress:   user.EmailAddress,
 			UserID:         user.ID,
 			Username:       user.Username,

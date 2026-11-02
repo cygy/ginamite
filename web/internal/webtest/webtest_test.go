@@ -7,10 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cygy/ginamite/common/ctxlocalization"
+	"github.com/cygy/ginamite/common/ctxkey"
 
 	"github.com/cygy/ginamite/common/config"
-	"github.com/cygy/ginamite/common/ctxconfig"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/log"
 
@@ -60,12 +59,12 @@ func TestSetConfig(t *testing.T) {
 		}
 
 		c, _ := Context(http.MethodGet, "/", nil)
-		if got := ctxconfig.Get(c).Environment; got != "test-env" {
+		if got := ctxkey.Config.Get(c).Environment; got != "test-env" {
 			t.Errorf("Environment in the context = %q", got)
 		}
 
 		var inRequest string
-		Serve(httpRequest(http.MethodGet, "/"), func(c *gin.Context) { inRequest = ctxconfig.Get(c).Environment })
+		Serve(httpRequest(http.MethodGet, "/"), func(c *gin.Context) { inRequest = ctxkey.Config.Get(c).Environment })
 		if inRequest != "test-env" {
 			t.Errorf("Environment in the request = %q", inRequest)
 		}
@@ -90,12 +89,12 @@ func TestSetTranslations(t *testing.T) {
 		}
 
 		c, _ := Context(http.MethodGet, "/", nil)
-		if ctxlocalization.Get(c) != Localization {
+		if ctxkey.Localization.Get(c) != Localization {
 			t.Error("the context must hold the translation engine")
 		}
 
 		var inRequest *localization.Engine
-		Serve(httpRequest(http.MethodGet, "/"), func(c *gin.Context) { inRequest = ctxlocalization.Get(c) })
+		Serve(httpRequest(http.MethodGet, "/"), func(c *gin.Context) { inRequest = ctxkey.Localization.Get(c) })
 		if inRequest != Localization {
 			t.Error("the requests must hold the translation engine")
 		}

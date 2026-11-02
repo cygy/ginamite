@@ -3,7 +3,7 @@ package user
 import (
 	"errors"
 
-	"github.com/cygy/ginamite/common/ctxlocalization"
+	"github.com/cygy/ginamite/common/ctxkey"
 
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/request"
@@ -31,7 +31,7 @@ func updateAbilities(c *gin.Context, action string) {
 	request.DecodeBody(c, &jsonBody)
 
 	locale := ctxLocale.Get(c)
-	t := ctxlocalization.Get(c).Translate(locale)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 
 	abilities := jsonBody.Abilities
 	if len(abilities) == 0 {

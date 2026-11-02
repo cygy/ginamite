@@ -3,7 +3,7 @@ package request
 import (
 	"testing"
 
-	"github.com/cygy/ginamite/common/ctxlocalization"
+	"github.com/cygy/ginamite/common/ctxkey"
 
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/internal/apitest"
@@ -33,7 +33,7 @@ func ctxLocaleMiddleware() gin.HandlerFunc {
 	locale := ctxLocale.Inject("en", []string{"en", "fr"})
 
 	return func(c *gin.Context) {
-		ctxlocalization.Set(c, apitest.Localization)
+		ctxkey.Localization.Set(c, apitest.Localization)
 		locale(c)
 	}
 }

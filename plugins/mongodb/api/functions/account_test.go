@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cygy/ginamite/common/ctxconfig"
+	"github.com/cygy/ginamite/common/ctxkey"
 	"github.com/cygy/ginamite/plugins/mongodb/internal/plugintest"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
 	"github.com/cygy/ginamite/plugins/mongodb/mongo/bson"
@@ -51,7 +51,7 @@ func publicProfileRequest(t *testing.T, db *mock.Database, id bson.ObjectID, bod
 	t.Helper()
 
 	c, recorder := plugintest.SignedInContext(t, db, model.User{ID: id})
-	ctxconfig.Get(c).SupportedLocales = []string{"en", "fr"}
+	ctxkey.Config.Get(c).SupportedLocales = []string{"en", "fr"}
 	c.Request = httptest.NewRequest(http.MethodPut, "/", strings.NewReader(body))
 	c.Request.Header.Set("Content-Type", "application/json")
 	c.Request.Header.Set("Authorization", "Bearer x")

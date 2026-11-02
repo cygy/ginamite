@@ -6,7 +6,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/cygy/ginamite/common/ctxtimezone"
+	"github.com/cygy/ginamite/common/ctxkey"
 
 	"github.com/cygy/ginamite/api/internal/apitest"
 	"github.com/cygy/ginamite/common/timezone"
@@ -14,7 +14,7 @@ import (
 
 func TestGetTimezones(t *testing.T) {
 	c, recorder := apitest.NewContext("GET", "/", nil)
-	ctxtimezone.Set(c, &timezone.Configuration{Timezones: []string{"Europe/Paris", "UTC"}})
+	ctxkey.Timezones.Set(c, &timezone.Configuration{Timezones: []string{"Europe/Paris", "UTC"}})
 	GetTimezones(c)
 
 	if recorder.Code != http.StatusOK {

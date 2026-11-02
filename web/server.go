@@ -7,8 +7,7 @@ import (
 
 	"github.com/cygy/ginamite/common/broker"
 	"github.com/cygy/ginamite/common/config"
-	"github.com/cygy/ginamite/common/ctxconfig"
-	"github.com/cygy/ginamite/common/ctxlocalization"
+	"github.com/cygy/ginamite/common/ctxkey"
 	"github.com/cygy/ginamite/common/httpserver"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/log"
@@ -167,7 +166,7 @@ func (s *Server) setUp(engine *gin.Engine) error {
 		return err
 	}
 	s.pages = pages
-	engine.Use(ctxconfig.Inject(s.Config), ctxlocalization.Inject(s.Localization), html.Inject(pages))
+	engine.Use(ctxkey.Config.Inject(s.Config), ctxkey.Localization.Inject(s.Localization), html.Inject(pages))
 
 	router := route.NewRouter(engine, pages, client,
 		s.Config.SupportedLocales, s.Config.DefaultLocale,

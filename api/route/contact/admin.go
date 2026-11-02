@@ -3,7 +3,7 @@ package contact
 import (
 	"errors"
 
-	"github.com/cygy/ginamite/common/ctxlocalization"
+	"github.com/cygy/ginamite/common/ctxkey"
 
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/request"
@@ -76,7 +76,7 @@ func Update(c *gin.Context) {
 	}
 
 	locale := ctxLocale.Get(c)
-	t := ctxlocalization.Get(c).Translate(locale)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 
 	response.OkWithStatus(c, t("status.admin.contact.updated"))
 }

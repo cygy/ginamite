@@ -5,12 +5,7 @@ import (
 
 	"github.com/cygy/ginamite/plugins/mongodb/api/ctxsettings"
 
-	"github.com/cygy/ginamite/common/ctxnotifications"
-	"github.com/cygy/ginamite/common/ctxtimezone"
-
-	"github.com/cygy/ginamite/common/ctxqueue"
-
-	"github.com/cygy/ginamite/common/ctxconfig"
+	"github.com/cygy/ginamite/common/ctxkey"
 
 	"github.com/cygy/ginamite/common/queue"
 
@@ -25,8 +20,8 @@ import (
 // registrationDefaults returns the values given to the user who registers with the locale.
 func registrationDefaults(c *gin.Context, locale string) model.RegistrationDefaults {
 	return model.RegistrationDefaults{
-		Timezone:      model.RegistrationTimezone(locale, ctxtimezone.Get(c), ctxconfig.Get(c).DefaultTimezone),
-		Notifications: ctxnotifications.Get(c).Defaults(),
+		Timezone:      model.RegistrationTimezone(locale, ctxkey.Timezones.Get(c), ctxkey.Config.Get(c).DefaultTimezone),
+		Notifications: ctxkey.Notifications.Get(c).Defaults(),
 		Abilities:     ctxsettings.GetSettings(c).DefaultUserAbilities,
 	}
 }
@@ -80,7 +75,7 @@ func CancelUserRegistration(c *gin.Context, userID, registrationKey string) erro
 		return err
 	}
 
-	ctxqueue.Get(c).DeleteUser(queue.TaskDeleteUser{
+	ctxkey.Queue.Get(c).DeleteUser(queue.TaskDeleteUser{
 		UserID: userID,
 	})
 

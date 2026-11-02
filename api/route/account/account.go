@@ -5,12 +5,11 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/cygy/ginamite/common/ctxlocalization"
+	"github.com/cygy/ginamite/common/ctxkey"
 
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common/authentication"
-	"github.com/cygy/ginamite/common/ctxconfig"
 	registrationError "github.com/cygy/ginamite/common/errors/registration"
 	"github.com/cygy/ginamite/common/localization"
 
@@ -26,9 +25,9 @@ func CheckUsernameParameter(c *gin.Context, username, parameterName string) bool
 
 	// Username is mandatory.
 	if usernameLength == 0 {
-		message := ctxlocalization.Get(c).Translate(locale)("error.username.not_found.message")
-		reason := ctxlocalization.Get(c).Translate(locale)("error.username.not_found.reason")
-		recovery := ctxlocalization.Get(c).Translate(locale)("error.username.not_found.recovery")
+		message := ctxkey.Localization.Get(c).Translate(locale)("error.username.not_found.message")
+		reason := ctxkey.Localization.Get(c).Translate(locale)("error.username.not_found.reason")
+		recovery := ctxkey.Localization.Get(c).Translate(locale)("error.username.not_found.recovery")
 
 		response.NotFoundParameterValue(c, parameterName, message, reason, recovery)
 		return false
@@ -36,9 +35,9 @@ func CheckUsernameParameter(c *gin.Context, username, parameterName string) bool
 
 	// Username must contain at least X characters.
 	if usernameLength < authentication.MinimumCharactersForUsername {
-		message := ctxlocalization.Get(c).Translate(locale)("error.username.invalid.message")
-		reason := ctxlocalization.Get(c).Translate(locale)("error.username.minimum_characters.reason", localization.H{"Count": authentication.MinimumCharactersForUsername})
-		recovery := ctxlocalization.Get(c).Translate(locale)("error.username.minimum_characters.recovery", localization.H{"Count": authentication.MinimumCharactersForUsername})
+		message := ctxkey.Localization.Get(c).Translate(locale)("error.username.invalid.message")
+		reason := ctxkey.Localization.Get(c).Translate(locale)("error.username.minimum_characters.reason", localization.H{"Count": authentication.MinimumCharactersForUsername})
+		recovery := ctxkey.Localization.Get(c).Translate(locale)("error.username.minimum_characters.recovery", localization.H{"Count": authentication.MinimumCharactersForUsername})
 
 		response.InvalidParameterValue(c, parameterName, message, reason, recovery)
 		return false
@@ -46,9 +45,9 @@ func CheckUsernameParameter(c *gin.Context, username, parameterName string) bool
 
 	// Username must not contain invalid characters.
 	if strings.ContainsAny(username, authentication.InvalidCharactersSetForUsername) {
-		message := ctxlocalization.Get(c).Translate(locale)("error.username.invalid.message")
-		reason := ctxlocalization.Get(c).Translate(locale)("error.username.invalid_characters.reason")
-		recovery := ctxlocalization.Get(c).Translate(locale)("error.username.invalid_characters.recovery", localization.H{"Set": authentication.InvalidCharactersSetForUsername})
+		message := ctxkey.Localization.Get(c).Translate(locale)("error.username.invalid.message")
+		reason := ctxkey.Localization.Get(c).Translate(locale)("error.username.invalid_characters.reason")
+		recovery := ctxkey.Localization.Get(c).Translate(locale)("error.username.invalid_characters.recovery", localization.H{"Set": authentication.InvalidCharactersSetForUsername})
 
 		response.InvalidParameterValue(c, parameterName, message, reason, recovery)
 		return false
@@ -58,7 +57,7 @@ func CheckUsernameParameter(c *gin.Context, username, parameterName string) bool
 	// Do not accept some patterns because of spam.
 	if doesUsernameContainForbiddenStrings(c, username) || !isUsernamePatternAccepted(username) {
 		// Spoof the error, if it happens it's because of a spam bot.
-		t := ctxlocalization.Get(c).Translate(locale)
+		t := ctxkey.Localization.Get(c).Translate(locale)
 		response.PreconditionFailedWithError(c, res.Error{
 			Domain:   registrationError.Domain,
 			Code:     registrationError.AccountAlreadyExists,
@@ -74,7 +73,7 @@ func CheckUsernameParameter(c *gin.Context, username, parameterName string) bool
 
 func doesUsernameContainForbiddenStrings(c *gin.Context, username string) bool {
 	loweredUsername := strings.ToLower(username)
-	for _, invalidString := range ctxconfig.Get(c).Account.InvalidStringsForUsername {
+	for _, invalidString := range ctxkey.Config.Get(c).Account.InvalidStringsForUsername {
 		if strings.Contains(loweredUsername, strings.ToLower(invalidString)) {
 			return true
 		}

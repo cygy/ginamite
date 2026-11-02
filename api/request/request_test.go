@@ -8,7 +8,7 @@ import (
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/internal/apitest"
 	"github.com/cygy/ginamite/common/config"
-	"github.com/cygy/ginamite/common/ctxconfig"
+	"github.com/cygy/ginamite/common/ctxkey"
 
 	"github.com/gin-gonic/gin"
 )
@@ -118,7 +118,7 @@ func TestGetLocaleValue(t *testing.T) {
 			var got string
 			var ok bool
 			router := gin.New()
-			router.Use(ctxconfig.Inject(testConfig), ctxLocaleMiddleware())
+			router.Use(ctxkey.Config.Inject(testConfig), ctxLocaleMiddleware())
 			router.GET("/:locale", func(c *gin.Context) {
 				got, ok = GetLocaleValue(c, "locale", "msg")
 				c.Status(http.StatusOK)
@@ -141,7 +141,7 @@ func TestGetLocaleValue_Missing(t *testing.T) {
 	initLocalization(t)
 
 	c, recorder := apitest.NewContext("GET", "/", nil)
-	ctxconfig.Set(c, config.NewConfiguration())
+	ctxkey.Config.Set(c, config.NewConfiguration())
 	ctxLocale.Set(c, "", "en")
 
 	if got, ok := GetLocaleValue(c, "locale", "msg"); got != "" || ok {

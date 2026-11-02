@@ -14,7 +14,7 @@ import (
 
 	"github.com/cygy/ginamite/plugins/mongodb/api/ctxsettings"
 
-	"github.com/cygy/ginamite/common/ctxconfig"
+	"github.com/cygy/ginamite/common/ctxkey"
 	"github.com/cygy/ginamite/plugins/mongodb/internal/plugintest"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
 	"github.com/cygy/ginamite/plugins/mongodb/mongo/bson"
@@ -69,7 +69,7 @@ func uploadImageRequest(t *testing.T, db *mock.Database, id bson.ObjectID, conte
 	}
 
 	c, recorder := plugintest.SignedInContext(t, db, model.User{ID: id})
-	ctxconfig.Get(c).Hosts.Static = "https://static.example.com"
+	ctxkey.Config.Get(c).Hosts.Static = "https://static.example.com"
 	ctxsettings.SetSettings(c, testSettings)
 	c.Request = httptest.NewRequest(http.MethodPost, "/", &body)
 	c.Request.Header.Set("Content-Type", writer.FormDataContentType())

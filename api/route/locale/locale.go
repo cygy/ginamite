@@ -3,7 +3,7 @@ package locale
 
 import (
 	"github.com/cygy/ginamite/api/response"
-	"github.com/cygy/ginamite/common/ctxconfig"
+	"github.com/cygy/ginamite/common/ctxkey"
 
 	"github.com/gin-gonic/gin"
 )
@@ -11,6 +11,6 @@ import (
 // GetLocales returns the current terms and version.
 func GetLocales(c *gin.Context) {
 	response.Ok(c, response.H{
-		"locales": ctxconfig.Get(c).SupportedLocales,
+		"locales": ctxkey.Config.Get(c).SupportedLocales,
 	})
 }

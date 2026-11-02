@@ -3,7 +3,7 @@ package request
 import (
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/response"
-	"github.com/cygy/ginamite/common/ctxlocalization"
+	"github.com/cygy/ginamite/common/ctxkey"
 	"github.com/gin-gonic/gin"
 )
 
@@ -37,7 +37,7 @@ func VerifyLocaleParameter(cfg Config) gin.HandlerFunc {
 func VerifyURLParameter(cfg Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		locale := ctxLocale.Get(c)
-		t := ctxlocalization.Get(c).Translate(locale)
+		t := ctxkey.Localization.Get(c).Translate(locale)
 
 		value := c.Param(cfg.Name)
 		if len(value) == 0 {

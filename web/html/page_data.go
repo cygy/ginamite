@@ -2,7 +2,7 @@ package html
 
 import (
 	"github.com/cygy/ginamite/common/authentication"
-	"github.com/cygy/ginamite/common/ctxconfig"
+	"github.com/cygy/ginamite/common/ctxkey"
 
 	"github.com/gin-gonic/gin"
 	jwt "github.com/golang-jwt/jwt/v5"
@@ -19,12 +19,12 @@ func (page *Page) InitializeData(c *gin.Context) {
 		page.SetVar(key, value)
 	}
 
-	tokenString, err := c.Cookie(ctxconfig.Get(c).Cookie.Name)
+	tokenString, err := c.Cookie(ctxkey.Config.Get(c).Cookie.Name)
 	if err != nil {
 		return
 	}
 
-	token, err := authentication.ParseToken(tokenString, ctxconfig.Get(c).JWT.Secret)
+	token, err := authentication.ParseToken(tokenString, ctxkey.Config.Get(c).JWT.Secret)
 	if err != nil || token == nil {
 		return
 	}

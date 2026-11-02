@@ -6,11 +6,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/cygy/ginamite/common/ctxlocalization"
+	"github.com/cygy/ginamite/common/ctxkey"
 
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/response"
-	"github.com/cygy/ginamite/common/ctxconfig"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/log"
 
@@ -42,7 +41,7 @@ func GetOffsetAndLimit(c *gin.Context, defaultOffset, defaultLimit, maxLimit int
 	}
 
 	locale := ctxLocale.Get(c)
-	t := ctxlocalization.Get(c).Translate(locale)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 
 	if offset < 0 {
 		message := t("error.request.parameter.offset.negative.message")
@@ -86,8 +85,8 @@ func GetLocaleValue(c *gin.Context, parameterName, errorMessageKey string) (stri
 	}
 
 	// The locale must be supported by the application.
-	if !ctxconfig.Get(c).SupportsLocale(localeParameterValue) {
-		response.UnsupportedRequestLocale(c, locale, localeParameterValue, ctxconfig.Get(c).SupportedLocales, errorMessageKey)
+	if !ctxkey.Config.Get(c).SupportsLocale(localeParameterValue) {
+		response.UnsupportedRequestLocale(c, locale, localeParameterValue, ctxkey.Config.Get(c).SupportedLocales, errorMessageKey)
 		return "", false
 	}
 

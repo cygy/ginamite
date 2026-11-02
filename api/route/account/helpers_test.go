@@ -9,14 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cygy/ginamite/common/ctxnotifications"
+	"github.com/cygy/ginamite/common/ctxkey"
 	"github.com/cygy/ginamite/common/notifications"
-
-	"github.com/cygy/ginamite/common/ctxtimezone"
-
-	"github.com/cygy/ginamite/common/ctxlocalization"
-
-	"github.com/cygy/ginamite/common/ctxqueue"
 
 	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
@@ -27,7 +21,6 @@ import (
 	"github.com/cygy/ginamite/common/broker"
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/config/environment"
-	"github.com/cygy/ginamite/common/ctxconfig"
 	"github.com/cygy/ginamite/common/queue"
 	"github.com/cygy/ginamite/common/timezone"
 
@@ -112,7 +105,7 @@ func resetFunctions() { testFunctions = Functions{} }
 // newRouter returns a router with the locale and the auth token middlewares, serving the handler on every path shape.
 func newRouter(handler gin.HandlerFunc) *gin.Engine {
 	router := gin.New()
-	router.Use(ctxconfig.Inject(testConfig), ctxqueue.Inject(testQueue), request.InjectIDValidator(testIDValidator), ctxtimezone.Inject(testTimezones), ctxnotifications.Inject(notifications.NewRegistry()), Inject(&testFunctions), ctxAuthToken.InjectHooks(testHooks), ctxlocalization.Inject(apitest.Localization), ctxLocale.Inject("en", []string{"en"}))
+	router.Use(ctxkey.Config.Inject(testConfig), ctxkey.Queue.Inject(testQueue), request.InjectIDValidator(testIDValidator), ctxkey.Timezones.Inject(testTimezones), ctxkey.Notifications.Inject(notifications.NewRegistry()), Inject(&testFunctions), ctxAuthToken.InjectHooks(testHooks), ctxkey.Localization.Inject(apitest.Localization), ctxLocale.Inject("en", []string{"en"}))
 	router.Use(ctxAuthToken.Parse(testSecret, nil, false))
 	router.Any("/", handler)
 	router.Any("/:id", handler)
@@ -168,11 +161,11 @@ func runCases(t *testing.T, handler gin.HandlerFunc, tests []testCase) {
 func newContext(params gin.Params) (*gin.Context, *httptest.ResponseRecorder) {
 	c, recorder := apitest.NewContext(http.MethodPost, "/", nil)
 	c.Params = params
-	ctxconfig.Set(c, testConfig)
-	ctxqueue.Set(c, testQueue)
+	ctxkey.Config.Set(c, testConfig)
+	ctxkey.Queue.Set(c, testQueue)
 	request.SetIDValidator(c, testIDValidator)
-	ctxtimezone.Set(c, testTimezones)
-	ctxnotifications.Set(c, notifications.NewRegistry())
+	ctxkey.Timezones.Set(c, testTimezones)
+	ctxkey.Notifications.Set(c, notifications.NewRegistry())
 	SetFunctions(c, &testFunctions)
 	ctxAuthToken.SetHooks(c, testHooks)
 	ctxLocale.Set(c, "en", "en")

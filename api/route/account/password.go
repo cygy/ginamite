@@ -3,16 +3,13 @@ package account
 import (
 	"errors"
 
-	"github.com/cygy/ginamite/common/ctxlocalization"
-
-	"github.com/cygy/ginamite/common/ctxqueue"
+	"github.com/cygy/ginamite/common/ctxkey"
 
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	ctxUser "github.com/cygy/ginamite/api/context/user"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common/authentication"
-	"github.com/cygy/ginamite/common/ctxconfig"
 	"github.com/cygy/ginamite/common/queue"
 
 	"github.com/gin-gonic/gin"
@@ -38,7 +35,7 @@ func UpdatePassword(c *gin.Context) {
 	request.DecodeBody(c, &jsonBody)
 
 	locale := ctxLocale.Get(c)
-	t := ctxlocalization.Get(c).Translate(locale)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 
 	// Password is mandatory.
 	password := jsonBody.Password
@@ -67,7 +64,7 @@ func UpdatePassword(c *gin.Context) {
 
 	// The password must be validated by the user.
 	// In Env test, we return the code and the user ID.
-	if ctxconfig.Get(c).IsTestEnvironment() {
+	if ctxkey.Config.Get(c).IsTestEnvironment() {
 		response.Ok(c, response.H{
 			"status": t("status.update_password.email_sent"),
 			"id":     processID,
@@ -76,7 +73,7 @@ func UpdatePassword(c *gin.Context) {
 		return
 	}
 
-	ctxqueue.Get(c).SendMail(queue.MessageMailUpdatePasswordConfirmation, queue.MailUpdatePasswordConfirmation{
+	ctxkey.Queue.Get(c).SendMail(queue.MessageMailUpdatePasswordConfirmation, queue.MailUpdatePasswordConfirmation{
 		EmailAddress: user.EmailAddress,
 		Username:     user.Username,
 		Locale:       user.Locale,

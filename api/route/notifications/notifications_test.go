@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/cygy/ginamite/common/ctxlocalization"
+	"github.com/cygy/ginamite/common/ctxkey"
 
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/internal/apitest"
@@ -20,7 +20,7 @@ func TestGetNotifications(t *testing.T) {
 	})
 
 	router := gin.New()
-	router.Use(ctxlocalization.Inject(apitest.Localization), ctxLocale.Inject("en", []string{"en"}))
+	router.Use(ctxkey.Localization.Inject(apitest.Localization), ctxLocale.Inject("en", []string{"en"}))
 	router.GET("/", GetNotifications([]string{"login"}))
 
 	// The second call is served from the cache.

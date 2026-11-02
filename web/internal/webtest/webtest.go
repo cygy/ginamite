@@ -17,8 +17,7 @@ import (
 	"time"
 
 	"github.com/cygy/ginamite/common/config"
-	"github.com/cygy/ginamite/common/ctxconfig"
-	"github.com/cygy/ginamite/common/ctxlocalization"
+	"github.com/cygy/ginamite/common/ctxkey"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/log"
 	htmlTemplate "github.com/cygy/ginamite/common/template/html"
@@ -74,10 +73,10 @@ func Context(method, target string, body io.Reader) (*gin.Context, *httptest.Res
 	c, _ := gin.CreateTestContext(rec)
 	c.Request = httptest.NewRequest(method, target, body)
 	if Config != nil {
-		ctxconfig.Set(c, Config)
+		ctxkey.Config.Set(c, Config)
 	}
 	if Localization != nil {
-		ctxlocalization.Set(c, Localization)
+		ctxkey.Localization.Set(c, Localization)
 	}
 	prepare(c)
 
@@ -89,10 +88,10 @@ func Context(method, target string, body io.Reader) (*gin.Context, *httptest.Res
 func Serve(req *http.Request, handlers ...gin.HandlerFunc) *httptest.ResponseRecorder {
 	router := gin.New()
 	if Config != nil {
-		router.Use(ctxconfig.Inject(Config))
+		router.Use(ctxkey.Config.Inject(Config))
 	}
 	if Localization != nil {
-		router.Use(ctxlocalization.Inject(Localization))
+		router.Use(ctxkey.Localization.Inject(Localization))
 	}
 	router.Use(func(c *gin.Context) {
 		prepare(c)

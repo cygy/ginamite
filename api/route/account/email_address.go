@@ -4,16 +4,13 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/cygy/ginamite/common/ctxlocalization"
-
-	"github.com/cygy/ginamite/common/ctxqueue"
+	"github.com/cygy/ginamite/common/ctxkey"
 
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	ctxUser "github.com/cygy/ginamite/api/context/user"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common/authentication"
-	"github.com/cygy/ginamite/common/ctxconfig"
 	accountErrors "github.com/cygy/ginamite/common/errors/account"
 	"github.com/cygy/ginamite/common/queue"
 	res "github.com/cygy/ginamite/common/response"
@@ -41,7 +38,7 @@ func UpdateEmailAddress(c *gin.Context) {
 	request.DecodeBody(c, &jsonBody)
 
 	locale := ctxLocale.Get(c)
-	t := ctxlocalization.Get(c).Translate(locale)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 
 	emailAddress := jsonBody.EmailAddress
 
@@ -74,7 +71,7 @@ func UpdateEmailAddress(c *gin.Context) {
 
 	// The email address must be validated by the user.
 	// In Env test, we return the code and the user ID.
-	if ctxconfig.Get(c).IsTestEnvironment() {
+	if ctxkey.Config.Get(c).IsTestEnvironment() {
 		response.Ok(c, response.H{
 			"status": t("status.update_email_address.email_sent"),
 			"id":     processID,
@@ -83,7 +80,7 @@ func UpdateEmailAddress(c *gin.Context) {
 		return
 	}
 
-	ctxqueue.Get(c).SendMail(queue.MessageMailUpdateEmailAddressConfirmation, queue.MailUpdateEmailAddressConfirmation{
+	ctxkey.Queue.Get(c).SendMail(queue.MessageMailUpdateEmailAddressConfirmation, queue.MailUpdateEmailAddressConfirmation{
 		EmailAddress: user.EmailAddress,
 		Username:     user.Username,
 		Locale:       user.Locale,
@@ -118,7 +115,7 @@ func ConfirmEmailAddress(c *gin.Context) {
 	}
 
 	locale := ctxLocale.Get(c)
-	t := ctxlocalization.Get(c).Translate(locale)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 
 	userID := ctxUser.GetID(c)
 	user, err := FunctionsOf(c).GetUserDetailsByID(c, userID)
@@ -145,7 +142,7 @@ func ConfirmEmailAddress(c *gin.Context) {
 
 		// The email address must be validated by the user.
 		// In Env test, we return the code and the user ID.
-	} else if ctxconfig.Get(c).IsTestEnvironment() {
+	} else if ctxkey.Config.Get(c).IsTestEnvironment() {
 		response.Ok(c, response.H{
 			"status": t("status.update_email_address.email_sent"),
 			"id":     processID,

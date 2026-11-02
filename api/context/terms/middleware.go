@@ -4,7 +4,7 @@ package terms
 import (
 	"errors"
 
-	"github.com/cygy/ginamite/common/ctxlocalization"
+	"github.com/cygy/ginamite/common/ctxkey"
 
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	ctxUser "github.com/cygy/ginamite/api/context/user"
@@ -35,7 +35,7 @@ func VerifyLatestVersionOfTermsAcceptedByUser(currentTermsVersion string, getLat
 		}
 
 		locale := ctxLocale.Get(c)
-		t := ctxlocalization.Get(c).Translate(locale)
+		t := ctxkey.Localization.Get(c).Translate(locale)
 
 		response.PreconditionFailedWithError(c, r.Error{
 			Domain:   termsError.Domain,

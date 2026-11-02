@@ -3,9 +3,7 @@ package account
 import (
 	"errors"
 
-	"github.com/cygy/ginamite/common/ctxlocalization"
-
-	"github.com/cygy/ginamite/common/ctxqueue"
+	"github.com/cygy/ginamite/common/ctxkey"
 
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/request"
@@ -18,7 +16,7 @@ import (
 
 func validateOrCancelForgotPassword(c *gin.Context, validate bool) {
 	locale := ctxLocale.Get(c)
-	t := ctxlocalization.Get(c).Translate(locale)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 
 	// Here is a local function that returns an error. This route does only return a single error.
 	sendError := func() {
@@ -121,14 +119,14 @@ func validateOrCancelForgotPassword(c *gin.Context, validate bool) {
 
 	// Send mail
 	if validate {
-		ctxqueue.Get(c).SendMail(queue.MessageMailForgotPasswordConfirmed, queue.MailForgotPasswordConfirmed{
+		ctxkey.Queue.Get(c).SendMail(queue.MessageMailForgotPasswordConfirmed, queue.MailForgotPasswordConfirmed{
 			EmailAddress: user.EmailAddress,
 			Username:     user.Username,
 			Locale:       user.Locale,
 		})
 		response.OkWithStatus(c, t("status.forgot_password.confirmed"))
 	} else {
-		ctxqueue.Get(c).SendMail(queue.MessageMailForgotPasswordCancelled, queue.MailForgotPasswordCancelled{
+		ctxkey.Queue.Get(c).SendMail(queue.MessageMailForgotPasswordCancelled, queue.MailForgotPasswordCancelled{
 			EmailAddress: user.EmailAddress,
 			Username:     user.Username,
 			Locale:       user.Locale,

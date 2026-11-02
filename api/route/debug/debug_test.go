@@ -11,7 +11,7 @@ import (
 	"github.com/cygy/ginamite/api/internal/apitest"
 	"github.com/cygy/ginamite/common/authentication"
 	"github.com/cygy/ginamite/common/config"
-	"github.com/cygy/ginamite/common/ctxconfig"
+	"github.com/cygy/ginamite/common/ctxkey"
 )
 
 func TestGetExpiredToken(t *testing.T) {
@@ -23,7 +23,7 @@ func TestGetExpiredToken(t *testing.T) {
 
 	t.Run("token functions undefined", func(t *testing.T) {
 		c, recorder := apitest.NewContext("GET", "/", nil)
-		ctxconfig.Set(c, testConfig)
+		ctxkey.Config.Set(c, testConfig)
 		ctxAuthToken.SetHooks(c, hooks)
 		GetExpiredToken(c)
 		c.Writer.WriteHeaderNow()
@@ -42,7 +42,7 @@ func TestGetExpiredToken(t *testing.T) {
 		}
 
 		c, recorder := apitest.NewContext("GET", "/", nil)
-		ctxconfig.Set(c, testConfig)
+		ctxkey.Config.Set(c, testConfig)
 		ctxAuthToken.SetHooks(c, hooks)
 		GetExpiredToken(c)
 
