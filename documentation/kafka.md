@@ -1,8 +1,8 @@
 # Message broker and Kafka
 
 The servers exchange messages through a broker: the API and the worker send them, the worker consumes them. This
-page describes the plugin `plugins/kafka` and how the workers consume the messages. See the [README](../README.md) for
-the rest of the configuration.
+page describes the plugin `plugins/kafka` and how the workers consume the messages. See the [configuration](configuration.md) for
+the rest of the settings.
 
 ## Workers and Kafka consumer groups
 

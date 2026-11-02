@@ -20,7 +20,7 @@ writes what is its own.
 | ginamite provides | The application writes |
 | --- | --- |
 | The servers, their start-up, their shutdown, the logs and the metrics. | Its routes: `AddCustomRoutes` on the API and the web server. |
-| The default routes of the API: accounts, authentication, notifications, contacts, terms (see API features). | The configuration file: the features it enables, its hosts, its secrets. |
+| The default routes of the API: accounts, authentication, notifications, contacts, terms (see [API features](documentation/api-features.md)). | The configuration file: the features it enables, its hosts, its secrets. |
 | The storage of these routes, through the plugin `plugins/mongodb`. | Its own storage, for its own data. |
 | The messages between the servers, through the plugin `plugins/kafka`, and the worker handling them. | Its own tasks, if any, sent with `Queue.CreateTask`. |
 | The web pages described by a routes file, localized, with their templates. | Its templates and translations. |
@@ -116,279 +116,22 @@ go run . -web    -name web    -env production -conf-server conf/server.yaml -rou
 The arguments `-dlq*`, added by `plugins/kafka`, run a command on the dead letters of Kafka instead of a server, see
 [Message broker and Kafka](documentation/kafka.md#dead-letters-command).
 
-## Custom routes
+## Documentation
 
-The routes of the application are added before `Run`, by a function called when the server sets up its routes.
-
-**API.** The function receives the group of the version of the API (`/v1`), the built-in middlewares, whether the
-environment is the production, and a function returning the middleware which checks the rights of the user:
-
-```go
-server.API.AddCustomRoutes(func(group *gin.RouterGroup, handlers route.Middlewares, isProd bool, rights func(admin bool, abilities []string) gin.HandlerFunc) {
-	group.GET("/public", public)
-	group.GET("/me", handlers.MustBeAuthenticated, handlers.MustAuthenticationBeValid, me)
-	group.DELETE("/items/:id", handlers.MustBeAuthenticated, rights(false, []string{"manage_items"}), deleteItem)
-})
-```
-
-The middlewares which authenticate need `jwt.secret`, see API features.
-
-**Web server.** The function is called once per locale, with the group of the locale (`/en-us`). `getRelativePath`
-returns, for the key of a route of the routes file, its path relative to the group, whether the page is partial, the
-middleware saving the key of the page in the context, and whether the route exists for the locale:
-
-```go
-server.Web.AddCustomRoutes(func(g *gin.RouterGroup, locale string, handlers route.Middlewares, getRelativePath func(key string) (string, bool, gin.HandlerFunc, bool)) {
-	if path, _, savePageKey, ok := getRelativePath("index"); ok {
-		g.GET(path, savePageKey, func(c *gin.Context) {
-			page := html.Of(c).PageByKey(c, "index")
-			page.Content.Title = page.Title
-			page.RenderOk(c)
-		})
-	}
-})
-```
-
-## Web server
-
-The pages are described by the routes file (`-routes`), rendered with the Go templates of `templates_path`, and
-translated with the files of `localization_path`. See the example [helloworld-web](examples/helloworld-web).
-
-```yaml
-default:                      # the properties of every page, overridden by each route
-  template:
-    decorator: decorator.html # the layout, which includes the main template with {{.IncludeMainTemplate}}
-    main: main.html
-routes:
-  index:                      # the key of the route, used by getRelativePath and PageByKey
-    title: hello.title        # a key of the translations
-    paths:
-      en-us: "/{{.Locale}}/hello"
-    sitemap: { included: true, priority: 0.5, update_frequency: weekly }
-```
-
-- The templates are the files of the sub-directories of `templates_path` (for instance `templates/pages/`), named by
-  their file name. A page also has `meta`, `scripts`, `access` and `partial`, see `web/html.Page`.
-- The translations are in `<localization_path>/<locale>.all.json`, one file per locale of `locales`, which lists the
-  locales served.
-- The web server serves `robots.txt` (`robots_file_path`) and the error pages, whose keys are `error.not_found`,
-  `error.internal_server`, `error.unauthorized`, etc. Without a locale, a request is redirected to the default locale.
-- The section `async` of the routes file forwards calls of the browser to the API (`api.host`, `api.port`).
-
-## End-to-end tests
-
-The package `api/e2e` tests the endpoints of a running API: each request is sent over HTTP, and the status code, the
-status, the error and the renewed auth token of its response are compared with the expected ones.
-
-```go
-var api = e2e.FromEnv("v1") // http://$API_HOST:$API_PORT/v1
-
-func TestLogin(t *testing.T) {
-	req := api.NewRequest(t)
-	req.Method = http.MethodPost
-	req.Endpoint = "/auth/login"
-	req.Body = e2e.H{"identifier": "john", "password": "wrong"}
-	req.Unauthorized()
-}
-```
-
-## Configuration
-
-The server configuration is a YAML file, see `common/config.Configuration` for the complete list of settings and their
-default values. The main sections are:
-
-| Section | Content |
+| Page | Content |
 | --- | --- |
-| `server` | Host, port, gzip, SSL and log format of the HTTP server. |
-| `hosts` | Public hosts of the API, the web server and the static files. |
-| `database` | `service` (for instance `mongodb`), `host`, `port`, `database`, `username`, `password`, `time_out` in seconds. |
-| `api_features` | The default routes of the API, by feature (see API features). |
-| `jwt`, `cookie` | Settings of the authentication tokens and of the cookie. |
-| `locales`, `default_locale`, `localization_path`, `templates_path` | Languages, translations and templates. |
-| `smtp`, `sender_*` | Sending of the emails. |
-| `facebook`, `google` | Sign-in with a social network. |
-| `recurring_tasks`, `run_start_up_tasks` | Tasks executed by the workers. |
-| `metrics`, `rate_limits` | Prometheus endpoint and limits of the requests (see Security and Metrics). |
-| `broker` | The message broker: `service` (for instance `kafka`, the plugin which connects), `host` and `port`. |
-| `kafka` | Read by `plugins/kafka`: connection to Kafka (version, TLS, SASL), prefix of the topics, retries, creation of the topics, statistics. |
-| `worker_consumers` | Kafka topics consumed by a worker, with their consumer group. |
-
-The sections `broker`, `kafka` and `worker_consumers`, and the way the workers consume the messages, are described in
-[Message broker and Kafka](documentation/kafka.md).
-
-The sections the core does not know belong to the plugins: a plugin reads its own with
-`Configuration.Section("name", &settings)`, which keeps the defaults of `settings` for the missing values and resolves
-`!file` and `!env` like the other sections. A plugin which is a `ginamite.Commander` also adds its own arguments to the
-command line with `RegisterFlags`.
-
-### Security
-
-- **Passwords** are hashed with Argon2id (PHC format, random salt, constant-time comparison). The legacy SHA-512 crypt
-  hashes (`$6$`) are still accepted, and replaced by an Argon2id hash after a successful login. Logging in with an
-  unknown email costs as much time as with a wrong password.
-- **JWT**: only HS256, HS384 and HS512 are accepted, and the `exp` claim is required. The tokens are never logged.
-  A `jwt` secret shorter than 32 characters logs a warning.
-- **Rate limiting**: the sign-in, registration and forgot-password routes are limited per client IP. A refused request
-  gets a `429` and a `Retry-After` header. By default the counters are a token bucket in the memory of each instance,
-  so the limit applies per API instance. The MongoDB plugin replaces them with counters in the database
-  (`rateLimits`, fixed windows), shared by the instances; another plugin can set `api.Server.Hooks.NewRateLimiter`
-  to its own `request.RateLimiter`. A failure of the limiter lets the request through.
-
-  ```yaml
-  rate_limits:
-    authentication:  { requests: 10, seconds: 60 }
-    registration:    { requests: 5,  seconds: 60 }
-    forgot_password: { requests: 5,  seconds: 60 }
-  server:
-    trusted_proxies: ["10.0.0.0/8"]  # the proxies allowed to give the client IP
-  ```
-
-  No proxy is trusted by default: the client IP, hence the limit and the IP saved with the auth tokens, is the one of
-  the connection. Set `server.trusted_proxies` behind a reverse proxy, otherwise every client has the IP of the proxy.
-  Only the trusted proxies can give the client IP, in `X-User-IP`, `X-Forwarded-For` or `X-Real-IP`: list the web
-  servers in the setting of the API, since they send the IP of the user in `X-User-IP`.
-
-### Metrics
-
-With `metrics.address`, the server listens there for Prometheus and serves `/metrics`, on its own port: do not expose
-it to the Internet. It is disabled when the address is empty.
-
-```yaml
-metrics:
-  address: ":9100"
-```
-
-- `http_requests_total` and `http_request_duration_seconds_total`, by method, route pattern and status (API).
-- `kafka_messages_{received,handled,retried,dead_lettered,duplicates,sent,dropped}_total`, `kafka_send_errors_total`,
-  `kafka_outbox_messages` and `kafka_consumer_lag_messages{topic,partition}`.
-
-A custom broker appears in the metrics if it implements `metrics.Collector` (`common/metrics`).
-
-### Shared services are injected
-
-There is no global service. `ginamite.Server` holds the configuration (`Config`), the translations (`Localization`),
-the message broker (`Broker`, set by a plugin) and the queue built on it (`Queue`), loads them in `Run`, and shares them with `Server.API`,
-`Server.Worker`, `Server.Web` (their fields of the same names) and the plugins (`Connector.Connect` receives the
-configuration).
-
-- The API and web servers save them in the Gin context of the requests, and the handlers read them with
-  `ctxkey.Config.Get(c)`, `ctxkey.Localization.Get(c)` and `ctxkey.Queue.Get(c)`. The storages of the application, such as the ones
-  of the storage plugin, are saved the same way: `account.StorageOf(c)`, `ctxAuthToken.HooksOf(c)`, etc.
-- The web server also saves its pages, `html.Of(c)`, and the worker builds a `mail.Mailer` from its services.
-- The code without a request receives what it needs as arguments: for instance the worker builds a `recurring.Scheduler`
-  and a `mail.Mailer` from its services.
-- The only process-wide state left is the logger `log.Main`, like the default logger of the standard library, and a few
-  constants and caches of immutable values.
-- In the tests, use `Set` on the key, for instance `ctxkey.Config.Set(c, configuration)`. `ctxkey.New[T](name)` creates
-  the key of a service of your own.
-
-### API features
-
-The default routes of the API are grouped by feature, chosen with `api_features`. Each feature owns its routes of
-administration, and needs the storages of `api.Server` they call (`Contacts`, `Terms`, `Users` and the ones of `Account`: `Accounts`,
-`Tokens`, `Processes`, `Notifications`; a plugin provides them): the start fails, naming the undefined storages, if an
-enabled feature misses some. No route is loaded without feature.
-
-```yaml
-api_features: [status, locales, timezones, auth, account, contact]
-```
-
-| Feature | Routes |
-| --- | --- |
-| `status`, `locales`, `timezones` | `GET /status`, the supported locales, the timezones of the countries. They need nothing from the application. |
-| `terms` | The terms of use, their version, their acceptance. |
-| `notifications` | The notifications of the users: list, center, settings, unsubscription, and their administration. |
-| `registration` | The registration with a password, and the availability of the usernames. |
-| `forgot_password` | The reset of a forgotten password. |
-| `auth` | The login with a password, the auth tokens of the users, and their administration. |
-| `facebook`, `google` | The registration and the login with the provider. They need `facebook.app_id` and `facebook.app_secret`, or `google.client_id`. |
-| `account` | The account of the users, and the administration of the users: list, update, disable, delete, abilities. |
-| `contact` | The contact messages, and their administration. |
-
-`api.Features()` returns the names. A route can still be enabled or moved in `RouterConfigureDefaultRoutes`.
-
-The features other than `status`, `locales` and `timezones` sign and verify the auth tokens, so they need `jwt.secret`:
-the start fails without it. Without a secret, the middlewares which authenticate (`MustBeAuthenticated`, `rights`,
-etc.) of the custom routes answer an error: set `jwt.secret` as soon as a route authenticates.
-
-### Logs
-
-The logs use `log/slog`: `log.Main` is a `*slog.Logger` (JSON in production, text otherwise) with the name of the server
-on each record. `log.Info("message", "key", value)`, `log.Warn`, `log.Error`, `log.Debug` and `log.With` log with it.
-In a test, `logtest.Replace(&log.Main, slog.LevelInfo)` collects the records of the code under test.
-
-### Secrets
-
-The configuration file should hold no secret (`jwt.secret`, `database.password`, `kafka.sasl.password`, `smtp.password`,
-`facebook.app_secret`, API keys): it is committed and copied into the images. Any value can be read from outside of the file with a tag:
-
-```yaml
-jwt:
-  secret: !file /run/secrets/jwt_secret   # the content of the file, without its trailing line break
-database:
-  password: !env DB_PASSWORD              # the environment variable
-```
-
-Prefer `!file` with the secrets of Docker or Kubernetes, mounted in memory: the environment variables show up in
-`docker inspect` and in the dumps of the process. The start fails, naming the key and the file or the variable but never
-the value, if the file is unreadable or the variable is not set. In production it also fails if `jwt.secret` still
-starts with `change-me`, the placeholder of the examples.
-
-## Layout
-
-| Directory | Content |
-| --- | --- |
-| `.` | `Server`, `Plugin`, `Connector` and `Run`, which sets up the configuration and runs the chosen server. |
-| `api/` | The API server: routes, middlewares, request validation, responses, authentication cache. |
-| `worker/` | The worker server: message consumers, notifications, mails, async and recurring tasks. |
-| `web/` | The web server: HTML routes, pages, cookies, calls to the API, `robots.txt`. |
-| `common/` | Shared packages: configuration, flags, logger, localization, templates, broker interfaces, JWT, timezones. |
-| `plugins/` | The plugins: the database (`mongodb`) and the message broker (`kafka`). |
-| `examples/` | Small projects built with ginamite, deployed with a Dockerfile. See [examples](examples/README.md). |
-| `documentation/` | The detailed documentation: [message broker and Kafka](documentation/kafka.md). |
-
-## Database plugins
-
-The core does not depend on a database. A database plugin, such as `plugins/mongodb`, provides the storage through
-the extension points below, and is registered with `server.AddPlugin`.
-
-| Extension point | Role |
-| --- | --- |
-| `ginamite.Plugin.Configure` | Sets the storages and the hooks of the API (`api.Server.Contacts`, `Account`, `Hooks`, etc.) and the storages and the hooks of the worker (`worker.Server.Storage`, `Hooks`). An error stops `Run`. |
-| `ginamite.Connector` (optional) | `Connect` opens the connection before the plugins are configured, and returns an error if it fails; `Close` closes it when the server stops. Called only for the API and worker servers. |
-| `api.Server.Middlewares` | Gin middlewares added before the routes, for instance to add a request ID or a CORS policy. A database plugin does not need them. |
-| `api.Server.Hooks.IsValidID` | Reports whether an identifier in a URL is well-formed. It depends on the database (an ObjectID for MongoDB, a UUID or an integer for SQL). By default every identifier is accepted. |
-
-A plugin for another database implements the same extension points. `plugins/mongodb` is the reference.
-
-The interfaces a plugin implements, by feature. A feature whose storage is left `nil` is disabled, with a warning at
-startup. Each method takes the `context.Context` of the request (or of the task, in the worker) and returns an error:
-`errors.ErrNotFound` when the document does not exist.
-
-| Server | Field | Interface |
-| --- | --- | --- |
-| API | `Contacts` | `contact.Storage` |
-| API | `Terms` | `terms.Storage` |
-| API | `Users` | `user.Storage` (administration of the users) |
-| API | `Account` | `account.Storage`: `Accounts`, `Tokens`, `Notifications` and `Processes` (`AccountsStorage`, `TokensStorage`, `NotificationsStorage`, `ProcessesStorage`) |
-| API | `Hooks` | `IsValidID`, `MiddlewareIsValidAuthToken`, `MiddlewareGetUserAndLocaleFromAuthToken`, `MiddlewareGetUserAbilities`, `BuildTokenFromID`, `ExtendTokenExpirationDateFromID`, etc. |
-| Worker | `Storage` | `worker.Storage`: `Tokens`, `Accounts`, `Users`, `Notifications`, `Locations`, `Emails` and `Sitemap` |
-| Worker | `Hooks` | `worker.Hooks`: the tasks, mails and notifications of the application |
-
-The rate limiters of the requests (`api.Server.Hooks.NewRateLimiter`) keep their counters in memory by default: a plugin
-can provide limiters shared between the instances by implementing `request.RateLimiter`, as the MongoDB plugin does.
-
-### MongoDB
-
-The packages `plugins/mongodb/mongo/session`, `store`, `document` and `bson` are the MongoDB helpers (session, driver,
-generic documents, BSON builders): an application can use them for its own collections.
-
-`plugins/mongodb` opens its own MongoDB session in `Connect`, with no global state: the functions of the API and of the
-worker work on the database of the plugin, which they receive when they are created, not through the context of the
-requests. Its settings (`Plugin.UserMaxImageSize`, etc., see `Plugin.Settings`) are given the same way. It stores the users, their auth tokens, their notifications and the contacts. Create it
-with `mongodb.NewPlugin()`, set the properties that differ from the defaults (abilities, size of the images, etc.), then
-register it. Its hooks let the application add its own collections, indexes and default documents, and update the
-documents which reference the users.
+| [Architecture](documentation/architecture.md) | The three servers, the plugins, the injected services, the packages. |
+| [Configuration](documentation/configuration.md) | The configuration file and its sections. |
+| [API features](documentation/api-features.md) | The default routes of the API, by feature. |
+| [Custom routes](documentation/custom-routes.md) | Add the routes of the application to the API and to the web server. |
+| [Web server](documentation/web-server.md) | The routes file, the templates and the translations. |
+| [Worker](documentation/worker.md) | The messages consumed, the recurring tasks, the storage and the hooks. |
+| [Message broker and Kafka](documentation/kafka.md) | The broker, the Kafka plugin, the consumer groups and the dead letters. |
+| [Database plugins](documentation/database-plugins.md) | The interfaces a database plugin implements, and the MongoDB plugin. |
+| [Security](documentation/security.md) | Passwords, JWT, rate limiting, trusted proxies and secrets. |
+| [Observability](documentation/observability.md) | The Prometheus metrics and the logs. |
+| [Tests](documentation/testing.md) | End-to-end tests of an API, and the logs in the tests. |
+| [Examples](examples/README.md) | Small projects built with ginamite. |
 
 ## Development
 
