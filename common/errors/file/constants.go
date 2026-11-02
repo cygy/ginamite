@@ -1,21 +1,23 @@
+// Package file lists the error codes of the "file" domain.
 package file
 
-const (
-	// Domain :
-	Domain = "file"
+// Domain is the name of the domain of the errors.
+const Domain = "file"
 
-	// CanNotReadFile :
+// Error codes of the domain.
+const (
+	// CanNotReadFile is the code of the error raised when the file can not be read.
 	CanNotReadFile = 0
 
-	// CanNotSaveFile :
+	// CanNotSaveFile is the code of the error raised when the file can not be saved.
 	CanNotSaveFile = 1
 
-	// FileNotFound :
+	// FileNotFound is the code of the error raised when the file is not found.
 	FileNotFound = 2
 
-	// MaxFileSizeExceeded :
+	// MaxFileSizeExceeded is the code of the error raised when the file is bigger than the maximum size.
 	MaxFileSizeExceeded = 3
 
-	// InvalidMimeType :
+	// InvalidMimeType is the code of the error raised when the MIME type of the file is not allowed.
 	InvalidMimeType = 4
 )

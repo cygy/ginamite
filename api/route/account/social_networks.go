@@ -1,10 +1,12 @@
 package account
 
 import (
-	"errors"
 	"strings"
 
-	"github.com/cygy/ginamite/api/context"
+	"github.com/cygy/ginamite/common/ctxkey"
+
+	ctxLocale "github.com/cygy/ginamite/api/context/locale"
+	ctxUser "github.com/cygy/ginamite/api/context/user"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common"
@@ -14,10 +16,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// UpdateSocialNetworks : updates the social network profiles of the user.
+// UpdateSocialNetworks updates the social network profiles of the user.
 func UpdateSocialNetworks(c *gin.Context) {
-	if UpdateUserSocialNetworks == nil {
-		c.Error(errors.New("undefined function 'UpdateUserSocialNetworks'"))
+	if StorageOf(c).Accounts == nil {
+		c.Error(errNoAccounts)
 		response.InternalServerError(c)
 		return
 	}
@@ -27,10 +29,12 @@ func UpdateSocialNetworks(c *gin.Context) {
 		Twitter   string `json:"twitter"`
 		Instagram string `json:"instagram"`
 	}
-	request.DecodeBody(c, &jsonBody)
+	if !request.DecodeBody(c, &jsonBody) {
+		return
+	}
 
-	locale := context.GetLocale(c)
-	t := localization.Translate(locale)
+	locale := ctxLocale.Get(c)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 
 	errorMessageKey := "error.account.social.update.message"
 
@@ -67,13 +71,13 @@ func UpdateSocialNetworks(c *gin.Context) {
 		return
 	}
 
-	userID := context.GetUserID(c)
-	if err := UpdateUserSocialNetworks(c, userID, facebook, twitter, instagram); err != nil {
+	userID := ctxUser.GetID(c)
+	if err := StorageOf(c).Accounts.UpdateUserSocialNetworks(c, userID, facebook, twitter, instagram); err != nil {
 		response.InternalServerError(c)
 		return
 	}
 
-	queue.UpdateUserSocialNetworks(queue.TaskUpdateUserSocialNetworks{
+	ctxkey.Queue.Get(c).UpdateUserSocialNetworks(queue.TaskUpdateUserSocialNetworks{
 		UserID: userID,
 	})
 

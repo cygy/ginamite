@@ -5,42 +5,27 @@ import (
 	"time"
 
 	"github.com/cygy/ginamite/common/authentication"
-
 	resty "github.com/go-resty/resty/v2"
 )
 
-// GoogleTokenValidator to validate the google OAuth tokens
-type GoogleTokenValidator struct {
-	APIClient *resty.Client
-	ClientID  string
-}
-
-// NewGoogleTokenValidator returns a new GoogleTokenValidator struct
-func NewGoogleTokenValidator(clientID, APIVersion string, timeOut, retryCount int, debugMode bool) *GoogleTokenValidator {
-	host := fmt.Sprintf("https://www.googleapis.com/oauth2/%s/", APIVersion)
-
-	return &GoogleTokenValidator{
-		APIClient: apiClient(host, timeOut, retryCount, debugMode),
-		ClientID:  clientID,
-	}
+type googleTokenValidator struct {
+	client   *resty.Client
+	clientID string
 }
 
 // SourceName returns the source name of the token
-func (validator *GoogleTokenValidator) SourceName() string {
+func (v *googleTokenValidator) SourceName() string {
 	return authentication.MethodGoogle
 }
 
-// VerifyTokenAndExtractInfos verifies a facebook access token
-func (validator *GoogleTokenValidator) VerifyTokenAndExtractInfos(token string) (TokenInfos, bool) {
-	// Verify the token is valid
-	endpoint := fmt.Sprintf("tokeninfo?id_token=%s", token)
-	r, err := validator.APIClient.R().Get(endpoint)
+// VerifyTokenAndExtractInfos verifies a google access token
+func (v *googleTokenValidator) VerifyTokenAndExtractInfos(token string) (TokenInfos, bool) {
+	r, err := v.client.R().SetQueryParam("id_token", token).Get("tokeninfo")
 
-	if !logResponseToken(token, validator, r, err) {
+	if !logResponseToken(v, r, err) {
 		return TokenInfos{}, false
 	}
 
-	// Parse the token to get the informations
 	var tokenInfos struct {
 		Aud           string
 		Sub           string
@@ -52,11 +37,11 @@ func (validator *GoogleTokenValidator) VerifyTokenAndExtractInfos(token string) 
 		Exp           int64
 	}
 
-	if !extractClaimsFromJWTToken(token, &tokenInfos, validator) ||
+	if !extractClaimsFromJWTToken(token, &tokenInfos, v) ||
 		len(tokenInfos.Sub) == 0 ||
 		len(tokenInfos.Email) == 0 ||
 		!tokenInfos.EmailVerified ||
-		tokenInfos.Aud != validator.ClientID {
+		tokenInfos.Aud != v.clientID {
 		return TokenInfos{}, false
 	}
 
@@ -71,4 +56,14 @@ func (validator *GoogleTokenValidator) VerifyTokenAndExtractInfos(token string) 
 	}
 
 	return t, true
+}
+
+// NewGoogleTokenValidator returns a TokenValidator for Google OAuth tokens.
+func NewGoogleTokenValidator(clientID, APIVersion string, timeOut, retryCount int, debugMode bool) TokenValidator {
+	host := fmt.Sprintf("https://www.googleapis.com/oauth2/%s/", APIVersion)
+
+	return &googleTokenValidator{
+		client:   apiClient(host, timeOut, retryCount, debugMode),
+		clientID: clientID,
+	}
 }

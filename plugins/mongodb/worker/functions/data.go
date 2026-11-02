@@ -1,42 +1,35 @@
 package functions
 
 import (
-	"github.com/cygy/ginamite/common/mongo/session"
-	"github.com/globalsign/mgo"
+	"github.com/cygy/ginamite/plugins/mongodb/mongo/store"
 )
 
-// CreateAllDefaultDocuments : populates the database with the initial documents.
-func CreateAllDefaultDocuments(environment, version string) {
+// CreateAllDefaultDocuments populates the database with the initial documents of the plugin, for an environment and
+// a version of the application. The plugin has none.
+func CreateAllDefaultDocuments(_, _ string) {
 }
 
-// RemoveUnusedDefaultDocuments : removes some unused documents from the database.
-func RemoveUnusedDefaultDocuments(environment, version string) {
+// RemoveUnusedDefaultDocuments removes the documents of the plugin that are not used anymore, for an environment and a
+// version of the application. The plugin has none.
+func RemoveUnusedDefaultDocuments(_, _ string) {
 }
 
-// UpdateAllDefaultDocuments : updates some default documents from the database.
-func UpdateAllDefaultDocuments(environment, version string) {
+// UpdateAllDefaultDocuments updates the default documents of the plugin, for an environment and a version of the
+// application. The plugin has none.
+func UpdateAllDefaultDocuments(_, _ string) {
 }
 
-// CreateDefaultDocuments : populates the database with the initial documents.
-func CreateDefaultDocuments(environment, version string, f func(string, string, *mgo.Database)) {
-	session, db := session.Copy()
-	defer session.Close()
-
-	f(environment, version, db)
+// CreateDefaultDocuments calls hook, which populates the database with the initial documents, with the main database.
+func (f *Functions) CreateDefaultDocuments(environment, version string, hook func(string, string, store.Database)) {
+	hook(environment, version, f.database())
 }
 
-// RemoveDefaultDocuments : removes some unused documents from the database.
-func RemoveDefaultDocuments(environment, version string, f func(string, string, *mgo.Database)) {
-	session, db := session.Copy()
-	defer session.Close()
-
-	f(environment, version, db)
+// RemoveDefaultDocuments calls hook, which removes the unused documents, with the main database.
+func (f *Functions) RemoveDefaultDocuments(environment, version string, hook func(string, string, store.Database)) {
+	hook(environment, version, f.database())
 }
 
-// UpdateDefaultDocuments : updates some default documents from the database.
-func UpdateDefaultDocuments(environment, version string, f func(string, string, *mgo.Database)) {
-	session, db := session.Copy()
-	defer session.Close()
-
-	f(environment, version, db)
+// UpdateDefaultDocuments calls hook, which updates the default documents, with the main database.
+func (f *Functions) UpdateDefaultDocuments(environment, version string, hook func(string, string, store.Database)) {
+	hook(environment, version, f.database())
 }

@@ -1,114 +1,122 @@
 package functions
 
 import (
+	"context"
+	"errors"
+	"fmt"
 	"time"
 
-	"github.com/cygy/ginamite/common/mongo/session"
+	errs "github.com/cygy/ginamite/common/errors"
 	"github.com/cygy/ginamite/common/notifications"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
-	"github.com/globalsign/mgo"
+	"github.com/cygy/ginamite/plugins/mongodb/mongo/store"
+
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
-// SanitizeAccounts : maintenance function to update/delete the data from a deleted user.
-func SanitizeAccounts(SanitizeAccounts func(mongoSession *mgo.Database) uint) func() uint {
-	return func() uint {
-		if SanitizeAccounts != nil {
-			session, db := session.Copy()
-			defer session.Close()
-
-			return SanitizeAccounts(db)
-		}
-
-		return 0
-	}
+// documentMissing reports whether err says a document does not exist.
+func documentMissing(err error) bool {
+	return errors.Is(err, mongo.ErrNoDocuments) || errs.IsNotFound(err)
 }
 
-// DeleteUserByID : deletes an user and all its bound documents.
-func DeleteUserByID(updateDocumentsReferencingToDeletedUser func(userID string, mongoSession *mgo.Database)) func(userID string) map[string]time.Time {
-	return func(userID string) map[string]time.Time {
-		session, db := session.Copy()
-		defer session.Close()
-
-		if updateDocumentsReferencingToDeletedUser != nil {
-			updateDocumentsReferencingToDeletedUser(userID, db)
-		}
-
-		model.DeleteDeletedUserByUserID(userID, db)
-		model.DeleteUserByUserID(userID, db)
-
-		authTokens, err := model.GetAuthTokens(userID, db)
-		revokedAuthTokens := make(map[string]time.Time, len(authTokens))
-		if err == nil {
-			for _, authToken := range authTokens {
-				revokedAuthTokens[authToken.ID.Hex()] = authToken.ExpiresAt
-			}
-		}
-
-		model.DeleteAuthTokensByUser(userID, db)
-
-		return revokedAuthTokens
-	}
-}
-
-// DisableUserByID : disables an user and all its bound documents.
-func DisableUserByID(updateDocumentsReferencingToDisabledUser func(userID string, mongoSession *mgo.Database)) func(userID string) map[string]time.Time {
-	return func(userID string) map[string]time.Time {
-		session, db := session.Copy()
-		defer session.Close()
-
-		if updateDocumentsReferencingToDisabledUser != nil {
-			updateDocumentsReferencingToDisabledUser(userID, db)
-		}
-
-		model.DeleteUserByUserID(userID, db)
-
-		authTokens, err := model.GetAuthTokens(userID, db)
-		revokedAuthTokens := make(map[string]time.Time, len(authTokens))
-		if err == nil {
-			for _, authToken := range authTokens {
-				revokedAuthTokens[authToken.ID.Hex()] = authToken.ExpiresAt
-			}
-		}
-
-		model.DeleteAuthTokensByUser(userID, db)
-
-		return revokedAuthTokens
-	}
-}
-
-// EnableUserByID : enables an user and all its bound documents.
-func EnableUserByID(updateDocumentsReferencingToEnabledUser func(userID string, mongoSession *mgo.Database)) func(userID string) {
-	return func(userID string) {
-		session, db := session.Copy()
-		defer session.Close()
-
-		if updateDocumentsReferencingToEnabledUser != nil {
-			updateDocumentsReferencingToEnabledUser(userID, db)
-		}
-
-		model.DeleteDisabledUserByUserID(userID, db)
-	}
-}
-
-// UpdateUserSocialNetworksByID : updates the user's social networks to its bound documents.
-func UpdateUserSocialNetworksByID(UpdateDocumentsReferencingToUpdatedUserSocialNetworks func(userID string, mongoSession *mgo.Database)) func(userID string) {
-	return func(userID string) {
-		if UpdateDocumentsReferencingToUpdatedUserSocialNetworks != nil {
-			session, db := session.Copy()
-			defer session.Close()
-
-			UpdateDocumentsReferencingToUpdatedUserSocialNetworks(userID, db)
-		}
+// wrapHook adds the context of the hooks to their error, and returns nil if there is none.
+func wrapHook(err error) error {
+	if err == nil {
+		return nil
 	}
 
+	return fmt.Errorf("unable to update the documents referencing the user: %w", err)
 }
 
-// GetNotificationTargetsByUserAndType : gets the targets of a notification sent to an user.
-func GetNotificationTargetsByUserAndType(userID, notificationType string) []notifications.Target {
-	session, db := session.Copy()
-	defer session.Close()
+// Sanitize runs the hook SanitizeAccounts, which updates or deletes the data left by the deleted users, and returns the
+// number of documents sanitized. It returns 0 if there is no hook.
+func (f *Functions) Sanitize(_ context.Context) (uint, error) {
+	if f.Hooks.SanitizeAccounts == nil {
+		return 0, nil
+	}
 
-	targets := model.GetUserNotificationTargetsByType(userID, notificationType, db)
+	return f.Hooks.SanitizeAccounts(f.database()), nil
+}
+
+// Delete deletes a user and all its bound documents: the documents referencing the user are updated by the hook, if
+// any, then the user, its deletion record and its auth tokens are deleted. It gives the expiration date of each revoked
+// auth token, by token ID, and the error of the database, if any: it can be called again, a user already deleted is not
+// an error.
+func (f *Functions) Delete(ctx context.Context, userID string) (map[string]time.Time, error) {
+	db := f.database()
+
+	if err := f.runHook(ctx, f.Hooks.UpdateDocumentsReferencingToDeletedUser, userID, db); err != nil {
+		return nil, err
+	}
+
+	if err := model.DeleteDeletedUserByUserID(ctx, userID, db); err != nil {
+		return nil, fmt.Errorf("unable to delete the deleted user: %w", err)
+	}
+	if err := model.DeleteUserByUserID(ctx, userID, db); err != nil && !documentMissing(err) {
+		return nil, fmt.Errorf("unable to delete the user: %w", err)
+	}
+
+	return revokeAuthTokens(ctx, userID, db)
+}
+
+// Disable disables a user and all its bound documents: the documents referencing the user are updated by the hook, if
+// any, then the user and its auth tokens are deleted. The disabled user is saved by the API. It gives the expiration
+// date of each revoked auth token, by token ID, and the error of the database, if any: it can be called again, a user
+// already deleted is not an error.
+func (f *Functions) Disable(ctx context.Context, userID string) (map[string]time.Time, error) {
+	db := f.database()
+
+	if err := f.runHook(ctx, f.Hooks.UpdateDocumentsReferencingToDisabledUser, userID, db); err != nil {
+		return nil, err
+	}
+
+	if err := model.DeleteUserByUserID(ctx, userID, db); err != nil && !documentMissing(err) {
+		return nil, fmt.Errorf("unable to delete the user: %w", err)
+	}
+
+	return revokeAuthTokens(ctx, userID, db)
+}
+
+// Enable enables a user and all its bound documents: the documents referencing the user are updated by the hook, if
+// any, then the disabled user is deleted. The enabled user is saved by the API.
+func (f *Functions) Enable(ctx context.Context, userID string) error {
+	db := f.database()
+
+	if err := f.runHook(ctx, f.Hooks.UpdateDocumentsReferencingToEnabledUser, userID, db); err != nil {
+		return err
+	}
+
+	if err := model.DeleteDisabledUserByUserID(ctx, userID, db); err != nil {
+		return fmt.Errorf("unable to delete the disabled user: %w", err)
+	}
+
+	return nil
+}
+
+// UpdateSocialNetworks runs the hook updating the documents referencing the social networks of a user. It does nothing
+// if there is no hook.
+func (f *Functions) UpdateSocialNetworks(ctx context.Context, userID string) error {
+	return f.runHook(ctx, f.Hooks.UpdateDocumentsReferencingToUpdatedUserSocialNetworks, userID, f.database())
+}
+
+// runHook runs a hook, if any, and adds its context to its error.
+func (f *Functions) runHook(ctx context.Context, hook UserHook, userID string, db store.Database) error {
+	if hook == nil {
+		return nil
+	}
+
+	return wrapHook(hook(ctx, userID, db))
+}
+
+// Targets returns the targets of a notification sent to a user: the devices and the email
+// address, see model.GetUserNotificationTargetsByType.
+func (f *Functions) Targets(ctx context.Context, userID, notificationType string) ([]notifications.Target, error) {
+	db := f.database()
+
+	targets, err := model.GetUserNotificationTargetsByType(ctx, userID, notificationType, db)
+	if err != nil {
+		return []notifications.Target{}, err
+	}
 
 	notificationsTargets := make([]notifications.Target, len(targets))
 	for i, target := range targets {
@@ -118,50 +126,71 @@ func GetNotificationTargetsByUserAndType(userID, notificationType string) []noti
 		}
 	}
 
-	return notificationsTargets
+	return notificationsTargets, nil
 }
 
-// IsEmailAddressValid : returns true if the email address is valid and messages can be sent it.
-func IsEmailAddressValid(emailAddress string) bool {
-	session, db := session.Copy()
-	defer session.Close()
+// IsValid reports whether a user, enabled or disabled, has this email address and it is valid, i.e. messages
+// can be sent to it.
+func (f *Functions) IsValid(ctx context.Context, emailAddress string) (bool, error) {
+	db := f.database()
 
-	ok := model.IsUserWithValidEmailAddressExisting(emailAddress, db)
+	ok, err := model.IsUserWithValidEmailAddressExisting(ctx, emailAddress, db)
+	if err != nil {
+		return false, err
+	}
 	if !ok {
-		ok = model.IsDisabledUserWithValidEmailAddressExisting(emailAddress, db)
+		ok, err = model.IsDisabledUserWithValidEmailAddressExisting(ctx, emailAddress, db)
 	}
 
-	return ok
+	return ok, err
 }
 
-// GetNeverUsedAccounts : returns the count of unused accounts deleted (never logged in).
-func GetNeverUsedAccounts(intervalInDays uint) []string {
-	session, db := session.Copy()
-	defer session.Close()
-
-	userIDs, _ := model.GetNeverUsedUserIDs(24*time.Hour*time.Duration(intervalInDays), db)
-	return userIDs
-}
-
-// GetInactiveAccounts : returns the count of inactive accounts deleted.
-func GetInactiveAccounts(intervalInMonths uint) []string {
-	session, db := session.Copy()
-	defer session.Close()
-
-	userIDs, _ := model.GetInactiveUserIDs(30*24*time.Hour*time.Duration(intervalInMonths), db)
-	return userIDs
-}
-
-// IsEmptyUser : returns true if the user has never done at least one action.
-func IsEmptyUser(isEmptyUser func(userId string, mongoSession *mgo.Database) bool) func(userID string) bool {
-	return func(userID string) bool {
-		if isEmptyUser == nil {
-			return true
-		}
-
-		session, db := session.Copy()
-		defer session.Close()
-
-		return isEmptyUser(userID, db)
+// NeverUsed returns the IDs of the accounts that never signed in, and registered more than intervalInDays days ago.
+func (f *Functions) NeverUsed(ctx context.Context, intervalInDays uint) ([]string, error) {
+	userIDs, err := model.GetNeverUsedUserIDs(ctx, 24*time.Hour*time.Duration(intervalInDays), f.database()) //nolint:gosec // an interval in days is far below the overflow
+	if err != nil {
+		return nil, fmt.Errorf("unable to get the accounts never used: %w", err)
 	}
+
+	return userIDs, nil
+}
+
+// Inactive returns the IDs of the accounts whose last sign-in is older than intervalInMonths months (of 30 days).
+func (f *Functions) Inactive(ctx context.Context, intervalInMonths uint) ([]string, error) {
+	userIDs, err := model.GetInactiveUserIDs(ctx, 30*24*time.Hour*time.Duration(intervalInMonths), f.database()) //nolint:gosec // an interval in months is far below the overflow
+	if err != nil {
+		return nil, fmt.Errorf("unable to get the inactive accounts: %w", err)
+	}
+
+	return userIDs, nil
+}
+
+// IsEmpty reports whether a user has never done any action, according to the hook IsUserEmpty. Every user is empty if
+// there is no hook.
+func (f *Functions) IsEmpty(ctx context.Context, userID string) (bool, error) {
+	if f.Hooks.IsUserEmpty == nil {
+		return true, nil
+	}
+
+	return f.Hooks.IsUserEmpty(ctx, userID, f.database()), nil
+}
+
+// revokeAuthTokens deletes the auth tokens of the user and returns the expiration date of each, by token ID. The
+// tokens are not deleted if they can not be listed, since their revocation could not be told to the other servers.
+func revokeAuthTokens(ctx context.Context, userID string, db store.Database) (map[string]time.Time, error) {
+	authTokens, err := model.GetAuthTokens(ctx, userID, db)
+	if err != nil {
+		return nil, fmt.Errorf("unable to get the auth tokens of the user: %w", err)
+	}
+
+	revokedAuthTokens := make(map[string]time.Time, len(authTokens))
+	for _, authToken := range authTokens {
+		revokedAuthTokens[authToken.ID.Hex()] = authToken.ExpiresAt
+	}
+
+	if _, err := model.DeleteAuthTokensByUser(ctx, userID, db); err != nil {
+		return nil, fmt.Errorf("unable to delete the auth tokens of the user: %w", err)
+	}
+
+	return revokedAuthTokens, nil
 }

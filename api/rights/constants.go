@@ -1,9 +1,9 @@
 package rights
 
 const (
-	// AbilityToManageUsers : ability to manage the users.
+	// AbilityToManageUsers is the ability to manage the users.
 	AbilityToManageUsers = "manageUsers"
 
-	// AbilityToManageContacts : ability to manage the contacts.
+	// AbilityToManageContacts is the ability to manage the contacts.
 	AbilityToManageContacts = "manageContacts"
 )

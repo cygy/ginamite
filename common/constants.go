@@ -1,18 +1,19 @@
+// Package common defines the constants shared by the whole application.
 package common
 
 const (
-	// FacebookPrefix : the prefix of a Facebook account URL.
+	// FacebookPrefix is the prefix of the URL of a Facebook account.
 	FacebookPrefix = "https://www.facebook.com/"
 
-	// TwitterPrefix : the prefix of a Twitter account URL.
+	// TwitterPrefix is the prefix of the URL of a Twitter account.
 	TwitterPrefix = "https://twitter.com/"
 
-	// InstagramPrefix : the prefix of a Instagram account URL.
+	// InstagramPrefix is the prefix of the URL of an Instagram account.
 	InstagramPrefix = "https://www.instagram.com/"
 
-	//ContactSubjectMaxLength : max length of the subject of a contact.
+	// ContactSubjectMaxLength is the maximum length of the subject of a contact.
 	ContactSubjectMaxLength = 150
 
-	//ContactTextMaxLength : max length of the text of a contact.
+	// ContactTextMaxLength is the maximum length of the text of a contact.
 	ContactTextMaxLength = 1000
 )

@@ -1,24 +1,25 @@
 package api
 
+// The HTTP methods of the API calls.
 const (
-	// GET http method
+	// GET is the HTTP method GET.
 	GET = "GET"
 
-	// POST http method
+	// POST is the HTTP method POST.
 	POST = "POST"
 
-	// PUT http method
+	// PUT is the HTTP method PUT.
 	PUT = "PUT"
 
-	// PATCH http method
+	// PATCH is the HTTP method PATCH.
 	PATCH = "PATCH"
 
-	// DELETE http method
+	// DELETE is the HTTP method DELETE.
 	DELETE = "DELETE"
 
-	// HEAD http method
+	// HEAD is the HTTP method HEAD.
 	HEAD = "HEAD"
 
-	// OPTIONS http method
+	// OPTIONS is the HTTP method OPTIONS.
 	OPTIONS = "OPTIONS"
 )

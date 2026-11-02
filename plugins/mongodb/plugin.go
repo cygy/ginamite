@@ -1,17 +1,36 @@
+// Package mongodb is the plugin that stores the data of the application in MongoDB: the users, their auth tokens,
+// their notifications and the contacts. It plugs the functions of the API and of the workers into a ginamite.Server.
 package mongodb
 
 import (
+	"context"
+	"strconv"
+	"time"
+
 	"github.com/cygy/ginamite"
+	"github.com/cygy/ginamite/api"
 	"github.com/cygy/ginamite/api/route"
+	"github.com/cygy/ginamite/common/config"
+	"github.com/cygy/ginamite/common/queue"
 	apiFunctions "github.com/cygy/ginamite/plugins/mongodb/api/functions"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
+	"github.com/cygy/ginamite/plugins/mongodb/mongo/bson"
+	"github.com/cygy/ginamite/plugins/mongodb/mongo/session"
+	"github.com/cygy/ginamite/plugins/mongodb/mongo/store"
 	workerFunctions "github.com/cygy/ginamite/plugins/mongodb/worker/functions"
+	"github.com/cygy/ginamite/worker"
 
 	"github.com/gin-gonic/gin"
-	"github.com/globalsign/mgo"
 )
 
-// Plugin : structure of the plugin.
+// Service is the name of MongoDB as the database.service of the configuration.
+const Service = "mongodb"
+
+// Plugin is the MongoDB plugin. Create it with NewPlugin, set the properties that differ from the defaults, then
+// register it on the server, which calls Configure.
+//
+// The functions are optional hooks: the application provides them to extend the plugin with its own collections,
+// indexes, default documents and documents that reference the users.
 type Plugin struct {
 	ExtraUserAbilities        []string
 	ExtraDefaultUserAbilities []string
@@ -25,209 +44,236 @@ type Plugin struct {
 	UserImageSmallVersion              bool
 	UserImageThumbVersion              bool
 
-	UpdateDocumentsReferencingToDeletedUser               func(userID string, mongoSession *mgo.Database)
-	UpdateDocumentsReferencingToDisabledUser              func(userID string, mongoSession *mgo.Database)
-	UpdateDocumentsReferencingToEnabledUser               func(userID string, mongoSession *mgo.Database)
-	UpdateDocumentsReferencingToUpdatedUserSocialNetworks func(userID string, mongoSession *mgo.Database)
-	SanitizeAccounts                                      func(mongoSession *mgo.Database) uint
+	UpdateDocumentsReferencingToDeletedUser               func(ctx context.Context, userID string, mongoSession store.Database) error
+	UpdateDocumentsReferencingToDisabledUser              func(ctx context.Context, userID string, mongoSession store.Database) error
+	UpdateDocumentsReferencingToEnabledUser               func(ctx context.Context, userID string, mongoSession store.Database) error
+	UpdateDocumentsReferencingToUpdatedUserSocialNetworks func(ctx context.Context, userID string, mongoSession store.Database) error
+	SanitizeAccounts                                      func(mongoSession store.Database) uint
 
 	CollectionsToRemove    func() []string
 	CollectionsToCreate    func() []workerFunctions.CollectionToCreate
 	IndexesToRemove        func() []workerFunctions.IndexToDelete
 	IndexesToCreate        func() []workerFunctions.IndexToCreate
-	CreateDefaultDocuments func(string, string, *mgo.Database)
-	RemoveDefaultDocuments func(string, string, *mgo.Database)
-	UpdateDefaultDocuments func(string, string, *mgo.Database)
+	CreateDefaultDocuments func(string, string, store.Database)
+	RemoveDefaultDocuments func(string, string, store.Database)
+	UpdateDefaultDocuments func(string, string, store.Database)
 	StartUpTasks           func()
 
-	IsUserEmpty func(string, *mgo.Database) bool
+	IsUserEmpty func(context.Context, string, store.Database) bool
+
+	session *session.Session // The session of the database, opened by Connect.
 }
 
-// NewPlugin : returns a new struct 'Plugin'.
+// NewPlugin returns a Plugin with the default settings of the model package.
 func NewPlugin() *Plugin {
+	settings := model.DefaultSettings()
+
 	return &Plugin{
 		ExtraUserAbilities:                 []string{},
 		ExtraDefaultUserAbilities:          []string{},
-		UserMaxValidateRegistrationAttemps: model.UserMaxValidateRegistrationAttemps,
-		UserMaxDescriptionLength:           model.UserMaxDescriptionLength,
-		UserMaxImageSize:                   model.UserMaxImageSize,
-		UserImagePath:                      model.UserImagePath,
-		UserImageWidth:                     model.UserImageWidth,
-		UserImageHeight:                    model.UserImageHeight,
-		UserImageSmallVersion:              model.UserImageSmallVersion,
-		UserImageThumbVersion:              model.UserImageThumbVersion,
+		UserMaxValidateRegistrationAttemps: settings.UserMaxValidateRegistrationAttemps,
+		UserMaxDescriptionLength:           settings.UserMaxDescriptionLength,
+		UserMaxImageSize:                   settings.UserMaxImageSize,
+		UserImagePath:                      settings.UserImagePath,
+		UserImageWidth:                     settings.UserImageWidth,
+		UserImageHeight:                    settings.UserImageHeight,
+		UserImageSmallVersion:              settings.UserImageSmallVersion,
+		UserImageThumbVersion:              settings.UserImageThumbVersion,
 	}
 }
 
-// Configure : configure the plugin.
-func (p *Plugin) Configure(server *ginamite.Server) {
-	model.UserMaxValidateRegistrationAttemps = p.UserMaxValidateRegistrationAttemps
-	model.UserMaxDescriptionLength = p.UserMaxDescriptionLength
-	model.UserMaxImageSize = p.UserMaxImageSize
-	model.UserImagePath = p.UserImagePath
-	model.UserImageWidth = p.UserImageWidth
-	model.UserImageHeight = p.UserImageHeight
-	model.UserImageSmallVersion = p.UserImageSmallVersion
-	model.UserImageThumbVersion = p.UserImageThumbVersion
+var _ ginamite.Connector = (*Plugin)(nil)
 
-	model.AddUserAbilities(p.ExtraUserAbilities)
-	model.AddDefaultUserAbilities(p.ExtraDefaultUserAbilities)
-
-	server.Worker.Functions.DeleteExpiredTokens = workerFunctions.DeleteExpiredTokens
-	server.Worker.Functions.GetNeverUsedAccounts = workerFunctions.GetNeverUsedAccounts
-	server.Worker.Functions.GetInactiveAccounts = workerFunctions.GetInactiveAccounts
-	server.Worker.Functions.IsUserEmpty = workerFunctions.IsEmptyUser(p.IsUserEmpty)
-	server.Worker.Functions.SanitizeAccounts = workerFunctions.SanitizeAccounts(p.SanitizeAccounts)
-	server.Worker.Functions.DeleteUserByID = workerFunctions.DeleteUserByID(p.UpdateDocumentsReferencingToDeletedUser)
-	server.Worker.Functions.DisableUserByID = workerFunctions.DisableUserByID(p.UpdateDocumentsReferencingToDisabledUser)
-	server.Worker.Functions.EnableUserByID = workerFunctions.EnableUserByID(p.UpdateDocumentsReferencingToEnabledUser)
-	server.Worker.Functions.UpdateUserSocialNetworksByID = workerFunctions.UpdateUserSocialNetworksByID(p.UpdateDocumentsReferencingToUpdatedUserSocialNetworks)
-	server.Worker.Functions.SaveIPAddressDetails = workerFunctions.SaveIPAddressDetails
-	server.Worker.Functions.GetNotificationTargetsByUserAndType = workerFunctions.GetNotificationTargetsByUserAndType
-	server.Worker.Functions.IsEmailAddressValid = workerFunctions.IsEmailAddressValid
-	server.Worker.Functions.StartUpTasks = func(environment, version string) {
-		workerFunctions.RemoveUnusedCollections()
-		if p.CollectionsToRemove != nil {
-			collections := p.CollectionsToRemove()
-			workerFunctions.RemoveCollections(collections)
-		}
-
-		workerFunctions.CreateAllCollections()
-		if p.CollectionsToCreate != nil {
-			collections := p.CollectionsToCreate()
-			workerFunctions.CreateCollections(collections)
-		}
-
-		workerFunctions.RemoveUnusedIndexes()
-		if p.IndexesToRemove != nil {
-			indexes := p.IndexesToRemove()
-			workerFunctions.RemoveIndexes(indexes)
-		}
-
-		workerFunctions.CreateAllIndexes()
-		if p.IndexesToCreate != nil {
-			indexes := p.IndexesToCreate()
-			workerFunctions.CreateIndexes(indexes)
-		}
-
-		workerFunctions.RemoveUnusedDefaultDocuments(environment, version)
-		if p.RemoveDefaultDocuments != nil {
-			workerFunctions.RemoveDefaultDocuments(environment, version, p.RemoveDefaultDocuments)
-		}
-
-		workerFunctions.CreateAllDefaultDocuments(environment, version)
-		if p.CreateDefaultDocuments != nil {
-			workerFunctions.CreateDefaultDocuments(environment, version, p.CreateDefaultDocuments)
-		}
-
-		workerFunctions.UpdateAllDefaultDocuments(environment, version)
-		if p.UpdateDefaultDocuments != nil {
-			workerFunctions.UpdateDefaultDocuments(environment, version, p.UpdateDefaultDocuments)
-		}
-
-		if p.StartUpTasks != nil {
-			p.StartUpTasks()
-		}
+// Connect opens the MongoDB session with the database settings of the main configuration. It does nothing if
+// the database service of the configuration is not MongoDB. The server calls it before Configure, if it is the API
+// or the worker. It returns an error if the server is not reachable.
+func (p *Plugin) Connect(configuration *config.Configuration) error {
+	if configuration.Database.Service != Service {
+		return nil
 	}
 
-	server.API.Functions.BuildTokenFromID = apiFunctions.BuildTokenFromID
-	server.API.Functions.ExtendTokenExpirationDateFromID = apiFunctions.ExtendTokenExpirationDateFromID
+	database := configuration.Database
+	s := session.NewSession()
+	if err := s.Initialize(database.Host+":"+strconv.Itoa(database.Port),
+		database.Database,
+		database.Username,
+		database.Password,
+		time.Duration(database.TimeOut)); err != nil {
+		return err
+	}
+	p.session = s
 
-	server.API.Functions.MiddlewareIsValidAuthToken = apiFunctions.IsValidAuthToken
-	server.API.Functions.MiddlewareGetUserAndLocaleFromAuthToken = apiFunctions.GetUserAndLocaleFromAuthToken
-	server.API.Functions.MiddlewareGetUserAbilities = apiFunctions.GetUserAbilities
-	server.API.Functions.MiddlewareGetLatestVersionOfTermsAcceptedByUser = apiFunctions.GetLatestVersionOfTermsAcceptedByUser
+	return nil
+}
 
-	server.API.Functions.GetEnabledUsersForAdmin = apiFunctions.GetEnabledUsersForAdmin
-	server.API.Functions.GetDisabledUsersForAdmin = apiFunctions.GetDisabledUsersForAdmin
-	server.API.Functions.UpdatePasswordByAdmin = apiFunctions.UpdateUserPasswordByAdmin
-	server.API.Functions.UpdateInformationsByAdmin = apiFunctions.UpdateUserInformationsByAdmin
-	server.API.Functions.UpdateDescriptionByAdmin = apiFunctions.UpdateUserDescriptionByAdmin
-	server.API.Functions.UpdateSocialByAdmin = apiFunctions.UpdateUserSocialByAdmin
-	server.API.Functions.UpdateSettingsByAdmin = apiFunctions.UpdateUserSettingsByAdmin
-	server.API.Functions.UpdateNotificationsByAdmin = apiFunctions.UpdateUserNotificationsByAdmin
-	server.API.Functions.GetTokensForAdmin = apiFunctions.GetTokensForAdmin
-	server.API.Functions.DeleteTokenByIDByAdmin = apiFunctions.DeleteTokenByIDByAdmin
-	server.API.Functions.SetAbilitiesToUser = apiFunctions.SetAbilitiesToUser
-	server.API.Functions.AddAbilitiesToUser = apiFunctions.AddAbilitiesToUser
-	server.API.Functions.RemoveAbilitiesFromUser = apiFunctions.RemoveAbilitiesFromUser
+// Close closes the MongoDB session, if it is open.
+func (p *Plugin) Close() {
+	if p.session != nil {
+		p.session.Close()
+	}
+}
 
-	server.API.Functions.NotificationsReceivedByUser = apiFunctions.NotificationsReceivedByUser
-	server.API.Functions.NotificationReceivedByUser = apiFunctions.NotificationReceivedByUser
-	server.API.Functions.UpdateUserNotificationRead = apiFunctions.UpdateUserNotificationRead
-	server.API.Functions.UpdateUserNotificationNotified = apiFunctions.UpdateUserNotificationNotified
-	server.API.Functions.DeleteUserNotification = apiFunctions.DeleteUserNotification
-	server.API.Functions.NotificationsSubscribedByUser = apiFunctions.NotificationsSubscribedByUser
-	server.API.Functions.SubscribeNotificationsToUser = apiFunctions.SubscribeNotificationsToUser
-	server.API.Functions.UnsubscribeNotificationFromUser = apiFunctions.UnsubscribeNotificationFromUser
+// Configure sets the functions of the plugin on the worker and the API of the server, and the deduplicator of the
+// messages, which remembers them in the database. The API saves the settings of
+// the plugin, see Settings, in the context of the requests, and adds the routes of the plugin.
+func (p *Plugin) Configure(server *ginamite.Server) error {
+	p.configureWorker(server.Worker)
+	p.configureAPI(server.API)
+	server.Deduplicator = p.workers().Deduplicator()
 
-	server.API.Functions.GetUserDetailsByIdentifier = apiFunctions.GetUserDetailsByIdentifier
-	server.API.Functions.GetUserDetailsByID = apiFunctions.GetUserDetailsByID
-	server.API.Functions.GetUserDetailsByFacebookUserID = apiFunctions.GetUserDetailsByFacebookUserID
-	server.API.Functions.GetUserDetailsByGoogleUserID = apiFunctions.GetUserDetailsByGoogleUserID
-	server.API.Functions.GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser = apiFunctions.GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser
+	return nil
+}
 
-	server.API.Functions.NewForgotPasswordProcessForUser = apiFunctions.NewForgotPasswordProcessForUser
-	server.API.Functions.GetForgotPasswordProcessDetailsByID = apiFunctions.GetForgotPasswordProcessDetailsByID
-	server.API.Functions.WrongAccessToForgotPasswordProcess = apiFunctions.WrongAccessToForgotPasswordProcess
-	server.API.Functions.DeleteForgotPasswordProcess = apiFunctions.DeleteForgotPasswordProcess
+// Settings returns the settings of the plugin, with the extra abilities added to the default ones.
+func (p *Plugin) Settings() model.Settings {
+	settings := model.DefaultSettings()
+	settings.UserMaxValidateRegistrationAttemps = p.UserMaxValidateRegistrationAttemps
+	settings.UserMaxDescriptionLength = p.UserMaxDescriptionLength
+	settings.UserMaxImageSize = p.UserMaxImageSize
+	settings.UserImagePath = p.UserImagePath
+	settings.UserImageWidth = p.UserImageWidth
+	settings.UserImageHeight = p.UserImageHeight
+	settings.UserImageSmallVersion = p.UserImageSmallVersion
+	settings.UserImageThumbVersion = p.UserImageThumbVersion
+	settings.AllUserAbilities = append(settings.AllUserAbilities, p.ExtraUserAbilities...)
+	settings.DefaultUserAbilities = append(settings.DefaultUserAbilities, p.ExtraDefaultUserAbilities...)
 
-	server.API.Functions.UpdateUserPassword = apiFunctions.UpdateUserPassword
-	server.API.Functions.UpdateUserEmailAddress = apiFunctions.UpdateUserEmailAddress
-	server.API.Functions.UserEmailAddressIsVerified = apiFunctions.UserEmailAddressIsVerified
-	server.API.Functions.UpdateUserSocialNetworks = apiFunctions.UpdateUserSocialNetworks
-	server.API.Functions.UpdateVersionOfTermsAcceptedByUser = apiFunctions.UpdateVersionOfTermsAcceptedByUser
+	return settings
+}
 
-	server.API.Functions.ValidateUserRegistration = apiFunctions.ValidateUserRegistration
-	server.API.Functions.CancelUserRegistration = apiFunctions.CancelUserRegistration
-	server.API.Functions.GetRegistrationDetails = apiFunctions.GetRegistrationDetails
-	server.API.Functions.RegisterByEmailAddress = apiFunctions.RegisterByEmailAddress
-	server.API.Functions.RegisterByThirdPartyToken = apiFunctions.RegisterByThirdPartyToken
+// database returns the database of the session of the plugin.
+func (p *Plugin) database() store.Database {
+	return p.session.Database()
+}
 
-	server.API.Functions.DoesAccountWithUsernameExist = apiFunctions.DoesAccountWithUsernameExist
-	server.API.Functions.DoesAccountWithEmailAddressExist = apiFunctions.DoesAccountWithEmailAddressExist
-	server.API.Functions.DoesUserWithFacebookUserIDExist = apiFunctions.DoesUserWithFacebookUserIDExist
-	server.API.Functions.DoesUserWithGoogleUserIDExist = apiFunctions.DoesUserWithGoogleUserIDExist
+// workers returns the functions of the workers working on the database of the plugin.
+func (p *Plugin) workers() *workerFunctions.Functions {
+	f := workerFunctions.New(p.database)
+	f.Hooks = workerFunctions.Hooks{
+		SanitizeAccounts:                                      p.SanitizeAccounts,
+		IsUserEmpty:                                           p.IsUserEmpty,
+		UpdateDocumentsReferencingToDeletedUser:               p.UpdateDocumentsReferencingToDeletedUser,
+		UpdateDocumentsReferencingToDisabledUser:              p.UpdateDocumentsReferencingToDisabledUser,
+		UpdateDocumentsReferencingToEnabledUser:               p.UpdateDocumentsReferencingToEnabledUser,
+		UpdateDocumentsReferencingToUpdatedUserSocialNetworks: p.UpdateDocumentsReferencingToUpdatedUserSocialNetworks,
+	}
 
-	server.API.Functions.SaveFacebookUserTokenDetailsToUser = apiFunctions.SaveFacebookUserTokenDetailsToUser
-	server.API.Functions.SaveGoogleUserTokenDetailsToUser = apiFunctions.SaveGoogleUserTokenDetailsToUser
+	return f
+}
 
-	server.API.Functions.SaveAuthenticationToken = apiFunctions.SaveAuthenticationToken
-	server.API.Functions.GetTokenExpirationDate = apiFunctions.GetTokenExpirationDate
-	server.API.Functions.DeleteTokenByID = apiFunctions.DeleteTokenByID
-	server.API.Functions.GetTokenDetailsByID = apiFunctions.GetTokenDetailsByID
-	server.API.Functions.GetOwnedTokens = apiFunctions.GetOwnedTokens
-	server.API.Functions.GetOwnedTokenByID = apiFunctions.GetOwnedTokenByID
-	server.API.Functions.UpdateTokenByID = apiFunctions.UpdateTokenByID
+// isValidID reports whether id is the hexadecimal representation of a MongoDB ObjectID.
+func isValidID(id string) bool {
+	_, err := bson.ObjectIDFromHex(id)
+	return err == nil
+}
 
-	server.API.Functions.GetOwnedAccountDetails = apiFunctions.GetOwnedAccountDetails
-	server.API.Functions.UpdatedAccountInfos = apiFunctions.UpdatedAccountInfos
-	server.API.Functions.UpdatedAccountSettings = apiFunctions.UpdatedAccountSettings
+// configureWorker sets the storages and the hooks of the worker.
+func (p *Plugin) configureWorker(w *worker.Server) {
+	workers := p.workers()
 
-	server.API.Functions.CreateNewDeleteAccountProcess = apiFunctions.CreateNewDeleteAccountProcess
-	server.API.Functions.CreateNewDisableAccountProcess = apiFunctions.CreateNewDisableAccountProcess
-	server.API.Functions.CreateNewUpdatePasswordProcess = apiFunctions.CreateNewUpdatePasswordProcess
-	server.API.Functions.CreateNewUpdateEmailAddressProcess = apiFunctions.CreateNewUpdateEmailAddressProcess
-	server.API.Functions.CreateNewVerifyEmailAddressProcess = apiFunctions.CreateNewVerifyEmailAddressProcess
-	server.API.Functions.VerifyProcess = apiFunctions.VerifyProcess
-	server.API.Functions.DeleteProcessByID = apiFunctions.DeleteProcessByID
+	w.Storage.Tokens = workers
+	w.Storage.Accounts = workers
+	w.Storage.Users = workers
+	w.Storage.Notifications = workers
+	w.Storage.Locations = workers
+	w.Storage.Emails = workers
+	w.Hooks.StartUpTasks = p.startUpTasks
+}
 
-	server.API.Functions.DeleteUserByID = apiFunctions.DeleteUserByID
-	server.API.Functions.DisableUserByID = apiFunctions.DisableUserByID
-	server.API.Functions.EnableUserByID = apiFunctions.EnableUserByID
+// startUpTasks creates and cleans the collections, the indexes and the default documents, when the worker starts.
+// The hooks of the plugin run after the default ones.
+func (p *Plugin) startUpTasks(ctx context.Context, environment, version string) {
+	workers := p.workers()
 
-	server.API.Functions.CreateContact = apiFunctions.CreateContact
-	server.API.Functions.UpdateContact = apiFunctions.UpdateContact
-	server.API.Functions.GetContacts = apiFunctions.GetContactsForAdmin
-	server.API.Functions.GetContact = apiFunctions.GetContactForAdmin
+	workers.RemoveUnusedCollections(ctx)
+	if p.CollectionsToRemove != nil {
+		collections := p.CollectionsToRemove()
+		workers.RemoveCollections(ctx, collections)
+	}
 
-	server.API.AddCustomRoutes(func(v *gin.RouterGroup, handlers route.Middlewares, isProductionEnvironment bool, rights func(admin bool, abilities []string) gin.HandlerFunc) {
+	workers.CreateAllCollections(ctx)
+	if p.CollectionsToCreate != nil {
+		collections := p.CollectionsToCreate()
+		workers.CreateCollections(ctx, collections)
+	}
+
+	workers.RemoveUnusedIndexes(ctx)
+	if p.IndexesToRemove != nil {
+		indexes := p.IndexesToRemove()
+		workers.RemoveIndexes(ctx, indexes)
+	}
+
+	workers.CreateAllIndexes(ctx)
+	if p.IndexesToCreate != nil {
+		indexes := p.IndexesToCreate()
+		workers.CreateIndexes(ctx, indexes)
+	}
+
+	workerFunctions.RemoveUnusedDefaultDocuments(environment, version)
+	if p.RemoveDefaultDocuments != nil {
+		workers.RemoveDefaultDocuments(environment, version, p.RemoveDefaultDocuments)
+	}
+
+	workerFunctions.CreateAllDefaultDocuments(environment, version)
+	if p.CreateDefaultDocuments != nil {
+		workers.CreateDefaultDocuments(environment, version, p.CreateDefaultDocuments)
+	}
+
+	workerFunctions.UpdateAllDefaultDocuments(environment, version)
+	if p.UpdateDefaultDocuments != nil {
+		workers.UpdateDefaultDocuments(environment, version, p.UpdateDefaultDocuments)
+	}
+
+	if p.StartUpTasks != nil {
+		p.StartUpTasks()
+	}
+}
+
+// configureAPI sets the storages and the hooks of the API, which work on the database of the plugin, and adds its
+// routes.
+func (p *Plugin) configureAPI(a *api.Server) {
+	a.Hooks.IsValidID = isValidID
+	a.Hooks.NewRateLimiter = apiFunctions.NewRateLimiters(p.database)
+
+	tokens := apiFunctions.NewTokens(p.database)
+	a.Hooks.BuildTokenFromID = tokens.BuildTokenFromID
+	a.Hooks.ExtendTokenExpirationDateFromID = tokens.ExtendTokenExpirationDateFromID
+	a.Account.Tokens = tokens
+	a.Account.Processes = apiFunctions.NewProcesses(p.database)
+	a.Account.Accounts = apiFunctions.NewAccounts(p.database, p.Settings,
+		func(locale string) model.RegistrationDefaults {
+			return model.RegistrationDefaults{
+				Timezone:      model.RegistrationTimezone(locale, a.Timezones, a.Config.DefaultTimezone),
+				Notifications: a.Notifications.Defaults(),
+				Abilities:     p.Settings().DefaultUserAbilities,
+			}
+		},
+		func(userID string) { a.Queue.DeleteUser(queue.TaskDeleteUser{UserID: userID}) },
+	)
+
+	a.Hooks.MiddlewareIsValidAuthToken = tokens.IsValid
+	a.Hooks.MiddlewareGetUserAndLocaleFromAuthToken = apiFunctions.GetUserAndLocaleFromAuthToken
+
+	a.Terms = apiFunctions.NewTerms(p.database)
+	a.Account.Notifications = apiFunctions.NewNotifications(p.database, func() string { return a.Config.DefaultLocale })
+	users := apiFunctions.NewUsers(p.database, p.Settings)
+	a.Users = users
+	a.Hooks.MiddlewareGetUserAbilities = users.Abilities
+
+	a.Contacts = apiFunctions.NewContacts(p.database)
+
+	a.AddCustomRoutes(addRoutes(apiFunctions.NewPublicAccount(p.database, p.Settings)))
+}
+
+// addRoutes adds the routes of the plugin: the image and the public profile of the account.
+func addRoutes(account *apiFunctions.PublicAccount) route.ConfigureCustomRoutes {
+	return func(v *gin.RouterGroup, handlers route.Middlewares, _ bool, _ func(admin bool, abilities []string) gin.HandlerFunc) {
 		mustBeAuthenticated := handlers.MustBeAuthenticated
 		mustAuthenticationBeValid := handlers.MustAuthenticationBeValid
 		mustHaveAcceptedTheLatestVersionOfTerms := handlers.MustHaveAcceptedTheLatestVersionOfTerms
 
-		v.PUT("/account/image", mustBeAuthenticated, mustAuthenticationBeValid, mustHaveAcceptedTheLatestVersionOfTerms, apiFunctions.UpdateAccountPublicImage)
-		v.DELETE("/account/image", mustBeAuthenticated, mustAuthenticationBeValid, mustHaveAcceptedTheLatestVersionOfTerms, apiFunctions.DeleteAccountPublicImage)
-		v.PUT("/account/public", mustBeAuthenticated, mustAuthenticationBeValid, mustHaveAcceptedTheLatestVersionOfTerms, apiFunctions.UpdateAccountPublicProfile)
-	})
+		v.PUT("/account/image", mustBeAuthenticated, mustAuthenticationBeValid, mustHaveAcceptedTheLatestVersionOfTerms, account.UpdateImage)
+		v.DELETE("/account/image", mustBeAuthenticated, mustAuthenticationBeValid, mustHaveAcceptedTheLatestVersionOfTerms, account.DeleteImage)
+		v.PUT("/account/public", mustBeAuthenticated, mustAuthenticationBeValid, mustHaveAcceptedTheLatestVersionOfTerms, account.UpdateProfile)
+	}
 }

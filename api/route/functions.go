@@ -1,39 +1,43 @@
 package route
 
 import (
-	"github.com/cygy/ginamite/api/context"
-	"github.com/cygy/ginamite/api/middleware"
+	"net/http"
+
+	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
+	ctxTerms "github.com/cygy/ginamite/api/context/terms"
+	middleware "github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/rights"
 	"github.com/cygy/ginamite/api/route/account"
 	"github.com/cygy/ginamite/api/route/contact"
-	"github.com/cygy/ginamite/api/route/debug"
-	"github.com/cygy/ginamite/api/route/locale"
+	"github.com/cygy/ginamite/api/route/internal/debug"
+	"github.com/cygy/ginamite/api/route/internal/locale"
+	"github.com/cygy/ginamite/api/route/internal/status"
+	"github.com/cygy/ginamite/api/route/internal/timezone"
 	"github.com/cygy/ginamite/api/route/notifications"
-	"github.com/cygy/ginamite/api/route/status"
 	"github.com/cygy/ginamite/api/route/terms"
-	"github.com/cygy/ginamite/api/route/timezone"
 	"github.com/cygy/ginamite/api/route/user"
+	"github.com/cygy/ginamite/common/log"
 	notificationsSettings "github.com/cygy/ginamite/common/notifications"
 
 	"github.com/gin-gonic/gin"
 )
 
-// NewRouter : returns a new Router struct.
-func NewRouter(e *gin.Engine, version string, productionEnvironment bool, jwtTokenSecret, latestTermsVersion string, IsAuthTokenValid context.IsAuthTokenValidFunc, getUserAndLocaleFromAuthToken context.GetUserAndLocaleFromAuthTokenFunc, getUserAbilities rights.GetUserAbilitesFunc, getLatestVersionOfTermsAcceptedByUser context.GetLatestVersionOfTermsAcceptedByUserFunc) *Router {
-	r := &Router{}
+// NewRouter returns a new Router struct.
+func NewRouter(e *gin.Engine, version string, productionEnvironment bool, jwtTokenSecret, latestTermsVersion string, IsAuthTokenValid ctxAuthToken.IsValidFunc, getUserAndLocaleFromAuthToken ctxAuthToken.GetUserAndLocaleFunc, getUserAbilities rights.GetUserAbilitiesFunc) *Router {
+	r := &Router{Notifications: notificationsSettings.NewRegistry()}
 
 	r.getUserAbilities = getUserAbilities
 
 	r.Group = e.Group("/" + version)
 	r.ProductionEnvironment = productionEnvironment
 
-	r.Handlers.CanBeAuthenticated = context.ParseAuthToken(jwtTokenSecret, getUserAndLocaleFromAuthToken, false)
-	r.Handlers.MustBeAuthenticated = context.ParseAuthToken(jwtTokenSecret, getUserAndLocaleFromAuthToken, true)
-	r.Handlers.MustAuthenticationBeValid = context.VerifyAuthToken(IsAuthTokenValid)
+	r.Handlers.CanBeAuthenticated = ctxAuthToken.Parse(jwtTokenSecret, getUserAndLocaleFromAuthToken, false)
+	r.Handlers.MustBeAuthenticated = ctxAuthToken.Parse(jwtTokenSecret, getUserAndLocaleFromAuthToken, true)
+	r.Handlers.MustAuthenticationBeValid = ctxAuthToken.Verify(IsAuthTokenValid)
 	r.Handlers.MustBeAdmin = r.Rights(true, []string{})
 	r.Handlers.AbleToManageUsers = r.Rights(false, []string{rights.AbilityToManageUsers})
 	r.Handlers.AbleToManageContacts = r.Rights(false, []string{rights.AbilityToManageContacts})
-	r.Handlers.MustHaveAcceptedTheLatestVersionOfTerms = context.VerifyLatestVersionOfTermsAcceptedByUser(latestTermsVersion, getLatestVersionOfTermsAcceptedByUser)
+	r.Handlers.MustHaveAcceptedTheLatestVersionOfTerms = ctxTerms.VerifyLatestVersionOfTermsAcceptedByUser(latestTermsVersion)
 
 	r.DefaultRoutes.Status.Enabled = true
 	r.DefaultRoutes.Status.Paths.Get.Enabled = true
@@ -207,12 +211,48 @@ func NewRouter(e *gin.Engine, version string, productionEnvironment bool, jwtTok
 	return r
 }
 
-// Rights : returns the rights for a route.
+// Rights returns the rights for a route.
 func (r *Router) Rights(admin bool, abilities []string) gin.HandlerFunc {
-	return rights.CheckRights(rights.Rights{AdminRequired: admin, Abilities: abilities}, r.getUserAbilities)
+	if r.authenticationDisabled {
+		return authenticationNotConfigured
+	}
+
+	return rights.Check(admin, abilities, r.getUserAbilities)
 }
 
-// LoadDefaultRoutes : load the default routes.
+// DisableAuthentication replaces the handlers which authenticate, or check the rights of, the requests by handlers
+// which fail: without a secret to sign and verify the auth tokens, nothing can be authenticated, and a token signed with
+// an empty secret would be forgeable. The debug route, which signs a token, is not loaded either.
+func (r *Router) DisableAuthentication() {
+	r.authenticationDisabled = true
+
+	r.Handlers = Middlewares{
+		CanBeAuthenticated:                      authenticationNotConfigured,
+		MustBeAuthenticated:                     authenticationNotConfigured,
+		MustAuthenticationBeValid:               authenticationNotConfigured,
+		MustBeAdmin:                             authenticationNotConfigured,
+		AbleToManageUsers:                       authenticationNotConfigured,
+		AbleToManageContacts:                    authenticationNotConfigured,
+		MustHaveAcceptedTheLatestVersionOfTerms: authenticationNotConfigured,
+	}
+}
+
+// authenticationNotConfigured aborts the request with an internal error: the route needs the setting jwt.secret.
+func authenticationNotConfigured(c *gin.Context) {
+	log.Error("a route needs the authentication, which is disabled: set the setting 'jwt.secret'")
+	c.AbortWithStatus(http.StatusInternalServerError)
+}
+
+// limited returns the handlers preceded by the middleware limiting the requests, if there is one.
+func limited(limit gin.HandlerFunc, handlers ...gin.HandlerFunc) []gin.HandlerFunc {
+	if limit == nil {
+		return handlers
+	}
+
+	return append([]gin.HandlerFunc{limit}, handlers...)
+}
+
+// LoadDefaultRoutes load the default routes.
 func (r *Router) LoadDefaultRoutes() {
 	// Get the middlewares.
 	mustBeAdmin := r.Handlers.MustBeAdmin
@@ -226,49 +266,49 @@ func (r *Router) LoadDefaultRoutes() {
 
 	mustBeValidAuthToken := func(messageKey string) gin.HandlerFunc {
 		return middleware.VerifyURLParameter(middleware.Config{
-			Name:                       "id",
-			StoreKey:                   "tokenID",
-			MessageKey:                 messageKey,
-			NotFoundReasonKey:          "error.admin.token.id.not_found.reason",
-			NotFoundRecoveryKey:        "error.admin.token.id.not_found.recovery",
-			InvalidObjectIDReasonKey:   "error.admin.token.id.invalid.reason",
-			InvalidObjectIDRecoveryKey: "error.admin.token.id.invalid.recovery",
+			Name:                 "id",
+			StoreKey:             "tokenID",
+			MessageKey:           messageKey,
+			NotFoundReasonKey:    "error.admin.token.id.not_found.reason",
+			NotFoundRecoveryKey:  "error.admin.token.id.not_found.recovery",
+			InvalidIDReasonKey:   "error.admin.token.id.invalid.reason",
+			InvalidIDRecoveryKey: "error.admin.token.id.invalid.recovery",
 		})
 	}
 
 	mustBeValidUserID := func(messageKey string) gin.HandlerFunc {
 		return middleware.VerifyURLParameter(middleware.Config{
-			Name:                       "id",
-			StoreKey:                   "userID",
-			MessageKey:                 messageKey,
-			NotFoundReasonKey:          "error.admin.user.id.not_found.reason",
-			NotFoundRecoveryKey:        "error.admin.user.id.not_found.recovery",
-			InvalidObjectIDReasonKey:   "error.admin.user.id.invalid.reason",
-			InvalidObjectIDRecoveryKey: "error.admin.user.id.invalid.recovery",
+			Name:                 "id",
+			StoreKey:             "userID",
+			MessageKey:           messageKey,
+			NotFoundReasonKey:    "error.admin.user.id.not_found.reason",
+			NotFoundRecoveryKey:  "error.admin.user.id.not_found.recovery",
+			InvalidIDReasonKey:   "error.admin.user.id.invalid.reason",
+			InvalidIDRecoveryKey: "error.admin.user.id.invalid.recovery",
 		})
 	}
 
 	mustBeValidContactID := func(messageKey string) gin.HandlerFunc {
 		return middleware.VerifyURLParameter(middleware.Config{
-			Name:                       "id",
-			StoreKey:                   "contactID",
-			MessageKey:                 messageKey,
-			NotFoundReasonKey:          "error.admin.contact.id.not_found.reason",
-			NotFoundRecoveryKey:        "error.admin.contact.id.not_found.recovery",
-			InvalidObjectIDReasonKey:   "error.admin.contact.id.invalid.reason",
-			InvalidObjectIDRecoveryKey: "error.admin.contact.id.invalid.recovery",
+			Name:                 "id",
+			StoreKey:             "contactID",
+			MessageKey:           messageKey,
+			NotFoundReasonKey:    "error.admin.contact.id.not_found.reason",
+			NotFoundRecoveryKey:  "error.admin.contact.id.not_found.recovery",
+			InvalidIDReasonKey:   "error.admin.contact.id.invalid.reason",
+			InvalidIDRecoveryKey: "error.admin.contact.id.invalid.recovery",
 		})
 	}
 
 	mustBeValidForgotPasswordID := func(messageKey string) gin.HandlerFunc {
 		return middleware.VerifyURLParameter(middleware.Config{
-			Name:                       "id",
-			StoreKey:                   "fpID",
-			MessageKey:                 messageKey,
-			NotFoundReasonKey:          "error.forgot_password.validate_or_cancel.reason",
-			NotFoundRecoveryKey:        "error.forgot_password.validate_or_cancel.recovery",
-			InvalidObjectIDReasonKey:   "error.forgot_password.validate_or_cancel.reason",
-			InvalidObjectIDRecoveryKey: "error.forgot_password.validate_or_cancel.recovery",
+			Name:                 "id",
+			StoreKey:             "fpID",
+			MessageKey:           messageKey,
+			NotFoundReasonKey:    "error.forgot_password.validate_or_cancel.reason",
+			NotFoundRecoveryKey:  "error.forgot_password.validate_or_cancel.recovery",
+			InvalidIDReasonKey:   "error.forgot_password.validate_or_cancel.reason",
+			InvalidIDRecoveryKey: "error.forgot_password.validate_or_cancel.recovery",
 		})
 	}
 
@@ -299,7 +339,7 @@ func (r *Router) LoadDefaultRoutes() {
 	// ----- Notifications.
 	if r.DefaultRoutes.Notifications.Enabled {
 		if r.DefaultRoutes.Notifications.Paths.Get.Enabled {
-			supportedNotifications := notificationsSettings.SupportedNotifications()
+			supportedNotifications := r.Notifications.Supported()
 			v.GET(r.DefaultRoutes.Notifications.Paths.Get.Path, notifications.GetNotifications(supportedNotifications))
 		}
 	}
@@ -314,7 +354,7 @@ func (r *Router) LoadDefaultRoutes() {
 	// ----- Terms.
 	if r.DefaultRoutes.Terms.Enabled {
 		if r.DefaultRoutes.Terms.Paths.GetTerms.Enabled {
-			v.GET(r.DefaultRoutes.Terms.Paths.GetTerms.Path, terms.GetTerms)
+			v.GET(r.DefaultRoutes.Terms.Paths.GetTerms.Path, terms.GetTerms())
 		}
 		if r.DefaultRoutes.Terms.Paths.GetVersion.Enabled {
 			v.GET(r.DefaultRoutes.Terms.Paths.GetVersion.Path, terms.GetTermsVersion)
@@ -327,16 +367,16 @@ func (r *Router) LoadDefaultRoutes() {
 	// ----- Account : registration.
 	if r.DefaultRoutes.Registration.Enabled {
 		if r.DefaultRoutes.Registration.Paths.RegisterWithPassword.Enabled {
-			v.POST(r.DefaultRoutes.Registration.Paths.RegisterWithPassword.Path, account.RegisterWithPassword)
+			v.POST(r.DefaultRoutes.Registration.Paths.RegisterWithPassword.Path, limited(r.Limits.Registration, account.RegisterWithPassword)...)
 		}
 		if r.DefaultRoutes.Registration.Paths.RegisterWithFacebook.Enabled {
-			v.POST(r.DefaultRoutes.Registration.Paths.RegisterWithFacebook.Path, account.RegisterWithFacebook)
+			v.POST(r.DefaultRoutes.Registration.Paths.RegisterWithFacebook.Path, limited(r.Limits.Registration, account.RegisterWithFacebook)...)
 		}
 		if r.DefaultRoutes.Registration.Paths.RegisterWithGoogle.Enabled {
-			v.POST(r.DefaultRoutes.Registration.Paths.RegisterWithGoogle.Path, account.RegisterWithGoogle)
+			v.POST(r.DefaultRoutes.Registration.Paths.RegisterWithGoogle.Path, limited(r.Limits.Registration, account.RegisterWithGoogle)...)
 		}
 		if r.DefaultRoutes.Registration.Paths.Validate.Enabled {
-			v.PUT(r.DefaultRoutes.Registration.Paths.Validate.Path, account.ValidateRegistration)
+			v.PUT(r.DefaultRoutes.Registration.Paths.Validate.Path, limited(r.Limits.Registration, account.ValidateRegistration)...)
 		}
 		if r.DefaultRoutes.Registration.Paths.Cancel.Enabled {
 			v.DELETE(r.DefaultRoutes.Registration.Paths.Cancel.Path, account.CancelRegistration)
@@ -346,10 +386,10 @@ func (r *Router) LoadDefaultRoutes() {
 	// ----- Account : forgot password.
 	if r.DefaultRoutes.ForgotPassword.Enabled {
 		if r.DefaultRoutes.ForgotPassword.Paths.ForgotPassword.Enabled {
-			v.POST(r.DefaultRoutes.ForgotPassword.Paths.ForgotPassword.Path, account.ForgotPassword)
+			v.POST(r.DefaultRoutes.ForgotPassword.Paths.ForgotPassword.Path, limited(r.Limits.ForgotPassword, account.ForgotPassword)...)
 		}
 		if r.DefaultRoutes.ForgotPassword.Paths.Validate.Enabled {
-			v.PUT(r.DefaultRoutes.ForgotPassword.Paths.Validate.Path, mustBeValidForgotPasswordID("error.forgot_password.validate.message"), account.ValidateForgotPassword)
+			v.PUT(r.DefaultRoutes.ForgotPassword.Paths.Validate.Path, limited(r.Limits.ForgotPassword, mustBeValidForgotPasswordID("error.forgot_password.validate.message"), account.ValidateForgotPassword)...)
 		}
 		if r.DefaultRoutes.ForgotPassword.Paths.Cancel.Enabled {
 			v.DELETE(r.DefaultRoutes.ForgotPassword.Paths.Cancel.Path, mustBeValidForgotPasswordID("error.forgot_password.cancel.message"), account.CancelForgotPassword)
@@ -359,13 +399,13 @@ func (r *Router) LoadDefaultRoutes() {
 	// ----- Account : auth tokens management.
 	if r.DefaultRoutes.Authentication.Enabled {
 		if r.DefaultRoutes.Authentication.Paths.LoginWithPassword.Enabled {
-			v.POST(r.DefaultRoutes.Authentication.Paths.LoginWithPassword.Path, account.LoginWithPassword)
+			v.POST(r.DefaultRoutes.Authentication.Paths.LoginWithPassword.Path, limited(r.Limits.Authentication, account.LoginWithPassword)...)
 		}
 		if r.DefaultRoutes.Authentication.Paths.LoginWithFacebook.Enabled {
-			v.POST(r.DefaultRoutes.Authentication.Paths.LoginWithFacebook.Path, account.LoginWithFacebook)
+			v.POST(r.DefaultRoutes.Authentication.Paths.LoginWithFacebook.Path, limited(r.Limits.Authentication, account.LoginWithFacebook)...)
 		}
 		if r.DefaultRoutes.Authentication.Paths.LoginWithGoogle.Enabled {
-			v.POST(r.DefaultRoutes.Authentication.Paths.LoginWithGoogle.Path, account.LoginWithGoogle)
+			v.POST(r.DefaultRoutes.Authentication.Paths.LoginWithGoogle.Path, limited(r.Limits.Authentication, account.LoginWithGoogle)...)
 		}
 		if r.DefaultRoutes.Authentication.Paths.Logout.Enabled {
 			v.DELETE(r.DefaultRoutes.Authentication.Paths.Logout.Path, mustBeAuthenticated, account.Logout)
@@ -559,7 +599,7 @@ func (r *Router) LoadDefaultRoutes() {
 	}
 
 	// ----- Helper routes fo tests/debug.
-	if !r.ProductionEnvironment {
+	if !r.ProductionEnvironment && !r.authenticationDisabled {
 		v.GET("/debug/expiredToken", debug.GetExpiredToken)
 	}
 }

@@ -1,0 +1,13 @@
+# Configuration of the example. The API listens on the port 8080 of the container.
+api_version: v1
+default_locale: en-us
+timezones_file_path: data/zone1970.tab
+
+server:
+  port: 8080
+
+# The default routes loaded, by feature: see the README of ginamite. Only /v1/status here. The features which
+# authenticate need jwt.secret, which should be read from outside of this file:
+#   jwt:
+#     secret: !env JWT_SECRET
+api_features: [status]

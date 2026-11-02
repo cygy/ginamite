@@ -1,20 +1,21 @@
 package account
 
 import (
-	"github.com/cygy/ginamite/api/context"
+	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
-	"github.com/cygy/ginamite/common/localization"
-
+	"github.com/cygy/ginamite/common/ctxkey"
 	"github.com/gin-gonic/gin"
 )
 
-// GetAvailability : returns true if the username is available.
+// GetAvailability returns true if the username is available.
 func GetAvailability(c *gin.Context) {
 	var jsonBody struct {
 		Username string `json:"username"`
 	}
-	request.DecodeBody(c, &jsonBody)
+	if !request.DecodeBody(c, &jsonBody) {
+		return
+	}
 
 	username := jsonBody.Username
 
@@ -22,18 +23,28 @@ func GetAvailability(c *gin.Context) {
 		return
 	}
 
-	locale := context.GetLocale(c)
-	t := localization.Translate(locale)
+	locale := ctxLocale.Get(c)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 
-	if DoesAccountWithUsernameExist != nil && DoesAccountWithUsernameExist(c, username) {
-		response.Ok(c, Availability{
-			Available: false,
-			Message:   t("status.username.unavailable"),
-		})
-	} else {
-		response.Ok(c, Availability{
-			Available: true,
-			Message:   t("status.username.available"),
-		})
+	if StorageOf(c).Accounts != nil {
+		exists, err := StorageOf(c).Accounts.DoesAccountWithUsernameExist(c, username)
+		if exists || err != nil {
+			response.Ok(c, Availability{
+				Available: false,
+				Message:   t("status.username.unavailable"),
+			})
+			return
+		}
 	}
+
+	response.Ok(c, Availability{
+		Available: true,
+		Message:   t("status.username.available"),
+	})
+}
+
+// Availability describes the availability of a username.
+type Availability struct {
+	Available bool   `json:"available"`
+	Message   string `json:"message"`
 }

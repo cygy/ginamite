@@ -3,26 +3,30 @@ package contact
 import (
 	"errors"
 
-	"github.com/cygy/ginamite/api/context"
-	"github.com/cygy/ginamite/api/middleware"
+	"github.com/cygy/ginamite/common/ctxkey"
+
+	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
-	"github.com/cygy/ginamite/common/localization"
 	"github.com/gin-gonic/gin"
 )
 
-// GetAdminContacts : returns the contact documents.
+// errNoStorage is logged when a route of the administration is called without storage of the contacts.
+var errNoStorage = errors.New("undefined storage of the contacts")
+
+// GetAdminContacts returns the contact documents.
 func GetAdminContacts(c *gin.Context) {
-	if GetContacts == nil {
-		c.Error(errors.New("undefined function 'GetContacts'"))
+	storage := StorageOf(c)
+	if storage == nil {
+		c.Error(errNoStorage)
 		response.InternalServerError(c)
 		return
 	}
 
-	offset := middleware.GetOffsetFromRequest(c)
-	limit := middleware.GetLimitFromRequest(c)
+	offset := request.GetOffset(c)
+	limit := request.GetLimit(c)
 
-	contacts, err := GetContacts(c, offset, limit)
+	contacts, err := storage.GetContacts(c, offset, limit)
 	if err != nil {
 		response.InternalServerError(c)
 		return
@@ -33,17 +37,18 @@ func GetAdminContacts(c *gin.Context) {
 	})
 }
 
-// GetAdminContact : returns a contact document.
+// GetAdminContact returns a contact document.
 func GetAdminContact(c *gin.Context) {
-	if GetContact == nil {
-		c.Error(errors.New("undefined function 'GetContact'"))
+	storage := StorageOf(c)
+	if storage == nil {
+		c.Error(errNoStorage)
 		response.InternalServerError(c)
 		return
 	}
 
 	contactID := getContactID(c)
 
-	contact, err := GetContact(c, contactID)
+	contact, err := storage.GetContact(c, contactID)
 	if err != nil {
 		response.InternalServerError(c)
 		return
@@ -54,10 +59,11 @@ func GetAdminContact(c *gin.Context) {
 	})
 }
 
-// Update : updates a contact document.
+// Update updates a contact document.
 func Update(c *gin.Context) {
-	if UpdateContact == nil {
-		c.Error(errors.New("undefined function 'UpdateContact'"))
+	storage := StorageOf(c)
+	if storage == nil {
+		c.Error(errNoStorage)
 		response.InternalServerError(c)
 		return
 	}
@@ -65,18 +71,20 @@ func Update(c *gin.Context) {
 	var jsonBody struct {
 		Done bool `json:"done"`
 	}
-	request.DecodeBody(c, &jsonBody)
+	if !request.DecodeBody(c, &jsonBody) {
+		return
+	}
 
 	contactID := getContactID(c)
 
-	err := UpdateContact(c, contactID, jsonBody.Done)
+	err := storage.UpdateContact(c, contactID, jsonBody.Done)
 	if err != nil {
 		response.InternalServerError(c)
 		return
 	}
 
-	locale := context.GetLocale(c)
-	t := localization.Translate(locale)
+	locale := ctxLocale.Get(c)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 
 	response.OkWithStatus(c, t("status.admin.contact.updated"))
 }

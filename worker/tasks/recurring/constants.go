@@ -1,22 +1,20 @@
+// Package recurring schedules the recurring tasks of the worker.
 package recurring
 
-// The name of the built-in recurring tasks.
+// The names of the built-in recurring tasks.
 const (
-	// DeleteExpiredTokens : task to delete the expired token from the database.
+	// DeleteExpiredTokens is the task deleting the expired auth tokens from the database.
 	DeleteExpiredTokens = "delete_expired_tokens"
 
-	// SendRegistrationMails : task to send mails to confirm unconfirmed accounts.
-	SendRegistrationMails = "send_registration_mails"
-
-	// DeleteNeverUsedAccounts : task to delete the never used accounts from the database, never logged in.
+	// DeleteNeverUsedAccounts is the task deleting the never used accounts, never logged in, from the database.
 	DeleteNeverUsedAccounts = "delete_never_used_accounts"
 
-	// DeleteInactiveAccounts : task to delete the inactive accounts from the database.
+	// DeleteInactiveAccounts is the task deleting the inactive accounts from the database.
 	DeleteInactiveAccounts = "delete_inactive_accounts"
 
-	// GenerateSitemaps : generate the sitemaps.
+	// GenerateSitemaps is the task generating the sitemaps.
 	GenerateSitemaps = "generate_sitemaps"
 
-	// SanitizeAccounts : sanitize the deleted accounts and the associated data.
+	// SanitizeAccounts is the task sanitizing the deleted accounts and their associated data.
 	SanitizeAccounts = "sanitize_accounts"
 )

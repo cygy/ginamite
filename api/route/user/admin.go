@@ -1,33 +1,40 @@
+// Package user provides the administration handlers to manage the users.
 package user
 
 import (
 	"errors"
 	"strings"
 
-	"github.com/cygy/ginamite/api/context"
+	"github.com/cygy/ginamite/common/ctxkey"
+
+	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/api/route/account"
 	"github.com/cygy/ginamite/common"
-	"github.com/cygy/ginamite/common/config"
 	commonErrors "github.com/cygy/ginamite/common/errors"
 	"github.com/cygy/ginamite/common/localization"
-	"github.com/cygy/ginamite/common/notifications"
 	"github.com/cygy/ginamite/common/queue"
-	"github.com/cygy/ginamite/common/timezone"
 
 	"github.com/gin-gonic/gin"
 )
 
-// GetAdminEnabledUsers : returns the enabled users.
+// errNoTokens is logged when the route to delete a token is called without storage of the auth tokens.
+var errNoTokens = errors.New("undefined storage of the auth tokens")
+
+// errNoStorage is logged when a route of the administration is called without storage of the users.
+var errNoStorage = errors.New("undefined storage of the users")
+
+// GetAdminEnabledUsers returns the enabled users.
 func GetAdminEnabledUsers(c *gin.Context) {
-	if GetEnabledUsersForAdmin == nil {
-		c.Error(errors.New("undefined function 'GetEnabledUsersForAdmin'"))
+	storage := StorageOf(c)
+	if storage == nil {
+		c.Error(errNoStorage)
 		response.InternalServerError(c)
 		return
 	}
 
-	users, err := GetEnabledUsersForAdmin(c)
+	users, err := storage.GetEnabledUsersForAdmin(c)
 	if err != nil {
 		response.InternalServerError(c)
 		return
@@ -38,15 +45,16 @@ func GetAdminEnabledUsers(c *gin.Context) {
 	})
 }
 
-// GetAdminDisabledUsers : returns the disabled users.
+// GetAdminDisabledUsers returns the disabled users.
 func GetAdminDisabledUsers(c *gin.Context) {
-	if GetDisabledUsersForAdmin == nil {
-		c.Error(errors.New("undefined function 'GetDisabledUsersForAdmin'"))
+	storage := StorageOf(c)
+	if storage == nil {
+		c.Error(errNoStorage)
 		response.InternalServerError(c)
 		return
 	}
 
-	users, err := GetDisabledUsersForAdmin(c)
+	users, err := storage.GetDisabledUsersForAdmin(c)
 	if err != nil {
 		response.InternalServerError(c)
 		return
@@ -57,17 +65,19 @@ func GetAdminDisabledUsers(c *gin.Context) {
 	})
 }
 
-// AdminUpdatePassword : updates the password of a user.
+// AdminUpdatePassword updates the password of a user.
 func AdminUpdatePassword(c *gin.Context) {
 	errorMessageKey := "error.admin.user.password.update.message"
 
 	var jsonBody struct {
 		Password string `json:"password"`
 	}
-	request.DecodeBody(c, &jsonBody)
+	if !request.DecodeBody(c, &jsonBody) {
+		return
+	}
 
-	locale := context.GetLocale(c)
-	t := localization.Translate(locale)
+	locale := ctxLocale.Get(c)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 
 	// Password is mandatory.
 	newPassword := jsonBody.Password
@@ -79,14 +89,15 @@ func AdminUpdatePassword(c *gin.Context) {
 		return
 	}
 
-	var err error
-	if UpdatePasswordByAdmin == nil {
-		err = c.Error(errors.New("undefined function 'UpdatePasswordByAdmin'"))
-	} else {
-		userID := getUserID(c)
-		err = UpdatePasswordByAdmin(c, userID, jsonBody.Password)
+	storage := StorageOf(c)
+	if storage == nil {
+		c.Error(errNoStorage)
+		response.InternalServerError(c)
+		return
 	}
 
+	userID := getUserID(c)
+	err := storage.UpdatePasswordByAdmin(c, userID, jsonBody.Password)
 	if err != nil {
 		response.InternalServerError(c)
 		return
@@ -95,7 +106,7 @@ func AdminUpdatePassword(c *gin.Context) {
 	response.OkWithStatus(c, t("status.admin.user.password.updated"))
 }
 
-// AdminUpdateInformations : updates the informations of a user.
+// AdminUpdateInformations updates the informations of a user.
 func AdminUpdateInformations(c *gin.Context) {
 	errorMessageKey := "error.admin.user.informations.update.message"
 
@@ -105,10 +116,12 @@ func AdminUpdateInformations(c *gin.Context) {
 		EmailAddress      string `json:"email_address"`
 		ValidEmailAddress bool   `json:"valid_email_address"`
 	}
-	request.DecodeBody(c, &jsonBody)
+	if !request.DecodeBody(c, &jsonBody) {
+		return
+	}
 
-	locale := context.GetLocale(c)
-	t := localization.Translate(locale)
+	locale := ctxLocale.Get(c)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 
 	// EmailAddress is mandatory.
 	newEmailAddress := jsonBody.EmailAddress
@@ -130,14 +143,15 @@ func AdminUpdateInformations(c *gin.Context) {
 		return
 	}
 
-	var err error
-	if UpdateInformationsByAdmin == nil {
-		err = c.Error(errors.New("undefined function 'UpdateInformationsByAdmin'"))
-	} else {
-		userID := getUserID(c)
-		err = UpdateInformationsByAdmin(c, userID, jsonBody.FirstName, jsonBody.LastName, newEmailAddress, jsonBody.ValidEmailAddress)
+	storage := StorageOf(c)
+	if storage == nil {
+		c.Error(errNoStorage)
+		response.InternalServerError(c)
+		return
 	}
 
+	userID := getUserID(c)
+	err := storage.UpdateInformationsByAdmin(c, userID, jsonBody.FirstName, jsonBody.LastName, newEmailAddress, jsonBody.ValidEmailAddress)
 	if err != nil {
 		response.InternalServerError(c)
 		return
@@ -146,7 +160,7 @@ func AdminUpdateInformations(c *gin.Context) {
 	response.OkWithStatus(c, t("status.admin.user.informations.updated"))
 }
 
-// AdminUpdateDescription : updates the description of a user.
+// AdminUpdateDescription updates the description of a user.
 func AdminUpdateDescription(c *gin.Context) {
 	errorMessageKey := "error.admin.user.description.update.message"
 
@@ -154,10 +168,12 @@ func AdminUpdateDescription(c *gin.Context) {
 		Description string `json:"description"`
 		Locale      string `json:"locale"`
 	}
-	request.DecodeBody(c, &jsonBody)
+	if !request.DecodeBody(c, &jsonBody) {
+		return
+	}
 
-	locale := context.GetLocale(c)
-	t := localization.Translate(locale)
+	locale := ctxLocale.Get(c)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 
 	// Locale is mandatory.
 	newLocale := jsonBody.Locale
@@ -170,19 +186,20 @@ func AdminUpdateDescription(c *gin.Context) {
 	}
 
 	// Locale not supported.
-	if !config.Main.SupportsLocale(newLocale) {
-		response.UnsupportedParameterLocale(c, locale, newLocale, "locale", config.Main.SupportedLocales, errorMessageKey)
+	if !ctxkey.Config.Get(c).SupportsLocale(newLocale) {
+		response.UnsupportedParameterLocale(c, locale, newLocale, "locale", ctxkey.Config.Get(c).SupportedLocales, errorMessageKey)
 		return
 	}
 
-	var err error
-	if UpdateDescriptionByAdmin == nil {
-		err = c.Error(errors.New("undefined function 'UpdateDescriptionByAdmin'"))
-	} else {
-		userID := getUserID(c)
-		err = UpdateDescriptionByAdmin(c, userID, newLocale, jsonBody.Description)
+	storage := StorageOf(c)
+	if storage == nil {
+		c.Error(errNoStorage)
+		response.InternalServerError(c)
+		return
 	}
 
+	userID := getUserID(c)
+	err := storage.UpdateDescriptionByAdmin(c, userID, newLocale, jsonBody.Description)
 	if err != nil {
 		response.InternalServerError(c)
 		return
@@ -191,7 +208,7 @@ func AdminUpdateDescription(c *gin.Context) {
 	response.OkWithStatus(c, t("status.admin.user.description.updated"))
 }
 
-// AdminUpdateSocial : updates the social networks of a user.
+// AdminUpdateSocial updates the social networks of a user.
 func AdminUpdateSocial(c *gin.Context) {
 	errorMessageKey := "error.admin.user.social.update.message"
 
@@ -200,10 +217,12 @@ func AdminUpdateSocial(c *gin.Context) {
 		Twitter   string `json:"twitter"`
 		Instagram string `json:"instagram"`
 	}
-	request.DecodeBody(c, &jsonBody)
+	if !request.DecodeBody(c, &jsonBody) {
+		return
+	}
 
-	locale := context.GetLocale(c)
-	t := localization.Translate(locale)
+	locale := ctxLocale.Get(c)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 
 	// The facebook profile must begin with a valid url.
 	facebook := jsonBody.Facebook
@@ -240,26 +259,27 @@ func AdminUpdateSocial(c *gin.Context) {
 
 	userID := getUserID(c)
 
-	var err error
-	if UpdateSocialByAdmin == nil {
-		err = c.Error(errors.New("undefined function 'UpdateSocialByAdmin'"))
-	} else {
-		err = UpdateSocialByAdmin(c, userID, facebook, twitter, instagram)
+	storage := StorageOf(c)
+	if storage == nil {
+		c.Error(errNoStorage)
+		response.InternalServerError(c)
+		return
 	}
 
+	err := storage.UpdateSocialByAdmin(c, userID, facebook, twitter, instagram)
 	if err != nil {
 		response.InternalServerError(c)
 		return
 	}
 
-	queue.UpdateUserSocialNetworks(queue.TaskUpdateUserSocialNetworks{
+	ctxkey.Queue.Get(c).UpdateUserSocialNetworks(queue.TaskUpdateUserSocialNetworks{
 		UserID: userID,
 	})
 
 	response.OkWithStatus(c, t("status.admin.user.social.updated"))
 }
 
-// AdminUpdateSettings : updates the settings of a user.
+// AdminUpdateSettings updates the settings of a user.
 func AdminUpdateSettings(c *gin.Context) {
 	errorMessageKey := "error.admin.user.settings.update.message"
 
@@ -267,10 +287,12 @@ func AdminUpdateSettings(c *gin.Context) {
 		Locale   string `json:"locale"`
 		Timezone string `json:"timezone"`
 	}
-	request.DecodeBody(c, &jsonBody)
+	if !request.DecodeBody(c, &jsonBody) {
+		return
+	}
 
-	locale := context.GetLocale(c)
-	t := localization.Translate(locale)
+	locale := ctxLocale.Get(c)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 
 	// Locale is mandatory.
 	newLocale := jsonBody.Locale
@@ -293,13 +315,13 @@ func AdminUpdateSettings(c *gin.Context) {
 	}
 
 	// Locale not supported.
-	if !config.Main.SupportsLocale(newLocale) {
-		response.UnsupportedParameterLocale(c, locale, newLocale, "locale", config.Main.SupportedLocales, errorMessageKey)
+	if !ctxkey.Config.Get(c).SupportsLocale(newLocale) {
+		response.UnsupportedParameterLocale(c, locale, newLocale, "locale", ctxkey.Config.Get(c).SupportedLocales, errorMessageKey)
 		return
 	}
 
 	// Timezone not supported.
-	if !timezone.Main.SupportsTimezone(newTimezone) {
+	if !ctxkey.Timezones.Get(c).SupportsTimezone(newTimezone) {
 		response.InvalidParameterValue(c, "timezone",
 			t(errorMessageKey),
 			t("error.admin.user.settings.update.timezone.not_supported.reason"),
@@ -308,14 +330,15 @@ func AdminUpdateSettings(c *gin.Context) {
 		return
 	}
 
-	var err error
-	if UpdateSettingsByAdmin == nil {
-		err = c.Error(errors.New("undefined function 'UpdateSettingsByAdmin'"))
-	} else {
-		userID := getUserID(c)
-		err = UpdateSettingsByAdmin(c, userID, newLocale, newTimezone)
+	storage := StorageOf(c)
+	if storage == nil {
+		c.Error(errNoStorage)
+		response.InternalServerError(c)
+		return
 	}
 
+	userID := getUserID(c)
+	err := storage.UpdateSettingsByAdmin(c, userID, newLocale, newTimezone)
 	if err != nil {
 		response.InternalServerError(c)
 		return
@@ -324,37 +347,40 @@ func AdminUpdateSettings(c *gin.Context) {
 	response.OkWithStatus(c, t("status.admin.user.settings.updated"))
 }
 
-// AdminUpdateNotifications : updates the notifications of a user.
+// AdminUpdateNotifications updates the notifications of a user.
 func AdminUpdateNotifications(c *gin.Context) {
 	errorMessageKey := "error.admin.user.notifications.update.message"
 
 	var jsonBody struct {
 		Notifications []string `json:"notifications"`
 	}
-	request.DecodeBody(c, &jsonBody)
+	if !request.DecodeBody(c, &jsonBody) {
+		return
+	}
 
-	locale := context.GetLocale(c)
-	t := localization.Translate(locale)
+	locale := ctxLocale.Get(c)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 
 	notificationsToSave := jsonBody.Notifications
 	for _, notification := range notificationsToSave {
-		if !notifications.IsNotificationSupported(notification) {
+		if !ctxkey.Notifications.Get(c).IsSupported(notification) {
 			response.InvalidParameterValue(c, "notifications",
 				t(errorMessageKey),
 				t("error.admin.user.notifications.update.invalid.reason", localization.H{"Value": notification}),
-				t("error.admin.user.notifications.update.invalid.recovery", localization.H{"Value": strings.Join(notifications.SupportedNotifications(), ",")}))
+				t("error.admin.user.notifications.update.invalid.recovery", localization.H{"Value": strings.Join(ctxkey.Notifications.Get(c).Supported(), ",")}))
 			return
 		}
 	}
 
-	var err error
-	if UpdateNotificationsByAdmin == nil {
-		err = c.Error(errors.New("undefined function 'UpdateNotificationsByAdmin'"))
-	} else {
-		userID := getUserID(c)
-		err = UpdateNotificationsByAdmin(c, userID, notificationsToSave)
+	storage := StorageOf(c)
+	if storage == nil {
+		c.Error(errNoStorage)
+		response.InternalServerError(c)
+		return
 	}
 
+	userID := getUserID(c)
+	err := storage.UpdateNotificationsByAdmin(c, userID, notificationsToSave)
 	if err != nil {
 		response.InternalServerError(c)
 		return
@@ -363,17 +389,18 @@ func AdminUpdateNotifications(c *gin.Context) {
 	response.OkWithStatus(c, t("status.admin.user.notifications.updated"))
 }
 
-// GetAdminUserTokens : returns the user's auth tokens.
+// GetAdminUserTokens returns the user's auth tokens.
 func GetAdminUserTokens(c *gin.Context) {
-	if GetTokensForAdmin == nil {
-		c.Error(errors.New("undefined function 'GetTokensForAdmin'"))
+	storage := StorageOf(c)
+	if storage == nil {
+		c.Error(errNoStorage)
 		response.InternalServerError(c)
 		return
 	}
 
 	userID := getUserID(c)
 
-	tokens, err := GetTokensForAdmin(c, userID)
+	tokens, err := storage.GetTokensForAdmin(c, userID)
 	if err != nil {
 		response.InternalServerError(c)
 		return
@@ -384,23 +411,24 @@ func GetAdminUserTokens(c *gin.Context) {
 	})
 }
 
-// AdminDeleteUserToken : deletes a user's auth token.
+// AdminDeleteUserToken deletes a user's auth token.
 func AdminDeleteUserToken(c *gin.Context) {
-	if DeleteTokenByIDByAdmin == nil {
-		c.Error(errors.New("undefined function 'DeleteTokenByIDByAdmin'"))
+	storage := StorageOf(c)
+	if storage == nil {
+		c.Error(errNoStorage)
 		response.InternalServerError(c)
 		return
 	}
 
-	if account.GetTokenDetailsByID == nil {
-		c.Error(errors.New("undefined function 'GetTokenDetailsByID'"))
+	if account.StorageOf(c).Tokens == nil {
+		c.Error(errNoTokens)
 		response.InternalServerError(c)
 		return
 	}
 
 	tokenID := getTokenID(c)
 
-	token, err := account.GetTokenDetailsByID(c, tokenID)
+	token, err := account.StorageOf(c).Tokens.GetTokenDetailsByID(c, tokenID)
 	if err != nil && !commonErrors.IsNotFound(err) {
 		response.InternalServerError(c)
 		return
@@ -408,122 +436,122 @@ func AdminDeleteUserToken(c *gin.Context) {
 
 	// If the token does exist, delete it.
 	if len(token.UserID) > 0 {
-		if err := DeleteTokenByIDByAdmin(c, tokenID); err != nil && !commonErrors.IsNotFound(err) {
+		if err := storage.DeleteTokenByIDByAdmin(c, tokenID); err != nil && !commonErrors.IsNotFound(err) {
 			response.InternalServerError(c)
 			return
 		}
 
-		queue.InvalidAuthToken(tokenID, token.ExpirationDate)
+		ctxkey.Queue.Get(c).InvalidAuthToken(tokenID, token.ExpirationDate)
 	}
 
-	locale := context.GetLocale(c)
-	response.OkWithStatus(c, localization.Translate(locale)("status.admin.user.token.deleted"))
+	locale := ctxLocale.Get(c)
+	response.OkWithStatus(c, ctxkey.Localization.Get(c).Translate(locale)("status.admin.user.token.deleted"))
 }
 
-// SetAbilities : set abilities to a user.
+// SetAbilities set abilities to a user.
 func SetAbilities(c *gin.Context) {
 	updateAbilities(c, "set")
 }
 
-// AddAbilities : add abilities to a user.
+// AddAbilities add abilities to a user.
 func AddAbilities(c *gin.Context) {
 	updateAbilities(c, "add")
 }
 
-// RemoveAbilities : remove abilities from a user.
+// RemoveAbilities remove abilities from a user.
 func RemoveAbilities(c *gin.Context) {
 	updateAbilities(c, "remove")
 }
 
-// AdminDelete : deletes a user.
+// AdminDelete deletes a user.
 func AdminDelete(c *gin.Context) {
 	// Get the userID from the request.
 	userID := getUserID(c)
 
 	// Get the user to delete.
-	user, err := account.GetUserDetailsByID(c, userID)
+	user, err := account.StorageOf(c).Accounts.GetUserDetailsByID(c, userID)
 	if err != nil {
 		response.InternalServerError(c)
 		return
 	}
 
 	// Delete the user.
-	if err := account.DeleteUserByID(c, userID); err != nil {
+	if err := account.StorageOf(c).Accounts.DeleteUserByID(c, userID); err != nil {
 		response.InternalServerError(c)
 		return
 	}
 
-	queue.DeleteUser(queue.TaskDeleteUser{
+	ctxkey.Queue.Get(c).DeleteUser(queue.TaskDeleteUser{
 		UserID: userID,
 	})
 
 	// Send a mail to warn the user.
-	queue.SendMail(queue.MessageMailDeleteAccountConfirmed, queue.MailDeleteAccountConfirmed{
+	ctxkey.Queue.Get(c).SendMail(queue.MessageMailDeleteAccountConfirmed, queue.MailDeleteAccountConfirmed{
 		EmailAddress: user.EmailAddress,
 		Username:     user.Username,
 		Locale:       user.Locale,
 	})
 
-	locale := context.GetLocale(c)
-	t := localization.Translate(locale)
+	locale := ctxLocale.Get(c)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 
 	response.OkWithStatus(c, t("status.admin.account.deleted"))
 }
 
-// AdminDisable : disables a user.
+// AdminDisable disables a user.
 func AdminDisable(c *gin.Context) {
 	// Get the userID from the request.
 	userID := getUserID(c)
 
 	// Disable the user.
-	user, err := account.DisableUserByID(c, userID)
+	user, err := account.StorageOf(c).Accounts.DisableUserByID(c, userID)
 	if err != nil {
 		response.InternalServerError(c)
 		return
 	}
 
-	queue.DisableUser(queue.TaskDisableUser{
+	ctxkey.Queue.Get(c).DisableUser(queue.TaskDisableUser{
 		UserID: userID,
 	})
 
 	// Send a mail to warn the user.
-	queue.SendMail(queue.MessageMailDisableAccountConfirmed, queue.MailDisableAccountConfirmed{
+	ctxkey.Queue.Get(c).SendMail(queue.MessageMailDisableAccountConfirmed, queue.MailDisableAccountConfirmed{
 		EmailAddress: user.EmailAddress,
 		Username:     user.Username,
 		Locale:       user.Locale,
 	})
 
-	locale := context.GetLocale(c)
-	t := localization.Translate(locale)
+	locale := ctxLocale.Get(c)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 
 	response.OkWithStatus(c, t("status.admin.account.disabled"))
 }
 
-// AdminEnable : enables a user.
+// AdminEnable enables a user.
 func AdminEnable(c *gin.Context) {
 	// Get the userID from the request.
 	disabledUserID := getUserID(c)
 
 	// Enable the user.
-	user, err := account.EnableUserByID(c, disabledUserID)
+	user, err := account.StorageOf(c).Accounts.EnableUserByID(c, disabledUserID)
 	if err != nil {
 		response.InternalServerError(c)
 		return
 	}
 
-	queue.EnableUser(queue.TaskEnableUser{
+	ctxkey.Queue.Get(c).EnableUser(queue.TaskEnableUser{
 		UserID: user.ID,
 	})
 
 	// Send a mail to warn the user.
-	queue.SendMail(queue.MessageMailEnableAccountConfirmed, queue.MailEnableAccountConfirmed{
+	ctxkey.Queue.Get(c).SendMail(queue.MessageMailEnableAccountConfirmed, queue.MailEnableAccountConfirmed{
 		EmailAddress: user.EmailAddress,
 		Username:     user.Username,
 		Locale:       user.Locale,
 	})
 
-	locale := context.GetLocale(c)
-	t := localization.Translate(locale)
+	locale := ctxLocale.Get(c)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 
 	response.OkWithStatus(c, t("status.admin.account.enabled"))
 }

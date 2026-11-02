@@ -1,73 +1,49 @@
+// Package log provides the logger of the application and the request logging middleware.
 package log
 
 import (
+	"log/slog"
 	"os"
-
-	"github.com/sirupsen/logrus"
 )
 
-// Initialize initialize the main logger of the application.
-func Initialize(serverName string, productionEnvironment bool) {
-	log := logrus.New()
-	log.SetOutput(os.Stdout)
+// Main is the main logger of the application, set by Initialize.
+var Main *slog.Logger
 
+// Initialize creates the main logger Main, writing to the standard output. The output is JSON in production and text
+// otherwise. Every record carries the name of the server.
+func Initialize(serverName string, productionEnvironment bool) {
+	var handler slog.Handler
 	if productionEnvironment {
-		log.Formatter = &logrus.JSONFormatter{}
+		handler = slog.NewJSONHandler(os.Stdout, nil)
 	} else {
-		log.Formatter = &logrus.TextFormatter{}
+		handler = slog.NewTextHandler(os.Stdout, nil)
 	}
 
-	Main = log.WithFields(logrus.Fields{
-		"server": serverName,
-	})
+	Main = slog.New(handler).With("server", serverName)
 }
 
-// Debug shorthand
-func Debug(args ...interface{}) {
-	Main.Debug(args...)
+// Debug logs a message at the debug level with the main logger. The arguments are alternating keys and values, see
+// slog.Logger.Log.
+func Debug(msg string, args ...any) {
+	Main.Debug(msg, args...)
 }
 
-// Error shorthand
-func Error(args ...interface{}) {
-	Main.Error(args...)
+// Info logs a message at the info level with the main logger.
+func Info(msg string, args ...any) {
+	Main.Info(msg, args...)
 }
 
-// Fatal shorthand
-func Fatal(args ...interface{}) {
-	Main.Fatal(args...)
+// Warn logs a message at the warning level with the main logger.
+func Warn(msg string, args ...any) {
+	Main.Warn(msg, args...)
 }
 
-// Info shorthand
-func Info(args ...interface{}) {
-	Main.Info(args...)
+// Error logs a message at the error level with the main logger.
+func Error(msg string, args ...any) {
+	Main.Error(msg, args...)
 }
 
-// Panic shorthand
-func Panic(args ...interface{}) {
-	Main.Panic(args...)
-}
-
-// Print shorthand
-func Print(args ...interface{}) {
-	Main.Print(args...)
-}
-
-// Warn shorthand
-func Warn(args ...interface{}) {
-	Main.Warn(args...)
-}
-
-// Warning shorthand
-func Warning(args ...interface{}) {
-	Main.Warning(args...)
-}
-
-// WithField shorthand
-func WithField(key string, value interface{}) *logrus.Entry {
-	return Main.WithField(key, value)
-}
-
-// WithFields shorthand
-func WithFields(fields logrus.Fields) *logrus.Entry {
-	return Main.WithFields(fields)
+// With returns the main logger with the attributes added to each of its records.
+func With(args ...any) *slog.Logger {
+	return Main.With(args...)
 }

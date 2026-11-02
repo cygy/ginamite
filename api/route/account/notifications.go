@@ -4,26 +4,32 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/cygy/ginamite/api/context"
+	"github.com/cygy/ginamite/common/ctxkey"
+
+	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
+	ctxLocale "github.com/cygy/ginamite/api/context/locale"
+	ctxUser "github.com/cygy/ginamite/api/context/user"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common/localization"
-	"github.com/cygy/ginamite/common/notifications"
 
 	"github.com/gin-gonic/gin"
 )
 
-// GetNotifications : returns the latest notifications received by the user.
+// errNoNotifications is logged when a route of the notifications is called without storage of the notifications.
+var errNoNotifications = errors.New("undefined storage of the notifications")
+
+// GetNotifications returns the latest notifications received by the user.
 func GetNotifications(c *gin.Context) {
-	if NotificationsReceivedByUser == nil {
-		c.Error(errors.New("undefined function 'NotificationsReceivedByUser'"))
+	if StorageOf(c).Notifications == nil {
+		c.Error(errNoNotifications)
 		response.InternalServerError(c)
 		return
 	}
 
-	userID := context.GetUserID(c)
+	userID := ctxUser.GetID(c)
 
-	notifications, err := NotificationsReceivedByUser(c, userID)
+	notifications, err := StorageOf(c).Notifications.NotificationsReceivedByUser(c, userID, ctxLocale.Get(c))
 	if err != nil {
 		response.InternalServerError(c)
 		return
@@ -34,10 +40,10 @@ func GetNotifications(c *gin.Context) {
 	})
 }
 
-// GetNotification : returns a notification received by the user.
+// GetNotification returns a notification received by the user.
 func GetNotification(c *gin.Context) {
-	if NotificationReceivedByUser == nil {
-		c.Error(errors.New("undefined function 'NotificationReceivedByUser'"))
+	if StorageOf(c).Notifications == nil {
+		c.Error(errNoNotifications)
 		response.InternalServerError(c)
 		return
 	}
@@ -49,9 +55,9 @@ func GetNotification(c *gin.Context) {
 		return
 	}
 
-	userID := context.GetUserID(c)
+	userID := ctxUser.GetID(c)
 
-	notification, err := NotificationReceivedByUser(c, userID, notificationID)
+	notification, err := StorageOf(c).Notifications.NotificationReceivedByUser(c, userID, notificationID, ctxLocale.Get(c))
 	if err != nil {
 		response.InternalServerError(c)
 		return
@@ -62,7 +68,7 @@ func GetNotification(c *gin.Context) {
 	})
 }
 
-// UpdateNotificationRead : updates a notification object.
+// UpdateNotificationRead updates a notification object.
 func UpdateNotificationRead(c *gin.Context) {
 	errorMessageKey := "error.account.notification.read.update.message"
 
@@ -72,11 +78,11 @@ func UpdateNotificationRead(c *gin.Context) {
 	}
 
 	var err error
-	if UpdateUserNotificationRead == nil {
-		err = c.Error(errors.New("undefined function 'UpdateUserNotificationRead'"))
+	if StorageOf(c).Notifications == nil {
+		err = c.Error(errNoNotifications)
 	} else {
-		userID := context.GetUserID(c)
-		err = UpdateUserNotificationRead(c, userID, notificationID)
+		userID := ctxUser.GetID(c)
+		err = StorageOf(c).Notifications.UpdateUserNotificationRead(c, userID, notificationID)
 	}
 
 	if err != nil {
@@ -85,13 +91,13 @@ func UpdateNotificationRead(c *gin.Context) {
 	}
 
 	// The auth token is updated too with the latest properties of the user.
-	context.RefreshAuthToken(c)
+	ctxAuthToken.Refresh(c)
 
-	locale := context.GetLocale(c)
-	response.OkWithStatus(c, localization.Translate(locale)("status.account.notification.read.updated"))
+	locale := ctxLocale.Get(c)
+	response.OkWithStatus(c, ctxkey.Localization.Get(c).Translate(locale)("status.account.notification.read.updated"))
 }
 
-// UpdateNotificationNotified : updates a notification object.
+// UpdateNotificationNotified updates a notification object.
 func UpdateNotificationNotified(c *gin.Context) {
 	errorMessageKey := "error.account.notification.notified.update.message"
 
@@ -101,11 +107,11 @@ func UpdateNotificationNotified(c *gin.Context) {
 	}
 
 	var err error
-	if UpdateUserNotificationNotified == nil {
-		err = c.Error(errors.New("undefined function 'UpdateUserNotificationNotified'"))
+	if StorageOf(c).Notifications == nil {
+		err = c.Error(errNoNotifications)
 	} else {
-		userID := context.GetUserID(c)
-		err = UpdateUserNotificationNotified(c, userID, notificationID)
+		userID := ctxUser.GetID(c)
+		err = StorageOf(c).Notifications.UpdateUserNotificationNotified(c, userID, notificationID)
 	}
 
 	if err != nil {
@@ -113,11 +119,11 @@ func UpdateNotificationNotified(c *gin.Context) {
 		return
 	}
 
-	locale := context.GetLocale(c)
-	response.OkWithStatus(c, localization.Translate(locale)("status.account.notification.notified.updated"))
+	locale := ctxLocale.Get(c)
+	response.OkWithStatus(c, ctxkey.Localization.Get(c).Translate(locale)("status.account.notification.notified.updated"))
 }
 
-// DeleteNotification : deletes a notification object.
+// DeleteNotification deletes a notification object.
 func DeleteNotification(c *gin.Context) {
 	errorMessageKey := "error.account.notification.delete.message"
 
@@ -127,11 +133,11 @@ func DeleteNotification(c *gin.Context) {
 	}
 
 	var err error
-	if DeleteUserNotification == nil {
-		err = c.Error(errors.New("undefined function 'DeleteUserNotification'"))
+	if StorageOf(c).Notifications == nil {
+		err = c.Error(errNoNotifications)
 	} else {
-		userID := context.GetUserID(c)
-		err = DeleteUserNotification(c, userID, notificationID)
+		userID := ctxUser.GetID(c)
+		err = StorageOf(c).Notifications.DeleteUserNotification(c, userID, notificationID)
 	}
 
 	if err != nil {
@@ -140,31 +146,36 @@ func DeleteNotification(c *gin.Context) {
 	}
 
 	// The auth token is updated too with the latest properties of the user.
-	context.RefreshAuthToken(c)
+	ctxAuthToken.Refresh(c)
 
-	locale := context.GetLocale(c)
-	response.OkWithStatus(c, localization.Translate(locale)("status.account.notification.deleted"))
+	locale := ctxLocale.Get(c)
+	response.OkWithStatus(c, ctxkey.Localization.Get(c).Translate(locale)("status.account.notification.deleted"))
 }
 
-// GetNotificationsSettings : returns all the notifications received or not by the user's devices.
+// GetNotificationsSettings returns all the notifications received or not by the user's devices.
 func GetNotificationsSettings(c *gin.Context) {
-	if NotificationsSubscribedByUser == nil {
-		c.Error(errors.New("undefined function 'NotificationsSubscribedByUser'"))
+	if StorageOf(c).Notifications == nil {
+		c.Error(errNoNotifications)
 		response.InternalServerError(c)
 		return
 	}
 
-	userID := context.GetUserID(c)
-	userNotifications := NotificationsSubscribedByUser(c, userID)
+	userID := ctxUser.GetID(c)
+	userNotifications, err := StorageOf(c).Notifications.NotificationsSubscribedByUser(c, userID)
+	if err != nil {
+		response.InternalServerError(c)
+		return
+	}
+
 	response.Ok(c, response.H{
 		"notifications": userNotifications,
 	})
 }
 
-// SaveNotificationsSettings : saves all the notifications received by the user's devices.
+// SaveNotificationsSettings saves all the notifications received by the user's devices.
 func SaveNotificationsSettings(c *gin.Context) {
-	if SubscribeNotificationsToUser == nil {
-		c.Error(errors.New("undefined function 'SubscribeNotificationsToUser'"))
+	if StorageOf(c).Notifications == nil {
+		c.Error(errNoNotifications)
 		response.InternalServerError(c)
 		return
 	}
@@ -172,25 +183,27 @@ func SaveNotificationsSettings(c *gin.Context) {
 	var jsonBody struct {
 		Notifications []string `json:"notifications"`
 	}
-	request.DecodeBody(c, &jsonBody)
+	if !request.DecodeBody(c, &jsonBody) {
+		return
+	}
 
-	locale := context.GetLocale(c)
-	t := localization.Translate(locale)
+	locale := ctxLocale.Get(c)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 
 	notificationsToSave := jsonBody.Notifications
 	for _, notification := range notificationsToSave {
-		if !notifications.IsNotificationSupported(notification) {
+		if !ctxkey.Notifications.Get(c).IsSupported(notification) {
 			message := t("error.notifications.update.unable.message")
 			reason := t("error.notifications.update.invalid.reason", localization.H{"Value": notification})
-			recovery := t("error.notifications.update.invalid.recovery", localization.H{"Value": strings.Join(notifications.SupportedNotifications(), ",")})
+			recovery := t("error.notifications.update.invalid.recovery", localization.H{"Value": strings.Join(ctxkey.Notifications.Get(c).Supported(), ",")})
 
 			response.InvalidParameterValue(c, "notifications", message, reason, recovery)
 			return
 		}
 	}
 
-	userID := context.GetUserID(c)
-	if err := SubscribeNotificationsToUser(c, userID, notificationsToSave); err != nil {
+	userID := ctxUser.GetID(c)
+	if err := StorageOf(c).Notifications.SubscribeNotificationsToUser(c, userID, notificationsToSave); err != nil {
 		response.InternalServerError(c)
 		return
 	}
@@ -198,10 +211,10 @@ func SaveNotificationsSettings(c *gin.Context) {
 	response.OkWithStatus(c, t("status.notifications.updated"))
 }
 
-// UnsubscribeNotificationByKey : unsubscribes from an encrypted key.
+// UnsubscribeNotificationByKey unsubscribes from an encrypted key.
 func UnsubscribeNotificationByKey(c *gin.Context) {
-	locale := context.GetLocale(c)
-	t := localization.Translate(locale)
+	locale := ctxLocale.Get(c)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 
 	// The same error is always sent to avoid giving some clues.
 	sendError := func() {
@@ -211,8 +224,8 @@ func UnsubscribeNotificationByKey(c *gin.Context) {
 		response.InvalidRequestParameterWithDetails(c, message, reason, recovery)
 	}
 
-	if UnsubscribeNotificationFromUser == nil {
-		c.Error(errors.New("undefined function 'UnsubscribeNotificationFromUser'"))
+	if StorageOf(c).Notifications == nil {
+		c.Error(errNoNotifications)
 		sendError()
 		return
 	}
@@ -236,12 +249,12 @@ func UnsubscribeNotificationByKey(c *gin.Context) {
 
 	// Verify that the notification is supported.
 	notification := parts[1]
-	if !notifications.IsNotificationSupported(notification) {
+	if !ctxkey.Notifications.Get(c).IsSupported(notification) {
 		sendError()
 		return
 	}
 
-	if err := UnsubscribeNotificationFromUser(c, userID, notification, key); err != nil {
+	if err := StorageOf(c).Notifications.UnsubscribeNotificationFromUser(c, userID, notification, key); err != nil {
 		sendError()
 		return
 	}

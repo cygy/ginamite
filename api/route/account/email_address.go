@@ -1,32 +1,32 @@
 package account
 
 import (
-	"errors"
 	"strings"
 
-	"github.com/cygy/ginamite/api/context"
+	"github.com/cygy/ginamite/common/ctxkey"
+
+	ctxLocale "github.com/cygy/ginamite/api/context/locale"
+	ctxUser "github.com/cygy/ginamite/api/context/user"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common/authentication"
-	"github.com/cygy/ginamite/common/config"
 	accountErrors "github.com/cygy/ginamite/common/errors/account"
-	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/queue"
 	res "github.com/cygy/ginamite/common/response"
 
 	"github.com/gin-gonic/gin"
 )
 
-// UpdateEmailAddress : updates the email address and sends a mail to confirm.
+// UpdateEmailAddress updates the email address and sends a mail to confirm.
 func UpdateEmailAddress(c *gin.Context) {
-	if GetUserDetailsByID == nil {
-		c.Error(errors.New("undefined function 'GetUserDetailsByID'"))
+	if StorageOf(c).Accounts == nil {
+		c.Error(errNoAccounts)
 		response.InternalServerError(c)
 		return
 	}
 
-	if CreateNewUpdateEmailAddressProcess == nil {
-		c.Error(errors.New("undefined function 'CreateNewUpdateEmailAddressProcess'"))
+	if StorageOf(c).Processes == nil {
+		c.Error(errNoProcesses)
 		response.InternalServerError(c)
 		return
 	}
@@ -34,10 +34,12 @@ func UpdateEmailAddress(c *gin.Context) {
 	var jsonBody struct {
 		EmailAddress string `json:"email_address"`
 	}
-	request.DecodeBody(c, &jsonBody)
+	if !request.DecodeBody(c, &jsonBody) {
+		return
+	}
 
-	locale := context.GetLocale(c)
-	t := localization.Translate(locale)
+	locale := ctxLocale.Get(c)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 
 	emailAddress := jsonBody.EmailAddress
 
@@ -46,15 +48,15 @@ func UpdateEmailAddress(c *gin.Context) {
 		return
 	}
 
-	userID := context.GetUserID(c)
-	user, err := GetUserDetailsByID(c, userID)
+	userID := ctxUser.GetID(c)
+	user, err := StorageOf(c).Accounts.GetUserDetailsByID(c, userID)
 	if err != nil {
 		response.InternalServerError(c)
 		return
 	}
 
 	// The same email address can not be used.
-	if strings.ToLower(emailAddress) == strings.ToLower(user.EmailAddress) {
+	if strings.EqualFold(emailAddress, user.EmailAddress) {
 		message := t("error.update_email_address.message")
 		reason := t("error.update_email_address.same_email_address.reason")
 		recovery := t("error.update_email_address.same_email_address.recovery")
@@ -62,7 +64,7 @@ func UpdateEmailAddress(c *gin.Context) {
 		return
 	}
 
-	processID, processKey, err := CreateNewUpdateEmailAddressProcess(c, userID, emailAddress)
+	processID, processKey, err := StorageOf(c).Processes.CreateNewUpdateEmailAddressProcess(c, userID, emailAddress)
 	if err != nil {
 		response.InternalServerError(c)
 		return
@@ -70,7 +72,7 @@ func UpdateEmailAddress(c *gin.Context) {
 
 	// The email address must be validated by the user.
 	// In Env test, we return the code and the user ID.
-	if config.Main.IsTestEnvironment() {
+	if ctxkey.Config.Get(c).IsTestEnvironment() {
 		response.Ok(c, response.H{
 			"status": t("status.update_email_address.email_sent"),
 			"id":     processID,
@@ -79,7 +81,7 @@ func UpdateEmailAddress(c *gin.Context) {
 		return
 	}
 
-	queue.SendMail(queue.MessageMailUpdateEmailAddressConfirmation, queue.MailUpdateEmailAddressConfirmation{
+	ctxkey.Queue.Get(c).SendMail(queue.MessageMailUpdateEmailAddressConfirmation, queue.MailUpdateEmailAddressConfirmation{
 		EmailAddress: user.EmailAddress,
 		Username:     user.Username,
 		Locale:       user.Locale,
@@ -90,34 +92,34 @@ func UpdateEmailAddress(c *gin.Context) {
 	response.OkWithStatus(c, t("status.update_email_address.email_sent"))
 }
 
-// ValidateUpdateEmailAddress : confirms the email address update.
+// ValidateUpdateEmailAddress confirms the email address update.
 func ValidateUpdateEmailAddress(c *gin.Context) {
 	validateOrCancelUpdateProperty(c, authentication.ProcessUpdateEmailAddress, true)
 }
 
-// CancelUpdateEmailAddress : cancels the email address update.
+// CancelUpdateEmailAddress cancels the email address update.
 func CancelUpdateEmailAddress(c *gin.Context) {
 	validateOrCancelUpdateProperty(c, authentication.ProcessUpdateEmailAddress, false)
 }
 
-// ValidateNewEmailAddress : valiadtes the new email address.
+// ValidateNewEmailAddress validates the new email address.
 func ValidateNewEmailAddress(c *gin.Context) {
 	validateOrCancelUpdateProperty(c, authentication.ProcessVerifyEmailAddress, true)
 }
 
-// ConfirmEmailAddress : validates the new email address.
+// ConfirmEmailAddress validates the new email address.
 func ConfirmEmailAddress(c *gin.Context) {
-	if GetUserDetailsByID == nil {
-		c.Error(errors.New("undefined function 'GetUserDetailsByID'"))
+	if StorageOf(c).Accounts == nil {
+		c.Error(errNoAccounts)
 		response.InternalServerError(c)
 		return
 	}
 
-	locale := context.GetLocale(c)
-	t := localization.Translate(locale)
+	locale := ctxLocale.Get(c)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 
-	userID := context.GetUserID(c)
-	user, err := GetUserDetailsByID(c, userID)
+	userID := ctxUser.GetID(c)
+	user, err := StorageOf(c).Accounts.GetUserDetailsByID(c, userID)
 	if err != nil {
 		response.InternalServerError(c)
 		return
@@ -141,7 +143,7 @@ func ConfirmEmailAddress(c *gin.Context) {
 
 		// The email address must be validated by the user.
 		// In Env test, we return the code and the user ID.
-	} else if config.Main.IsTestEnvironment() {
+	} else if ctxkey.Config.Get(c).IsTestEnvironment() {
 		response.Ok(c, response.H{
 			"status": t("status.update_email_address.email_sent"),
 			"id":     processID,

@@ -1,0 +1,174 @@
+# Message broker and Kafka
+
+The servers exchange messages through a broker: the API and the worker send them, the worker consumes them. This
+page describes the plugin `plugins/kafka` and how the workers consume the messages. See the [configuration](configuration.md) for
+the rest of the settings.
+
+## Workers and Kafka consumer groups
+
+The messages are consumed through Kafka consumer groups, and a message is committed once it is handled, so a worker
+stopped in the middle of a message does not lose it (the message is handled again: handlers must tolerate it).
+
+- The workers of the **same group** share the messages of a topic: each message is handled by one worker. Run several
+  identical workers to share the load.
+- The workers of **different groups** each receive every message.
+- A worker consumes all the topics (`task`, `task_location`, `task_user`, `task_registration`, `group_notification`,
+  `user_notification`, `mail`) unless `worker_consumers` lists the ones it consumes. The group is the topic by default,
+  so two workers listing the same topic share it. The tasks have a topic per kind: `task_location` (the location of the
+  IP addresses, slow because of ipstack), `task_user` (deleting, disabling, enabling a user, social networks, ordered by
+  user), `task_registration`, and `task` for your own tasks (`Queue.CreateTask`). All of them handle the built-in
+  tasks, so the ones still waiting in `task` after an upgrade are handled. A worker which only runs the location can
+  list only `task_location`:
+
+```yaml
+ worker 1: the mails, shared with the worker 2, and the users
+worker_consumers:
+  - topic: mail
+  - topic: task_user
+```
+
+```yaml
+ worker 2: the mails, shared with the worker 1, and the user notifications
+worker_consumers:
+  - topic: mail
+  - topic: user_notification
+```
+
+- A worker cannot ignore some messages of a topic: it would take them away from the other workers of the group. To
+  split the work, give each kind of work its own topic.
+- The API servers use a group of their own per instance for the `cache` topic, because every instance must receive
+  every invalidation.
+- A group created for the first time handles the messages sent from then on.
+
+### Retries and dead letters
+
+A message whose handling fails is handled again, then sent to a **dead-letter topic** instead of blocking the others.
+
+- Failures are retried up to `kafka.max_attempts` times (3 by default), waiting `kafka.retry_delay` milliseconds
+  (1000 by default) before the second attempt, then twice as long each time, a minute at most. The partition waits
+  meanwhile, which keeps the order of its messages.
+- The failed message is then published, as it is, to the topic named like its own with the suffix `_dlq`
+  (`<prefix>mail_dlq`), and the consumer goes on. The headers give the reason: `error`, `attempts`, `group`, `topic`,
+  `partition` and `offset`. No worker consumes this topic: use the command below to inspect the failures and to send
+  the messages again once the cause is fixed.
+- A message which can not be decoded is dead-lettered at once, since no retry can fix it. A panic is recovered and
+  counts as a failure. A message of an unknown type is only logged.
+- The functions of `worker.Handlers` handling a message (`DeleteUserByID`, `SaveIPAddressDetails`, `HandleMail`, etc.)
+  return an error, and the custom ones return `(handled bool, err error)`; the plugin `plugins/mongodb` returns the
+  errors of its database. An email which can not be sent (SMTP error) fails the same way. The functions must tolerate
+  being called again for the same message, and `broker.Permanent(err)` marks the error which must not be retried. A
+  handler of your own (`broker.MessageConsumer.Action`) follows the same rule.
+- The hooks of the plugin `plugins/mongodb` which update the documents referencing a user
+  (`UpdateDocumentsReferencingTo...`) return an error, and the message is handled again when they fail, so they must be
+  safe to run again. The temporary failures of the ipstack API (network, `429`, `5xx`) are retried the same way; an
+  unknown location or a client error is logged and not retried.
+- If the producer is not connected, the failed message is dropped and logged as an error.
+
+#### Dead letters command
+
+The binary lists, replays and purges the dead letters of a topic, without starting any server. It only needs the
+server configuration (`-conf-server`) and the name of the process, and the sections `broker` and `kafka` of the configuration:
+
+```bash
+myapp -name dlq -conf-server server.yaml -dlq list -dlq-topic mail
+myapp -name dlq -conf-server server.yaml -dlq replay -dlq-topic mail -dlq-limit 10
+myapp -name dlq -conf-server server.yaml -dlq purge -dlq-topic mail
+```
+
+- `-dlq-topic` is the topic without the prefix. `-dlq-limit` limits the count of dead letters (all if absent).
+- `list` prints where each dead letter is, when it failed, the topic, group and number of attempts, the error and the
+  size of the message; `-dlq-body` prints the body too, which holds secrets.
+- `replay` sends the dead letters again to the topic they came from, partition by partition, and stops at the first
+  failure. A message replayed again and failing again is dead-lettered again. The replayed message has a header
+  `replayed-from`.
+- `purge` forgets the dead letters without sending them again.
+- The position of the command is saved in Kafka, in the consumer group `<prefix><topic>_dlq_tool`: a dead letter
+  replayed or purged is never visited again, and `list` shows only the others. The messages themselves stay in the
+  topic until their retention ends (`dead_letter_retention_hours`).
+
+### Shutdown and logs
+
+- When the context of `Run` is done, such as on SIGINT or SIGTERM, the consumers finish the message they are handling, commit it and
+  leave their group (30 seconds at most), then the producer sends the messages it still holds, then the plugins close
+  their connections. `Run` returns nil, and the exit code is 0.
+- The logs give the topic, the partition, the offset and the size of the messages, never their body, which holds the
+  keys of the confirmation links: it is logged at the debug level only.
+
+### Ordering and duplicates
+
+- The messages about a same user (`user_id` in the payload, else `email`) are sent with that key: with several
+  partitions they go to the same one, so a worker handles them in the order they were sent. A payload can choose its
+  key by implementing `queue.Keyed`. The messages without key go to any partition.
+- Each message carries an identifier in the `message-id` header, kept by the dead letters. A group ignores a message
+  it already handled (counted in `Stats().Duplicates`), through `Server.Deduplicator`: in memory by default (the last
+  10 000 messages, which covers the redeliveries of a rebalance), and in the `processedMessages` collection with the
+  MongoDB plugin, shared by the workers and kept after a restart (the documents expire after 7 days; the TTL index is
+  created by the worker at start up). A consumer whose handler gives the same result twice, such as the
+  invalidation of a cache, sets `Idempotent: true` and costs nothing.
+- A message is remembered once it is handled: a crash between the handling and this record handles it twice. The
+  handlers of the database (deleting, disabling, enabling a user, saving a location) are idempotent. The mails and the
+  notifications are not: a duplicate is possible after such a crash, which is preferred to losing the message.
+
+## Using another broker
+
+The servers only depend on the interfaces of `common/broker`: a `Producer` (`SendMessageToTopic`, and
+`SendKeyedMessageToTopic` for the ordering), the `MessageConsumer`s of the topics, and `Broker` (`Start(consumers)`,
+`Close()`).
+
+- The plugin `plugins/kafka` is the implementation for Kafka: when it is configured, and the configuration has
+  `broker.service: kafka` with a host and a port, it sets the Kafka client as the broker with `server.UseBroker`.
+- Without a broker, the messages are not sent and an error is logged for each.
+- To use another broker, implement `broker.Broker`, then call `server.UseBroker(b)` from a plugin, or from the
+  application before `Run`: the queues of the API and of the worker send through it, and `Run` starts it with the
+  consumers of the chosen server.
+- A broker which implements `broker.DeduplicatorUser` receives the deduplicator of the server before it starts.
+- A plugin which implements `ginamite.Commander` can run a command of the command line instead of a server:
+  `plugins/kafka` runs the one on the dead letters.
+- The retries, the dead letters and the duplicates are the business of the broker: Kafka does them itself (see above),
+  another one can rely on its own mechanisms. `broker.Permanent(err)` marks an error which must not be retried.
+- `broker.NewMemory()` is a broker for the tests: it records the messages and delivers them to the consumers at once.
+
+## Kafka connection and topics
+
+The address of the broker is in the section `broker`, with `service: kafka`; the other settings are in the section
+`kafka` of the configuration file; `kafka.topics_prefix` is prepended to the names of the topics and of the consumer groups.
+
+```yaml
+broker:
+  service: kafka
+  host: kafka.example.com
+  port: 9093
+
+kafka:
+  topics_prefix: myapp_
+  max_attempts: 3
+  retry_delay: 1000            # milliseconds, doubled at each attempt
+  version: 3.6.0               # the version of the brokers, the one of the client library if absent
+  tls:
+    enabled: true
+    ca_file: /etc/kafka/ca.pem  # the system authorities if absent
+    cert_file: /etc/kafka/client.pem   # for a mutual authentication
+    key_file: /etc/kafka/client.key
+  sasl:
+    mechanism: SCRAM-SHA-512   # PLAIN, SCRAM-SHA-256 or SCRAM-SHA-512
+    username: myapp
+    password: secret
+  topics:
+    create: true               # create the missing topics when a server starts
+    partitions: 6
+    replication_factor: 3
+    retention_hours: 168
+    dead_letter_retention_hours: 720
+  stats_interval: 60           # seconds between two logs of the statistics, none if absent
+```
+
+- **Producer.** A message is acknowledged by all the in-sync replicas, and sent again if it fails without being
+  duplicated nor reordered (idempotent producer). The messages are sent in the order of the calls; the ones sent before
+  the producer is connected wait for it (1024 at most, the others are dropped and logged).
+- **Topics.** With `topics.create`, the servers create the topics, and the topics of their dead letters, which do not
+  exist yet, and never change the ones which exist. Without it, create them yourself, or let the brokers do it.
+- **Partitions.** The workers of a group share the partitions of a topic: with one partition, a single worker
+  works and the others wait. The messages are only ordered within a partition: with several partitions, only the
+  messages with the same key (see Ordering and duplicates) are handled in the order they were sent.
+- **Statistics.** `Client.Stats()` gives the counters (messages received, handled, retried, dead-lettered, sent, refused,
+  dropped) and the lag (messages waiting) of each partition. `kafka.stats_interval` logs them.

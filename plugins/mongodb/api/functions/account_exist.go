@@ -1,56 +1,45 @@
 package functions
 
 import (
-	"github.com/cygy/ginamite/common/mongo/session"
-	"github.com/cygy/ginamite/plugins/mongodb/model"
+	"context"
 
-	"github.com/gin-gonic/gin"
+	"github.com/cygy/ginamite/plugins/mongodb/model"
+	"github.com/cygy/ginamite/plugins/mongodb/mongo/store"
 )
 
-// DoesAccountWithUsernameExist : returns true if an account with this username exists.
-func DoesAccountWithUsernameExist(c *gin.Context, username string) bool {
-	mongoSession := session.Get(c)
-	ok := model.IsUserWithUsernameExisting(username, mongoSession)
-
-	if !ok {
-		ok = model.IsDisabledUserWithUsernameExisting(username, mongoSession)
-	}
-
-	return ok
+// DoesAccountWithUsernameExist reports whether an account with this username exists.
+func (a *Accounts) DoesAccountWithUsernameExist(ctx context.Context, username string) (bool, error) {
+	return a.existsInEither(ctx, username, model.IsUserWithUsernameExisting, model.IsDisabledUserWithUsernameExisting)
 }
 
-// DoesAccountWithEmailAddressExist : returns true if an account with this email address exists.
-func DoesAccountWithEmailAddressExist(c *gin.Context, emailAddress string) bool {
-	mongoSession := session.Get(c)
-	ok := model.IsUserWithEmailAddressExisting(emailAddress, mongoSession)
-
-	if !ok {
-		ok = model.IsDisabledUserWithEmailAddressExisting(emailAddress, mongoSession)
-	}
-
-	return ok
+// DoesAccountWithEmailAddressExist reports whether an account with this email address exists.
+func (a *Accounts) DoesAccountWithEmailAddressExist(ctx context.Context, emailAddress string) (bool, error) {
+	return a.existsInEither(ctx, emailAddress, model.IsUserWithEmailAddressExisting, model.IsDisabledUserWithEmailAddressExisting)
 }
 
-// DoesUserWithFacebookUserIDExist : returns true if an account with this facebook id exists.
-func DoesUserWithFacebookUserIDExist(c *gin.Context, userID string) bool {
-	mongoSession := session.Get(c)
-	ok := model.IsUserWithFacebookUserIDExisting(userID, mongoSession)
-
-	if !ok {
-		ok = model.IsDisabledUserWithFacebookUserIDExisting(userID, mongoSession)
-	}
-
-	return ok
+// DoesUserWithFacebookUserIDExist reports whether an account with this facebook id exists.
+func (a *Accounts) DoesUserWithFacebookUserIDExist(ctx context.Context, userID string) (bool, error) {
+	return a.existsInEither(ctx, userID, model.IsUserWithFacebookUserIDExisting, model.IsDisabledUserWithFacebookUserIDExisting)
 }
 
-// DoesUserWithGoogleUserIDExist : returns true if an account with this google id exists.
-func DoesUserWithGoogleUserIDExist(c *gin.Context, userID string) bool {
-	mongoSession := session.Get(c)
-	ok := model.IsUserWithGoogleUserIDExisting(userID, mongoSession)
+// DoesUserWithGoogleUserIDExist reports whether an account with this google id exists.
+func (a *Accounts) DoesUserWithGoogleUserIDExist(ctx context.Context, userID string) (bool, error) {
+	return a.existsInEither(ctx, userID, model.IsUserWithGoogleUserIDExisting, model.IsDisabledUserWithGoogleUserIDExisting)
+}
 
-	if !ok {
-		ok = model.IsDisabledUserWithGoogleUserIDExisting(userID, mongoSession)
+// existsInEither reports whether the value is found by the check of the enabled users or, if not, by the check of
+// the disabled users.
+func (a *Accounts) existsInEither(ctx context.Context, value string, enabled, disabled func(context.Context, string, store.Database) (bool, error)) (bool, error) {
+	mongoSession := a.database()
+
+	ok, err := enabled(ctx, value, mongoSession)
+	if err != nil {
+		return false, err
 	}
 
-	return ok
+	if !ok {
+		ok, err = disabled(ctx, value, mongoSession)
+	}
+
+	return ok, err
 }

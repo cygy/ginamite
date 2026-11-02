@@ -3,6 +3,8 @@ package response
 import (
 	"strings"
 
+	"github.com/cygy/ginamite/common/ctxkey"
+
 	"github.com/cygy/ginamite/common/errors"
 	"github.com/cygy/ginamite/common/errors/auth"
 	"github.com/cygy/ginamite/common/errors/database"
@@ -16,12 +18,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// H : shorthand to the hashmap type.
+// H is a shorthand for the hashmap type.
 type H gin.H
 
-// UnsupportedRequestLocale : returns a HTTP 400 error.
+// UnsupportedRequestLocale returns a HTTP 400 error.
 func UnsupportedRequestLocale(c *gin.Context, userLocale, usedLocale string, supportedLocales []string, messageKey string) {
-	t := localization.Translate(userLocale)
+	t := ctxkey.Localization.Get(c).Translate(userLocale)
 	BadRequestWithError(c, response.Error{
 		Domain:   locale.Domain,
 		Code:     locale.UnsupportedLocale,
@@ -31,9 +33,9 @@ func UnsupportedRequestLocale(c *gin.Context, userLocale, usedLocale string, sup
 	})
 }
 
-// UnsupportedParameterLocale : returns a HTTP 400 error.
+// UnsupportedParameterLocale returns a HTTP 400 error.
 func UnsupportedParameterLocale(c *gin.Context, userLocale, usedLocale, parameterName string, supportedLocales []string, messageKey string) {
-	t := localization.Translate(userLocale)
+	t := ctxkey.Localization.Get(c).Translate(userLocale)
 	InvalidParameterValue(c, parameterName,
 		t(messageKey),
 		t("error.request.parameter.locale.unsupported.reason", localization.H{"Locale": usedLocale}),
@@ -41,9 +43,9 @@ func UnsupportedParameterLocale(c *gin.Context, userLocale, usedLocale, paramete
 	)
 }
 
-// NotFoundParameterLocale : returns a HTTP 404 error.
+// NotFoundParameterLocale returns a HTTP 404 error.
 func NotFoundParameterLocale(c *gin.Context, userLocale, parameterName, messageKey string) {
-	t := localization.Translate(userLocale)
+	t := ctxkey.Localization.Get(c).Translate(userLocale)
 	NotFoundParameterValue(c, parameterName,
 		t(messageKey),
 		t("error.request.parameter.locale.not_found.reason", localization.H{"ParameterName": parameterName}),
@@ -51,9 +53,9 @@ func NotFoundParameterLocale(c *gin.Context, userLocale, parameterName, messageK
 	)
 }
 
-// UnauthorizedWithInvalidAuthorizationToken : returns a HTTP 401 error.
+// UnauthorizedWithInvalidAuthorizationToken returns a HTTP 401 error.
 func UnauthorizedWithInvalidAuthorizationToken(c *gin.Context, locale string) {
-	t := localization.Translate(locale)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 	UnauthorizedWithError(c, response.Error{
 		Domain:   auth.Domain,
 		Code:     auth.InvalidAuthorizationToken,
@@ -63,9 +65,9 @@ func UnauthorizedWithInvalidAuthorizationToken(c *gin.Context, locale string) {
 	})
 }
 
-// UnauthorizedWithRevokedAuthorizationToken : returns a HTTP 401 error.
+// UnauthorizedWithRevokedAuthorizationToken returns a HTTP 401 error.
 func UnauthorizedWithRevokedAuthorizationToken(c *gin.Context, locale string) {
-	t := localization.Translate(locale)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 	UnauthorizedWithError(c, response.Error{
 		Domain:   auth.Domain,
 		Code:     auth.RevokedAuthorizationToken,
@@ -75,9 +77,9 @@ func UnauthorizedWithRevokedAuthorizationToken(c *gin.Context, locale string) {
 	})
 }
 
-// UnauthorizedWithExpiredAuthorizationToken : returns a HTTP 401 error.
+// UnauthorizedWithExpiredAuthorizationToken returns a HTTP 401 error.
 func UnauthorizedWithExpiredAuthorizationToken(c *gin.Context, locale string) {
-	t := localization.Translate(locale)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 	UnauthorizedWithError(c, response.Error{
 		Domain:   auth.Domain,
 		Code:     auth.ExpiredAuthorizationToken,
@@ -87,9 +89,9 @@ func UnauthorizedWithExpiredAuthorizationToken(c *gin.Context, locale string) {
 	})
 }
 
-// UnauthorizedWithInsufficientRights : returns a HTTP 401 error.
+// UnauthorizedWithInsufficientRights returns a HTTP 401 error.
 func UnauthorizedWithInsufficientRights(c *gin.Context, locale string) {
-	t := localization.Translate(locale)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 	UnauthorizedWithError(c, response.Error{
 		Domain:   auth.Domain,
 		Code:     auth.InsufficientRights,
@@ -99,16 +101,16 @@ func UnauthorizedWithInsufficientRights(c *gin.Context, locale string) {
 	})
 }
 
-// InvalidRequestParameter : returns a HTTP 400 error.
+// InvalidRequestParameter returns a HTTP 400 error.
 func InvalidRequestParameter(c *gin.Context, locale string) {
-	t := localization.Translate(locale)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 	InvalidRequestParameterWithDetails(c,
 		t("error.request.invalid.parameter.message"),
 		t("error.request.invalid.parameter.reason"),
 		t("error.request.invalid.parameter.recovery"))
 }
 
-// InvalidRequestParameterWithDetails : returns a HTTP 400 error.
+// InvalidRequestParameterWithDetails returns a HTTP 400 error.
 func InvalidRequestParameterWithDetails(c *gin.Context, message, reason, recovery string) {
 	BadRequestWithError(c, response.Error{
 		Domain:   request.Domain,
@@ -119,7 +121,7 @@ func InvalidRequestParameterWithDetails(c *gin.Context, message, reason, recover
 	})
 }
 
-// InvalidParameterValue : returns a HTTP 400 error.
+// InvalidParameterValue returns a HTTP 400 error.
 func InvalidParameterValue(c *gin.Context, parameterName, message, reason, recovery string) {
 	BadRequestWithError(c, response.Error{
 		Domain:   request.Domain,
@@ -131,7 +133,7 @@ func InvalidParameterValue(c *gin.Context, parameterName, message, reason, recov
 	})
 }
 
-// NotFoundParameterValue : returns a HTTP 400 error.
+// NotFoundParameterValue returns a HTTP 400 error.
 func NotFoundParameterValue(c *gin.Context, parameterName, message, reason, recovery string) {
 	BadRequestWithError(c, response.Error{
 		Domain:   request.Domain,
@@ -143,9 +145,9 @@ func NotFoundParameterValue(c *gin.Context, parameterName, message, reason, reco
 	})
 }
 
-// UnableToReadFile : returns a HTTP 500 error.
+// UnableToReadFile returns a HTTP 500 error.
 func UnableToReadFile(c *gin.Context, locale, messageKey string) {
-	t := localization.Translate(locale)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 	InternalServerErrorWithError(c, response.Error{
 		Domain:   file.Domain,
 		Code:     file.CanNotReadFile,
@@ -155,9 +157,9 @@ func UnableToReadFile(c *gin.Context, locale, messageKey string) {
 	})
 }
 
-// UnableToSaveFile : returns a HTTP 500 error.
+// UnableToSaveFile returns a HTTP 500 error.
 func UnableToSaveFile(c *gin.Context, locale, messageKey string) {
-	t := localization.Translate(locale)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 	InternalServerErrorWithError(c, response.Error{
 		Domain:   file.Domain,
 		Code:     file.CanNotSaveFile,
@@ -167,9 +169,9 @@ func UnableToSaveFile(c *gin.Context, locale, messageKey string) {
 	})
 }
 
-// FileNotFound : returns a HTTP 500 error.
+// FileNotFound returns a HTTP 500 error.
 func FileNotFound(c *gin.Context, locale, messageKey string) {
-	t := localization.Translate(locale)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 	InternalServerErrorWithError(c, response.Error{
 		Domain:   file.Domain,
 		Code:     file.FileNotFound,
@@ -179,9 +181,9 @@ func FileNotFound(c *gin.Context, locale, messageKey string) {
 	})
 }
 
-// MaxFileSizeExceeded : returns a HTTP 500 error.
+// MaxFileSizeExceeded returns a HTTP 412 error.
 func MaxFileSizeExceeded(c *gin.Context, locale, messageKey string, maxSize uint64) {
-	t := localization.Translate(locale)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 	PreconditionFailedWithError(c, response.Error{
 		Domain:   file.Domain,
 		Code:     file.MaxFileSizeExceeded,
@@ -191,9 +193,9 @@ func MaxFileSizeExceeded(c *gin.Context, locale, messageKey string, maxSize uint
 	})
 }
 
-// InvalidMimeType : returns a HTTP 500 error.
+// InvalidMimeType returns a HTTP 412 error.
 func InvalidMimeType(c *gin.Context, locale, messageKey string) {
-	t := localization.Translate(locale)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 	PreconditionFailedWithError(c, response.Error{
 		Domain:   file.Domain,
 		Code:     file.InvalidMimeType,
@@ -203,9 +205,9 @@ func InvalidMimeType(c *gin.Context, locale, messageKey string) {
 	})
 }
 
-// UnableToUpdateDatabase : returns a HTTP 500 error.
+// UnableToUpdateDatabase returns a HTTP 500 error.
 func UnableToUpdateDatabase(c *gin.Context, locale, messageKey string) {
-	t := localization.Translate(locale)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 	InternalServerErrorWithError(c, response.Error{
 		Domain:   database.Domain,
 		Code:     database.CanNotUpdate,

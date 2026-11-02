@@ -1,29 +1,45 @@
+// Package route defines the routes of the API and the middlewares applied to them.
 package route
 
 import (
 	"github.com/cygy/ginamite/api/rights"
+	"github.com/cygy/ginamite/common/notifications"
 
 	"github.com/gin-gonic/gin"
 )
 
-// ConfigureDefaultRoutes : function to configure the default routes of the API.
+// ConfigureDefaultRoutes is a function to configure the default routes of the API.
 type ConfigureDefaultRoutes func(routes *DefaultRoutes)
 
-// ConfigureCustomRoutes : function to add custom routes of the API.
+// ConfigureCustomRoutes is a function to add custom routes of the API.
 type ConfigureCustomRoutes func(group *gin.RouterGroup, handlers Middlewares, isProductionEnvironment bool, rights func(admin bool, abilities []string) gin.HandlerFunc)
 
-// Router : properties to define routes and their rights.
+// Router holds the properties to define routes and their rights.
 type Router struct {
 	Group                 *gin.RouterGroup
 	ProductionEnvironment bool
 	DefaultRoutes         DefaultRoutes
 	Handlers              Middlewares
 
+	// Limits are the middlewares limiting the requests which try to guess a secret. A nil one does not limit.
+	Limits RateLimits
+
+	// Notifications is the registry of the notifications the users can subscribe to.
+	Notifications *notifications.Registry
+
 	// private properties
-	getUserAbilities rights.GetUserAbilitesFunc
+	getUserAbilities       rights.GetUserAbilitiesFunc
+	authenticationDisabled bool
 }
 
-// Middlewares : collection of the built-in handlers.
+// RateLimits are the middlewares limiting the requests of the default routes, by group of routes.
+type RateLimits struct {
+	Authentication gin.HandlerFunc
+	Registration   gin.HandlerFunc
+	ForgotPassword gin.HandlerFunc
+}
+
+// Middlewares is the collection of the built-in handlers.
 type Middlewares struct {
 	CanBeAuthenticated                      gin.HandlerFunc
 	MustBeAuthenticated                     gin.HandlerFunc
@@ -34,13 +50,13 @@ type Middlewares struct {
 	MustHaveAcceptedTheLatestVersionOfTerms gin.HandlerFunc
 }
 
-// PathProperties : properties of a route.
+// PathProperties holds the properties of a route.
 type PathProperties struct {
 	Enabled bool
 	Path    string
 }
 
-// DefaultRoutes : definition of the built-in routes.
+// DefaultRoutes defines the built-in routes.
 type DefaultRoutes struct {
 	Status struct {
 		Enabled bool

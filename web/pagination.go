@@ -6,32 +6,44 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// GetPageNumber : returns the page number from the request.
+// Pagination holds the properties of a paginated list.
+type Pagination struct {
+	CountOfPages int
+	Pages        []int // The numbers of the pages to display, where -1 stands for the pages left out.
+	TotalItems   int
+	ItemsPerPage int
+	CurrentPage  int
+	PreviousPage int
+	NextPage     int
+}
+
+// GetPageNumber returns the number of the page in the query parameter "page" of the request: 1 if it is missing,
+// invalid, or lower than 1.
 func GetPageNumber(c *gin.Context) int {
-	var pageNumber int
-	var err error
-	if pageNumber, err = strconv.Atoi(c.Query("page")); err != nil {
-		pageNumber = 1
+	pageNumber, err := strconv.Atoi(c.Query("page"))
+	if err != nil || pageNumber < 1 {
+		return 1
 	}
 
 	return pageNumber
 }
 
-// GetPagination : returns an initialized Pagination struct.
+// GetPagination returns the pagination of countOfItems items, itemsPerPage per page, on the page currentPage.
+// The pages displayed are the first three, the last three and the ones next to the current one, separated by -1.
+// There is no page if there is no item or if itemsPerPage is lower than 1.
 func GetPagination(countOfItems, itemsPerPage, currentPage int) Pagination {
-	countOfPages := countOfItems / itemsPerPage
-	if countOfItems%itemsPerPage > 0 {
-		countOfPages++
+	countOfPages := 0
+	if countOfItems > 0 && itemsPerPage > 0 {
+		countOfPages = (countOfItems + itemsPerPage - 1) / itemsPerPage
 	}
 
 	pages := []int{}
 	for i := 1; i <= countOfPages; i++ {
-		if i <= 3 || i >= countOfPages-2 || (i >= (currentPage-1) && i <= (currentPage+1)) {
+		switch {
+		case i <= 3 || i >= countOfPages-2 || (i >= currentPage-1 && i <= currentPage+1):
 			pages = append(pages, i)
-		} else {
-			if pages[len(pages)-1] != -1 {
-				pages = append(pages, -1)
-			}
+		case pages[len(pages)-1] != -1:
+			pages = append(pages, -1)
 		}
 	}
 

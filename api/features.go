@@ -1,0 +1,240 @@
+package api
+
+import (
+	"fmt"
+	"slices"
+	"sort"
+	"strings"
+
+	"github.com/cygy/ginamite/api/route"
+)
+
+// The features of the API: the sets of default routes the application chooses with the setting api_features. A feature
+// holds its own routes of administration, and needs the functions of the application they call.
+const (
+	// FeatureStatus: the status of the API.
+	FeatureStatus = "status"
+	// FeatureLocales: the locales supported by the API.
+	FeatureLocales = "locales"
+	// FeatureTimezones: the timezones of the countries.
+	FeatureTimezones = "timezones"
+	// FeatureTerms: the terms of use, their version, and their acceptance by the users.
+	FeatureTerms = "terms"
+	// FeatureNotifications: the notifications of the users, their center and their settings.
+	FeatureNotifications = "notifications"
+	// FeatureRegistration: the registration with a password, and the availability of the usernames.
+	FeatureRegistration = "registration"
+	// FeatureForgotPassword: the reset of a forgotten password.
+	FeatureForgotPassword = "forgot_password"
+	// FeatureAuth: the login with a password, the auth tokens of the users, and their administration.
+	FeatureAuth = "auth"
+	// FeatureFacebook: the registration and the login with Facebook.
+	FeatureFacebook = "facebook"
+	// FeatureGoogle: the registration and the login with Google.
+	FeatureGoogle = "google"
+	// FeatureAccount: the account of the users and, for the administrators, the management of the users.
+	FeatureAccount = "account"
+	// FeatureContact: the contact messages and, for the administrators, their management.
+	FeatureContact = "contact"
+)
+
+// requirement is a default route and the names of the functions of the application, see Server.Account and the other groups of functions, its handler calls.
+type requirement struct {
+	route     *route.PathProperties
+	functions []string
+}
+
+// feature is a set of default routes.
+type feature struct {
+	name     string
+	routes   []requirement
+	needsJWT bool // The routes sign or verify auth tokens, which needs the setting jwt.secret.
+}
+
+// Features returns the names of the features of the API.
+func Features() []string {
+	var routes route.DefaultRoutes
+
+	features := (&Server{}).features(&routes)
+	names := make([]string, len(features))
+	for i, f := range features {
+		names[i] = f.name
+	}
+
+	return names
+}
+
+// features returns the features of the API, with the routes of the default routes.
+func (s *Server) features(routes *route.DefaultRoutes) []feature {
+	account, authentication, registration := &routes.Account.Paths, &routes.Authentication.Paths, &routes.Registration.Paths
+	forgotPassword, admin, terms := &routes.ForgotPassword.Paths, &routes.Admin.Paths, &routes.Terms.Paths
+
+	return []feature{
+		{FeatureStatus, []requirement{{&routes.Status.Paths.Get, nil}}, false},
+		{FeatureLocales, []requirement{{&routes.Locales.Paths.Get, nil}}, false},
+		{FeatureTimezones, []requirement{{&routes.Timezones.Paths.Get, nil}}, false},
+		{FeatureTerms, []requirement{
+			{&terms.GetTerms, nil},
+			{&terms.GetVersion, nil},
+			{&terms.Accept, []string{"Terms"}},
+		}, true},
+		{FeatureNotifications, []requirement{
+			{&routes.Notifications.Paths.Get, nil},
+			{&account.GetNotifications, []string{"Notifications"}},
+			{&account.GetNotification, []string{"Notifications"}},
+			{&account.DeleteNotification, []string{"Notifications"}},
+			{&account.UpdateNotificationRead, []string{"Notifications"}},
+			{&account.UpdateNotificationNotified, []string{"Notifications"}},
+			{&account.GetNotificationsSettings, []string{"Notifications"}},
+			{&account.SaveNotificationsSettings, []string{"Notifications"}},
+			{&account.UnsubscribeFromNotification, []string{"Notifications"}},
+			{&admin.UpdateUserNotifications, []string{"Users"}},
+		}, true},
+		{FeatureRegistration, []requirement{
+			{&routes.Username.Paths.Availability, []string{"Accounts"}},
+			{&registration.RegisterWithPassword, []string{"Accounts"}},
+			{&registration.Validate, []string{"Accounts"}},
+			{&registration.Cancel, []string{"Accounts"}},
+		}, true},
+		{FeatureForgotPassword, []requirement{
+			{&forgotPassword.ForgotPassword, []string{"Accounts", "Processes"}},
+			{&forgotPassword.Validate, []string{"Processes", "Accounts"}},
+			{&forgotPassword.Cancel, []string{"Processes"}},
+		}, true},
+		{FeatureAuth, []requirement{
+			{&authentication.LoginWithPassword, []string{"Accounts", "Tokens"}},
+			{&authentication.Logout, []string{"Tokens"}},
+			{&authentication.GetTokens, []string{"Tokens"}},
+			{&authentication.GetToken, []string{"Tokens"}},
+			{&authentication.UpdateToken, []string{"Tokens"}},
+			{&authentication.RefreshToken, []string{"Tokens"}},
+			{&authentication.DeleteToken, []string{"Tokens"}},
+			{&authentication.DeleteTokenWithKey, []string{"Tokens"}},
+			{&admin.GetUserTokens, []string{"Users"}},
+			{&admin.DeleteUserToken, []string{"Users", "Tokens"}},
+		}, true},
+		{FeatureFacebook, []requirement{
+			{&registration.RegisterWithFacebook, []string{"Accounts"}},
+			{&authentication.LoginWithFacebook, []string{"Accounts", "Tokens"}},
+		}, true},
+		{FeatureGoogle, []requirement{
+			{&registration.RegisterWithGoogle, []string{"Accounts"}},
+			{&authentication.LoginWithGoogle, []string{"Accounts", "Tokens"}},
+		}, true},
+		{FeatureAccount, []requirement{
+			{&account.GetDetails, []string{"Accounts"}},
+			{&account.UpdateDetails, []string{"Accounts"}},
+			{&account.UpdateSettings, []string{"Accounts"}},
+			{&account.UpdateSocialNetworks, []string{"Accounts"}},
+			{&account.UpdateEmailAddress, []string{"Processes", "Accounts"}},
+			{&account.ValidateUpdateEmailAddress, []string{"Processes", "Accounts"}},
+			{&account.CancelUpdateEmailAddress, []string{"Processes"}},
+			{&account.ValidateNewEmailAddress, []string{"Processes", "Accounts"}},
+			{&account.ConfirmEmailAddress, []string{"Processes", "Accounts"}},
+			{&account.UpdatePassword, []string{"Processes", "Accounts"}},
+			{&account.ValidateUpdatePassword, []string{"Processes", "Accounts"}},
+			{&account.CancelUpdatePassword, []string{"Processes"}},
+			{&account.Delete, []string{"Processes", "Accounts"}},
+			{&account.ValidateDelete, []string{"Processes", "Accounts"}},
+			{&account.CancelDelete, []string{"Processes"}},
+			{&account.Disable, []string{"Processes", "Accounts"}},
+			{&account.ValidateDisable, []string{"Processes", "Accounts"}},
+			{&account.CancelDisable, []string{"Processes"}},
+			{&admin.GetEnabledUsers, []string{"Users"}},
+			{&admin.GetDisabledUsers, []string{"Users"}},
+			{&admin.UpdateUserPassword, []string{"Users"}},
+			{&admin.UpdateUserInformations, []string{"Users"}},
+			{&admin.UpdateUserDescription, []string{"Users"}},
+			{&admin.UpdateUserSocial, []string{"Users"}},
+			{&admin.UpdateUserSettings, []string{"Users"}},
+			{&admin.SetAbilitiesToUser, []string{"Users"}},
+			{&admin.AddAbilitiesToUser, []string{"Users"}},
+			{&admin.RemoveAbilitiesFromUser, []string{"Users"}},
+			{&admin.DeleteUser, []string{"Accounts"}},
+			{&admin.DisableUser, []string{"Accounts"}},
+			{&admin.EnableUser, []string{"Accounts"}},
+		}, true},
+		{FeatureContact, []requirement{
+			{&routes.Contact.Paths.Post, []string{"Contacts"}},
+			{&admin.GetContacts, []string{"Contacts"}},
+			{&admin.GetContact, []string{"Contacts"}},
+			{&admin.UpdateContact, []string{"Contacts"}},
+		}, true},
+	}
+}
+
+// selectRoutes loads, among the default routes, the ones of the enabled features only. It returns an error naming the
+// unknown features, or the functions of the application the features need and which are undefined. It reports whether
+// the enabled features need the setting jwt.secret.
+func (s *Server) selectRoutes(routes *route.DefaultRoutes, enabled []string) (needsJWT bool, err error) {
+	features := s.features(routes)
+
+	var unknown []string
+	for _, name := range enabled {
+		if !slices.ContainsFunc(features, func(f feature) bool { return f.name == name }) {
+			unknown = append(unknown, name)
+		}
+	}
+	if len(unknown) > 0 {
+		names := make([]string, len(features))
+		for i, f := range features {
+			names[i] = f.name
+		}
+
+		return false, fmt.Errorf("unknown features %v in the setting api_features, the features are: %s", unknown, strings.Join(names, ", "))
+	}
+
+	missing := map[string]bool{}
+	for _, f := range features {
+		isEnabled := slices.Contains(enabled, f.name)
+		needsJWT = needsJWT || (isEnabled && f.needsJWT)
+
+		for _, r := range f.routes {
+			r.route.Enabled = isEnabled
+			if !isEnabled {
+				continue
+			}
+
+			for _, function := range r.functions {
+				if s.isUndefined(function) {
+					missing[function] = true
+				}
+			}
+		}
+	}
+
+	if len(missing) > 0 {
+		names := make([]string, 0, len(missing))
+		for name := range missing {
+			names = append(names, name)
+		}
+		sort.Strings(names)
+
+		return needsJWT, fmt.Errorf("the features of the setting api_features need functions or storages which are undefined: %s", strings.Join(names, ", "))
+	}
+
+	return needsJWT, nil
+}
+
+// isUndefined reports whether the storage with the name is undefined. The names are the ones of the storages of the
+// server, and the ones of its Account storage.
+func (s *Server) isUndefined(name string) bool {
+	switch name {
+	case "Contacts":
+		return s.Contacts == nil
+	case "Terms":
+		return s.Terms == nil
+	case "Users":
+		return s.Users == nil
+	case "Notifications":
+		return s.Account.Notifications == nil
+	case "Tokens":
+		return s.Account.Tokens == nil
+	case "Processes":
+		return s.Account.Processes == nil
+	case "Accounts":
+		return s.Account.Accounts == nil
+	}
+
+	panic("api: the feature needs the unknown storage " + name)
+}

@@ -1,29 +1,31 @@
 package account
 
 import (
-	"errors"
+	"github.com/cygy/ginamite/common/ctxkey"
 
-	"github.com/cygy/ginamite/api/context"
+	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
+	ctxLocale "github.com/cygy/ginamite/api/context/locale"
+	ctxUser "github.com/cygy/ginamite/api/context/user"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
-	"github.com/cygy/ginamite/common/config"
-	"github.com/cygy/ginamite/common/localization"
-	"github.com/cygy/ginamite/common/timezone"
 
 	"github.com/gin-gonic/gin"
 )
 
-// GetInfos : returns the details of an account.
+// GetInfos returns the details of an account.
 func GetInfos(c *gin.Context) {
-	if GetOwnedAccountDetails == nil {
-		c.Error(errors.New("undefined function 'GetOwnedAccountDetails'"))
+	if StorageOf(c).Accounts == nil {
+		c.Error(errNoAccounts)
 		response.InternalServerError(c)
 		return
 	}
 
-	userID := context.GetUserID(c)
-	user := GetOwnedAccountDetails(c, userID)
-	if user == nil {
+	userID := ctxUser.GetID(c)
+	user, err := StorageOf(c).Accounts.GetOwnedAccountDetails(c, userID)
+	if err != nil || user == nil {
+		if err != nil {
+			c.Error(err)
+		}
 		response.InternalServerError(c)
 		return
 	}
@@ -33,10 +35,10 @@ func GetInfos(c *gin.Context) {
 	})
 }
 
-// UpdateInfos : updated the details of an account.
+// UpdateInfos updated the details of an account.
 func UpdateInfos(c *gin.Context) {
-	if UpdatedAccountInfos == nil {
-		c.Error(errors.New("undefined function 'UpdatedAccountInfos'"))
+	if StorageOf(c).Accounts == nil {
+		c.Error(errNoAccounts)
 		response.InternalServerError(c)
 		return
 	}
@@ -45,10 +47,12 @@ func UpdateInfos(c *gin.Context) {
 		FirstName string `json:"first_name"`
 		LastName  string `json:"last_name"`
 	}
-	request.DecodeBody(c, &jsonBody)
+	if !request.DecodeBody(c, &jsonBody) {
+		return
+	}
 
-	locale := context.GetLocale(c)
-	t := localization.Translate(locale)
+	locale := ctxLocale.Get(c)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 
 	errorMessageKey := "error.account.infos.update.unable.message"
 
@@ -75,22 +79,22 @@ func UpdateInfos(c *gin.Context) {
 	}
 
 	// Update the infos of the user.
-	userID := context.GetUserID(c)
-	if err := UpdatedAccountInfos(c, userID, firstName, lastName); err != nil {
+	userID := ctxUser.GetID(c)
+	if err := StorageOf(c).Accounts.UpdatedAccountInfos(c, userID, firstName, lastName); err != nil {
 		response.InternalServerError(c)
 		return
 	}
 
 	// The auth token is updated too with the latest properties of the user.
-	context.RefreshAuthToken(c)
+	ctxAuthToken.Refresh(c)
 
 	response.OkWithStatus(c, t("status.account.infos.updated"))
 }
 
-// UpdateSettings : updated the settings of an account.
+// UpdateSettings updated the settings of an account.
 func UpdateSettings(c *gin.Context) {
-	if UpdatedAccountSettings == nil {
-		c.Error(errors.New("undefined function 'UpdatedAccountSettings'"))
+	if StorageOf(c).Accounts == nil {
+		c.Error(errNoAccounts)
 		response.InternalServerError(c)
 		return
 	}
@@ -99,10 +103,12 @@ func UpdateSettings(c *gin.Context) {
 		Locale   string `json:"locale"`
 		Timezone string `json:"timezone"`
 	}
-	request.DecodeBody(c, &jsonBody)
+	if !request.DecodeBody(c, &jsonBody) {
+		return
+	}
 
-	locale := context.GetLocale(c)
-	t := localization.Translate(locale)
+	locale := ctxLocale.Get(c)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 
 	errorMessageKey := "error.account.settings.update.unable.message"
 
@@ -129,13 +135,13 @@ func UpdateSettings(c *gin.Context) {
 	}
 
 	// Locale not supported.
-	if !config.Main.SupportsLocale(accountLocale) {
-		response.UnsupportedParameterLocale(c, locale, accountLocale, "locale", config.Main.SupportedLocales, errorMessageKey)
+	if !ctxkey.Config.Get(c).SupportsLocale(accountLocale) {
+		response.UnsupportedParameterLocale(c, locale, accountLocale, "locale", ctxkey.Config.Get(c).SupportedLocales, errorMessageKey)
 		return
 	}
 
 	// Timezone not supported.
-	if !timezone.Main.SupportsTimezone(accountTimezone) {
+	if !ctxkey.Timezones.Get(c).SupportsTimezone(accountTimezone) {
 		response.InvalidParameterValue(c, "timezone",
 			t(errorMessageKey),
 			t("error.account.settings.update.timezone.not_supported.reason"),
@@ -145,14 +151,14 @@ func UpdateSettings(c *gin.Context) {
 	}
 
 	// Update the settings of the user.
-	userID := context.GetUserID(c)
-	if err := UpdatedAccountSettings(c, userID, accountLocale, accountTimezone); err != nil {
+	userID := ctxUser.GetID(c)
+	if err := StorageOf(c).Accounts.UpdatedAccountSettings(c, userID, accountLocale, accountTimezone); err != nil {
 		response.InternalServerError(c)
 		return
 	}
 
 	// The auth token is updated too with the latest properties of the user.
-	context.RefreshAuthToken(c)
+	ctxAuthToken.Refresh(c)
 
 	response.OkWithStatus(c, t("status.account.settings.updated"))
 }

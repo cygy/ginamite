@@ -1,82 +1,121 @@
 package functions
 
 import (
-	"github.com/cygy/ginamite/common/errors"
-	"github.com/cygy/ginamite/common/mongo/session"
-	"github.com/cygy/ginamite/plugins/mongodb/model"
+	"context"
 
-	"github.com/gin-gonic/gin"
+	"github.com/cygy/ginamite/common/errors"
+	"github.com/cygy/ginamite/plugins/mongodb/model"
+	"github.com/cygy/ginamite/plugins/mongodb/mongo/store"
 )
 
-// GetEnabledUsersForAdmin : returns the enabled users for the admin panel.
-func GetEnabledUsersForAdmin(c *gin.Context) (interface{}, error) {
-	mongoSession := session.Get(c)
-	users, err := model.GetEnabledUsersForAdmin(mongoSession)
+// Users stores the users managed by the administrators in a database. It is a user.Storage. Create it with NewUsers.
+type Users struct {
+	database func() store.Database
+	settings func() model.Settings
+}
+
+// NewUsers returns the storage of the users working on the database returned by the function, which is called each
+// time the storage needs the database. The abilities which can be given to the users are the ones of the settings.
+func NewUsers(database func() store.Database, settings func() model.Settings) *Users {
+	return &Users{database: database, settings: settings}
+}
+
+// Abilities reports whether a user is an administrator, and returns the abilities of the user. The user is not an
+// administrator and has no ability if the user does not exist.
+func (s *Users) Abilities(ctx context.Context, userID string) (bool, []string, error) {
+	user := &model.User{}
+	if err := user.GetByID(ctx, userID, s.database()); err != nil {
+		if model.IsNotFound(err) || errors.IsNotFound(err) {
+			return false, nil, nil
+		}
+
+		return false, nil, err
+	}
+
+	if !user.IsSaved() {
+		return false, nil, nil
+	}
+
+	return user.IsAdmin, user.Abilities, nil
+}
+
+// GetEnabledUsersForAdmin returns the enabled users for the admin panel.
+func (s *Users) GetEnabledUsersForAdmin(ctx context.Context) (any, error) {
+	users, err := model.GetEnabledUsersForAdmin(ctx, s.database())
 
 	return users, err
 }
 
-// GetDisabledUsersForAdmin : returns the disabled users for the admin panel.
-func GetDisabledUsersForAdmin(c *gin.Context) (interface{}, error) {
-	mongoSession := session.Get(c)
-	users, err := model.GetDisabledUsersForAdmin(mongoSession)
+// GetDisabledUsersForAdmin returns the disabled users for the admin panel.
+func (s *Users) GetDisabledUsersForAdmin(ctx context.Context) (any, error) {
+	users, err := model.GetDisabledUsersForAdmin(ctx, s.database())
 
 	return users, err
 }
 
-// UpdateUserPasswordByAdmin : updates the password of a user by an admin.
-func UpdateUserPasswordByAdmin(c *gin.Context, userID, password string) error {
-	mongoSession := session.Get(c)
-	user := model.UserWithID(userID)
+// UpdatePasswordByAdmin updates the password of a user.
+func (s *Users) UpdatePasswordByAdmin(ctx context.Context, userID, password string) error {
+	user, err := model.UserWithID(userID)
+	if err != nil {
+		return err
+	}
 
-	return user.UpdatePassword(password, false, mongoSession)
+	return user.UpdatePassword(ctx, password, false, s.database())
 }
 
-// UpdateUserInformationsByAdmin : updates the informations of a user by an admin.
-func UpdateUserInformationsByAdmin(c *gin.Context, userID, firstName, lastName, emailAddress string, validEmailAddress bool) error {
-	mongoSession := session.Get(c)
-	user := model.UserWithID(userID)
+// UpdateInformationsByAdmin updates the informations of a user.
+func (s *Users) UpdateInformationsByAdmin(ctx context.Context, userID, firstName, lastName, emailAddress string, validEmailAddress bool) error {
+	user, err := model.UserWithID(userID)
+	if err != nil {
+		return err
+	}
 
-	return user.UpdateAllInformations(firstName, lastName, emailAddress, validEmailAddress, mongoSession)
+	return user.UpdateAllInformations(ctx, firstName, lastName, emailAddress, validEmailAddress, s.database())
 }
 
-// UpdateUserDescriptionByAdmin : updates the description of a user by an admin.
-func UpdateUserDescriptionByAdmin(c *gin.Context, userID, locale, description string) error {
-	mongoSession := session.Get(c)
-	user := model.UserWithID(userID)
+// UpdateDescriptionByAdmin updates the description of a user.
+func (s *Users) UpdateDescriptionByAdmin(ctx context.Context, userID, locale, description string) error {
+	user, err := model.UserWithID(userID)
+	if err != nil {
+		return err
+	}
 
-	return user.UpdatePublicProfile(locale, description, mongoSession)
+	return user.UpdatePublicProfile(ctx, locale, description, s.database())
 }
 
-// UpdateUserSocialByAdmin : updates the social networks of a user by an admin.
-func UpdateUserSocialByAdmin(c *gin.Context, userID, facebook, twitter, instagram string) error {
-	mongoSession := session.Get(c)
-	user := model.UserWithID(userID)
+// UpdateSocialByAdmin updates the social networks of a user.
+func (s *Users) UpdateSocialByAdmin(ctx context.Context, userID, facebook, twitter, instagram string) error {
+	user, err := model.UserWithID(userID)
+	if err != nil {
+		return err
+	}
 
-	return user.UpdateSocialNetworks(facebook, twitter, instagram, mongoSession)
+	return user.UpdateSocialNetworks(ctx, facebook, twitter, instagram, s.database())
 }
 
-// UpdateUserSettingsByAdmin : updates the settings of a user by an admin.
-func UpdateUserSettingsByAdmin(c *gin.Context, userID, locale, timezone string) error {
-	mongoSession := session.Get(c)
-	user := model.UserWithID(userID)
+// UpdateSettingsByAdmin updates the locale and the timezone of a user.
+func (s *Users) UpdateSettingsByAdmin(ctx context.Context, userID, locale, timezone string) error {
+	user, err := model.UserWithID(userID)
+	if err != nil {
+		return err
+	}
 
-	return user.UpdateSettings(locale, timezone, mongoSession)
+	return user.UpdateSettings(ctx, locale, timezone, s.database())
 }
 
-// UpdateUserNotificationsByAdmin : updates the notifications of a user by an admin.
-func UpdateUserNotificationsByAdmin(c *gin.Context, userID string, notifications []string) error {
-	mongoSession := session.Get(c)
-	user := model.UserWithID(userID)
+// UpdateNotificationsByAdmin updates the notifications of a user.
+func (s *Users) UpdateNotificationsByAdmin(ctx context.Context, userID string, notifications []string) error {
+	user, err := model.UserWithID(userID)
+	if err != nil {
+		return err
+	}
 
-	return user.UpdateNotifications(notifications, mongoSession)
+	return user.UpdateNotifications(ctx, notifications, s.database())
 }
 
-// GetTokensForAdmin : returns the user's auth tokens for the admin panel.
-func GetTokensForAdmin(c *gin.Context, userID string) (interface{}, error) {
-	mongoSession := session.Get(c)
-
-	tokens, err := model.GetAuthTokens(userID, mongoSession)
+// GetTokensForAdmin returns the auth tokens of the user, as model.AdminAuthToken, for the admin panel.
+func (s *Users) GetTokensForAdmin(ctx context.Context, userID string) (any, error) {
+	tokens, err := model.GetAuthTokens(ctx, userID, s.database())
 	if err != nil && !errors.IsNotFound(err) {
 		return nil, err
 	}
@@ -89,32 +128,37 @@ func GetTokensForAdmin(c *gin.Context, userID string) (interface{}, error) {
 	return adminTokens, nil
 }
 
-// DeleteTokenByIDByAdmin : deletes a user's auth token by an admin.
-func DeleteTokenByIDByAdmin(c *gin.Context, tokenID string) error {
-	mongoSession := session.Get(c)
-	return model.DeleteAuthTokenByID(tokenID, mongoSession)
+// DeleteTokenByIDByAdmin deletes an auth token of a user.
+func (s *Users) DeleteTokenByIDByAdmin(ctx context.Context, tokenID string) error {
+	return model.DeleteAuthTokenByID(ctx, tokenID, s.database())
 }
 
-// SetAbilitiesToUser : sets the abilities to an user.
-func SetAbilitiesToUser(c *gin.Context, abilities []string, userID string) error {
-	mongoSession := session.Get(c)
-	user := model.UserWithID(userID)
+// SetAbilitiesToUser replaces the abilities of a user.
+func (s *Users) SetAbilitiesToUser(ctx context.Context, userID string, abilities []string) error {
+	user, err := model.UserWithID(userID)
+	if err != nil {
+		return err
+	}
 
-	return user.SetAbilities(abilities, mongoSession)
+	return user.SetAbilities(ctx, abilities, s.settings().AllUserAbilities, s.database())
 }
 
-// AddAbilitiesToUser : adds some abilities to an user.
-func AddAbilitiesToUser(c *gin.Context, abilities []string, userID string) error {
-	mongoSession := session.Get(c)
-	user := model.UserWithID(userID)
+// AddAbilitiesToUser adds some abilities to a user.
+func (s *Users) AddAbilitiesToUser(ctx context.Context, userID string, abilities []string) error {
+	user, err := model.UserWithID(userID)
+	if err != nil {
+		return err
+	}
 
-	return user.AddAbilities(abilities, mongoSession)
+	return user.AddAbilities(ctx, abilities, s.settings().AllUserAbilities, s.database())
 }
 
-// RemoveAbilitiesFromUser : remove some abilities from an user.
-func RemoveAbilitiesFromUser(c *gin.Context, abilities []string, userID string) error {
-	mongoSession := session.Get(c)
-	user := model.UserWithID(userID)
+// RemoveAbilitiesFromUser removes some abilities from a user.
+func (s *Users) RemoveAbilitiesFromUser(ctx context.Context, userID string, abilities []string) error {
+	user, err := model.UserWithID(userID)
+	if err != nil {
+		return err
+	}
 
-	return user.RemoveAbilities(abilities, mongoSession)
+	return user.RemoveAbilities(ctx, abilities, s.database())
 }

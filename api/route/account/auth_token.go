@@ -5,27 +5,27 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cygy/ginamite/api/context"
+	"github.com/cygy/ginamite/common/ctxkey"
+
+	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
+	ctxLocale "github.com/cygy/ginamite/api/context/locale"
+	ctxUser "github.com/cygy/ginamite/api/context/user"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
-	"github.com/cygy/ginamite/api/validator"
 	"github.com/cygy/ginamite/common/authentication"
-	"github.com/cygy/ginamite/common/config"
 	commonErrors "github.com/cygy/ginamite/common/errors"
 	authError "github.com/cygy/ginamite/common/errors/auth"
 	"github.com/cygy/ginamite/common/localization"
-	"github.com/cygy/ginamite/common/notifications"
-	"github.com/cygy/ginamite/common/queue"
-	req "github.com/cygy/ginamite/common/request"
+	"github.com/cygy/ginamite/common/log"
 	res "github.com/cygy/ginamite/common/response"
 
 	"github.com/gin-gonic/gin"
 )
 
-// LoginWithPassword : creates a token to log in an account.
+// LoginWithPassword creates a token to log in an account.
 func LoginWithPassword(c *gin.Context) {
-	if GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser == nil {
-		c.Error(errors.New("undefined function 'GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser'"))
+	if StorageOf(c).Accounts == nil {
+		c.Error(errNoAccounts)
 		response.InternalServerError(c)
 		return
 	}
@@ -36,10 +36,12 @@ func LoginWithPassword(c *gin.Context) {
 		Source     string                `json:"source"`
 		Device     authentication.Device `json:"device"`
 	}
-	request.DecodeBody(c, &jsonBody)
+	if !request.DecodeBody(c, &jsonBody) {
+		return
+	}
 
-	locale := context.GetLocale(c)
-	t := localization.Translate(locale)
+	locale := ctxLocale.Get(c)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 
 	// Identifier is mandatory.
 	identifier := jsonBody.Identifier
@@ -85,46 +87,56 @@ func LoginWithPassword(c *gin.Context) {
 		return
 	}
 
-	user, encryptedPassword, err := GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser(c, identifier)
-	if err != nil || !authentication.ComparePassword(password, encryptedPassword) {
+	user, encryptedPassword, err := StorageOf(c).Accounts.GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser(c, identifier)
+	if err != nil {
+		// Spend the time of a comparison: a login must not be faster when the account does not exist.
+		authentication.DummyCompare(password)
 		canNotLoginError(c, err)
 		return
 	}
+	if !authentication.ComparePassword(password, encryptedPassword) {
+		canNotLoginError(c, nil)
+		return
+	}
 
-	IPAddress := req.GetRealIPAddress(c)
-	createAuthenticationToken(c, user, IPAddress, source, device, authentication.MethodPassword, true, false)
+	upgradePassword(c, user.ID, password, encryptedPassword)
+
+	IPAddress := c.ClientIP()
+	// The errors are already reported to the client.
+	if _, err := createAuthenticationToken(c, user, IPAddress, source, device, authentication.MethodPassword, true, false); err != nil {
+		return
+	}
 }
 
-// LoginWithFacebook : creates a token to log in an account.
+// LoginWithFacebook creates a token to log in an account.
 func LoginWithFacebook(c *gin.Context) {
-	v := validator.NewFacebookTokenValidator(config.Main.Facebook.AppID, config.Main.Facebook.APIVersion, config.Main.Facebook.TimeOut, config.Main.Facebook.RetryCount, config.Main.IsDebugModeEnabled())
-	loginWithThirdParty(c, v)
+	loginWithThirdParty(c, newTokenValidator(c, authentication.MethodFacebook))
 }
 
-// LoginWithGoogle : creates a token to log in an account.
+// LoginWithGoogle creates a token to log in an account.
 func LoginWithGoogle(c *gin.Context) {
-	v := validator.NewGoogleTokenValidator(config.Main.Google.ClientID, config.Main.Google.APIVersion, config.Main.Google.TimeOut, config.Main.Google.RetryCount, config.Main.IsDebugModeEnabled())
-	loginWithThirdParty(c, v)
+	loginWithThirdParty(c, newTokenValidator(c, authentication.MethodGoogle))
 }
 
-// Logout : deletes the token and log out.
+// errNoTokens is logged when a route of the auth tokens is called without storage of the tokens.
+var errNoTokens = errors.New("undefined storage of the auth tokens")
+
+// Logout deletes the token and log out.
 func Logout(c *gin.Context) {
-	if DeleteTokenByID == nil {
-		c.Error(errors.New("undefined function 'DeleteTokenByID'"))
+	if StorageOf(c).Tokens == nil {
+		c.Error(errNoTokens)
 		response.InternalServerError(c)
 		return
 	}
 
-	tokenID := context.GetAuthTokenID(c)
+	tokenID := ctxAuthToken.GetID(c)
 
-	expirationDate := time.Now().Add(time.Duration(config.Main.JWT.TTL) * time.Second)
-	if GetTokenExpirationDate != nil {
-		if date, err := GetTokenExpirationDate(c, tokenID); err != nil {
-			expirationDate = date
-		}
+	expirationDate := time.Now().Add(time.Duration(ctxkey.Config.Get(c).JWT.TTL) * time.Second)
+	if date, err := StorageOf(c).Tokens.GetTokenExpirationDate(c, tokenID); err == nil {
+		expirationDate = date
 	}
 
-	if err := DeleteTokenByID(c, tokenID); err != nil {
+	if err := StorageOf(c).Tokens.DeleteTokenByID(c, tokenID); err != nil {
 		if commonErrors.IsNotFound(err) {
 			response.NoContent(c)
 		} else {
@@ -133,22 +145,22 @@ func Logout(c *gin.Context) {
 		return
 	}
 
-	queue.InvalidAuthToken(tokenID, expirationDate)
+	ctxkey.Queue.Get(c).InvalidAuthToken(tokenID, expirationDate)
 
 	response.NoContent(c)
 }
 
-// GetAuthTokens : gets the tokens of an account.
+// GetAuthTokens gets the tokens of an account.
 func GetAuthTokens(c *gin.Context) {
-	if GetOwnedTokens == nil {
-		c.Error(errors.New("undefined function 'GetOwnedTokens'"))
+	if StorageOf(c).Tokens == nil {
+		c.Error(errNoTokens)
 		response.InternalServerError(c)
 		return
 	}
 
-	userID := context.GetUserID(c)
+	userID := ctxUser.GetID(c)
 
-	tokens, err := GetOwnedTokens(c, userID)
+	tokens, err := StorageOf(c).Tokens.GetOwnedTokens(c, userID)
 	if err != nil {
 		response.SendError(c, err)
 		return
@@ -159,33 +171,33 @@ func GetAuthTokens(c *gin.Context) {
 	})
 }
 
-// DeleteAuthToken : revokes a token from an account.
+// DeleteAuthToken revokes a token from an account.
 func DeleteAuthToken(c *gin.Context) {
 	deleteAuthenticationToken(c, false)
 }
 
-// DeleteAuthTokenWithKey : revokes a token from an account with a key.
+// DeleteAuthTokenWithKey revokes a token from an account with a key.
 func DeleteAuthTokenWithKey(c *gin.Context) {
 	deleteAuthenticationToken(c, true)
 }
 
-// GetAuthToken : gets the token properties of an account.
+// GetAuthToken gets the token properties of an account.
 func GetAuthToken(c *gin.Context) {
-	if GetOwnedTokenByID == nil {
-		c.Error(errors.New("undefined function 'GetOwnedTokenByID'"))
+	if StorageOf(c).Tokens == nil {
+		c.Error(errNoTokens)
 		response.InternalServerError(c)
 		return
 	}
 
 	tokenID := c.Param("id")
 
-	token, tokenOwnerID, err := GetOwnedTokenByID(c, tokenID)
+	token, tokenOwnerID, err := StorageOf(c).Tokens.GetOwnedTokenByID(c, tokenID)
 	if err != nil {
 		response.SendError(c, err)
 		return
 	}
 
-	userID := context.GetUserID(c)
+	userID := ctxUser.GetID(c)
 	if tokenOwnerID != userID {
 		response.NotFound(c)
 		return
@@ -196,22 +208,16 @@ func GetAuthToken(c *gin.Context) {
 	})
 }
 
-// UpdateAuthToken : updates a token of an account.
+// UpdateAuthToken updates a token of an account.
 func UpdateAuthToken(c *gin.Context) {
-	if GetTokenDetailsByID == nil {
-		c.Error(errors.New("undefined function 'GetTokenDetailsByID'"))
+	if StorageOf(c).Tokens == nil {
+		c.Error(errNoTokens)
 		response.InternalServerError(c)
 		return
 	}
 
-	if UpdateTokenByID == nil {
-		c.Error(errors.New("undefined function 'UpdateTokenByID'"))
-		response.InternalServerError(c)
-		return
-	}
-
-	locale := context.GetLocale(c)
-	t := localization.Translate(locale)
+	locale := ctxLocale.Get(c)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 
 	tokenID := c.Param("id")
 
@@ -220,7 +226,9 @@ func UpdateAuthToken(c *gin.Context) {
 		EnableNotification bool     `json:"enable_notification"`
 		Notifications      []string `json:"notifications"`
 	}
-	request.DecodeBody(c, &jsonBody)
+	if !request.DecodeBody(c, &jsonBody) {
+		return
+	}
 
 	// Name is mandatory.
 	name := jsonBody.Name
@@ -235,29 +243,29 @@ func UpdateAuthToken(c *gin.Context) {
 
 	subscribedNotifications := jsonBody.Notifications
 	for _, notification := range subscribedNotifications {
-		if !notifications.IsNotificationSupported(notification) {
+		if !ctxkey.Notifications.Get(c).IsSupported(notification) {
 			message := t("error.auth_token.update.unable.message")
 			reason := t("error.auth_token.update.notifications.invalid.reason", localization.H{"Value": notification})
-			recovery := t("error.auth_token.update.notifications.invalid.recovery", localization.H{"Value": strings.Join(notifications.SupportedNotifications(), ",")})
+			recovery := t("error.auth_token.update.notifications.invalid.recovery", localization.H{"Value": strings.Join(ctxkey.Notifications.Get(c).Supported(), ",")})
 
 			response.InvalidParameterValue(c, "notifications", message, reason, recovery)
 			return
 		}
 	}
 
-	token, err := GetTokenDetailsByID(c, tokenID)
+	token, err := StorageOf(c).Tokens.GetTokenDetailsByID(c, tokenID)
 	if err != nil {
 		response.SendError(c, err)
 		return
 	}
 
-	userID := context.GetUserID(c)
+	userID := ctxUser.GetID(c)
 	if token.UserID != userID {
 		response.NotFound(c)
 		return
 	}
 
-	if err := UpdateTokenByID(c, tokenID, name, jsonBody.EnableNotification, subscribedNotifications); err != nil {
+	if err := StorageOf(c).Tokens.UpdateTokenByID(c, tokenID, name, jsonBody.EnableNotification, subscribedNotifications); err != nil {
 		response.InternalServerError(c)
 		return
 	}
@@ -265,14 +273,14 @@ func UpdateAuthToken(c *gin.Context) {
 	response.OkWithStatus(c, t("status.auth_token.updated"))
 }
 
-// RefreshAuthToken : refreshes a auth token.
+// RefreshAuthToken refreshes a auth token.
 func RefreshAuthToken(c *gin.Context) {
-	tokenID := context.GetAuthTokenID(c)
+	tokenID := ctxAuthToken.GetID(c)
 
-	signedToken, err := authentication.RefreshAuthToken(config.Main.JWT.Secret, config.Main.JWT.SigningMethod, tokenID, time.Duration(config.Main.JWT.TTL))
+	signedToken, err := ctxAuthToken.HooksOf(c).RefreshAuthToken(c, ctxkey.Config.Get(c).JWT.Secret, ctxkey.Config.Get(c).JWT.SigningMethod, tokenID, time.Duration(ctxkey.Config.Get(c).JWT.TTL))
 	if err != nil {
-		locale := context.GetLocale(c)
-		t := localization.Translate(locale)
+		locale := ctxLocale.Get(c)
+		t := ctxkey.Localization.Get(c).Translate(locale)
 
 		response.BadRequestWithError(c, res.Error{
 			Domain:   authError.Domain,
@@ -287,4 +295,23 @@ func RefreshAuthToken(c *gin.Context) {
 	response.Ok(c, response.H{
 		"auth_token": signedToken,
 	})
+}
+
+// upgradePassword encrypts the password of the user again if its hash is weaker than the current one. The failure is
+// logged: the user can sign in anyway.
+func upgradePassword(c *gin.Context, userID, password, encryptedPassword string) {
+	if !authentication.NeedsRehash(encryptedPassword) {
+		return
+	}
+
+	upgraded, err := authentication.EncryptPassword(password)
+	if err == nil {
+		err = StorageOf(c).Accounts.UpdateEncryptedPasswordByUserID(c, userID, upgraded)
+	}
+	if err != nil {
+		log.Error("unable to upgrade the encrypted password",
+			"user", userID,
+			"error", err.Error(),
+		)
+	}
 }

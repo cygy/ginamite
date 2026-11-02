@@ -3,13 +3,13 @@ package account
 import (
 	"errors"
 
-	"github.com/cygy/ginamite/api/context"
+	"github.com/cygy/ginamite/common/ctxkey"
+
+	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
-	"github.com/cygy/ginamite/common/config"
 	commonErrors "github.com/cygy/ginamite/common/errors"
 	authError "github.com/cygy/ginamite/common/errors/auth"
-	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/queue"
 	"github.com/cygy/ginamite/common/random"
 	res "github.com/cygy/ginamite/common/response"
@@ -17,16 +17,22 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// ForgotPassword : sends a mail to reset the password.
+// errNoAccounts is logged when a route needing the accounts is called without storage of the accounts.
+var errNoAccounts = errors.New("undefined storage of the accounts")
+
+// errNoProcesses is logged when a route needing the processes is called without storage of the processes.
+var errNoProcesses = errors.New("undefined storage of the processes")
+
+// ForgotPassword sends a mail to reset the password.
 func ForgotPassword(c *gin.Context) {
-	if GetUserDetailsByIdentifier == nil {
-		c.Error(errors.New("undefined function 'GetUserDetailsByIdentifier'"))
+	if StorageOf(c).Accounts == nil {
+		c.Error(errNoAccounts)
 		response.InternalServerError(c)
 		return
 	}
 
-	if NewForgotPasswordProcessForUser == nil {
-		c.Error(errors.New("undefined function 'NewForgotPasswordProcessForUser'"))
+	if StorageOf(c).Processes == nil {
+		c.Error(errNoProcesses)
 		response.InternalServerError(c)
 		return
 	}
@@ -34,10 +40,12 @@ func ForgotPassword(c *gin.Context) {
 	var jsonBody struct {
 		Identifier string `json:"identifier"` // must be the username or the email address
 	}
-	request.DecodeBody(c, &jsonBody)
+	if !request.DecodeBody(c, &jsonBody) {
+		return
+	}
 
-	locale := context.GetLocale(c)
-	t := localization.Translate(locale)
+	locale := ctxLocale.Get(c)
+	t := ctxkey.Localization.Get(c).Translate(locale)
 
 	// Identifier is mandatory.
 	identifier := jsonBody.Identifier
@@ -50,7 +58,7 @@ func ForgotPassword(c *gin.Context) {
 		return
 	}
 
-	user, err := GetUserDetailsByIdentifier(c, identifier)
+	user, err := StorageOf(c).Accounts.GetUserDetailsByIdentifier(c, identifier)
 	if err != nil {
 		if commonErrors.IsNotFound(err) {
 			message := t("error.forgot_password.account.not_found.message")
@@ -71,7 +79,7 @@ func ForgotPassword(c *gin.Context) {
 	}
 
 	processPrivateKey := random.String(64)
-	processID, err := NewForgotPasswordProcessForUser(c, user.ID, processPrivateKey)
+	processID, err := StorageOf(c).Processes.NewForgotPasswordProcessForUser(c, user.ID, processPrivateKey)
 	if err != nil {
 		response.InternalServerError(c)
 		return
@@ -79,7 +87,7 @@ func ForgotPassword(c *gin.Context) {
 
 	// The email address must be validated by the user.
 	// In Env test, we return the code and the user ID.
-	if config.Main.IsTestEnvironment() {
+	if ctxkey.Config.Get(c).IsTestEnvironment() {
 		response.Ok(c, response.H{
 			"status": t("status.forgot_password.email_sent"),
 			"id":     processID,
@@ -88,7 +96,7 @@ func ForgotPassword(c *gin.Context) {
 		return
 	}
 
-	queue.SendMail(queue.MessageMailForgotPasswordConfirmation, queue.MailForgotPasswordConfirmation{
+	ctxkey.Queue.Get(c).SendMail(queue.MessageMailForgotPasswordConfirmation, queue.MailForgotPasswordConfirmation{
 		EmailAddress: user.EmailAddress,
 		Username:     user.Username,
 		Locale:       user.Locale,
@@ -98,12 +106,12 @@ func ForgotPassword(c *gin.Context) {
 	response.OkWithStatus(c, t("status.forgot_password.email_sent"))
 }
 
-// ValidateForgotPassword : validates the reset password.
+// ValidateForgotPassword validates the reset password.
 func ValidateForgotPassword(c *gin.Context) {
 	validateOrCancelForgotPassword(c, true)
 }
 
-// CancelForgotPassword : cancels the reset password.
+// CancelForgotPassword cancels the reset password.
 func CancelForgotPassword(c *gin.Context) {
 	validateOrCancelForgotPassword(c, false)
 }

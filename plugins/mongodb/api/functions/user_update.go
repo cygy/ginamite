@@ -1,40 +1,51 @@
 package functions
 
 import (
-	"github.com/cygy/ginamite/common/mongo/session"
-	"github.com/cygy/ginamite/plugins/mongodb/model"
+	"context"
 
-	"github.com/gin-gonic/gin"
+	"github.com/cygy/ginamite/plugins/mongodb/model"
 )
 
-// UpdateUserPassword : update the password of an user.
-func UpdateUserPassword(c *gin.Context, userID, password string, isPasswordEncrypted bool) error {
-	mongoSession := session.Get(c)
-	user := model.UserWithID(userID)
+// UpdateUserPassword updates the password of a user.
+func (a *Accounts) UpdateUserPassword(ctx context.Context, userID, password string, isPasswordEncrypted bool) error {
+	mongoSession := a.database()
+	user, err := model.UserWithID(userID)
+	if err != nil {
+		return err
+	}
 
-	return user.UpdatePassword(password, isPasswordEncrypted, mongoSession)
+	return user.UpdatePassword(ctx, password, isPasswordEncrypted, mongoSession)
 }
 
-// UpdateUserEmailAddress : update the email address of an user.
-func UpdateUserEmailAddress(c *gin.Context, userID, emailAddress string) error {
-	mongoSession := session.Get(c)
-	user := model.UserWithID(userID)
+// UpdateUserEmailAddress updates the email address of a user.
+func (a *Accounts) UpdateUserEmailAddress(ctx context.Context, userID, emailAddress string) error {
+	mongoSession := a.database()
+	user, err := model.UserWithID(userID)
+	if err != nil {
+		return err
+	}
 
-	return user.UpdateEmailAddress(emailAddress, mongoSession)
+	return user.UpdateEmailAddress(ctx, emailAddress, mongoSession)
 }
 
-// UserEmailAddressIsVerified : the email address of an user is verified.
-func UserEmailAddressIsVerified(c *gin.Context, userID string) error {
-	mongoSession := session.Get(c)
-	user := model.UserWithID(userID)
+// UserEmailAddressIsVerified marks the email address of the user as verified.
+func (a *Accounts) UserEmailAddressIsVerified(ctx context.Context, userID string) error {
+	mongoSession := a.database()
+	user, err := model.UserWithID(userID)
+	if err != nil {
+		return err
+	}
 
-	return user.SetEmailAddressValid(mongoSession)
+	return user.SetEmailAddressValid(ctx, mongoSession)
 }
 
-// UpdateUserSocialNetworks : update the social network links of an user.
-func UpdateUserSocialNetworks(c *gin.Context, userID, facebook, twitter, instagram string) error {
-	mongoSession := session.Get(c)
-	user := model.UserWithID(userID)
+// UpdateUserSocialNetworks updates the social network links of a user.
+func (a *Accounts) UpdateUserSocialNetworks(ctx context.Context, userID, facebook, twitter, instagram string) error {
+	mongoSession := a.database()
+	user, err := model.UserWithID(userID)
+	if err != nil {
+		return err
+	}
 
-	return user.UpdateSocialNetworks(facebook, twitter, instagram, mongoSession)
+	return user.UpdateSocialNetworks(ctx, facebook, twitter, instagram, mongoSession)
 }

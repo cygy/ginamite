@@ -1,8 +1,9 @@
+// Package response defines the JSON structures returned by the API.
 package response
 
 import "fmt"
 
-// Error : error with more details.
+// Error is an error with more details, serialized in the responses.
 type Error struct {
 	Code     int    `json:"code"`
 	Domain   string `json:"domain"`
@@ -12,12 +13,12 @@ type Error struct {
 	Field    string `json:"field,omitempty"`
 }
 
-// Error : returns a string.
+// Error returns the message, the reason and the recovery of the error, separated by spaces.
 func (e *Error) Error() string {
 	return fmt.Sprintf("%s %s %s", e.Message, e.Reason, e.Recovery)
 }
 
-// IsNil : returns true if it is an empty struct.
+// IsNil reports whether the error is empty, i.e. has neither code nor domain.
 func (e *Error) IsNil() bool {
 	return e.Code == 0 && len(e.Domain) == 0
 }

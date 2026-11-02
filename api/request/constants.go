@@ -1,9 +1,17 @@
 package request
 
 const (
-	// OffsetRequestParameterName name of the offset parameter in a request.
-	OffsetRequestParameterName = "offset"
+	// storedOffsetRequestParameterName name of the offset parameter in the context.
+	storedOffsetRequestParameterName = "_offset"
 
-	// LimitRequestParameterName name of the limit parameter in a request.
-	LimitRequestParameterName = "limit"
+	// storedLimitRequestParameterName name of the limit parameter in the context.
+	storedLimitRequestParameterName = "_limit"
+)
+
+const (
+	// OffsetParameterName name of the offset parameter in a request.
+	OffsetParameterName = "offset"
+
+	// LimitParameterName name of the limit parameter in a request.
+	LimitParameterName = "limit"
 )

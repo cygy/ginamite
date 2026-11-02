@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  schedule:
+    # Every Monday: a new vulnerability can affect an unchanged code.
+    - cron: "0 6 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: make check
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - name: Install gofumpt
+        run: go install mvdan.cc/gofumpt@v0.12.0
+      - name: Install golangci-lint
+        run: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0
+      - name: Check
+        run: make check
+
+  integration:
+    name: integration tests
+    runs-on: ubuntu-24.04
+    services:
+      mongo:
+        image: mongo:9
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.runCommand({ping:1})'"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+      # A single-node, single-broker cluster: the replication factors of its own topics are lowered to 1, otherwise
+      # their partitions stay leaderless and every consumer group hangs forever.
+      kafka:
+        image: apache/kafka:4.4.0
+        ports:
+          - 9092:9092
+        env:
+          KAFKA_NODE_ID: 0
+          KAFKA_PROCESS_ROLES: controller,broker
+          KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+          KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+          KAFKA_CONTROLLER_QUORUM_VOTERS: 0@localhost:9093
+          KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+          KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+          KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+          KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+          KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+          KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+          CLUSTER_ID: ciWo7IWazngRchmPES6q5A
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - name: Wait for Kafka
+        run: |
+          for i in $(seq 1 30); do
+            (exec 3<>/dev/tcp/localhost/9092) 2>/dev/null && exit 0
+            sleep 1
+          done
+          echo "Kafka did not become reachable on localhost:9092" >&2
+          exit 1
+      - name: Test
+        run: make integration
+
+  vulnerabilities:
+    name: govulncheck
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - name: Scan
+        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
