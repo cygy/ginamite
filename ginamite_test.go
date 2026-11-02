@@ -22,19 +22,27 @@ func init() {
 	log.Main = logger.WithField("server", "test")
 }
 
-type testPlugin struct{ configured []*Server }
+type testPlugin struct {
+	configured []*Server
+	err        error // Returned by Configure.
+}
 
-func (p *testPlugin) Configure(s *Server) { p.configured = append(p.configured, s) }
+func (p *testPlugin) Configure(s *Server) error {
+	p.configured = append(p.configured, s)
+	return p.err
+}
 
 // testConnector is a Plugin which records its connection into events.
 type testConnector struct {
 	testPlugin
-	name   string
-	events *[]string
+	name       string
+	events     *[]string
+	connectErr error // Returned by Connect.
 }
 
-func (c *testConnector) Connect(configuration *config.Configuration) {
+func (c *testConnector) Connect(configuration *config.Configuration) error {
 	*c.events = append(*c.events, "connect "+c.name+" "+configuration.Database.Service)
+	return c.connectErr
 }
 func (c *testConnector) Close() { *c.events = append(*c.events, "close "+c.name) }
 

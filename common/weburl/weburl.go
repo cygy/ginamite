@@ -50,24 +50,15 @@ func (conf *Configuration) GetURL(key, locale string) string {
 // Initialize loads the routes from the YAML file and computes their absolute paths,
 // prefixing the paths with webHost and replacing the locale keyword.
 // A route is also reachable with the language of a locale ("fr" for "fr-fr").
-// It panics, after logging the error, if the file can not be read or parsed.
-func (conf *Configuration) Initialize(file, webHost string) bool {
-	// Read the configuration file.
+// It returns an error if the file can not be read or parsed.
+func (conf *Configuration) Initialize(file, webHost string) error {
 	source, err := os.ReadFile(file)
 	if err != nil {
-		log.WithFields(logrus.Fields{
-			"path":  file,
-			"error": err.Error(),
-		}).Panic("unable to load web urls")
+		return fmt.Errorf("unable to read the routes: %w", err)
 	}
 
-	// Get the routes from the file.
-	err = yaml.Unmarshal(source, conf)
-	if err != nil {
-		log.WithFields(logrus.Fields{
-			"path":  file,
-			"error": err.Error(),
-		}).Panic("unable to load web urls")
+	if err := yaml.Unmarshal(source, conf); err != nil {
+		return fmt.Errorf("unable to load the routes %s: %w", file, err)
 	}
 
 	// Normalize the routes.
@@ -90,7 +81,7 @@ func (conf *Configuration) Initialize(file, webHost string) bool {
 		conf.Routes[k] = r
 	}
 
-	return true
+	return nil
 }
 
 // HasVariable reports whether a path of the route is generic, i.e. contains some variables.
@@ -106,9 +97,11 @@ func (route *Route) HasVariable() bool {
 
 // Load returns the configuration of the web routes read from the YAML file, with the absolute paths computed.
 // See Configuration.Initialize.
-func Load(file, webHost string) *Configuration {
+func Load(file, webHost string) (*Configuration, error) {
 	conf := NewConfiguration()
-	conf.Initialize(file, webHost)
+	if err := conf.Initialize(file, webHost); err != nil {
+		return nil, err
+	}
 
-	return conf
+	return conf, nil
 }

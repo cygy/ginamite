@@ -20,7 +20,7 @@ func TestEngine_Initialize(t *testing.T) {
 	}
 }
 
-func TestEngine_Initialize_Panics(t *testing.T) {
+func TestEngine_Initialize_Errors(t *testing.T) {
 	tests := []struct {
 		name  string
 		files map[string]string
@@ -34,13 +34,9 @@ func TestEngine_Initialize_Panics(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			dir := writeTranslations(t, tt.files)
 
-			defer func() {
-				if recover() == nil {
-					t.Error("Initialize() must panic after logging the error")
-				}
-			}()
-
-			NewEngine().Initialize(dir, []string{"fr-FR"})
+			if err := NewEngine().Initialize(dir, []string{"fr-FR"}); err == nil {
+				t.Error("Initialize() must return an error")
+			}
 		})
 	}
 }

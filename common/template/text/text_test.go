@@ -34,7 +34,7 @@ func render(t *testing.T, templates *template.Template, name string) string {
 }
 
 func TestLoadTemplates(t *testing.T) {
-	templates := LoadTemplates(writeTemplates(t, "Hello {{.Name}}"))
+	templates := must(t)(LoadTemplates(writeTemplates(t, "Hello {{.Name}}")))
 
 	if got := render(t, templates, "hello.txt"); got != "Hello John" {
 		t.Errorf("got %q", got)
@@ -42,7 +42,7 @@ func TestLoadTemplates(t *testing.T) {
 }
 
 func TestLoadTemplatesWithDelimiters(t *testing.T) {
-	templates := LoadTemplatesWithDelimiters(writeTemplates(t, "Hello [[.Name]] {{.Name}}"), "[[", "]]")
+	templates := must(t)(LoadTemplatesWithDelimiters(writeTemplates(t, "Hello [[.Name]] {{.Name}}"), "[[", "]]"))
 
 	if got := render(t, templates, "hello.txt"); got != "Hello John {{.Name}}" {
 		t.Errorf("got %q", got)
@@ -50,11 +50,21 @@ func TestLoadTemplatesWithDelimiters(t *testing.T) {
 }
 
 func TestLoadTemplates_InvalidTemplate(t *testing.T) {
-	defer func() {
-		if recover() == nil {
-			t.Error("LoadTemplates() must panic on an invalid template")
-		}
-	}()
+	if templates, err := LoadTemplates(writeTemplates(t, "{{.Name")); err == nil || templates != nil {
+		t.Errorf("LoadTemplates() = %v, %v, want an error", templates, err)
+	}
+}
 
-	LoadTemplates(writeTemplates(t, "{{.Name"))
+// must returns a function returning the templates, which fails the test on an error.
+func must(t *testing.T) func(*template.Template, error) *template.Template {
+	t.Helper()
+
+	return func(templates *template.Template, err error) *template.Template {
+		t.Helper()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		return templates
+	}
 }

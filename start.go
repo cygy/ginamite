@@ -1,6 +1,7 @@
 package ginamite
 
 import (
+	"errors"
 	"io"
 	"os"
 	"slices"
@@ -17,39 +18,54 @@ import (
 // dedupSize is the number of messages the consumers remember to ignore the ones delivered twice.
 const dedupSize = 10000
 
-// Start parses the command line arguments, sets up the configuration, the translations and the services needed by the
-// chosen server, configures the plugins, then starts the API, worker or web server. It exits the process if the
-// help is requested or if the set up fails. It returns once the server stopped, after the consumers of Kafka are
-// stopped, the producer is flushed and the plugins are closed.
-func (s *Server) Start() {
+// Run parses the command line arguments, sets up the configuration, the translations and the services needed by the
+// chosen server, configures the plugins, then runs the API, worker or web server, or the command of a plugin. It
+// returns nil at once if the help is requested, and an error if the arguments or the set up are invalid. Otherwise it
+// returns once the server stopped, after the consumers of the broker are stopped, the producer is flushed and the
+// plugins are closed.
+//
+//	if err := server.Run(); err != nil {
+//		log.Fatal(err)
+//	}
+func (s *Server) Run() error {
 	f := flags.NewFlags()
-	if !f.Parse(s.ApplicationConfiguration.FileRequired) {
-		os.Exit(0)
-		return
+	ok, err := f.Parse(s.ApplicationConfiguration.FileRequired)
+	if err != nil || !ok {
+		return err
 	}
 
-	if handled, err := s.runCommand(f, os.Stdout); handled {
-		if err != nil {
-			log.WithField("error", err).Fatal("the command failed")
-		}
+	return s.run(f, os.Stdout)
+}
 
-		return
+// run runs the command or the server chosen by the arguments. The output of a command is written to out.
+func (s *Server) run(f *flags.Flags, out io.Writer) error {
+	if handled, err := s.runCommand(f, out); handled {
+		return err
 	}
 
 	if f.DLQ != "" {
-		log.Fatal("no plugin handles the command on the dead letters: add the plugin of the message broker")
-		return
+		return errors.New("no plugin handles the command on the dead letters: add the plugin of the message broker")
 	}
 
-	s.initializeConfiguration(f)
+	server := s.specializedServer(f)
+	if server == nil {
+		return errors.New("no server selected: use one of the arguments -api, -worker or -web")
+	}
+
+	if err := s.initializeConfiguration(f); err != nil {
+		return err
+	}
 
 	if f.IsAPIServer || f.IsWorkerServer {
-		defer s.connectPlugins(s.Config)()
+		closeAll, err := s.connectPlugins(s.Config)
+		if err != nil {
+			return err
+		}
+		defer closeAll()
 
 		timezones, err := timezone.Load(s.Config.TimezonesFilePath)
 		if err != nil {
-			log.WithField("error", err).Fatal("unable to initialize the timezones")
-			return
+			return err
 		}
 
 		s.Timezones = timezones
@@ -59,25 +75,20 @@ func (s *Server) Start() {
 	if f.IsWebServer {
 		content, err := robots.Load(s.Config.RobotsFilePath)
 		if err != nil {
-			log.WithField("error", err).Fatal("unable to initialize the robots.txt file")
-			return
+			return err
 		}
 
 		s.Web.Robots = content
 	}
 
-	specializedServer := s.specializedServer(f)
-	if specializedServer == nil {
-		log.Fatal("no server selected: use one of the arguments -api, -worker or -web")
-		return
-	}
-
 	// The plugins are configured first: their functions and their deduplicator are ready when the first message comes.
 	for _, plugin := range s.plugins {
-		plugin.Configure(s)
+		if err := plugin.Configure(s); err != nil {
+			return err
+		}
 	}
 
-	if s.startBroker(specializedServer.CreateConsumers()) {
+	if s.startBroker(server.CreateConsumers()) {
 		// Registered after the plugins are connected: the consumers stop, and the producer is flushed, before the
 		// plugins close their connections.
 		defer s.Broker.Close()
@@ -85,7 +96,7 @@ func (s *Server) Start() {
 
 	defer s.startMetrics()()
 
-	specializedServer.Start()
+	return server.Run()
 }
 
 // runCommand asks the plugins which are Commanders to run the command of the arguments, and reports whether one did.
@@ -103,12 +114,12 @@ func (s *Server) runCommand(f *flags.Flags, out io.Writer) (handled bool, err er
 
 // initializeConfiguration sets up the main logger, the server configuration and the translations, which are shared
 // with the specialized servers, and the application configuration.
-func (s *Server) initializeConfiguration(f *flags.Flags) {
+func (s *Server) initializeConfiguration(f *flags.Flags) error {
 	log.Initialize(f.ServerName, f.Environment == environment.Production)
 
 	s.Config = config.NewConfiguration()
 	if err := s.Config.Initialize(f.ServerConfigurationFile, f.Environment, f.Version); err != nil {
-		log.WithField("error", err).Fatal("unable to initialize the server configuration")
+		return err
 	}
 	s.API.Config, s.Worker.Config, s.Web.Config = s.Config, s.Config, s.Config
 
@@ -116,26 +127,38 @@ func (s *Server) initializeConfiguration(f *flags.Flags) {
 		s.ApplicationConfiguration.InitializeFunc(f.ApplicationConfigurationFile)
 	}
 
-	s.Localization = localization.Load(s.Config.LocalizationPath, s.Config.SupportedLocales)
-	s.API.Localization, s.Worker.Localization, s.Web.Localization = s.Localization, s.Localization, s.Localization
+	engine, err := localization.Load(s.Config.LocalizationPath, s.Config.SupportedLocales)
+	if err != nil {
+		return err
+	}
+	s.Localization = engine
+	s.API.Localization, s.Worker.Localization, s.Web.Localization = engine, engine, engine
+
+	return nil
 }
 
-// connectPlugins connects, with the configuration, the plugins which are Connectors, and returns the function which closes them, in the reverse
-// order.
-func (s *Server) connectPlugins(configuration *config.Configuration) (closeAll func()) {
+// connectPlugins connects, with the configuration, the plugins which are Connectors, and returns the function which
+// closes them, in the reverse order. If a connection fails, it closes the connectors already connected and returns
+// the error.
+func (s *Server) connectPlugins(configuration *config.Configuration) (closeAll func(), err error) {
 	var connected []Connector
-	for _, plugin := range s.plugins {
-		if connector, ok := plugin.(Connector); ok {
-			connector.Connect(configuration)
-			connected = append(connected, connector)
-		}
-	}
-
-	return func() {
+	closeAll = func() {
 		for _, c := range slices.Backward(connected) {
 			c.Close()
 		}
 	}
+
+	for _, plugin := range s.plugins {
+		if connector, ok := plugin.(Connector); ok {
+			if err := connector.Connect(configuration); err != nil {
+				closeAll()
+				return nil, err
+			}
+			connected = append(connected, connector)
+		}
+	}
+
+	return closeAll, nil
 }
 
 // specializedServer returns the server chosen by the arguments, with its routes file if it uses one, or nil if none is.

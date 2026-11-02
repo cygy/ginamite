@@ -49,14 +49,10 @@ func TestSession_Initialize_Unreachable(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			defer func() {
-				if recover() == nil {
-					t.Error("Initialize() must panic after logging the error")
-				}
-			}()
-
 			// The timeout is in seconds.
-			NewSession().Initialize("127.0.0.1:1", "app", tt.username, "secret", 1)
+			if err := NewSession().Initialize("127.0.0.1:1", "app", tt.username, "secret", 1); err == nil {
+				t.Error("Initialize() must return an error")
+			}
 		})
 	}
 }

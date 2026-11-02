@@ -37,19 +37,9 @@ func Error(args ...any) {
 	Main.Error(args...)
 }
 
-// Fatal logs a message at the fatal level with the main logger, then exits the process.
-func Fatal(args ...any) {
-	Main.Fatal(args...)
-}
-
 // Info logs a message at the info level with the main logger.
 func Info(args ...any) {
 	Main.Info(args...)
-}
-
-// Panic logs a message at the panic level with the main logger, then panics.
-func Panic(args ...any) {
-	Main.Panic(args...)
 }
 
 // Print logs a message with the main logger.

@@ -5,16 +5,15 @@
 package html
 
 import (
+	"fmt"
 	"html/template"
 	"os"
 
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/localization"
-	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/web/context"
 
 	"github.com/gin-gonic/gin"
-	"github.com/sirupsen/logrus"
 	yaml "gopkg.in/yaml.v3"
 )
 
@@ -51,34 +50,32 @@ type Settings struct {
 }
 
 // Load loads the routes file and prepares the pages for each supported locale.
-// It panics, after logging the error, if the file can not be read or parsed.
-func Load(file string, settings Settings) *Configuration {
-	conf := read(file)
+// It returns an error if the file can not be read or parsed.
+func Load(file string, settings Settings) (*Configuration, error) {
+	conf, err := read(file)
+	if err != nil {
+		return nil, err
+	}
+
 	conf.settings = settings
 	conf.prepare()
 
-	return conf
+	return conf, nil
 }
 
-// read reads the routes file. It panics, after logging the error, if the file can not be read or parsed.
-func read(file string) *Configuration {
+// read reads the routes file.
+func read(file string) (*Configuration, error) {
 	source, err := os.ReadFile(file)
 	if err != nil {
-		log.WithFields(logrus.Fields{
-			"path":  file,
-			"error": err.Error(),
-		}).Panic("unable to load routes")
+		return nil, fmt.Errorf("unable to read the routes: %w", err)
 	}
 
 	conf := &Configuration{}
 	if err := yaml.Unmarshal(source, conf); err != nil {
-		log.WithFields(logrus.Fields{
-			"path":  file,
-			"error": err.Error(),
-		}).Panic("unable to load routes")
+		return nil, fmt.Errorf("unable to load the routes %s: %w", file, err)
 	}
 
-	return conf
+	return conf, nil
 }
 
 // prepare computes the URLs and the localized pages of the routes, and the paths of the async calls.

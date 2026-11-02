@@ -113,7 +113,9 @@ func TestServer_SetUp(t *testing.T) {
 	})
 
 	engine := gin.New()
-	server.setUp(engine)
+	if err := server.setUp(engine); err != nil {
+		t.Fatal(err)
+	}
 
 	tests := []struct {
 		target string
@@ -156,7 +158,9 @@ func TestServer_SetUp_AppliesTheConfigurationOfTheDefaultRoutes(t *testing.T) {
 	}
 
 	engine := gin.New()
-	server.setUp(engine)
+	if err := server.setUp(engine); err != nil {
+		t.Fatal(err)
+	}
 
 	rec := httptest.NewRecorder()
 	engine.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/robots.txt", nil))
@@ -222,7 +226,7 @@ func TestNewEngine(t *testing.T) {
 	}
 }
 
-func TestServer_Start(t *testing.T) {
+func TestServer_Run(t *testing.T) {
 	type call struct {
 		tls               bool
 		address           string
@@ -246,8 +250,6 @@ func TestServer_Start(t *testing.T) {
 			server, conf := newTestServer(t, environment.Test)
 			conf.Server.Port = 8443
 			conf.Server.SSL = config.SSLConfiguration{Enabled: tt.ssl, CertPath: "cert.pem", KeyPath: "key.pem"}
-			webtest.Hook.Reset()
-
 			var got *call
 			oldServe, oldServeTLS := listenAndServe, listenAndServeTLS
 			t.Cleanup(func() { listenAndServe, listenAndServeTLS = oldServe, oldServeTLS })
@@ -260,8 +262,11 @@ func TestServer_Start(t *testing.T) {
 				return tt.err
 			}
 
-			server.Start()
+			err := server.Run()
 
+			if !errors.Is(err, tt.err) || (err == nil) != (tt.err == nil) {
+				t.Errorf("Run() = %v, want %v", err, tt.err)
+			}
 			if got == nil {
 				t.Fatal("the server did not listen")
 			}
@@ -274,13 +279,27 @@ func TestServer_Start(t *testing.T) {
 			if rec.Code != http.StatusOK {
 				t.Errorf("the routes are not loaded: status = %d", rec.Code)
 			}
+		})
+	}
+}
 
-			stopped := false
-			for _, entry := range webtest.Hook.AllEntries() {
-				stopped = stopped || entry.Message == "the server stopped"
-			}
-			if stopped != (tt.err != nil) {
-				t.Errorf("stop logged = %v, want %v", stopped, tt.err != nil)
+func TestServer_Run_SetUpErrors(t *testing.T) {
+	tests := []struct {
+		name  string
+		setup func(*Server, *config.Configuration)
+		want  string
+	}{
+		{"missing templates", func(_ *Server, conf *config.Configuration) { conf.TemplatesPath = t.TempDir() }, "templates"},
+		{"missing routes", func(server *Server, _ *config.Configuration) { server.RoutesFile = "missing.yaml" }, "routes"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server, conf := newTestServer(t, environment.Test)
+			tt.setup(server, conf)
+
+			if err := server.Run(); err == nil || !strings.Contains(err.Error(), tt.want) {
+				t.Errorf("Run() = %v, want an error about %q", err, tt.want)
 			}
 		})
 	}

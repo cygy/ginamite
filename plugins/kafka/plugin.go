@@ -1,11 +1,11 @@
 package kafka
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/cygy/ginamite"
 	"github.com/cygy/ginamite/common/config"
-	"github.com/cygy/ginamite/common/log"
 )
 
 // Service is the name of Kafka as a broker.Service of the configuration.
@@ -24,17 +24,16 @@ func NewPlugin() *Plugin {
 	return &Plugin{}
 }
 
-// Configure sets the Kafka client, built from the configuration, as the broker of the server. It stops the process if
+// Configure sets the Kafka client, built from the configuration, as the broker of the server. It returns an error if
 // the Kafka settings are invalid.
-func (p *Plugin) Configure(s *ginamite.Server) {
+func (p *Plugin) Configure(s *ginamite.Server) error {
 	if !enabled(s.Config) {
-		return
+		return nil
 	}
 
 	options, err := optionsFrom(s.Config)
 	if err != nil {
-		log.WithField("error", err).Fatal("invalid kafka configuration")
-		return
+		return fmt.Errorf("invalid kafka configuration: %w", err)
 	}
 
 	createTopics(s.Config, s.Config.Broker.Host, s.Config.Broker.Port, options)
@@ -46,6 +45,8 @@ func (p *Plugin) Configure(s *ginamite.Server) {
 	client.MaxAttempts = max(s.Config.Kafka.MaxAttempts, 1)
 	client.RetryDelay = time.Duration(s.Config.Kafka.RetryDelay) * time.Millisecond
 	s.UseBroker(client)
+
+	return nil
 }
 
 // enabled reports whether the configuration chooses Kafka as the broker, and has its address.

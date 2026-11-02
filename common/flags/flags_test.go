@@ -105,12 +105,17 @@ func TestFlags_Parse(t *testing.T) {
 	os.Args = []string{"cmd", "-web", "-name", "srv", "-conf-server", "s.yml", "-routes", "r.yml"}
 
 	f := NewFlags()
-	if !f.Parse(false) || !f.IsWebServer || f.ServerName != "srv" {
-		t.Errorf("Parse() failed: %+v", f)
+	if ok, err := f.Parse(false); !ok || err != nil || !f.IsWebServer || f.ServerName != "srv" {
+		t.Errorf("Parse() = %v, %v: %+v", ok, err, f)
 	}
 
 	os.Args = []string{"cmd", "-help"}
-	if NewFlags().Parse(false) {
-		t.Error("Parse() must return false when the help is requested")
+	if ok, err := NewFlags().Parse(false); ok || err != nil {
+		t.Errorf("Parse() = %v, %v, want false when the help is requested", ok, err)
+	}
+
+	os.Args = []string{"cmd", "-web"}
+	if ok, err := NewFlags().Parse(false); ok || err == nil {
+		t.Errorf("Parse() = %v, %v, want an error without name", ok, err)
 	}
 }

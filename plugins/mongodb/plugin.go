@@ -83,19 +83,24 @@ var _ ginamite.Connector = (*Plugin)(nil)
 
 // Connect opens the MongoDB session with the database settings of the main configuration. It does nothing if
 // the database service of the configuration is not MongoDB. The server calls it before Configure, if it is the API
-// or the worker. If the server is not reachable, it panics after logging the error.
-func (p *Plugin) Connect(configuration *config.Configuration) {
+// or the worker. It returns an error if the server is not reachable.
+func (p *Plugin) Connect(configuration *config.Configuration) error {
 	if !configuration.IsMongoDBDatabase() {
-		return
+		return nil
 	}
 
 	database := configuration.Database
-	p.session = session.NewSession()
-	p.session.Initialize(database.Host+":"+strconv.Itoa(database.Port),
+	s := session.NewSession()
+	if err := s.Initialize(database.Host+":"+strconv.Itoa(database.Port),
 		database.Database,
 		database.Username,
 		database.Password,
-		time.Duration(database.TimeOut))
+		time.Duration(database.TimeOut)); err != nil {
+		return err
+	}
+	p.session = s
+
+	return nil
 }
 
 // Close closes the MongoDB session, if it is open.
@@ -108,10 +113,12 @@ func (p *Plugin) Close() {
 // Configure sets the functions of the plugin on the worker and the API of the server, and the deduplicator of the
 // messages, which remembers them in the database. The API saves the settings of
 // the plugin, see Settings, in the context of the requests, and adds the routes of the plugin.
-func (p *Plugin) Configure(server *ginamite.Server) {
+func (p *Plugin) Configure(server *ginamite.Server) error {
 	p.configureWorker(server.Worker)
 	p.configureAPI(server.API)
 	server.Deduplicator = p.workers().Deduplicator()
+
+	return nil
 }
 
 // Settings returns the settings of the plugin, with the extra abilities added to the default ones.

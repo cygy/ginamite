@@ -127,7 +127,7 @@ func Setup(t *testing.T) *gin.Engine {
 	}, engine)
 
 	file := webtest.WriteFile(t, t.TempDir(), "routes.yaml", routes)
-	Pages = html.Load(file, html.Settings{
+	pages, err := html.Load(file, html.Settings{
 		WebHost:         WebHost,
 		StaticHost:      StaticHost,
 		APIHost:         "https://api.test",
@@ -138,7 +138,10 @@ func Setup(t *testing.T) *gin.Engine {
 		Localization:    webtest.Localization,
 		Templates:       templates,
 	})
-	pages := Pages
+	if err != nil {
+		t.Fatal(err)
+	}
+	Pages = pages
 	t.Cleanup(func() { Pages = nil })
 
 	engine.Use(html.Inject(pages), ctxlocalization.Inject(webtest.Localization))

@@ -47,7 +47,6 @@ func TestShorthands(t *testing.T) {
 		{"Warn", func() { Warn("m") }, logrus.WarnLevel},
 		{"Warning", func() { Warning("m") }, logrus.WarnLevel},
 		{"Error", func() { Error("m") }, logrus.ErrorLevel},
-		{"Fatal", func() { Fatal("m") }, logrus.FatalLevel},
 		{"WithField", func() { WithField("k", "v").Info("m") }, logrus.InfoLevel},
 		{"WithFields", func() { WithFields(logrus.Fields{"k": "v"}).Info("m") }, logrus.InfoLevel},
 	}
@@ -66,19 +65,4 @@ func TestShorthands(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestPanic(t *testing.T) {
-	hook := useHook(t)
-
-	defer func() {
-		if recover() == nil {
-			t.Error("Panic() must panic")
-		}
-		if entry := hook.LastEntry(); entry == nil || entry.Level != logrus.PanicLevel {
-			t.Errorf("entry = %+v, want a panic entry", entry)
-		}
-	}()
-
-	Panic("m")
 }

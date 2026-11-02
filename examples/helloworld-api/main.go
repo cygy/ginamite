@@ -2,6 +2,7 @@
 package main
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/cygy/ginamite"
@@ -17,7 +18,9 @@ func main() {
 		group.GET("/hello", hello)
 	})
 
-	server.Start()
+	if err := server.Run(); err != nil {
+		log.Fatal(err)
+	}
 }
 
 // hello answers {"hello":"world"}.

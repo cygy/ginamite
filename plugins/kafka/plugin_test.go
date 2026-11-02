@@ -275,7 +275,9 @@ func TestEnabled(t *testing.T) {
 func TestPlugin_Configure(t *testing.T) {
 	t.Run("without service", func(t *testing.T) {
 		s := ginamite.NewServer()
-		NewPlugin().Configure(s)
+		if err := NewPlugin().Configure(s); err != nil {
+			t.Fatal(err)
+		}
 
 		if s.Broker != nil {
 			t.Errorf("broker = %v, want none without the address of kafka", s.Broker)
@@ -288,7 +290,9 @@ func TestPlugin_Configure(t *testing.T) {
 		s.Config.Kafka.TopicsPrefix = "app_"
 		s.Config.Kafka.MaxAttempts = 4
 		s.Config.Kafka.RetryDelay = 250
-		NewPlugin().Configure(s)
+		if err := NewPlugin().Configure(s); err != nil {
+			t.Fatal(err)
+		}
 
 		client, ok := s.Broker.(*Client)
 		if !ok {
@@ -302,5 +306,15 @@ func TestPlugin_Configure(t *testing.T) {
 		}
 
 		var _ broker.DeduplicatorUser = client
+	})
+
+	t.Run("invalid settings", func(t *testing.T) {
+		s := ginamite.NewServer()
+		s.Config.Broker = config.BrokerConfiguration{Service: "kafka", Host: "kafka", Port: 9093}
+		s.Config.Kafka.Version = "not a version"
+
+		if err := NewPlugin().Configure(s); err == nil || s.Broker != nil {
+			t.Errorf("Configure() = %v, broker = %v, want an error and no broker", err, s.Broker)
+		}
 	})
 }

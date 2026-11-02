@@ -3,6 +3,7 @@ package timezone
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"sort"
 	"strings"
@@ -56,22 +57,11 @@ func (conf *Configuration) GetCountries(timezone string) []string {
 // Initialize loads the countries and the timezones from a tab-separated file,
 // whose lines are "country codes (comma-separated)<TAB>coordinates<TAB>timezone".
 // Lines starting with "#" and malformed lines are ignored.
-// It panics, after logging the error, if the file can not be read.
+// It returns an error if the file can not be read.
 func (conf *Configuration) Initialize(filepath string) error {
-	var err error
-	defer func() {
-		if err != nil {
-			log.WithFields(logrus.Fields{
-				"path":  filepath,
-				"error": err.Error(),
-			}).Panic("unable to load the timezone file")
-		}
-	}()
-
-	var file *os.File
-	file, err = os.Open(filepath)
+	file, err := os.Open(filepath)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to load the timezones: %w", err)
 	}
 
 	defer func() {
@@ -115,8 +105,8 @@ func (conf *Configuration) Initialize(filepath string) error {
 		}
 	}
 
-	if err = scanner.Err(); err != nil {
-		return err
+	if err := scanner.Err(); err != nil {
+		return fmt.Errorf("unable to read the timezones %s: %w", filepath, err)
 	}
 
 	sort.Strings(conf.Countries)

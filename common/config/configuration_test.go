@@ -120,13 +120,9 @@ func TestConfiguration_Initialize_Errors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			defer func() {
-				if recover() == nil {
-					t.Error("Initialize() must panic after logging the error")
-				}
-			}()
-
-			_ = NewConfiguration().Initialize(tt.file, environment.Test, version.Final)
+			if err := NewConfiguration().Initialize(tt.file, environment.Test, version.Final); err == nil {
+				t.Error("Initialize() must return an error")
+			}
 		})
 	}
 }

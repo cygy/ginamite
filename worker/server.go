@@ -120,11 +120,13 @@ func NewServer() *Server {
 	return &Server{Config: config.NewConfiguration(), Queue: queue.New(nil), Localization: localization.NewEngine(), scheduler: recurring.NewScheduler()}
 }
 
-// Start starts the worker: it loads the templates and the routes, initializes the emails, runs the start up tasks
+// Run runs the worker: it loads the templates and the routes, initializes the emails, runs the start up tasks
 // and starts the recurring tasks. It returns when the worker is interrupted or terminated, so that the caller can stop
-// the consumption of the messages and close the connections.
-func (s *Server) Start() {
-	s.setup()
+// the consumption of the messages and close the connections, or at once with an error if the set up fails.
+func (s *Server) Run() error {
+	if err := s.setup(); err != nil {
+		return err
+	}
 
 	log.Info("started")
 
@@ -134,13 +136,29 @@ func (s *Server) Start() {
 	<-signals
 
 	log.Info("shutdown")
+
+	return nil
 }
 
-// setup prepares and starts the worker, except the consumption of the messages.
-func (s *Server) setup() {
+// setup prepares and starts the worker, except the consumption of the messages. It returns an error if the routes or
+// the templates can not be loaded.
+func (s *Server) setup() error {
 	s.warnUndefinedFunctions()
 
-	s.routes = weburl.Load(s.RoutesFile, s.Config.Hosts.Web)
+	routes, err := weburl.Load(s.RoutesFile, s.Config.Hosts.Web)
+	if err != nil {
+		return err
+	}
+	s.routes = routes
+
+	htmlTemplates, err := html.LoadTemplatesWithDelimiters(s.Config.TemplatesPath+"/html", "[[", "]]", nil)
+	if err != nil {
+		return err
+	}
+	textTemplates, err := text.LoadTemplates(s.Config.TemplatesPath + "/text")
+	if err != nil {
+		return err
+	}
 
 	commonHTMLVars, commonTextVars := s.commonMailVars(), s.commonMailVars()
 	s.mailer = mail.New(mail.Settings{
@@ -157,8 +175,8 @@ func (s *Server) setup() {
 		TextVars:      commonTextVars,
 		Localization:  s.Localization,
 		Routes:        s.routes,
-		HTMLTemplates: html.LoadTemplatesWithDelimiters(s.Config.TemplatesPath+"/html", "[[", "]]", nil),
-		TextTemplates: text.LoadTemplates(s.Config.TemplatesPath + "/text"),
+		HTMLTemplates: htmlTemplates,
+		TextTemplates: textTemplates,
 	})
 
 	if s.Functions.StartUpTasks != nil && s.Config.RunStartUpTasks {
@@ -169,6 +187,8 @@ func (s *Server) setup() {
 
 	s.loadRecurringTasks()
 	s.scheduler.Start()
+
+	return nil
 }
 
 // commonMailVars returns the variables available in all the emails, by name then by locale.

@@ -135,7 +135,11 @@ func SetTranslations(t *testing.T, messages map[string]map[string]string) {
 	}
 
 	old := Localization
-	Localization = localization.Load(dir, locales)
+	engine, err := localization.Load(dir, locales)
+	if err != nil {
+		t.Fatal(err)
+	}
+	Localization = engine
 	t.Cleanup(func() { Localization = old })
 }
 
@@ -179,5 +183,10 @@ func SetTemplates(t *testing.T, templates map[string]string, e *gin.Engine) *tem
 		WriteFile(t, dir, "pages/"+name, content)
 	}
 
-	return htmlTemplate.LoadTemplates(dir, e)
+	loaded, err := htmlTemplate.LoadTemplates(dir, e)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return loaded
 }

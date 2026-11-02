@@ -40,8 +40,8 @@ func load(t *testing.T) *Configuration {
 	t.Helper()
 
 	conf := NewConfiguration()
-	if !conf.Initialize(writeRoutes(t, routes), "https://example.com") {
-		t.Fatal("Initialize() = false")
+	if err := conf.Initialize(writeRoutes(t, routes), "https://example.com"); err != nil {
+		t.Fatal(err)
 	}
 
 	return conf
@@ -82,13 +82,12 @@ func TestConfiguration_Initialize_Errors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			defer func() {
-				if recover() == nil {
-					t.Error("Initialize() must panic after logging the error")
-				}
-			}()
-
-			NewConfiguration().Initialize(tt.file, "https://example.com")
+			if err := NewConfiguration().Initialize(tt.file, "https://example.com"); err == nil {
+				t.Error("Initialize() must return an error")
+			}
+			if conf, err := Load(tt.file, "https://example.com"); err == nil || conf != nil {
+				t.Errorf("Load() = %v, %v, want an error", conf, err)
+			}
 		})
 	}
 }
@@ -134,7 +133,10 @@ func TestRoute_HasVariable(t *testing.T) {
 }
 
 func TestLoad(t *testing.T) {
-	conf := Load(writeRoutes(t, routes), "https://example.com")
+	conf, err := Load(writeRoutes(t, routes), "https://example.com")
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if got := conf.GetURL("account.profile", "de"); got != "https://example.com/konto" {
 		t.Errorf("GetURL() = %q", got)

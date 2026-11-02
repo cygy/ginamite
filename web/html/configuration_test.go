@@ -98,19 +98,10 @@ func TestInitialize_Panics(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			webtest.Hook.Reset()
-			file := tt.file(t)
-
-			defer func() {
-				if recover() == nil {
-					t.Error("Load() must panic")
-				}
-				if entry := webtest.Hook.LastEntry(); entry == nil || entry.Message != "unable to load routes" || entry.Data["path"] != file {
-					t.Errorf("logged entry = %+v", entry)
-				}
-			}()
-
-			Load(file, Settings{Timezone: "UTC", Locales: testLocales, FallbackLocales: testFallback})
+			conf, err := Load(tt.file(t), Settings{Timezone: "UTC", Locales: testLocales, FallbackLocales: testFallback})
+			if err == nil || conf != nil {
+				t.Errorf("Load() = %v, %v, want an error", conf, err)
+			}
 		})
 	}
 }
@@ -119,7 +110,10 @@ func TestLoad_WithoutDefaultPage(t *testing.T) {
 	webtest.SetTranslations(t, map[string]map[string]string{"en-us": {"a": "b"}, "fr-fr": {"a": "b"}})
 
 	file := webtest.WriteFile(t, t.TempDir(), "routes.yaml", "routes:\n  home:\n    paths:\n      en-us: /home\n")
-	conf := Load(file, Settings{WebHost: testWebHost, Timezone: "UTC", Locales: testLocales, FallbackLocales: testFallback, Production: true})
+	conf, err := Load(file, Settings{WebHost: testWebHost, Timezone: "UTC", Locales: testLocales, FallbackLocales: testFallback, Production: true})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	page := conf.preprocessedPages["home"]["en-us"]
 	if page == nil || !page.Production || conf.URL("home", "en-us") != testWebHost+"/home" {

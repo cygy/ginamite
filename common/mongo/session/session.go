@@ -3,6 +3,7 @@ package session
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/cygy/ginamite/common/log"
@@ -37,8 +38,8 @@ const contextKey = "_mgo"
 // Initialize connects the session to the database and checks that the server is reachable.
 // The timeout is in seconds, and defaults to 10 seconds if not positive. The user, if any, is
 // authenticated against the database itself.
-// It panics, after logging the error, if the server can not be reached.
-func (session *Session) Initialize(address, database, username, password string, timeout time.Duration) {
+// It returns an error if the server can not be reached.
+func (session *Session) Initialize(address, database, username, password string, timeout time.Duration) error {
 	session.DatabaseName = database
 
 	timeout = timeout * time.Second
@@ -72,12 +73,12 @@ func (session *Session) Initialize(address, database, username, password string,
 	}
 
 	if err != nil {
-		log.WithFields(logrus.Fields{
-			"error": err.Error(),
-		}).Panic("unable to connect to the mongo database")
+		return fmt.Errorf("unable to connect to the MongoDB database at %s: %w", address, err)
 	}
 
 	session.Client = client
+
+	return nil
 }
 
 // Close disconnects the session. It does nothing if the session is not connected.

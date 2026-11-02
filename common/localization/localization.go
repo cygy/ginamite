@@ -33,9 +33,11 @@ func NewEngine() (e *Engine) {
 
 // Load returns an Engine with the translations of the locales loaded from the directory path.
 // See Engine.Initialize.
-func Load(path string, locales []string) *Engine {
+func Load(path string, locales []string) (*Engine, error) {
 	e := NewEngine()
-	e.Initialize(path, locales)
+	if err := e.Initialize(path, locales); err != nil {
+		return nil, err
+	}
 
-	return e
+	return e, nil
 }

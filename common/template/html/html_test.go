@@ -2,6 +2,7 @@ package html
 
 import (
 	"bytes"
+	"html/template"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -26,7 +27,7 @@ func writeTemplates(t *testing.T, content string) string {
 }
 
 func TestLoadTemplates_WithoutEngine(t *testing.T) {
-	templates := LoadTemplates(writeTemplates(t, "<p>{{.Name}}</p>"), nil)
+	templates := must(t)(LoadTemplates(writeTemplates(t, "<p>{{.Name}}</p>"), nil))
 
 	var out bytes.Buffer
 	if err := templates.ExecuteTemplate(&out, "home.html", map[string]string{"Name": "<John>"}); err != nil {
@@ -38,7 +39,7 @@ func TestLoadTemplates_WithoutEngine(t *testing.T) {
 }
 
 func TestLoadTemplatesWithDelimiters(t *testing.T) {
-	templates := LoadTemplatesWithDelimiters(writeTemplates(t, "[[.Name]] {{.Name}}"), "[[", "]]", nil)
+	templates := must(t)(LoadTemplatesWithDelimiters(writeTemplates(t, "[[.Name]] {{.Name}}"), "[[", "]]", nil))
 
 	var out bytes.Buffer
 	if err := templates.ExecuteTemplate(&out, "home.html", map[string]string{"Name": "John"}); err != nil {
@@ -53,7 +54,7 @@ func TestLoadTemplates_WithEngine(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	engine := gin.New()
-	LoadTemplates(writeTemplates(t, `{{plus 1 2}} {{minus 5 2}} {{mult 3 4}} {{div 8 2}}`), engine)
+	must(t)(LoadTemplates(writeTemplates(t, `{{plus 1 2}} {{minus 5 2}} {{mult 3 4}} {{div 8 2}}`), engine))
 	engine.GET("/", func(c *gin.Context) { c.HTML(http.StatusOK, "home.html", nil) })
 
 	rec := httptest.NewRecorder()
@@ -65,7 +66,7 @@ func TestLoadTemplates_WithEngine(t *testing.T) {
 }
 
 func TestLoadTemplates_HasTheHelpers(t *testing.T) {
-	templates := LoadTemplates(writeTemplates(t, `{{plus 1 2}}`), nil)
+	templates := must(t)(LoadTemplates(writeTemplates(t, `{{plus 1 2}}`), nil))
 
 	var out bytes.Buffer
 	if err := templates.ExecuteTemplate(&out, "home.html", nil); err != nil || out.String() != "3" {
@@ -77,7 +78,7 @@ func TestLoadTemplatesWithDelimiters_Engine(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	engine := gin.New()
-	LoadTemplatesWithDelimiters(writeTemplates(t, `[[plus 1 2]]`), "[[", "]]", engine)
+	must(t)(LoadTemplatesWithDelimiters(writeTemplates(t, `[[plus 1 2]]`), "[[", "]]", engine))
 	engine.GET("/", func(c *gin.Context) { c.HTML(http.StatusOK, "home.html", nil) })
 
 	rec := httptest.NewRecorder()
@@ -89,7 +90,7 @@ func TestLoadTemplatesWithDelimiters_Engine(t *testing.T) {
 }
 
 func TestDivisionByZero(t *testing.T) {
-	templates := LoadTemplates(writeTemplates(t, `{{div 1 0}}`), nil)
+	templates := must(t)(LoadTemplates(writeTemplates(t, `{{div 1 0}}`), nil))
 
 	if err := templates.ExecuteTemplate(&bytes.Buffer{}, "home.html", nil); err == nil {
 		t.Error("expected an error")
@@ -97,11 +98,22 @@ func TestDivisionByZero(t *testing.T) {
 }
 
 func TestLoadTemplates_InvalidTemplate(t *testing.T) {
-	defer func() {
-		if recover() == nil {
-			t.Error("LoadTemplates() must panic on an invalid template")
-		}
-	}()
+	engine := gin.New()
+	if templates, err := LoadTemplates(writeTemplates(t, "{{.Name"), engine); err == nil || templates != nil {
+		t.Errorf("LoadTemplates() = %v, %v, want an error", templates, err)
+	}
+}
 
-	LoadTemplates(writeTemplates(t, "{{.Name"), nil)
+// must returns a function returning the templates, which fails the test on an error.
+func must(t *testing.T) func(*template.Template, error) *template.Template {
+	t.Helper()
+
+	return func(templates *template.Template, err error) *template.Template {
+		t.Helper()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		return templates
+	}
 }

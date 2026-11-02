@@ -3,6 +3,8 @@
 package main
 
 import (
+	"log"
+
 	"github.com/cygy/ginamite"
 	"github.com/cygy/ginamite/web/html"
 	"github.com/cygy/ginamite/web/route"
@@ -15,7 +17,9 @@ func main() {
 
 	server.Web.AddCustomRoutes(configureRoutes)
 
-	server.Start()
+	if err := server.Run(); err != nil {
+		log.Fatal(err)
+	}
 }
 
 // configureRoutes adds, for each locale, the route of the page "index" of the routes file.

@@ -28,14 +28,14 @@ import (
 
 // Server is the main struct of the application, containing all the settings.
 type Server struct {
-	// Config is the configuration of the application, loaded from the configuration file by Start and shared with the
+	// Config is the configuration of the application, loaded from the configuration file by Run and shared with the
 	// specialized servers and the plugins.
 	Config                   *config.Configuration
-	Broker                   broker.Broker           // The message broker, none by default: a plugin sets it, such as the one of Kafka, see UseBroker. Started by Start.
+	Broker                   broker.Broker           // The message broker, none by default: a plugin sets it, such as the one of Kafka, see UseBroker. Started by Run.
 	Deduplicator             broker.Deduplicator     // Remembers the messages handled, to ignore the ones delivered twice. In memory by default; a plugin may replace it.
 	Queue                    *queue.Queue            // Sends the messages to the other servers through the broker.
-	Localization             *localization.Engine    // The translations, loaded by Start.
-	Timezones                *timezone.Configuration // The timezones of the countries, loaded by Start for the API and the worker.
+	Localization             *localization.Engine    // The translations, loaded by Run.
+	Timezones                *timezone.Configuration // The timezones of the countries, loaded by Run for the API and the worker.
 	ApplicationConfiguration ApplicationConfiguration
 	Worker                   *worker.Server
 	API                      *api.Server
@@ -48,11 +48,11 @@ type Server struct {
 // runner is a specialized server: API, worker or web.
 type runner interface {
 	CreateConsumers() []broker.MessageConsumer
-	Start()
+	Run() error
 }
 
 // UseBroker sets the message broker, and the queue sending the messages through it, which the API and the worker use.
-// A plugin calls it when it is configured, or the application before Start, which starts the broker with the consumers
+// A plugin calls it when it is configured, or the application before Run, which starts the broker with the consumers
 // of the server. Without a broker, the messages are not sent and an error is logged for each.
 func (s *Server) UseBroker(b broker.Broker) {
 	s.Broker = b
@@ -61,14 +61,17 @@ func (s *Server) UseBroker(b broker.Broker) {
 }
 
 // Plugin is a plugin which configures a server, such as the functions of the API and of the workers.
+//
+// Run calls Configure once the configuration is loaded, before it starts the server, and stops with the error if
+// Configure returns one.
 type Plugin interface {
-	Configure(s *Server)
+	Configure(s *Server) error
 }
 
 // Commander is a Plugin which runs a command given by the command line arguments, instead of a server.
 //
-// Start calls Command with the arguments, before it sets up a server. A command handled by a plugin is the last thing
-// Start does. The plugins are asked in the order they were added, until one handles the command.
+// Run calls Command with the arguments, before it sets up a server. A command handled by a plugin is the last thing
+// Run does. The plugins are asked in the order they were added, until one handles the command.
 type Commander interface {
 	Plugin
 	Command(f *flags.Flags, out io.Writer) (handled bool, err error)
@@ -76,11 +79,12 @@ type Commander interface {
 
 // Connector is a Plugin which holds a connection to a database, or to any other service the API and the worker need.
 //
-// Start calls Connect with the configuration, before it configures the plugins, only if the API or the worker server
-// runs, then Close when the server stops. Connect does not return if the connection fails: it logs the error and exits or panics.
+// Run calls Connect with the configuration, before it configures the plugins, only if the API or the worker server
+// runs, then Close when the server stops. Run stops with the error if Connect returns one, after closing the
+// connectors already connected.
 type Connector interface {
 	Plugin
-	Connect(configuration *config.Configuration)
+	Connect(configuration *config.Configuration) error
 	Close()
 }
 
@@ -126,7 +130,7 @@ func NewServer() *Server {
 	return server
 }
 
-// AddPlugin adds a plugin, which is configured when the server starts.
+// AddPlugin adds a plugin, which is configured by Run.
 func (s *Server) AddPlugin(p Plugin) {
 	s.plugins = append(s.plugins, p)
 }

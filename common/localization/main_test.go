@@ -44,7 +44,9 @@ func loadEngine(t *testing.T) *Engine {
 
 	dir := writeTranslations(t, map[string]string{"fr-fr.all.json": frTranslations, "en-gb.all.json": enTranslations})
 	engine := NewEngine()
-	engine.Initialize(dir, []string{"fr-FR", "en-GB"})
+	if err := engine.Initialize(dir, []string{"fr-FR", "en-GB"}); err != nil {
+		t.Fatal(err)
+	}
 
 	return engine
 }

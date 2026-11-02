@@ -51,7 +51,9 @@ func main() {
 		group.GET("/hello", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"hello": "world"}) })
 	})
 
-	server.Start()
+	if err := server.Run(); err != nil {
+		log.Fatal(err)
+	}
 }
 ```
 
@@ -62,12 +64,14 @@ curl localhost:8080/v1/hello
 
 ## Usage
 
-Create a server, register the plugins, add the functions and routes of the application, then start it:
+Create a server, register the plugins, add the functions and routes of the application, then run it:
 
 ```go
 package main
 
 import (
+	"log"
+
 	"github.com/cygy/ginamite"
 	"github.com/cygy/ginamite/plugins/kafka"
 	"github.com/cygy/ginamite/plugins/mongodb"
@@ -78,11 +82,17 @@ func main() {
 	server.AddPlugin(mongodb.NewPlugin())
 	server.AddPlugin(kafka.NewPlugin())
 
-	// Customize the servers before starting: server.API, server.Worker and server.Web.
+	// Customize the servers before running: server.API, server.Worker and server.Web.
 
-	server.Start()
+	if err := server.Run(); err != nil {
+		log.Fatal(err)
+	}
 }
 ```
+
+`Run` returns an error, without exiting the process, if the arguments, the configuration or a plugin are invalid, or
+if the server stops for another reason than SIGINT or SIGTERM; the connections already opened are closed first. It
+returns nil once the server stopped gracefully, or at once if `-help` is given.
 
 Run the same binary once per server:
 
@@ -108,7 +118,7 @@ The arguments `-dlq*` run a command on the dead letters of Kafka instead of a se
 
 ## Custom routes
 
-The routes of the application are added before `Start`, by a function called when the server sets up its routes.
+The routes of the application are added before `Run`, by a function called when the server sets up its routes.
 
 **API.** The function receives the group of the version of the API (`/v1`), the built-in middlewares, whether the
 environment is the production, and a function returning the middleware which checks the rights of the user:
@@ -249,7 +259,7 @@ A custom broker appears in the metrics if it implements `metrics.Collector` (`co
 ### Shared services are injected
 
 There is no global service. `ginamite.Server` holds the configuration (`Config`), the translations (`Localization`),
-the message broker (`Broker`, set by a plugin) and the queue built on it (`Queue`), loads them in `Start`, and shares them with `Server.API`,
+the message broker (`Broker`, set by a plugin) and the queue built on it (`Queue`), loads them in `Run`, and shares them with `Server.API`,
 `Server.Worker`, `Server.Web` (their fields of the same names) and the plugins (`Connector.Connect` receives the
 configuration).
 
@@ -312,7 +322,7 @@ starts with `change-me`, the placeholder of the examples.
 
 | Directory | Content |
 | --- | --- |
-| `.` | `Server`, `Plugin`, `Connector` and `Start`, which sets up the configuration and starts the chosen server. |
+| `.` | `Server`, `Plugin`, `Connector` and `Run`, which sets up the configuration and runs the chosen server. |
 | `api/` | The API server: routes, middlewares, request validation, responses, authentication cache. |
 | `worker/` | The worker server: message consumers, notifications, mails, async and recurring tasks. |
 | `web/` | The web server: HTML routes, pages, cookies, calls to the API, `robots.txt`. |
@@ -328,8 +338,8 @@ the extension points below, and is registered with `server.AddPlugin`.
 
 | Extension point | Role |
 | --- | --- |
-| `ginamite.Plugin.Configure` | Sets the functions of the API (`api.Server.Functions`) and of the worker (`worker.Server.Functions`). |
-| `ginamite.Connector` (optional) | `Connect` opens the connection before the plugins are configured, `Close` closes it when the server stops. Called only for the API and worker servers. |
+| `ginamite.Plugin.Configure` | Sets the functions of the API (`api.Server.Functions`) and of the worker (`worker.Server.Functions`). An error stops `Run`. |
+| `ginamite.Connector` (optional) | `Connect` opens the connection before the plugins are configured, and returns an error if it fails; `Close` closes it when the server stops. Called only for the API and worker servers. |
 | `api.Server.Middlewares` | Gin middlewares added before the routes, for instance to put the database in the context of the requests. |
 | `api.Handlers.IsValidID` | Reports whether an identifier in a URL is well-formed. It depends on the database (an ObjectID for MongoDB, a UUID or an integer for SQL). By default every identifier is accepted. |
 

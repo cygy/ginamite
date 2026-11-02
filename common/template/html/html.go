@@ -11,18 +11,30 @@ import (
 
 // LoadTemplates loads the HTML templates found in the sub-directories of path.
 // See LoadTemplatesWithDelimiters.
-func LoadTemplates(path string, e *gin.Engine) *template.Template {
+func LoadTemplates(path string, e *gin.Engine) (*template.Template, error) {
 	return LoadTemplatesWithDelimiters(path, "", "", e)
 }
 
 // LoadTemplatesWithDelimiters loads the HTML templates found in the sub-directories of path
 // and, if e is not nil, into the Gin engine, with the helpers plus, minus, mult and div, and returns them.
 // The delimiters are the default ones unless both left and right are set.
-// It panics if a template can not be parsed.
-func LoadTemplatesWithDelimiters(path, left, right string, e *gin.Engine) *template.Template {
+// It returns an error if a template can not be parsed.
+func LoadTemplatesWithDelimiters(path, left, right string, e *gin.Engine) (*template.Template, error) {
 	pattern := fmt.Sprintf("%s/**/*", path)
 	customDelimiters := len(left) > 0 && len(right) > 0
 
+	t := template.New("html").Funcs(funcMap())
+	if customDelimiters {
+		t = t.Delims(left, right)
+	}
+
+	t, err := t.ParseGlob(pattern)
+	if err != nil {
+		return nil, fmt.Errorf("unable to load the HTML templates of %s: %w", path, err)
+	}
+
+	// The templates are valid: the engine, which panics on an invalid one, parses them again and reloads them on
+	// each request in debug mode.
 	if e != nil {
 		if customDelimiters {
 			e.Delims(left, right)
@@ -31,12 +43,7 @@ func LoadTemplatesWithDelimiters(path, left, right string, e *gin.Engine) *templ
 		e.LoadHTMLGlob(pattern)
 	}
 
-	t := template.New("html").Funcs(funcMap())
-	if customDelimiters {
-		t = t.Delims(left, right)
-	}
-
-	return template.Must(t.ParseGlob(pattern))
+	return t, nil
 }
 
 // funcMap returns the helpers available in the templates.

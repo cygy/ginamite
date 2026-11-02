@@ -6,25 +6,20 @@ import (
 	"os"
 	"strings"
 
-	"github.com/cygy/ginamite/common/log"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/text/language"
 )
 
 // Initialize loads the translations of the locales from the files "<path>/<locale>.all.json".
-// It panics, after logging the error, if a file is missing, invalid or empty.
-func (e *Engine) Initialize(path string, locales []string) {
+// It returns an error if a file is missing, invalid or empty.
+func (e *Engine) Initialize(path string, locales []string) error {
 	for _, locale := range locales {
 		lowerLocale := strings.ToLower(locale)
 		filePath := fmt.Sprintf("%s/%s.all.json", path, lowerLocale)
 
 		content, err := os.ReadFile(filePath)
 		if err != nil {
-			log.WithFields(logrus.Fields{
-				"path":  filePath,
-				"error": err.Error(),
-			}).Panic("unable to read translation file")
+			return fmt.Errorf("unable to read the translations: %w", err)
 		}
 
 		// One bundle per locale, like with go-i18n v1: a missing key is never
@@ -37,17 +32,11 @@ func (e *Engine) Initialize(path string, locales []string) {
 		// so the name passed here is only used to give the language: "<locale>.json".
 		messageFile, err := bundle.ParseMessageFileBytes(content, lowerLocale+".json")
 		if err != nil {
-			log.WithFields(logrus.Fields{
-				"path":  filePath,
-				"error": err.Error(),
-			}).Panic("unable to load translation file")
+			return fmt.Errorf("unable to load the translations %s: %w", filePath, err)
 		}
 
 		if len(messageFile.Messages) == 0 {
-			log.WithFields(logrus.Fields{
-				"path":   filePath,
-				"locale": locale,
-			}).Panic("no translation found in the translation file")
+			return fmt.Errorf("no translation in the file %s", filePath)
 		}
 
 		sources := make(map[string]string, len(messageFile.Messages))
@@ -58,6 +47,8 @@ func (e *Engine) Initialize(path string, locales []string) {
 		e.Translations[locale] = sources
 		e.TranslateFuncs[locale] = newTranslateFunc(i18n.NewLocalizer(bundle, locale))
 	}
+
+	return nil
 }
 
 // Translate returns the translate function of the locale, or nil if the locale is not loaded.

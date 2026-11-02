@@ -79,8 +79,9 @@ func (s *Server) CreateConsumers() []broker.MessageConsumer {
 	return consumers
 }
 
-// Start starts the worker.
-func (s *Server) Start() {
+// Run sets up the routes, then serves the API until SIGINT or SIGTERM. It returns an error if the set up fails or if
+// the server stops for another reason.
+func (s *Server) Run() error {
 	s.warnWeakSecret()
 
 	// Enable debug mode if needed.
@@ -101,7 +102,9 @@ func (s *Server) Start() {
 		server = gin.Default()
 	}
 
-	s.configureProxies(server)
+	if err := s.configureProxies(server); err != nil {
+		return err
+	}
 
 	// Enable server settings
 	if s.Config.Server.GZip.Enabled {
@@ -134,7 +137,9 @@ func (s *Server) Start() {
 
 	// Load the HTML templates into the engine, for the custom routes of the application.
 	if s.Config.TemplatesPath != "" {
-		html.LoadTemplatesWithDelimiters(s.Config.TemplatesPath+"/html", "[[", "]]", server)
+		if _, err := html.LoadTemplatesWithDelimiters(s.Config.TemplatesPath+"/html", "[[", "]]", server); err != nil {
+			return err
+		}
 	}
 
 	// Set up the routes.
@@ -147,16 +152,14 @@ func (s *Server) Start() {
 	)
 	needsJWT, err := s.selectRoutes(&router.DefaultRoutes, s.Config.APIFeatures)
 	if err != nil {
-		log.WithField("error", err).Fatal("unable to load the routes of the API")
-		return
+		return fmt.Errorf("unable to load the routes of the API: %w", err)
 	}
 	if router.DefaultRoutes.Authentication.Paths.LoginWithPassword.Enabled && s.Functions.UpdateEncryptedPasswordByUserID == nil {
 		log.Warn("The function 'UpdateEncryptedPasswordByUserID' is undefined: the weak password hashes are not upgraded.")
 	}
 	if s.Config.JWT.Secret == "" {
 		if needsJWT {
-			log.Fatal("the setting 'jwt.secret' is required by the features of the setting api_features")
-			return
+			return errors.New("the setting 'jwt.secret' is required by the features of the setting api_features")
 		}
 
 		router.DisableAuthentication()
@@ -186,12 +189,15 @@ func (s *Server) Start() {
 	// Start the server.
 	address := fmt.Sprintf(":%d", s.Config.Server.Port)
 	if s.Config.Server.SSL.Enabled {
-		if err := httpserver.ListenAndServeTLS(address, s.Config.Server.SSL.CertPath, s.Config.Server.SSL.KeyPath, server); err != nil {
-			log.WithField("error", err).Error("the server stopped")
-		}
-	} else if err := httpserver.ListenAndServe(address, server); err != nil {
-		log.WithField("error", err).Error("the server stopped")
+		err = httpserver.ListenAndServeTLS(address, s.Config.Server.SSL.CertPath, s.Config.Server.SSL.KeyPath, server)
+	} else {
+		err = httpserver.ListenAndServe(address, server)
 	}
+	if err != nil {
+		return fmt.Errorf("the API stopped: %w", err)
+	}
+
+	return nil
 }
 
 // AddCustomRoutes adds some suctom routes.
@@ -301,11 +307,13 @@ func (s *Server) idValidator() gin.HandlerFunc {
 
 // configureProxies sets the proxies trusted to give the address of the client, which limits the requests. No proxy is
 // trusted unless the setting server.trusted_proxies lists them: Gin trusts every proxy by default, so a client could
-// forge its address.
-func (s *Server) configureProxies(server *gin.Engine) {
+// forge its address. It returns an error if the setting is invalid.
+func (s *Server) configureProxies(server *gin.Engine) error {
 	if err := server.SetTrustedProxies(s.Config.Server.TrustedProxies); err != nil {
-		log.WithField("error", err).Fatal("invalid setting 'server.trusted_proxies'")
+		return fmt.Errorf("invalid setting 'server.trusted_proxies': %w", err)
 	}
+
+	return nil
 }
 
 // minimumSecretLength is the length under which the secret of the JWT can be guessed.

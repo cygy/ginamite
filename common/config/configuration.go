@@ -1,15 +1,13 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
 	"github.com/cygy/ginamite/common/config/database"
 	"github.com/cygy/ginamite/common/config/environment"
 	"github.com/cygy/ginamite/common/config/version"
-	"github.com/cygy/ginamite/common/log"
-
-	"github.com/sirupsen/logrus"
 )
 
 // Configuration is the root configuration object.
@@ -106,35 +104,22 @@ func NewConfiguration() (config *Configuration) {
 // and computes the supported and fallback locales.
 // The values tagged !file or !env are read from a file or from the environment, see resolveExternalValues, and the
 // production refuses the placeholder secret of the examples.
-// It panics, after logging the error, if the file can not be read or parsed.
+// It returns an error if the file can not be read or parsed.
 func (config *Configuration) Initialize(file, env, ver string) error {
-	var err error
-	defer func() {
-		if err != nil {
-			log.WithFields(logrus.Fields{
-				"path":  file,
-				"error": err.Error(),
-			}).Panic("unable to load the configuration file")
-		}
-	}()
-
-	var source []byte
-	source, err = os.ReadFile(file)
+	source, err := os.ReadFile(file)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to read the configuration file: %w", err)
 	}
 
-	err = unmarshal(source, config)
-	if err != nil {
-		return err
+	if err := unmarshal(source, config); err != nil {
+		return fmt.Errorf("unable to load the configuration file %s: %w", file, err)
 	}
 
 	config.Environment = env
 	config.Version = ver
 
 	if config.IsProductionEnvironment() && strings.HasPrefix(config.JWT.Secret, placeholderSecretPrefix) {
-		err = errPlaceholderSecret
-		return err
+		return errPlaceholderSecret
 	}
 
 	for locale, c := range config.Locales {

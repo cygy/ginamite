@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"slices"
 	"sort"
+	"strings"
 	"testing"
 	"time"
 
@@ -279,7 +280,9 @@ func TestServer_setup(t *testing.T) {
 	s.Functions.SetFuncOfRecurringTasks = func(func(string, func(string))) { calls = append(calls, "recurring") }
 	s.Functions.DeleteExpiredTokens = allHandlers().DeleteExpiredTokens
 
-	s.setup()
+	if err := s.setup(); err != nil {
+		t.Fatal(err)
+	}
 
 	if env != "test" || version != "1.0" || !slices.Equal(calls, []string{"start up", "recurring"}) {
 		t.Errorf("env = %q, version = %q, calls = %v", env, version, calls)
@@ -297,8 +300,38 @@ func TestServer_setup(t *testing.T) {
 	// The start up tasks only run if the configuration asks for it.
 	c.RunStartUpTasks = false
 	calls = nil
-	s.setup()
+	if err := s.setup(); err != nil {
+		t.Fatal(err)
+	}
 	if slices.Contains(calls, "start up") {
 		t.Errorf("calls = %v", calls)
+	}
+}
+
+func TestServer_Run_SetUpErrors(t *testing.T) {
+	dir := t.TempDir()
+	routes := filepath.Join(dir, "routes.yml")
+	if err := os.WriteFile(routes, []byte("routes: {}\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		name       string
+		routesFile string
+		want       string
+	}{
+		{"missing routes", filepath.Join(dir, "missing.yml"), "routes"},
+		{"missing templates", routes, "templates"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &config.Configuration{TemplatesPath: filepath.Join(dir, "templates")}
+			s := &Server{Config: c, scheduler: recurring.NewScheduler(), RoutesFile: tt.routesFile}
+
+			if err := s.Run(); err == nil || !strings.Contains(err.Error(), tt.want) {
+				t.Errorf("Run() = %v, want an error about %q", err, tt.want)
+			}
+		})
 	}
 }

@@ -216,7 +216,9 @@ func TestServer_configureProxies(t *testing.T) {
 			s.Config.Server.TrustedProxies = tt.proxies
 
 			engine := gin.New()
-			s.configureProxies(engine)
+			if err := s.configureProxies(engine); err != nil {
+				t.Fatal(err)
+			}
 
 			var got string
 			engine.GET("/", func(c *gin.Context) { got = c.ClientIP() })
@@ -228,6 +230,40 @@ func TestServer_configureProxies(t *testing.T) {
 
 			if got != tt.want {
 				t.Errorf("ClientIP() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestServer_configureProxies_Invalid(t *testing.T) {
+	s := NewServer()
+	s.Config.Server.TrustedProxies = []string{"not an address"}
+
+	if err := s.configureProxies(gin.New()); err == nil {
+		t.Error("configureProxies() must return an error")
+	}
+}
+
+func TestServer_Run_SetUpErrors(t *testing.T) {
+	tests := []struct {
+		name  string
+		setup func(s *Server)
+		want  string
+	}{
+		{"invalid trusted proxies", func(s *Server) { s.Config.Server.TrustedProxies = []string{"not an address"} }, "trusted_proxies"},
+		{"invalid templates", func(s *Server) { s.Config.TemplatesPath = t.TempDir() }, "templates"},
+		{"unknown feature", func(s *Server) { s.Config.APIFeatures = []string{"nope"} }, "nope"},
+		{"missing secret", func(s *Server) { s.Config.APIFeatures = []string{FeatureTerms} }, "jwt.secret"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := NewServer()
+			s.Functions.UpdateVersionOfTermsAcceptedByUser = func(*gin.Context, string, string) error { return nil }
+			tt.setup(s)
+
+			if err := s.Run(); err == nil || !strings.Contains(err.Error(), tt.want) {
+				t.Errorf("Run() = %v, want an error about %q", err, tt.want)
 			}
 		})
 	}

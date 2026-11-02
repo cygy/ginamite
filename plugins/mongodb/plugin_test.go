@@ -47,7 +47,9 @@ func newConfiguration(service string) *config.Configuration {
 func TestPlugin_Connect_OtherService(t *testing.T) {
 	p := NewPlugin()
 
-	p.Connect(newConfiguration("postgresql"))
+	if err := p.Connect(newConfiguration("postgresql")); err != nil {
+		t.Fatal(err)
+	}
 
 	if p.session != nil {
 		t.Error("the plugin must not connect to MongoDB when the service is another one")
@@ -61,16 +63,9 @@ func TestPlugin_Connect_Unreachable(t *testing.T) {
 	configuration.Database.Port = 1
 	configuration.Database.TimeOut = 1
 
-	defer func() {
-		if recover() == nil {
-			t.Error("Connect() must panic when the server is unreachable")
-		}
-		if p.session == nil || p.session.DatabaseName != configuration.Database.Database {
-			t.Errorf("the session must be created with the database of the configuration: %+v", p.session)
-		}
-	}()
-
-	p.Connect(configuration)
+	if err := p.Connect(configuration); err == nil || p.session != nil {
+		t.Errorf("Connect() = %v, session = %+v, want an error and no session", err, p.session)
+	}
 }
 
 func TestPlugin_Close(t *testing.T) {
@@ -109,7 +104,9 @@ func TestIsValidID(t *testing.T) {
 
 func TestPlugin_Configure_IsValidID(t *testing.T) {
 	server := ginamite.NewServer()
-	NewPlugin().Configure(server)
+	if err := NewPlugin().Configure(server); err != nil {
+		t.Fatal(err)
+	}
 
 	if isValid := server.API.Functions.IsValidID; isValid == nil || !isValid("507f1f77bcf86cd799439011") || isValid("xyz") {
 		t.Error("the API must validate the IDs as ObjectIDs")
@@ -119,7 +116,9 @@ func TestPlugin_Configure_IsValidID(t *testing.T) {
 func TestPlugin_Configure_Deduplicator(t *testing.T) {
 	server := ginamite.NewServer()
 	memory := server.Deduplicator
-	NewPlugin().Configure(server)
+	if err := NewPlugin().Configure(server); err != nil {
+		t.Fatal(err)
+	}
 
 	if server.Deduplicator == nil || server.Deduplicator == memory {
 		t.Error("the messages must be remembered in the database")
@@ -129,7 +128,9 @@ func TestPlugin_Configure_Deduplicator(t *testing.T) {
 func TestPlugin_Configure_Middlewares(t *testing.T) {
 	t.Run("without session", func(t *testing.T) {
 		server := ginamite.NewServer()
-		NewPlugin().Configure(server)
+		if err := NewPlugin().Configure(server); err != nil {
+			t.Fatal(err)
+		}
 
 		if len(server.API.Middlewares) != 1 {
 			t.Errorf("len(Middlewares) = %d, want only the one of the settings", len(server.API.Middlewares))
@@ -142,7 +143,9 @@ func TestPlugin_Configure_Middlewares(t *testing.T) {
 		p.session = &session.Session{Store: db}
 
 		server := ginamite.NewServer()
-		p.Configure(server)
+		if err := p.Configure(server); err != nil {
+			t.Fatal(err)
+		}
 
 		if len(server.API.Middlewares) != 2 {
 			t.Fatalf("len(Middlewares) = %d, want 2", len(server.API.Middlewares))
@@ -192,7 +195,9 @@ func TestPlugin_Configure_Settings(t *testing.T) {
 	p.UserMaxDescriptionLength = 10
 
 	server := ginamite.NewServer()
-	p.Configure(server)
+	if err := p.Configure(server); err != nil {
+		t.Fatal(err)
+	}
 
 	if len(server.API.Middlewares) == 0 {
 		t.Fatal("the middleware of the settings is missing")
@@ -214,7 +219,9 @@ func sameFunction(a, b any) bool {
 
 func TestPlugin_Configure_Functions(t *testing.T) {
 	server := ginamite.NewServer()
-	NewPlugin().Configure(server)
+	if err := NewPlugin().Configure(server); err != nil {
+		t.Fatal(err)
+	}
 
 	api, worker := server.API.Functions, server.Worker.Functions
 
@@ -267,7 +274,9 @@ func TestPlugin_Configure_WorkerHooks(t *testing.T) {
 	p.IsUserEmpty = func(context.Context, string, store.Database) bool { empty = true; return false }
 
 	server := ginamite.NewServer()
-	p.Configure(server)
+	if err := p.Configure(server); err != nil {
+		t.Fatal(err)
+	}
 
 	if got := server.Worker.Functions.SanitizeAccounts(); got != 5 || !sanitized {
 		t.Errorf("SanitizeAccounts() = %d", got)

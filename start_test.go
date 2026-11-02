@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/cygy/ginamite/common/config"
@@ -23,7 +24,10 @@ func TestServer_ConnectPlugins(t *testing.T) {
 
 	configuration := config.NewConfiguration()
 	configuration.Database.Service = "db"
-	closeAll := s.connectPlugins(configuration)
+	closeAll, err := s.connectPlugins(configuration)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if want := []string{"connect first db", "connect second db"}; !slices.Equal(events, want) {
 		t.Fatalf("events = %v, want %v", events, want)
@@ -40,7 +44,30 @@ func TestServer_ConnectPlugins_NoConnector(t *testing.T) {
 	s := NewServer()
 	s.AddPlugin(&testPlugin{})
 
-	s.connectPlugins(config.NewConfiguration())()
+	closeAll, err := s.connectPlugins(config.NewConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+	closeAll()
+}
+
+func TestServer_ConnectPlugins_Error(t *testing.T) {
+	boom := errors.New("boom")
+
+	var events []string
+	s := NewServer()
+	s.AddPlugin(&testConnector{name: "first", events: &events})
+	s.AddPlugin(&testConnector{name: "second", events: &events, connectErr: boom})
+	s.AddPlugin(&testConnector{name: "third", events: &events})
+
+	closeAll, err := s.connectPlugins(config.NewConfiguration())
+
+	if !errors.Is(err, boom) || closeAll != nil {
+		t.Errorf("connectPlugins() = %v, want the error", err)
+	}
+	if want := []string{"connect first ", "connect second ", "close first"}; !slices.Equal(events, want) {
+		t.Errorf("events = %v, want %v", events, want)
+	}
 }
 
 func TestServer_SpecializedServer(t *testing.T) {
@@ -88,7 +115,9 @@ func TestServer_InitializeConfiguration(t *testing.T) {
 	s := NewServer()
 	s.ApplicationConfiguration.InitializeFunc = func(path string) { appFile = path }
 
-	s.initializeConfiguration(&flags.Flags{ServerName: "web", Environment: "test", Version: "final", ServerConfigurationFile: conf, ApplicationConfigurationFile: "app.yaml"})
+	if err := s.initializeConfiguration(&flags.Flags{ServerName: "web", Environment: "test", Version: "final", ServerConfigurationFile: conf, ApplicationConfigurationFile: "app.yaml"}); err != nil {
+		t.Fatal(err)
+	}
 
 	if s.Config == nil || s.Config.Environment != "test" {
 		t.Fatalf("config = %+v", s.Config)
@@ -123,7 +152,7 @@ func writeFile(t *testing.T, path, content string) string {
 // fakeCommander is a plugin which handles the command "run".
 type fakeCommander struct{ err error }
 
-func (fakeCommander) Configure(*Server) {}
+func (fakeCommander) Configure(*Server) error { return nil }
 
 func (c fakeCommander) Command(f *flags.Flags, out io.Writer) (bool, error) {
 	if f.DLQ != "run" {
@@ -148,5 +177,82 @@ func TestServer_runCommand(t *testing.T) {
 
 	if handled, err := s.runCommand(&flags.Flags{}, &out); handled || err != nil {
 		t.Errorf("runCommand() = %v, %v, want a command nobody handles to be left to the caller", handled, err)
+	}
+}
+
+func TestServer_InitializeConfiguration_Errors(t *testing.T) {
+	dir := t.TempDir()
+	withoutTranslations := writeFile(t, filepath.Join(dir, "server.yaml"), "localization_path: "+dir+"\nlocales:\n  en-us:\n    default: true\n")
+
+	oldLog := log.Main
+	t.Cleanup(func() { log.Main = oldLog })
+
+	tests := []struct {
+		name, file string
+	}{
+		{"missing configuration", filepath.Join(dir, "missing.yaml")},
+		{"missing translations", withoutTranslations},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := NewServer().initializeConfiguration(&flags.Flags{ServerName: "api", Environment: "test", ServerConfigurationFile: tt.file}); err == nil {
+				t.Error("initializeConfiguration() must return an error")
+			}
+		})
+	}
+}
+
+func TestServer_run_Errors(t *testing.T) {
+	boom := errors.New("boom")
+
+	dir := t.TempDir()
+	conf := writeFile(t, filepath.Join(dir, "server.yaml"), "timezones_file_path: "+filepath.Join(dir, "missing.tab")+"\n")
+	valid := writeFile(t, filepath.Join(dir, "valid.yaml"), "timezones_file_path: data/zone1970.tab\n")
+
+	oldLog := log.Main
+	t.Cleanup(func() { log.Main = oldLog })
+
+	tests := []struct {
+		name    string
+		plugins []Plugin
+		flags   flags.Flags
+		want    error
+		message string
+	}{
+		{"command", []Plugin{fakeCommander{err: boom}}, flags.Flags{DLQ: "run"}, boom, ""},
+		{"command without plugin", nil, flags.Flags{DLQ: "list"}, nil, "no plugin handles the command"},
+		{"no server", nil, flags.Flags{}, nil, "no server selected"},
+		{"invalid configuration", nil, flags.Flags{IsAPIServer: true, ServerConfigurationFile: filepath.Join(dir, "missing.yaml")}, nil, "configuration"},
+		{
+			"connection failure",
+			[]Plugin{&testConnector{events: &[]string{}, connectErr: boom}},
+			flags.Flags{IsAPIServer: true, ServerConfigurationFile: conf},
+			boom, "",
+		},
+		{"missing timezones", nil, flags.Flags{IsWorkerServer: true, ServerConfigurationFile: conf}, nil, "timezones"},
+		{"missing robots", nil, flags.Flags{IsWebServer: true, ServerConfigurationFile: conf}, nil, "robots"},
+		{"configuration failure", []Plugin{&testPlugin{err: boom}}, flags.Flags{IsAPIServer: true, ServerConfigurationFile: valid}, boom, ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := NewServer()
+			for _, p := range tt.plugins {
+				s.AddPlugin(p)
+			}
+
+			tt.flags.ServerName, tt.flags.Environment = "test", "test"
+			err := s.run(&tt.flags, io.Discard)
+
+			switch {
+			case err == nil:
+				t.Error("run() must return an error")
+			case tt.want != nil && !errors.Is(err, tt.want):
+				t.Errorf("run() = %v, want %v", err, tt.want)
+			case tt.message != "" && !strings.Contains(err.Error(), tt.message):
+				t.Errorf("run() = %v, want an error about %q", err, tt.message)
+			}
+		})
 	}
 }

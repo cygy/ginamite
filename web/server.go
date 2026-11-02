@@ -70,10 +70,13 @@ func (s *Server) CreateConsumers() []broker.MessageConsumer {
 	return []broker.MessageConsumer{}
 }
 
-// Start sets up and starts the web server, which stops on error.
-func (s *Server) Start() {
+// Run sets up the web server, then serves it until SIGINT or SIGTERM. It returns an error if the set up fails or if
+// the server stops for another reason.
+func (s *Server) Run() error {
 	engine := s.newEngine()
-	s.setUp(engine)
+	if err := s.setUp(engine); err != nil {
+		return err
+	}
 
 	address := fmt.Sprintf(":%d", s.Config.Server.Port)
 
@@ -85,8 +88,10 @@ func (s *Server) Start() {
 	}
 
 	if err != nil {
-		log.WithField("error", err).Error("the server stopped")
+		return fmt.Errorf("the web server stopped: %w", err)
 	}
+
+	return nil
 }
 
 // newEngine returns the Gin engine, in debug mode if enabled by the configuration. The requests are logged by the
@@ -115,8 +120,9 @@ func (s *Server) newEngine() *gin.Engine {
 }
 
 // setUp initializes the API client, the HTML templates and pages, and loads the routes into the engine. The pages are
-// saved in the context of the requests, with the translation engine.
-func (s *Server) setUp(engine *gin.Engine) {
+// saved in the context of the requests, with the translation engine. It returns an error if the templates or the
+// routes file can not be loaded.
+func (s *Server) setUp(engine *gin.Engine) error {
 	client := api.NewClient(s.Config.API.Host, s.Config.API.Version, s.Config.API.Port, s.Config.API.TimeOut, s.Config.API.RetryCount, s.Config.IsDebugModeEnabled())
 	s.apiClient = client
 	client.AddResponseHandlers(append([]api.ResponseHandlerFunc{
@@ -125,7 +131,12 @@ func (s *Server) setUp(engine *gin.Engine) {
 		response.HandleLatestTermsVersionMustBeAcceptedError(),
 	}, s.Functions.APIMiddlewares...)...)
 
-	pages := html.Load(s.RoutesFile, html.Settings{
+	templates, err := htmlTemplate.LoadTemplates(s.Config.TemplatesPath, engine)
+	if err != nil {
+		return err
+	}
+
+	pages, err := html.Load(s.RoutesFile, html.Settings{
 		WebHost:         s.Config.Hosts.Web,
 		StaticHost:      s.Config.Hosts.Static,
 		APIHost:         s.Config.Hosts.API + "/" + s.Config.APIVersion,
@@ -150,8 +161,11 @@ func (s *Server) setUp(engine *gin.Engine) {
 		BetaVersion:  !s.Config.IsFinalVersion(),
 		Production:   s.Config.IsProductionEnvironment(),
 		Localization: s.Localization,
-		Templates:    htmlTemplate.LoadTemplates(s.Config.TemplatesPath, engine),
+		Templates:    templates,
 	})
+	if err != nil {
+		return err
+	}
 	s.pages = pages
 	engine.Use(ctxconfig.Inject(s.Config), ctxlocalization.Inject(s.Localization), html.Inject(pages))
 
@@ -167,4 +181,6 @@ func (s *Server) setUp(engine *gin.Engine) {
 	for _, customRoute := range s.customRoutes {
 		router.LoadCustomRoutes(customRoute)
 	}
+
+	return nil
 }

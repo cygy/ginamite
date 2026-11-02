@@ -2,10 +2,10 @@
 package flags
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"io"
-	"log"
 	"os"
 
 	"github.com/cygy/ginamite/common/config/environment"
@@ -47,18 +47,17 @@ func NewFlags() *Flags {
 	return &Flags{}
 }
 
-// Parse parses the command line arguments of the process.
+// Parse parses the command line arguments of the process and reports whether a server or a command must run.
 // It prints the usage and returns false if the help is requested.
-// It logs a fatal error, which exits the process, if a mandatory argument is
-// missing; the application configuration file is mandatory only if
-// applicationConfigurationRequired is true.
-func (f *Flags) Parse(applicationConfigurationRequired bool) bool {
+// It returns an error if an argument is invalid or a mandatory one is missing; the application configuration file is
+// mandatory only if applicationConfigurationRequired is true.
+func (f *Flags) Parse(applicationConfigurationRequired bool) (bool, error) {
 	ok, problem := f.parse(os.Args[1:], os.Stderr, applicationConfigurationRequired)
-	if len(problem) > 0 {
-		log.Fatal(problem)
+	if problem != "" {
+		return false, errors.New(problem)
 	}
 
-	return ok
+	return ok, nil
 }
 
 // parse parses args and reports whether they are valid.

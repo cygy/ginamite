@@ -90,7 +90,7 @@ myapp -name dlq -conf-server server.yaml -dlq purge -dlq-topic mail
 
 - When the process is interrupted or terminated, the consumers finish the message they are handling, commit it and
   leave their group (30 seconds at most), then the producer sends the messages it still holds, then the plugins close
-  their connections. `Start` returns, and the exit code is 0.
+  their connections. `Run` returns nil, and the exit code is 0.
 - The logs give the topic, the partition, the offset and the size of the messages, never their body, which holds the
   keys of the confirmation links: it is logged at the debug level only.
 
@@ -119,7 +119,7 @@ The servers only depend on the interfaces of `common/broker`: a `Producer` (`Sen
   `broker.service: kafka` with a host and a port, it sets the Kafka client as the broker with `server.UseBroker`.
 - Without a broker, the messages are not sent and an error is logged for each.
 - To use another broker, implement `broker.Broker`, then call `server.UseBroker(b)` from a plugin, or from the
-  application before `Start`: the queues of the API and of the worker send through it, and `Start` runs it with the
+  application before `Run`: the queues of the API and of the worker send through it, and `Run` starts it with the
   consumers of the chosen server.
 - A broker which implements `broker.DeduplicatorUser` receives the deduplicator of the server before it starts.
 - A plugin which implements `ginamite.Commander` can run a command of the command line instead of a server:

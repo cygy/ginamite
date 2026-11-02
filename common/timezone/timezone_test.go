@@ -70,13 +70,9 @@ func TestConfiguration_Initialize(t *testing.T) {
 }
 
 func TestConfiguration_Initialize_Errors(t *testing.T) {
-	defer func() {
-		if recover() == nil {
-			t.Error("Initialize() must panic after logging the error")
-		}
-	}()
-
-	_ = NewConfiguration().Initialize(filepath.Join(t.TempDir(), "missing.tab"))
+	if err := NewConfiguration().Initialize(filepath.Join(t.TempDir(), "missing.tab")); err == nil {
+		t.Error("Initialize() must return an error")
+	}
 }
 
 func TestLoad(t *testing.T) {

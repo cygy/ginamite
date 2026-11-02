@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -79,13 +80,9 @@ func TestConfiguration_Initialize_RefusesThePlaceholderSecretInProduction(t *tes
 	file := writeFile(t, "jwt:\n  secret: change-me-with-at-least-32-characters-secret\n")
 
 	t.Run("production", func(t *testing.T) {
-		defer func() {
-			if recover() == nil {
-				t.Error("Initialize() must panic after logging the error")
-			}
-		}()
-
-		_ = NewConfiguration().Initialize(file, environment.Production, version.Final)
+		if err := NewConfiguration().Initialize(file, environment.Production, version.Final); !errors.Is(err, errPlaceholderSecret) {
+			t.Errorf("Initialize() error = %v, want errPlaceholderSecret", err)
+		}
 	})
 
 	t.Run("development", func(t *testing.T) {

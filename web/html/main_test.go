@@ -82,7 +82,7 @@ var testConf *Configuration
 func loadTestRoutes(t *testing.T, file string, templates *template.Template) *Configuration {
 	t.Helper()
 
-	return Load(file, Settings{
+	conf, err := Load(file, Settings{
 		WebHost:         testWebHost,
 		StaticHost:      testStaticHost,
 		APIHost:         testAPIHost,
@@ -97,6 +97,11 @@ func loadTestRoutes(t *testing.T, file string, templates *template.Template) *Co
 		Localization:    webtest.Localization,
 		Templates:       templates,
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return conf
 }
 
 // setup prepares the configuration of the routes, see testConf, with the test routes file, the translations, the

@@ -124,7 +124,11 @@ func InitLocalization(t *testing.T, messages map[string]string) {
 	}
 
 	old := Localization
-	Localization = localization.Load(dir, []string{"en"})
+	engine, err := localization.Load(dir, []string{"en"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	Localization = engine
 	t.Cleanup(func() { Localization = old })
 }
 
