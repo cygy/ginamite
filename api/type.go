@@ -38,7 +38,7 @@ type Server struct {
 
 	// The functions and the storages of the application, such as the ones of the storage plugin, by feature. A feature
 	// whose functions are undefined can not be enabled, see api_features.
-	Account  account.Functions
+	Account  account.Storage
 	Users    user.Storage
 	Contacts contact.Storage
 	Terms    terms.Storage

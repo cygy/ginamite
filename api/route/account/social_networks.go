@@ -18,7 +18,7 @@ import (
 
 // UpdateSocialNetworks updates the social network profiles of the user.
 func UpdateSocialNetworks(c *gin.Context) {
-	if FunctionsOf(c).Accounts == nil {
+	if StorageOf(c).Accounts == nil {
 		c.Error(errNoAccounts)
 		response.InternalServerError(c)
 		return
@@ -70,7 +70,7 @@ func UpdateSocialNetworks(c *gin.Context) {
 	}
 
 	userID := ctxUser.GetID(c)
-	if err := FunctionsOf(c).Accounts.UpdateUserSocialNetworks(c, userID, facebook, twitter, instagram); err != nil {
+	if err := StorageOf(c).Accounts.UpdateUserSocialNetworks(c, userID, facebook, twitter, instagram); err != nil {
 		response.InternalServerError(c)
 		return
 	}

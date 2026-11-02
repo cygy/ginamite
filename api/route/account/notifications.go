@@ -21,7 +21,7 @@ var errNoNotifications = errors.New("undefined storage of the notifications")
 
 // GetNotifications returns the latest notifications received by the user.
 func GetNotifications(c *gin.Context) {
-	if FunctionsOf(c).Notifications == nil {
+	if StorageOf(c).Notifications == nil {
 		c.Error(errNoNotifications)
 		response.InternalServerError(c)
 		return
@@ -29,7 +29,7 @@ func GetNotifications(c *gin.Context) {
 
 	userID := ctxUser.GetID(c)
 
-	notifications, err := FunctionsOf(c).Notifications.NotificationsReceivedByUser(c, userID, ctxLocale.Get(c))
+	notifications, err := StorageOf(c).Notifications.NotificationsReceivedByUser(c, userID, ctxLocale.Get(c))
 	if err != nil {
 		response.InternalServerError(c)
 		return
@@ -42,7 +42,7 @@ func GetNotifications(c *gin.Context) {
 
 // GetNotification returns a notification received by the user.
 func GetNotification(c *gin.Context) {
-	if FunctionsOf(c).Notifications == nil {
+	if StorageOf(c).Notifications == nil {
 		c.Error(errNoNotifications)
 		response.InternalServerError(c)
 		return
@@ -57,7 +57,7 @@ func GetNotification(c *gin.Context) {
 
 	userID := ctxUser.GetID(c)
 
-	notification, err := FunctionsOf(c).Notifications.NotificationReceivedByUser(c, userID, notificationID, ctxLocale.Get(c))
+	notification, err := StorageOf(c).Notifications.NotificationReceivedByUser(c, userID, notificationID, ctxLocale.Get(c))
 	if err != nil {
 		response.InternalServerError(c)
 		return
@@ -78,11 +78,11 @@ func UpdateNotificationRead(c *gin.Context) {
 	}
 
 	var err error
-	if FunctionsOf(c).Notifications == nil {
+	if StorageOf(c).Notifications == nil {
 		err = c.Error(errNoNotifications)
 	} else {
 		userID := ctxUser.GetID(c)
-		err = FunctionsOf(c).Notifications.UpdateUserNotificationRead(c, userID, notificationID)
+		err = StorageOf(c).Notifications.UpdateUserNotificationRead(c, userID, notificationID)
 	}
 
 	if err != nil {
@@ -107,11 +107,11 @@ func UpdateNotificationNotified(c *gin.Context) {
 	}
 
 	var err error
-	if FunctionsOf(c).Notifications == nil {
+	if StorageOf(c).Notifications == nil {
 		err = c.Error(errNoNotifications)
 	} else {
 		userID := ctxUser.GetID(c)
-		err = FunctionsOf(c).Notifications.UpdateUserNotificationNotified(c, userID, notificationID)
+		err = StorageOf(c).Notifications.UpdateUserNotificationNotified(c, userID, notificationID)
 	}
 
 	if err != nil {
@@ -133,11 +133,11 @@ func DeleteNotification(c *gin.Context) {
 	}
 
 	var err error
-	if FunctionsOf(c).Notifications == nil {
+	if StorageOf(c).Notifications == nil {
 		err = c.Error(errNoNotifications)
 	} else {
 		userID := ctxUser.GetID(c)
-		err = FunctionsOf(c).Notifications.DeleteUserNotification(c, userID, notificationID)
+		err = StorageOf(c).Notifications.DeleteUserNotification(c, userID, notificationID)
 	}
 
 	if err != nil {
@@ -154,14 +154,14 @@ func DeleteNotification(c *gin.Context) {
 
 // GetNotificationsSettings returns all the notifications received or not by the user's devices.
 func GetNotificationsSettings(c *gin.Context) {
-	if FunctionsOf(c).Notifications == nil {
+	if StorageOf(c).Notifications == nil {
 		c.Error(errNoNotifications)
 		response.InternalServerError(c)
 		return
 	}
 
 	userID := ctxUser.GetID(c)
-	userNotifications, err := FunctionsOf(c).Notifications.NotificationsSubscribedByUser(c, userID)
+	userNotifications, err := StorageOf(c).Notifications.NotificationsSubscribedByUser(c, userID)
 	if err != nil {
 		response.InternalServerError(c)
 		return
@@ -174,7 +174,7 @@ func GetNotificationsSettings(c *gin.Context) {
 
 // SaveNotificationsSettings saves all the notifications received by the user's devices.
 func SaveNotificationsSettings(c *gin.Context) {
-	if FunctionsOf(c).Notifications == nil {
+	if StorageOf(c).Notifications == nil {
 		c.Error(errNoNotifications)
 		response.InternalServerError(c)
 		return
@@ -201,7 +201,7 @@ func SaveNotificationsSettings(c *gin.Context) {
 	}
 
 	userID := ctxUser.GetID(c)
-	if err := FunctionsOf(c).Notifications.SubscribeNotificationsToUser(c, userID, notificationsToSave); err != nil {
+	if err := StorageOf(c).Notifications.SubscribeNotificationsToUser(c, userID, notificationsToSave); err != nil {
 		response.InternalServerError(c)
 		return
 	}
@@ -222,7 +222,7 @@ func UnsubscribeNotificationByKey(c *gin.Context) {
 		response.InvalidRequestParameterWithDetails(c, message, reason, recovery)
 	}
 
-	if FunctionsOf(c).Notifications == nil {
+	if StorageOf(c).Notifications == nil {
 		c.Error(errNoNotifications)
 		sendError()
 		return
@@ -252,7 +252,7 @@ func UnsubscribeNotificationByKey(c *gin.Context) {
 		return
 	}
 
-	if err := FunctionsOf(c).Notifications.UnsubscribeNotificationFromUser(c, userID, notification, key); err != nil {
+	if err := StorageOf(c).Notifications.UnsubscribeNotificationFromUser(c, userID, notification, key); err != nil {
 		sendError()
 		return
 	}

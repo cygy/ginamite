@@ -14,14 +14,14 @@ import (
 
 // GetInfos returns the details of an account.
 func GetInfos(c *gin.Context) {
-	if FunctionsOf(c).Accounts == nil {
+	if StorageOf(c).Accounts == nil {
 		c.Error(errNoAccounts)
 		response.InternalServerError(c)
 		return
 	}
 
 	userID := ctxUser.GetID(c)
-	user, err := FunctionsOf(c).Accounts.GetOwnedAccountDetails(c, userID)
+	user, err := StorageOf(c).Accounts.GetOwnedAccountDetails(c, userID)
 	if err != nil || user == nil {
 		if err != nil {
 			c.Error(err)
@@ -37,7 +37,7 @@ func GetInfos(c *gin.Context) {
 
 // UpdateInfos updated the details of an account.
 func UpdateInfos(c *gin.Context) {
-	if FunctionsOf(c).Accounts == nil {
+	if StorageOf(c).Accounts == nil {
 		c.Error(errNoAccounts)
 		response.InternalServerError(c)
 		return
@@ -78,7 +78,7 @@ func UpdateInfos(c *gin.Context) {
 
 	// Update the infos of the user.
 	userID := ctxUser.GetID(c)
-	if err := FunctionsOf(c).Accounts.UpdatedAccountInfos(c, userID, firstName, lastName); err != nil {
+	if err := StorageOf(c).Accounts.UpdatedAccountInfos(c, userID, firstName, lastName); err != nil {
 		response.InternalServerError(c)
 		return
 	}
@@ -91,7 +91,7 @@ func UpdateInfos(c *gin.Context) {
 
 // UpdateSettings updated the settings of an account.
 func UpdateSettings(c *gin.Context) {
-	if FunctionsOf(c).Accounts == nil {
+	if StorageOf(c).Accounts == nil {
 		c.Error(errNoAccounts)
 		response.InternalServerError(c)
 		return
@@ -148,7 +148,7 @@ func UpdateSettings(c *gin.Context) {
 
 	// Update the settings of the user.
 	userID := ctxUser.GetID(c)
-	if err := FunctionsOf(c).Accounts.UpdatedAccountSettings(c, userID, accountLocale, accountTimezone); err != nil {
+	if err := StorageOf(c).Accounts.UpdatedAccountSettings(c, userID, accountLocale, accountTimezone); err != nil {
 		response.InternalServerError(c)
 		return
 	}

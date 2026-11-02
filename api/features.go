@@ -2,7 +2,6 @@ package api
 
 import (
 	"fmt"
-	"reflect"
 	"slices"
 	"sort"
 	"strings"
@@ -185,7 +184,6 @@ func (s *Server) selectRoutes(routes *route.DefaultRoutes, enabled []string) (ne
 		return false, fmt.Errorf("unknown features %v in the setting api_features, the features are: %s", unknown, strings.Join(names, ", "))
 	}
 
-	groups := []reflect.Value{reflect.ValueOf(s.Account)}
 	missing := map[string]bool{}
 	for _, f := range features {
 		isEnabled := slices.Contains(enabled, f.name)
@@ -198,7 +196,7 @@ func (s *Server) selectRoutes(routes *route.DefaultRoutes, enabled []string) (ne
 			}
 
 			for _, function := range r.functions {
-				if s.isUndefined(groups, function) {
+				if s.isUndefined(function) {
 					missing[function] = true
 				}
 			}
@@ -218,9 +216,9 @@ func (s *Server) selectRoutes(routes *route.DefaultRoutes, enabled []string) (ne
 	return needsJWT, nil
 }
 
-// isUndefined reports whether the storage, or the function, with the name is undefined. The names of the storages are
-// the fields of the server, the names of the functions are the fields of the groups of functions.
-func (s *Server) isUndefined(groups []reflect.Value, name string) bool {
+// isUndefined reports whether the storage with the name is undefined. The names are the ones of the storages of the
+// server, and the ones of its Account storage.
+func (s *Server) isUndefined(name string) bool {
 	switch name {
 	case "Contacts":
 		return s.Contacts == nil
@@ -238,11 +236,5 @@ func (s *Server) isUndefined(groups []reflect.Value, name string) bool {
 		return s.Account.Accounts == nil
 	}
 
-	for _, group := range groups {
-		if field := group.FieldByName(name); field.IsValid() {
-			return field.IsNil()
-		}
-	}
-
-	panic("api: the feature needs the unknown function " + name)
+	panic("api: the feature needs the unknown storage " + name)
 }

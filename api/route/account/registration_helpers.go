@@ -21,31 +21,31 @@ import (
 )
 
 func register(c *gin.Context, method string) {
-	if FunctionsOf(c).Accounts == nil {
+	if StorageOf(c).Accounts == nil {
 		c.Error(errNoAccounts)
 		response.InternalServerError(c)
 		return
 	}
 
-	if FunctionsOf(c).Accounts == nil {
+	if StorageOf(c).Accounts == nil {
 		c.Error(errNoAccounts)
 		response.InternalServerError(c)
 		return
 	}
 
-	if FunctionsOf(c).Accounts == nil {
+	if StorageOf(c).Accounts == nil {
 		c.Error(errNoAccounts)
 		response.InternalServerError(c)
 		return
 	}
 
-	if FunctionsOf(c).Accounts == nil {
+	if StorageOf(c).Accounts == nil {
 		c.Error(errNoAccounts)
 		response.InternalServerError(c)
 		return
 	}
 
-	if FunctionsOf(c).Accounts == nil {
+	if StorageOf(c).Accounts == nil {
 		c.Error(errNoAccounts)
 		response.InternalServerError(c)
 		return
@@ -186,7 +186,7 @@ func register(c *gin.Context, method string) {
 		})
 	}
 
-	exists, err := FunctionsOf(c).Accounts.DoesAccountWithUsernameExist(c, username)
+	exists, err := StorageOf(c).Accounts.DoesAccountWithUsernameExist(c, username)
 	if exists || err != nil {
 		sendAccountAlreadyExistsError()
 		return
@@ -219,9 +219,9 @@ func register(c *gin.Context, method string) {
 		// Then verify that an exiting account is not linked to the third-party user.
 		var doesUserExist func(context.Context, string) (bool, error)
 		if isFacebookMethod {
-			doesUserExist = FunctionsOf(c).Accounts.DoesUserWithFacebookUserIDExist
+			doesUserExist = StorageOf(c).Accounts.DoesUserWithFacebookUserIDExist
 		} else if isGoogleMethod {
-			doesUserExist = FunctionsOf(c).Accounts.DoesUserWithGoogleUserIDExist
+			doesUserExist = StorageOf(c).Accounts.DoesUserWithGoogleUserIDExist
 		}
 		if doesUserExist != nil {
 			exists, err := doesUserExist(c, tokenInfos.UserID)
@@ -231,14 +231,14 @@ func register(c *gin.Context, method string) {
 		}
 
 		// Finally verify that an account with this email address does not exist.
-		exists, err := FunctionsOf(c).Accounts.DoesAccountWithEmailAddressExist(c, tokenInfos.Email)
+		exists, err := StorageOf(c).Accounts.DoesAccountWithEmailAddressExist(c, tokenInfos.Email)
 		if exists || err != nil {
 			sendAccountAlreadyExistsError()
 			return
 		}
 
 		// Create an account with this third-party token.
-		if err := FunctionsOf(c).Accounts.RegisterByThirdPartyToken(c, username, tokenInfos, tokenValidator.SourceName(), accountLocale, termsVersion, registrationCode, privateKey, source, IPAddress, device); err != nil {
+		if err := StorageOf(c).Accounts.RegisterByThirdPartyToken(c, username, tokenInfos, tokenValidator.SourceName(), accountLocale, termsVersion, registrationCode, privateKey, source, IPAddress, device); err != nil {
 			response.InternalServerError(c)
 			return
 		}
@@ -251,21 +251,21 @@ func register(c *gin.Context, method string) {
 	// Register with a email/password
 	if isPasswordMethod {
 		// Verify that an account with this email address does not exist.
-		exists, err := FunctionsOf(c).Accounts.DoesAccountWithEmailAddressExist(c, emailAddress)
+		exists, err := StorageOf(c).Accounts.DoesAccountWithEmailAddressExist(c, emailAddress)
 		if exists || err != nil {
 			sendAccountAlreadyExistsError()
 			return
 		}
 
 		// Create an account with this email address.
-		if err := FunctionsOf(c).Accounts.RegisterByEmailAddress(c, username, encryptedPassword, emailAddress, accountLocale, termsVersion, registrationCode, privateKey, source, IPAddress, device); err != nil {
+		if err := StorageOf(c).Accounts.RegisterByEmailAddress(c, username, encryptedPassword, emailAddress, accountLocale, termsVersion, registrationCode, privateKey, source, IPAddress, device); err != nil {
 			response.InternalServerError(c)
 			return
 		}
 	}
 
 	// Get the newly created account.
-	user, err := FunctionsOf(c).Accounts.GetUserDetailsByIdentifier(c, emailAddress)
+	user, err := StorageOf(c).Accounts.GetUserDetailsByIdentifier(c, emailAddress)
 	if err != nil {
 		response.InternalServerError(c)
 		return
@@ -334,25 +334,25 @@ func validateOrCancelRegistration(c *gin.Context, validate bool) {
 		)
 	}
 
-	if FunctionsOf(c).Accounts == nil {
+	if StorageOf(c).Accounts == nil {
 		c.Error(errNoAccounts)
 		sendError()
 		return
 	}
 
-	if FunctionsOf(c).Accounts == nil {
+	if StorageOf(c).Accounts == nil {
 		c.Error(errNoAccounts)
 		sendError()
 		return
 	}
 
-	if FunctionsOf(c).Accounts == nil {
+	if StorageOf(c).Accounts == nil {
 		c.Error(errNoAccounts)
 		sendError()
 		return
 	}
 
-	if FunctionsOf(c).Accounts == nil {
+	if StorageOf(c).Accounts == nil {
 		c.Error(errNoAccounts)
 		sendError()
 		return
@@ -366,7 +366,7 @@ func validateOrCancelRegistration(c *gin.Context, validate bool) {
 		return
 	}
 
-	user, err := FunctionsOf(c).Accounts.GetUserDetailsByID(c, userID)
+	user, err := StorageOf(c).Accounts.GetUserDetailsByID(c, userID)
 	if err != nil {
 		sendError()
 		return
@@ -374,15 +374,15 @@ func validateOrCancelRegistration(c *gin.Context, validate bool) {
 
 	var registrationDetails *authentication.Details
 	if validate {
-		registrationDetails, err = FunctionsOf(c).Accounts.GetRegistrationDetails(c, userID)
+		registrationDetails, err = StorageOf(c).Accounts.GetRegistrationDetails(c, userID)
 		if err != nil {
 			sendError()
 			return
 		}
 
-		err = FunctionsOf(c).Accounts.ValidateUserRegistration(c, userID, key)
+		err = StorageOf(c).Accounts.ValidateUserRegistration(c, userID, key)
 	} else {
-		err = FunctionsOf(c).Accounts.CancelUserRegistration(c, userID, key)
+		err = StorageOf(c).Accounts.CancelUserRegistration(c, userID, key)
 	}
 	if err != nil {
 		sendError()

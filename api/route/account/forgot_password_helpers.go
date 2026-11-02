@@ -32,19 +32,19 @@ func validateOrCancelForgotPassword(c *gin.Context, validate bool) {
 		)
 	}
 
-	if FunctionsOf(c).Accounts == nil {
+	if StorageOf(c).Accounts == nil {
 		c.Error(errNoAccounts)
 		sendError()
 		return
 	}
 
-	if FunctionsOf(c).Processes == nil {
+	if StorageOf(c).Processes == nil {
 		c.Error(errNoProcesses)
 		sendError()
 		return
 	}
 
-	if FunctionsOf(c).Accounts == nil {
+	if StorageOf(c).Accounts == nil {
 		c.Error(errNoAccounts)
 		sendError()
 		return
@@ -72,19 +72,19 @@ func validateOrCancelForgotPassword(c *gin.Context, validate bool) {
 		}
 	}
 
-	userID, processPrivateKey, err := FunctionsOf(c).Processes.GetForgotPasswordProcessDetailsByID(c, processID)
+	userID, processPrivateKey, err := StorageOf(c).Processes.GetForgotPasswordProcessDetailsByID(c, processID)
 	if err != nil {
 		sendError()
 		return
 	}
 
 	if processPrivateKey != key {
-		FunctionsOf(c).Processes.WrongAccessToForgotPasswordProcess(c, processID)
+		StorageOf(c).Processes.WrongAccessToForgotPasswordProcess(c, processID)
 		sendError()
 		return
 	}
 
-	user, err := FunctionsOf(c).Accounts.GetUserDetailsByID(c, userID)
+	user, err := StorageOf(c).Accounts.GetUserDetailsByID(c, userID)
 	if err != nil {
 		sendError()
 		return
@@ -96,13 +96,13 @@ func validateOrCancelForgotPassword(c *gin.Context, validate bool) {
 			sendError()
 			return
 		}
-		if err := FunctionsOf(c).Accounts.UpdateUserPassword(c, userID, encryptedPassword, true); err != nil {
+		if err := StorageOf(c).Accounts.UpdateUserPassword(c, userID, encryptedPassword, true); err != nil {
 			sendError()
 			return
 		}
 	}
 
-	if err := FunctionsOf(c).Processes.DeleteForgotPasswordProcess(c, processID); err != nil && !validate {
+	if err := StorageOf(c).Processes.DeleteForgotPasswordProcess(c, processID); err != nil && !validate {
 		sendError()
 		return
 	}

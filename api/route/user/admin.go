@@ -408,7 +408,7 @@ func AdminDeleteUserToken(c *gin.Context) {
 		return
 	}
 
-	if account.FunctionsOf(c).Tokens == nil {
+	if account.StorageOf(c).Tokens == nil {
 		c.Error(errNoTokens)
 		response.InternalServerError(c)
 		return
@@ -416,7 +416,7 @@ func AdminDeleteUserToken(c *gin.Context) {
 
 	tokenID := getTokenID(c)
 
-	token, err := account.FunctionsOf(c).Tokens.GetTokenDetailsByID(c, tokenID)
+	token, err := account.StorageOf(c).Tokens.GetTokenDetailsByID(c, tokenID)
 	if err != nil && !commonErrors.IsNotFound(err) {
 		response.InternalServerError(c)
 		return
@@ -457,14 +457,14 @@ func AdminDelete(c *gin.Context) {
 	userID := getUserID(c)
 
 	// Get the user to delete.
-	user, err := account.FunctionsOf(c).Accounts.GetUserDetailsByID(c, userID)
+	user, err := account.StorageOf(c).Accounts.GetUserDetailsByID(c, userID)
 	if err != nil {
 		response.InternalServerError(c)
 		return
 	}
 
 	// Delete the user.
-	if err := account.FunctionsOf(c).Accounts.DeleteUserByID(c, userID); err != nil {
+	if err := account.StorageOf(c).Accounts.DeleteUserByID(c, userID); err != nil {
 		response.InternalServerError(c)
 		return
 	}
@@ -492,7 +492,7 @@ func AdminDisable(c *gin.Context) {
 	userID := getUserID(c)
 
 	// Disable the user.
-	user, err := account.FunctionsOf(c).Accounts.DisableUserByID(c, userID)
+	user, err := account.StorageOf(c).Accounts.DisableUserByID(c, userID)
 	if err != nil {
 		response.InternalServerError(c)
 		return
@@ -521,7 +521,7 @@ func AdminEnable(c *gin.Context) {
 	disabledUserID := getUserID(c)
 
 	// Enable the user.
-	user, err := account.FunctionsOf(c).Accounts.EnableUserByID(c, disabledUserID)
+	user, err := account.StorageOf(c).Accounts.EnableUserByID(c, disabledUserID)
 	if err != nil {
 		response.InternalServerError(c)
 		return

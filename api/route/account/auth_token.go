@@ -26,7 +26,7 @@ import (
 
 // LoginWithPassword creates a token to log in an account.
 func LoginWithPassword(c *gin.Context) {
-	if FunctionsOf(c).Accounts == nil {
+	if StorageOf(c).Accounts == nil {
 		c.Error(errNoAccounts)
 		response.InternalServerError(c)
 		return
@@ -87,7 +87,7 @@ func LoginWithPassword(c *gin.Context) {
 		return
 	}
 
-	user, encryptedPassword, err := FunctionsOf(c).Accounts.GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser(c, identifier)
+	user, encryptedPassword, err := StorageOf(c).Accounts.GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser(c, identifier)
 	if err != nil {
 		// Spend the time of a comparison: a login must not be faster when the account does not exist.
 		authentication.DummyCompare(password)
@@ -123,7 +123,7 @@ var errNoTokens = errors.New("undefined storage of the auth tokens")
 
 // Logout deletes the token and log out.
 func Logout(c *gin.Context) {
-	if FunctionsOf(c).Tokens == nil {
+	if StorageOf(c).Tokens == nil {
 		c.Error(errNoTokens)
 		response.InternalServerError(c)
 		return
@@ -132,11 +132,11 @@ func Logout(c *gin.Context) {
 	tokenID := ctxAuthToken.GetID(c)
 
 	expirationDate := time.Now().Add(time.Duration(ctxkey.Config.Get(c).JWT.TTL) * time.Second)
-	if date, err := FunctionsOf(c).Tokens.GetTokenExpirationDate(c, tokenID); err == nil {
+	if date, err := StorageOf(c).Tokens.GetTokenExpirationDate(c, tokenID); err == nil {
 		expirationDate = date
 	}
 
-	if err := FunctionsOf(c).Tokens.DeleteTokenByID(c, tokenID); err != nil {
+	if err := StorageOf(c).Tokens.DeleteTokenByID(c, tokenID); err != nil {
 		if commonErrors.IsNotFound(err) {
 			response.NoContent(c)
 		} else {
@@ -152,7 +152,7 @@ func Logout(c *gin.Context) {
 
 // GetAuthTokens gets the tokens of an account.
 func GetAuthTokens(c *gin.Context) {
-	if FunctionsOf(c).Tokens == nil {
+	if StorageOf(c).Tokens == nil {
 		c.Error(errNoTokens)
 		response.InternalServerError(c)
 		return
@@ -160,7 +160,7 @@ func GetAuthTokens(c *gin.Context) {
 
 	userID := ctxUser.GetID(c)
 
-	tokens, err := FunctionsOf(c).Tokens.GetOwnedTokens(c, userID)
+	tokens, err := StorageOf(c).Tokens.GetOwnedTokens(c, userID)
 	if err != nil {
 		response.SendError(c, err)
 		return
@@ -183,7 +183,7 @@ func DeleteAuthTokenWithKey(c *gin.Context) {
 
 // GetAuthToken gets the token properties of an account.
 func GetAuthToken(c *gin.Context) {
-	if FunctionsOf(c).Tokens == nil {
+	if StorageOf(c).Tokens == nil {
 		c.Error(errNoTokens)
 		response.InternalServerError(c)
 		return
@@ -191,7 +191,7 @@ func GetAuthToken(c *gin.Context) {
 
 	tokenID := c.Param("id")
 
-	token, tokenOwnerID, err := FunctionsOf(c).Tokens.GetOwnedTokenByID(c, tokenID)
+	token, tokenOwnerID, err := StorageOf(c).Tokens.GetOwnedTokenByID(c, tokenID)
 	if err != nil {
 		response.SendError(c, err)
 		return
@@ -210,7 +210,7 @@ func GetAuthToken(c *gin.Context) {
 
 // UpdateAuthToken updates a token of an account.
 func UpdateAuthToken(c *gin.Context) {
-	if FunctionsOf(c).Tokens == nil {
+	if StorageOf(c).Tokens == nil {
 		c.Error(errNoTokens)
 		response.InternalServerError(c)
 		return
@@ -251,7 +251,7 @@ func UpdateAuthToken(c *gin.Context) {
 		}
 	}
 
-	token, err := FunctionsOf(c).Tokens.GetTokenDetailsByID(c, tokenID)
+	token, err := StorageOf(c).Tokens.GetTokenDetailsByID(c, tokenID)
 	if err != nil {
 		response.SendError(c, err)
 		return
@@ -263,7 +263,7 @@ func UpdateAuthToken(c *gin.Context) {
 		return
 	}
 
-	if err := FunctionsOf(c).Tokens.UpdateTokenByID(c, tokenID, name, jsonBody.EnableNotification, subscribedNotifications); err != nil {
+	if err := StorageOf(c).Tokens.UpdateTokenByID(c, tokenID, name, jsonBody.EnableNotification, subscribedNotifications); err != nil {
 		response.InternalServerError(c)
 		return
 	}
@@ -304,7 +304,7 @@ func upgradePassword(c *gin.Context, userID, password, encryptedPassword string)
 
 	upgraded, err := authentication.EncryptPassword(password)
 	if err == nil {
-		err = FunctionsOf(c).Accounts.UpdateEncryptedPasswordByUserID(c, userID, upgraded)
+		err = StorageOf(c).Accounts.UpdateEncryptedPasswordByUserID(c, userID, upgraded)
 	}
 	if err != nil {
 		log.WithFields(logrus.Fields{"user": userID, "error": err.Error()}).Error("unable to upgrade the encrypted password")

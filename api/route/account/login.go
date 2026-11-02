@@ -77,19 +77,19 @@ func loginWithThirdParty(c *gin.Context, v validator.TokenValidator) {
 	var user authentication.User
 	var err error
 	if isFacebookMethod {
-		if FunctionsOf(c).Accounts == nil {
+		if StorageOf(c).Accounts == nil {
 			err := errNoAccounts
 			canNotLoginError(c, err)
 			return
 		}
-		user, err = FunctionsOf(c).Accounts.GetUserDetailsByFacebookUserID(c, tokenInfos.UserID)
+		user, err = StorageOf(c).Accounts.GetUserDetailsByFacebookUserID(c, tokenInfos.UserID)
 	} else if isGoogleMethod {
-		if FunctionsOf(c).Accounts == nil {
+		if StorageOf(c).Accounts == nil {
 			err := errNoAccounts
 			canNotLoginError(c, err)
 			return
 		}
-		user, err = FunctionsOf(c).Accounts.GetUserDetailsByGoogleUserID(c, tokenInfos.UserID)
+		user, err = StorageOf(c).Accounts.GetUserDetailsByGoogleUserID(c, tokenInfos.UserID)
 	}
 	if err != nil && !commonErrors.IsNotFound(err) {
 		canNotLoginError(c, err)
@@ -97,13 +97,13 @@ func loginWithThirdParty(c *gin.Context, v validator.TokenValidator) {
 	}
 
 	if !user.IsSaved() {
-		if FunctionsOf(c).Accounts == nil {
+		if StorageOf(c).Accounts == nil {
 			err := errNoAccounts
 			canNotLoginError(c, err)
 			return
 		}
 
-		if user, err = FunctionsOf(c).Accounts.GetUserDetailsByIdentifier(c, tokenInfos.Email); err != nil && !commonErrors.IsNotFound(err) {
+		if user, err = StorageOf(c).Accounts.GetUserDetailsByIdentifier(c, tokenInfos.Email); err != nil && !commonErrors.IsNotFound(err) {
 			canNotLoginError(c, err)
 			return
 		}
@@ -117,19 +117,19 @@ func loginWithThirdParty(c *gin.Context, v validator.TokenValidator) {
 
 	// Save the token.
 	if isFacebookMethod {
-		if FunctionsOf(c).Accounts == nil {
+		if StorageOf(c).Accounts == nil {
 			err := errNoAccounts
 			canNotLoginError(c, err)
 			return
 		}
-		err = FunctionsOf(c).Accounts.SaveFacebookUserTokenDetailsToUser(c, user.ID, tokenInfos)
+		err = StorageOf(c).Accounts.SaveFacebookUserTokenDetailsToUser(c, user.ID, tokenInfos)
 	} else if isGoogleMethod {
-		if FunctionsOf(c).Accounts == nil {
+		if StorageOf(c).Accounts == nil {
 			err := errNoAccounts
 			canNotLoginError(c, err)
 			return
 		}
-		err = FunctionsOf(c).Accounts.SaveGoogleUserTokenDetailsToUser(c, user.ID, tokenInfos)
+		err = StorageOf(c).Accounts.SaveGoogleUserTokenDetailsToUser(c, user.ID, tokenInfos)
 	}
 	if err != nil {
 		canNotLoginError(c, err)

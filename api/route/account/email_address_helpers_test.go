@@ -14,7 +14,7 @@ func TestStartProcessValidateNewEmailAddress(t *testing.T) {
 		t.Error("error = nil, want an error when the storage of the processes is not defined")
 	}
 
-	testFunctions.Processes = testProcesses
+	testStorage.Processes = testProcesses
 	testProcesses.CreateNewVerifyEmailAddressProcessFn = func(context.Context, string) (string, string, error) { return "", "", errBoom }
 	if _, _, err := startProcessValidateNewEmailAddress(c, testUserID, "john@example.com", "john", "en"); err == nil {
 		t.Error("error = nil, want the error of the process creation")

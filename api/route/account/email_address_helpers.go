@@ -9,11 +9,11 @@ import (
 )
 
 func startProcessValidateNewEmailAddress(c *gin.Context, userID, emailAddress, username, locale string) (string, string, error) {
-	if FunctionsOf(c).Processes == nil {
+	if StorageOf(c).Processes == nil {
 		return "", "", errNoProcesses
 	}
 
-	processID, processKey, err := FunctionsOf(c).Processes.CreateNewVerifyEmailAddressProcess(c, userID)
+	processID, processKey, err := StorageOf(c).Processes.CreateNewVerifyEmailAddressProcess(c, userID)
 	if err != nil {
 		return "", "", err
 	}

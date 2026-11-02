@@ -25,13 +25,13 @@ var errNoProcesses = errors.New("undefined storage of the processes")
 
 // ForgotPassword sends a mail to reset the password.
 func ForgotPassword(c *gin.Context) {
-	if FunctionsOf(c).Accounts == nil {
+	if StorageOf(c).Accounts == nil {
 		c.Error(errNoAccounts)
 		response.InternalServerError(c)
 		return
 	}
 
-	if FunctionsOf(c).Processes == nil {
+	if StorageOf(c).Processes == nil {
 		c.Error(errNoProcesses)
 		response.InternalServerError(c)
 		return
@@ -56,7 +56,7 @@ func ForgotPassword(c *gin.Context) {
 		return
 	}
 
-	user, err := FunctionsOf(c).Accounts.GetUserDetailsByIdentifier(c, identifier)
+	user, err := StorageOf(c).Accounts.GetUserDetailsByIdentifier(c, identifier)
 	if err != nil {
 		if commonErrors.IsNotFound(err) {
 			message := t("error.forgot_password.account.not_found.message")
@@ -77,7 +77,7 @@ func ForgotPassword(c *gin.Context) {
 	}
 
 	processPrivateKey := random.String(64)
-	processID, err := FunctionsOf(c).Processes.NewForgotPasswordProcessForUser(c, user.ID, processPrivateKey)
+	processID, err := StorageOf(c).Processes.NewForgotPasswordProcessForUser(c, user.ID, processPrivateKey)
 	if err != nil {
 		response.InternalServerError(c)
 		return

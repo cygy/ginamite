@@ -14,13 +14,13 @@ import (
 
 // DisableAccount starts the disable processus and sends a mail to confirm.
 func DisableAccount(c *gin.Context) {
-	if FunctionsOf(c).Accounts == nil {
+	if StorageOf(c).Accounts == nil {
 		c.Error(errNoAccounts)
 		response.InternalServerError(c)
 		return
 	}
 
-	if FunctionsOf(c).Processes == nil {
+	if StorageOf(c).Processes == nil {
 		c.Error(errNoProcesses)
 		response.InternalServerError(c)
 		return
@@ -30,13 +30,13 @@ func DisableAccount(c *gin.Context) {
 	t := ctxkey.Localization.Get(c).Translate(locale)
 
 	userID := ctxUser.GetID(c)
-	user, err := FunctionsOf(c).Accounts.GetUserDetailsByID(c, userID)
+	user, err := StorageOf(c).Accounts.GetUserDetailsByID(c, userID)
 	if err != nil {
 		response.InternalServerError(c)
 		return
 	}
 
-	processID, processKey, err := FunctionsOf(c).Processes.CreateNewDisableAccountProcess(c, userID)
+	processID, processKey, err := StorageOf(c).Processes.CreateNewDisableAccountProcess(c, userID)
 	if err != nil {
 		response.InternalServerError(c)
 		return

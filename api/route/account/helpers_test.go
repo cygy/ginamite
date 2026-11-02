@@ -79,7 +79,7 @@ func setup(t *testing.T) {
 	testConfig.Terms.Version = "v1"
 	testConfig.Environment = environment.Development
 
-	resetFunctions()
+	resetStorage()
 
 	testHooks.BuildTokenFromID = func(context.Context, string) (*authentication.Token, error) {
 		return &authentication.Token{UserID: testUserID, ExpirationDate: time.Now().Add(time.Hour), CreationDate: time.Now()}, nil
@@ -88,14 +88,14 @@ func setup(t *testing.T) {
 	testHooks.ExtendTokenExpirationDateFromID = func(context.Context, string, time.Duration) error { return nil }
 
 	t.Cleanup(func() {
-		resetFunctions()
+		resetStorage()
 		testHooks = authentication.Hooks{}
 	})
 }
 
 var (
-	// testFunctions are the functions of the handlers, set by the tests and reset at the end of each one.
-	testFunctions Functions
+	// testStorage are the functions of the handlers, set by the tests and reset at the end of each one.
+	testStorage Storage
 
 	// testHooks are the functions building and extending the auth tokens, set by setup.
 	testHooks authentication.Hooks
@@ -109,20 +109,20 @@ var (
 	testAccounts      = &fakeAccounts{}
 )
 
-// resetFunctions removes every function of the handlers and resets the storages.
-func resetFunctions() {
+// resetStorage removes every function of the handlers and resets the storages.
+func resetStorage() {
 	*testNotifications = fakeNotifications{}
 	*testTokens = fakeTokens{}
 	*testProcesses = fakeProcesses{}
 	*testAccounts = fakeAccounts{}
-	testFunctions = Functions{Notifications: testNotifications, Tokens: testTokens, Processes: testProcesses, Accounts: testAccounts}
+	testStorage = Storage{Notifications: testNotifications, Tokens: testTokens, Processes: testProcesses, Accounts: testAccounts}
 }
 
 // withoutNotifications, withoutTokens, withoutProcesses and withoutAccounts remove the storages.
-func withoutNotifications() { testFunctions.Notifications = nil }
-func withoutTokens()        { testFunctions.Tokens = nil }
-func withoutProcesses()     { testFunctions.Processes = nil }
-func withoutAccounts()      { testFunctions.Accounts = nil }
+func withoutNotifications() { testStorage.Notifications = nil }
+func withoutTokens()        { testStorage.Tokens = nil }
+func withoutProcesses()     { testStorage.Processes = nil }
+func withoutAccounts()      { testStorage.Accounts = nil }
 
 // fakeTokens is a TokensStorage whose methods call the function set by the test, if any.
 type fakeTokens struct {
@@ -618,7 +618,7 @@ func (f *fakeNotifications) UnsubscribeNotificationFromUser(ctx context.Context,
 // newRouter returns a router with the locale and the auth token middlewares, serving the handler on every path shape.
 func newRouter(handler gin.HandlerFunc) *gin.Engine {
 	router := gin.New()
-	router.Use(ctxkey.Config.Inject(testConfig), ctxkey.Queue.Inject(testQueue), request.InjectIDValidator(testIDValidator), ctxkey.Timezones.Inject(testTimezones), ctxkey.Notifications.Inject(notifications.NewRegistry()), Inject(&testFunctions), ctxAuthToken.InjectHooks(testHooks), ctxkey.Localization.Inject(apitest.Localization), ctxLocale.Inject("en", []string{"en"}))
+	router.Use(ctxkey.Config.Inject(testConfig), ctxkey.Queue.Inject(testQueue), request.InjectIDValidator(testIDValidator), ctxkey.Timezones.Inject(testTimezones), ctxkey.Notifications.Inject(notifications.NewRegistry()), Inject(&testStorage), ctxAuthToken.InjectHooks(testHooks), ctxkey.Localization.Inject(apitest.Localization), ctxLocale.Inject("en", []string{"en"}))
 	router.Use(ctxAuthToken.Parse(testSecret, nil, false))
 	router.Any("/", handler)
 	router.Any("/:id", handler)
@@ -679,7 +679,7 @@ func newContext(params gin.Params) (*gin.Context, *httptest.ResponseRecorder) {
 	request.SetIDValidator(c, testIDValidator)
 	ctxkey.Timezones.Set(c, testTimezones)
 	ctxkey.Notifications.Set(c, notifications.NewRegistry())
-	SetFunctions(c, &testFunctions)
+	SetStorage(c, &testStorage)
 	ctxAuthToken.SetHooks(c, testHooks)
 	ctxLocale.Set(c, "en", "en")
 
@@ -734,6 +734,6 @@ func (v fakeValidator) VerifyTokenAndExtractInfos(string) (validator.TokenInfos,
 // withValidator makes the handlers use the fake validator for every third-party method.
 func withValidator(v fakeValidator) func() {
 	return func() {
-		testFunctions.NewTokenValidator = func(*gin.Context, string) validator.TokenValidator { return v }
+		testStorage.NewTokenValidator = func(*gin.Context, string) validator.TokenValidator { return v }
 	}
 }

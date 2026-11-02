@@ -132,7 +132,7 @@ func TestFeatures(t *testing.T) {
 }
 
 // TestServer_features_areConsistent fails when a default route is added without being in a feature, when a route is in
-// two features, or when a requirement names a function which is not in a group of functions.
+// two features, or when a requirement names a storage which does not exist.
 // storages are the names of the storages of the server which the features need.
 var storages = []string{"Contacts", "Terms", "Users", "Notifications", "Tokens", "Processes", "Accounts"}
 
@@ -171,9 +171,6 @@ type noopProcesses struct{ account.ProcessesStorage }
 // noopAccounts is an account.AccountsStorage doing nothing: it embeds the interface, whose methods are never called.
 type noopAccounts struct{ account.AccountsStorage }
 
-// functionGroups are the types of the groups of functions of the server.
-var functionGroups = []reflect.Type{reflect.TypeFor[account.Functions]()}
-
 func TestServer_features_areConsistent(t *testing.T) {
 	routes := newDefaultRoutes()
 
@@ -186,11 +183,8 @@ func TestServer_features_areConsistent(t *testing.T) {
 			listed[r.route] = f.name
 
 			for _, function := range r.functions {
-				if slices.Contains(storages, function) {
-					continue
-				}
-				if !slices.ContainsFunc(functionGroups, func(group reflect.Type) bool { _, ok := group.FieldByName(function); return ok }) {
-					t.Errorf("the route %q needs %q, which is not a function of the server", r.route.Path, function)
+				if !slices.Contains(storages, function) {
+					t.Errorf("the route %q needs %q, which is not a storage of the server", r.route.Path, function)
 				}
 			}
 		}

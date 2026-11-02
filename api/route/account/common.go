@@ -19,7 +19,7 @@ import (
 // newTokenValidator returns the validator of the tokens issued by a third-party authentication method: the one of the
 // functions of the context if any, the validators of Facebook and Google else. It returns nil for another method.
 func newTokenValidator(c *gin.Context, method string) validator.TokenValidator {
-	if newValidator := FunctionsOf(c).NewTokenValidator; newValidator != nil {
+	if newValidator := StorageOf(c).NewTokenValidator; newValidator != nil {
 		return newValidator(c, method)
 	}
 
@@ -109,19 +109,19 @@ func validateOrCancelUpdateProperty(c *gin.Context, property string, validate bo
 		return
 	}
 
-	if FunctionsOf(c).Accounts == nil || FunctionsOf(c).Processes == nil {
+	if StorageOf(c).Accounts == nil || StorageOf(c).Processes == nil {
 		sendError(errors.New("the storages of the accounts and of the processes must be defined"))
 		return
 	}
 
 	// Verify the process.
-	userID, value, err := FunctionsOf(c).Processes.VerifyProcess(c, processID, key)
+	userID, value, err := StorageOf(c).Processes.VerifyProcess(c, processID, key)
 	if err != nil {
 		sendError(err)
 		return
 	}
 
-	user, err := FunctionsOf(c).Accounts.GetUserDetailsByID(c, userID)
+	user, err := StorageOf(c).Accounts.GetUserDetailsByID(c, userID)
 	if err != nil {
 		sendError(err)
 		return
@@ -130,22 +130,22 @@ func validateOrCancelUpdateProperty(c *gin.Context, property string, validate bo
 	// Now update the password/email address.
 	if validate {
 		if isEmailAddressProcess {
-			if err := FunctionsOf(c).Accounts.UpdateUserEmailAddress(c, userID, value); err != nil {
+			if err := StorageOf(c).Accounts.UpdateUserEmailAddress(c, userID, value); err != nil {
 				sendError(err)
 				return
 			}
 		} else if isPasswordProcess {
-			if err := FunctionsOf(c).Accounts.UpdateUserPassword(c, userID, value, true); err != nil {
+			if err := StorageOf(c).Accounts.UpdateUserPassword(c, userID, value, true); err != nil {
 				sendError(err)
 				return
 			}
 		} else if isValidateEmailAddressProcess {
-			if err := FunctionsOf(c).Accounts.UserEmailAddressIsVerified(c, userID); err != nil {
+			if err := StorageOf(c).Accounts.UserEmailAddressIsVerified(c, userID); err != nil {
 				sendError(err)
 				return
 			}
 		} else if isDeleteAccountProcess {
-			if err := FunctionsOf(c).Accounts.DeleteUserByID(c, userID); err != nil {
+			if err := StorageOf(c).Accounts.DeleteUserByID(c, userID); err != nil {
 				sendError(err)
 				return
 			}
@@ -154,7 +154,7 @@ func validateOrCancelUpdateProperty(c *gin.Context, property string, validate bo
 				UserID: userID,
 			})
 		} else if isDisableAccountProcess {
-			if _, err := FunctionsOf(c).Accounts.DisableUserByID(c, userID); err != nil {
+			if _, err := StorageOf(c).Accounts.DisableUserByID(c, userID); err != nil {
 				sendError(err)
 				return
 			}
@@ -166,7 +166,7 @@ func validateOrCancelUpdateProperty(c *gin.Context, property string, validate bo
 	}
 
 	// Now delete the process.
-	err = FunctionsOf(c).Processes.DeleteProcessByID(c, processID)
+	err = StorageOf(c).Processes.DeleteProcessByID(c, processID)
 	if err != nil && !validate {
 		sendError(err)
 		return

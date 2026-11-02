@@ -19,13 +19,13 @@ import (
 
 // UpdateEmailAddress updates the email address and sends a mail to confirm.
 func UpdateEmailAddress(c *gin.Context) {
-	if FunctionsOf(c).Accounts == nil {
+	if StorageOf(c).Accounts == nil {
 		c.Error(errNoAccounts)
 		response.InternalServerError(c)
 		return
 	}
 
-	if FunctionsOf(c).Processes == nil {
+	if StorageOf(c).Processes == nil {
 		c.Error(errNoProcesses)
 		response.InternalServerError(c)
 		return
@@ -47,7 +47,7 @@ func UpdateEmailAddress(c *gin.Context) {
 	}
 
 	userID := ctxUser.GetID(c)
-	user, err := FunctionsOf(c).Accounts.GetUserDetailsByID(c, userID)
+	user, err := StorageOf(c).Accounts.GetUserDetailsByID(c, userID)
 	if err != nil {
 		response.InternalServerError(c)
 		return
@@ -62,7 +62,7 @@ func UpdateEmailAddress(c *gin.Context) {
 		return
 	}
 
-	processID, processKey, err := FunctionsOf(c).Processes.CreateNewUpdateEmailAddressProcess(c, userID, emailAddress)
+	processID, processKey, err := StorageOf(c).Processes.CreateNewUpdateEmailAddressProcess(c, userID, emailAddress)
 	if err != nil {
 		response.InternalServerError(c)
 		return
@@ -107,7 +107,7 @@ func ValidateNewEmailAddress(c *gin.Context) {
 
 // ConfirmEmailAddress validates the new email address.
 func ConfirmEmailAddress(c *gin.Context) {
-	if FunctionsOf(c).Accounts == nil {
+	if StorageOf(c).Accounts == nil {
 		c.Error(errNoAccounts)
 		response.InternalServerError(c)
 		return
@@ -117,7 +117,7 @@ func ConfirmEmailAddress(c *gin.Context) {
 	t := ctxkey.Localization.Get(c).Translate(locale)
 
 	userID := ctxUser.GetID(c)
-	user, err := FunctionsOf(c).Accounts.GetUserDetailsByID(c, userID)
+	user, err := StorageOf(c).Accounts.GetUserDetailsByID(c, userID)
 	if err != nil {
 		response.InternalServerError(c)
 		return

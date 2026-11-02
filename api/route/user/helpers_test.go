@@ -36,7 +36,7 @@ var (
 	// testStorage is the storage of the handlers and testAccountFunctions their account functions, reset at the end of
 	// each test. The storage is removed from the context by withoutStorage.
 	testStorage          = &fakeStorage{}
-	testAccountFunctions account.Functions
+	testAccountFunctions account.Storage
 	storageRemoved       bool
 	testTokens           = &fakeAccountTokens{}
 	testAccounts         = &fakeAccountAccounts{}
@@ -171,7 +171,7 @@ func setup(t *testing.T) {
 	t.Helper()
 
 	apitest.InitLocalization(t, map[string]string{"placeholder": "placeholder"})
-	testAccountFunctions = account.Functions{Tokens: testTokens, Accounts: testAccounts}
+	testAccountFunctions = account.Storage{Tokens: testTokens, Accounts: testAccounts}
 
 	testConfig = config.NewConfiguration()
 	testConfig.SupportedLocales = []string{"en"}
@@ -181,7 +181,7 @@ func setup(t *testing.T) {
 		*testTokens = fakeAccountTokens{}
 		*testAccounts = fakeAccountAccounts{}
 		storageRemoved = false
-		testAccountFunctions = account.Functions{Tokens: testTokens, Accounts: testAccounts}
+		testAccountFunctions = account.Storage{Tokens: testTokens, Accounts: testAccounts}
 	})
 }
 
@@ -204,7 +204,7 @@ func newTestContext(body string) (*gin.Context, *httptest.ResponseRecorder) {
 	ctxkey.Timezones.Set(c, testTimezones)
 	ctxkey.Notifications.Set(c, notifications.NewRegistry())
 	SetStorage(c, testStorage)
-	account.SetFunctions(c, &testAccountFunctions)
+	account.SetStorage(c, &testAccountFunctions)
 	ctxLocale.Set(c, "en", "en")
 
 	return c, recorder

@@ -269,8 +269,8 @@ the message broker (`Broker`, set by a plugin) and the queue built on it (`Queue
 configuration).
 
 - The API and web servers save them in the Gin context of the requests, and the handlers read them with
-  `ctxkey.Config.Get(c)`, `ctxkey.Localization.Get(c)` and `ctxkey.Queue.Get(c)`. The functions of the application, such as the ones
-  of the storage plugin, are saved the same way: `account.FunctionsOf(c)`, `ctxAuthToken.HooksOf(c)`, etc.
+  `ctxkey.Config.Get(c)`, `ctxkey.Localization.Get(c)` and `ctxkey.Queue.Get(c)`. The storages of the application, such as the ones
+  of the storage plugin, are saved the same way: `account.StorageOf(c)`, `ctxAuthToken.HooksOf(c)`, etc.
 - The web server also saves its pages, `html.Of(c)`, and the worker builds a `mail.Mailer` from its services.
 - The code without a request receives what it needs as arguments: for instance the worker builds a `recurring.Scheduler`
   and a `mail.Mailer` from its services.
@@ -282,8 +282,9 @@ configuration).
 ### API features
 
 The default routes of the API are grouped by feature, chosen with `api_features`. Each feature owns its routes of
-administration, and needs the functions of `api.Server.Functions` they call (a plugin provides them): the start fails,
-naming the undefined functions, if an enabled feature misses some. No route is loaded without feature.
+administration, and needs the storages of `api.Server` they call (`Contacts`, `Terms`, `Users` and the ones of `Account`: `Accounts`,
+`Tokens`, `Processes`, `Notifications`; a plugin provides them): the start fails, naming the undefined storages, if an
+enabled feature misses some. No route is loaded without feature.
 
 ```yaml
 api_features: [status, locales, timezones, auth, account, contact]
@@ -344,7 +345,7 @@ the extension points below, and is registered with `server.AddPlugin`.
 
 | Extension point | Role |
 | --- | --- |
-| `ginamite.Plugin.Configure` | Sets the functions of the API (`api.Server.Functions`) and of the worker (`worker.Server.Functions`). An error stops `Run`. |
+| `ginamite.Plugin.Configure` | Sets the storages and the hooks of the API (`api.Server.Contacts`, `Account`, `Hooks`, etc.) and the functions of the worker (`worker.Server.Functions`). An error stops `Run`. |
 | `ginamite.Connector` (optional) | `Connect` opens the connection before the plugins are configured, and returns an error if it fails; `Close` closes it when the server stops. Called only for the API and worker servers. |
 | `api.Server.Middlewares` | Gin middlewares added before the routes, for instance to put the database in the context of the requests. |
 | `api.Server.Hooks.IsValidID` | Reports whether an identifier in a URL is well-formed. It depends on the database (an ObjectID for MongoDB, a UUID or an integer for SQL). By default every identifier is accepted. |
