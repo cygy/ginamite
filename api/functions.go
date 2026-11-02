@@ -60,7 +60,7 @@ func (s *Server) CreateConsumers() []broker.MessageConsumer {
 				}
 				s.RevokedTokens.Add(p.Tokens)
 			default:
-				if s.Functions.NewMessageFromQueueCache == nil || !s.Functions.NewMessageFromQueueCache(msgType) {
+				if s.Hooks.NewMessageFromQueueCache == nil || !s.Hooks.NewMessageFromQueueCache(msgType) {
 					log.WithFields(logrus.Fields{
 						"topic": queue.TopicCache,
 						"type":  msgType,
@@ -108,7 +108,6 @@ func (s *Server) Run() error {
 	}
 
 	// Set up some global functions.
-	accountFunctions, userFunctions, contactFunctions, termsFunctions := s.routeFunctions()
 
 	// Load the middlewares.
 	if s.Requests != nil {
@@ -119,15 +118,15 @@ func (s *Server) Run() error {
 	server.Use(s.idValidator())
 	server.Use(ctxAuthToken.InjectRevoked(s.RevokedTokens.IsRevoked))
 	server.Use(ctxAuthToken.InjectHooks(authentication.Hooks{
-		BuildTokenFromID:                s.Functions.BuildTokenFromID,
-		ExtraPropertiesForTokenWithID:   s.Functions.ExtraPropertiesForTokenWithID,
-		ExtendTokenExpirationDateFromID: s.Functions.ExtendTokenExpirationDateFromID,
+		BuildTokenFromID:                s.Hooks.BuildTokenFromID,
+		ExtraPropertiesForTokenWithID:   s.Hooks.ExtraPropertiesForTokenWithID,
+		ExtendTokenExpirationDateFromID: s.Hooks.ExtendTokenExpirationDateFromID,
 	}))
 	server.Use(
-		account.Inject(&accountFunctions),
-		user.Inject(&userFunctions),
-		contact.Inject(&contactFunctions),
-		terms.Inject(&termsFunctions),
+		account.Inject(&s.Account),
+		user.Inject(&s.Users),
+		contact.Inject(&s.Contacts),
+		terms.Inject(&s.Terms),
 	)
 	server.Use(ctxLocale.Inject(s.Config.DefaultLocale, s.Config.SupportedLocales))
 
@@ -141,16 +140,16 @@ func (s *Server) Run() error {
 	// Set up the routes.
 	router := route.NewRouter(
 		server, s.Config.APIVersion, s.Config.IsProductionEnvironment(), s.Config.JWT.Secret, s.Config.Terms.Version,
-		s.Functions.MiddlewareIsValidAuthToken,
-		s.Functions.MiddlewareGetUserAndLocaleFromAuthToken,
-		s.Functions.MiddlewareGetUserAbilities,
-		s.Functions.MiddlewareGetLatestVersionOfTermsAcceptedByUser,
+		s.Hooks.MiddlewareIsValidAuthToken,
+		s.Hooks.MiddlewareGetUserAndLocaleFromAuthToken,
+		s.Hooks.MiddlewareGetUserAbilities,
+		s.Hooks.MiddlewareGetLatestVersionOfTermsAcceptedByUser,
 	)
 	needsJWT, err := s.selectRoutes(&router.DefaultRoutes, s.Config.APIFeatures)
 	if err != nil {
 		return fmt.Errorf("unable to load the routes of the API: %w", err)
 	}
-	if router.DefaultRoutes.Authentication.Paths.LoginWithPassword.Enabled && s.Functions.UpdateEncryptedPasswordByUserID == nil {
+	if router.DefaultRoutes.Authentication.Paths.LoginWithPassword.Enabled && s.Account.UpdateEncryptedPasswordByUserID == nil {
 		log.Warn("The function 'UpdateEncryptedPasswordByUserID' is undefined: the weak password hashes are not upgraded.")
 	}
 	if s.Config.JWT.Secret == "" {
@@ -160,8 +159,8 @@ func (s *Server) Run() error {
 
 		router.DisableAuthentication()
 	}
-	if s.Functions.RouterConfigureDefaultRoutes != nil {
-		s.Functions.RouterConfigureDefaultRoutes(&router.DefaultRoutes)
+	if s.Hooks.RouterConfigureDefaultRoutes != nil {
+		s.Hooks.RouterConfigureDefaultRoutes(&router.DefaultRoutes)
 	}
 	router.Notifications = s.Notifications
 	router.Limits = route.RateLimits{
@@ -178,8 +177,8 @@ func (s *Server) Run() error {
 	s.RevokedTokens.StartDeletingExpired(time.Duration(s.Config.ExpiredAuthTokens.FlushCacheInterval))
 
 	// Start the custom recurring tasks.
-	if s.Functions.RecurringTasks != nil {
-		s.Functions.RecurringTasks()
+	if s.Hooks.RecurringTasks != nil {
+		s.Hooks.RecurringTasks()
 	}
 
 	// Start the server.
@@ -214,91 +213,14 @@ func NewServer() *Server {
 	}
 }
 
-// routeFunctions returns the functions of the server used by the handlers of the routes, by package.
-func (s *Server) routeFunctions() (accountFunctions account.Functions, userFunctions user.Functions, contactFunctions contact.Functions, termsFunctions terms.Functions) {
-	termsFunctions.UpdateVersionOfTermsAcceptedByUser = s.Functions.UpdateVersionOfTermsAcceptedByUser
-	userFunctions.GetEnabledUsersForAdmin = s.Functions.GetEnabledUsersForAdmin
-	userFunctions.GetDisabledUsersForAdmin = s.Functions.GetDisabledUsersForAdmin
-	userFunctions.UpdatePasswordByAdmin = s.Functions.UpdatePasswordByAdmin
-	userFunctions.UpdateInformationsByAdmin = s.Functions.UpdateInformationsByAdmin
-	userFunctions.UpdateDescriptionByAdmin = s.Functions.UpdateDescriptionByAdmin
-	userFunctions.UpdateSocialByAdmin = s.Functions.UpdateSocialByAdmin
-	userFunctions.UpdateSettingsByAdmin = s.Functions.UpdateSettingsByAdmin
-	userFunctions.UpdateNotificationsByAdmin = s.Functions.UpdateNotificationsByAdmin
-	userFunctions.GetTokensForAdmin = s.Functions.GetTokensForAdmin
-	userFunctions.DeleteTokenByIDByAdmin = s.Functions.DeleteTokenByIDByAdmin
-	userFunctions.SetAbilitiesToUser = s.Functions.SetAbilitiesToUser
-	userFunctions.AddAbilitiesToUser = s.Functions.AddAbilitiesToUser
-	userFunctions.RemoveAbilitiesFromUser = s.Functions.RemoveAbilitiesFromUser
-	accountFunctions.NotificationsReceivedByUser = s.Functions.NotificationsReceivedByUser
-	accountFunctions.NotificationReceivedByUser = s.Functions.NotificationReceivedByUser
-	accountFunctions.UpdateUserNotificationRead = s.Functions.UpdateUserNotificationRead
-	accountFunctions.UpdateUserNotificationNotified = s.Functions.UpdateUserNotificationNotified
-	accountFunctions.DeleteUserNotification = s.Functions.DeleteUserNotification
-	accountFunctions.NotificationsSubscribedByUser = s.Functions.NotificationsSubscribedByUser
-	accountFunctions.SubscribeNotificationsToUser = s.Functions.SubscribeNotificationsToUser
-	accountFunctions.UnsubscribeNotificationFromUser = s.Functions.UnsubscribeNotificationFromUser
-	accountFunctions.GetUserDetailsByIdentifier = s.Functions.GetUserDetailsByIdentifier
-	accountFunctions.GetUserDetailsByID = s.Functions.GetUserDetailsByID
-	accountFunctions.NewForgotPasswordProcessForUser = s.Functions.NewForgotPasswordProcessForUser
-	accountFunctions.GetForgotPasswordProcessDetailsByID = s.Functions.GetForgotPasswordProcessDetailsByID
-	accountFunctions.WrongAccessToForgotPasswordProcess = s.Functions.WrongAccessToForgotPasswordProcess
-	accountFunctions.UpdateUserPassword = s.Functions.UpdateUserPassword
-	accountFunctions.UpdateUserEmailAddress = s.Functions.UpdateUserEmailAddress
-	accountFunctions.UserEmailAddressIsVerified = s.Functions.UserEmailAddressIsVerified
-	accountFunctions.UpdateUserSocialNetworks = s.Functions.UpdateUserSocialNetworks
-	accountFunctions.DeleteForgotPasswordProcess = s.Functions.DeleteForgotPasswordProcess
-	accountFunctions.ValidateUserRegistration = s.Functions.ValidateUserRegistration
-	accountFunctions.CancelUserRegistration = s.Functions.CancelUserRegistration
-	accountFunctions.GetRegistrationDetails = s.Functions.GetRegistrationDetails
-	accountFunctions.SaveAuthenticationToken = s.Functions.SaveAuthenticationToken
-	accountFunctions.DoesAccountWithUsernameExist = s.Functions.DoesAccountWithUsernameExist
-	accountFunctions.DoesAccountWithEmailAddressExist = s.Functions.DoesAccountWithEmailAddressExist
-	accountFunctions.RegisterByEmailAddress = s.Functions.RegisterByEmailAddress
-	accountFunctions.RegisterByThirdPartyToken = s.Functions.RegisterByThirdPartyToken
-	accountFunctions.DoesUserWithFacebookUserIDExist = s.Functions.DoesUserWithFacebookUserIDExist
-	accountFunctions.DoesUserWithGoogleUserIDExist = s.Functions.DoesUserWithGoogleUserIDExist
-	accountFunctions.GetUserDetailsByFacebookUserID = s.Functions.GetUserDetailsByFacebookUserID
-	accountFunctions.GetUserDetailsByGoogleUserID = s.Functions.GetUserDetailsByGoogleUserID
-	accountFunctions.SaveFacebookUserTokenDetailsToUser = s.Functions.SaveFacebookUserTokenDetailsToUser
-	accountFunctions.SaveGoogleUserTokenDetailsToUser = s.Functions.SaveGoogleUserTokenDetailsToUser
-	accountFunctions.GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser = s.Functions.GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser
-	accountFunctions.UpdateEncryptedPasswordByUserID = s.Functions.UpdateEncryptedPasswordByUserID
-	accountFunctions.GetTokenExpirationDate = s.Functions.GetTokenExpirationDate
-	accountFunctions.DeleteTokenByID = s.Functions.DeleteTokenByID
-	accountFunctions.GetTokenDetailsByID = s.Functions.GetTokenDetailsByID
-	accountFunctions.GetOwnedTokens = s.Functions.GetOwnedTokens
-	accountFunctions.GetOwnedTokenByID = s.Functions.GetOwnedTokenByID
-	accountFunctions.UpdateTokenByID = s.Functions.UpdateTokenByID
-	accountFunctions.GetOwnedAccountDetails = s.Functions.GetOwnedAccountDetails
-	accountFunctions.UpdatedAccountInfos = s.Functions.UpdatedAccountInfos
-	accountFunctions.UpdatedAccountSettings = s.Functions.UpdatedAccountSettings
-	accountFunctions.CreateNewDeleteAccountProcess = s.Functions.CreateNewDeleteAccountProcess
-	accountFunctions.CreateNewDisableAccountProcess = s.Functions.CreateNewDisableAccountProcess
-	accountFunctions.CreateNewUpdatePasswordProcess = s.Functions.CreateNewUpdatePasswordProcess
-	accountFunctions.CreateNewUpdateEmailAddressProcess = s.Functions.CreateNewUpdateEmailAddressProcess
-	accountFunctions.CreateNewVerifyEmailAddressProcess = s.Functions.CreateNewVerifyEmailAddressProcess
-	accountFunctions.VerifyProcess = s.Functions.VerifyProcess
-	accountFunctions.DeleteProcessByID = s.Functions.DeleteProcessByID
-	accountFunctions.DeleteUserByID = s.Functions.DeleteUserByID
-	accountFunctions.DisableUserByID = s.Functions.DisableUserByID
-	accountFunctions.EnableUserByID = s.Functions.EnableUserByID
-	contactFunctions.CreateContact = s.Functions.CreateContact
-	contactFunctions.UpdateContact = s.Functions.UpdateContact
-	contactFunctions.GetContacts = s.Functions.GetContacts
-	contactFunctions.GetContact = s.Functions.GetContact
-
-	return accountFunctions, userFunctions, contactFunctions, termsFunctions
-}
-
 // idValidator returns the middleware making the requests use the IsValidID function of the server, if any, to validate
 // the identifiers. It does nothing if the function is undefined.
 func (s *Server) idValidator() gin.HandlerFunc {
-	if s.Functions.IsValidID == nil {
+	if s.Hooks.IsValidID == nil {
 		return func(c *gin.Context) {}
 	}
 
-	return request.InjectIDValidator(s.Functions.IsValidID)
+	return request.InjectIDValidator(s.Hooks.IsValidID)
 }
 
 // configureProxies sets the proxies trusted to give the address of the client, which limits the requests. No proxy is

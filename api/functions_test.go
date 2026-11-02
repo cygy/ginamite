@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -29,43 +28,6 @@ func TestNewServer(t *testing.T) {
 	}
 }
 
-func TestServer_routeFunctions(t *testing.T) {
-	s := NewServer()
-
-	// Every function of the server is defined.
-	values := reflect.ValueOf(&s.Functions).Elem()
-	for i := range values.NumField() {
-		field := values.Field(i)
-		if field.Kind() == reflect.Func {
-			field.Set(reflect.MakeFunc(field.Type(), func([]reflect.Value) []reflect.Value {
-				out := make([]reflect.Value, field.Type().NumOut())
-				for j := range out {
-					out[j] = reflect.Zero(field.Type().Out(j))
-				}
-
-				return out
-			}))
-		}
-	}
-
-	account, user, contact, terms := s.routeFunctions()
-
-	// Every function of the routes, except the ones which have a default, is the function of the server.
-	for name, functions := range map[string]any{"account": &account, "user": &user, "contact": &contact, "terms": &terms} {
-		fields := reflect.ValueOf(functions).Elem()
-		for i := range fields.NumField() {
-			fieldName := fields.Type().Field(i).Name
-			if fieldName == "NewTokenValidator" {
-				continue
-			}
-
-			if fields.Field(i).IsNil() {
-				t.Errorf("%s.%s is not set from the functions of the server", name, fieldName)
-			}
-		}
-	}
-}
-
 func TestServer_idValidator(t *testing.T) {
 	validity := func(s *Server) (valid, invalid bool) {
 		router := gin.New()
@@ -81,7 +43,7 @@ func TestServer_idValidator(t *testing.T) {
 		t.Error("without a function, every ID must stay valid")
 	}
 
-	s.Functions.IsValidID = func(id string) bool { return id == "ok" }
+	s.Hooks.IsValidID = func(id string) bool { return id == "ok" }
 	if valid, invalid := validity(s); !valid || invalid {
 		t.Error("the function of the server must validate the IDs")
 	}
@@ -144,7 +106,7 @@ func TestServer_CreateConsumers(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			hook := logtest.NewLocal(log.Main.Logger)
 			s := NewServer()
-			s.Functions.NewMessageFromQueueCache = tt.handler
+			s.Hooks.NewMessageFromQueueCache = tt.handler
 
 			consumers := s.CreateConsumers()
 			if len(consumers) != 1 || consumers[0].Topic != queue.TopicCache {
@@ -259,7 +221,7 @@ func TestServer_Run_SetUpErrors(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := NewServer()
-			s.Functions.UpdateVersionOfTermsAcceptedByUser = func(*gin.Context, string, string) error { return nil }
+			s.Terms.UpdateVersionOfTermsAcceptedByUser = func(*gin.Context, string, string) error { return nil }
 			tt.setup(s)
 
 			if err := s.Run(); err == nil || !strings.Contains(err.Error(), tt.want) {

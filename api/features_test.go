@@ -9,6 +9,10 @@ import (
 	"testing"
 
 	"github.com/cygy/ginamite/api/route"
+	"github.com/cygy/ginamite/api/route/account"
+	"github.com/cygy/ginamite/api/route/contact"
+	"github.com/cygy/ginamite/api/route/terms"
+	"github.com/cygy/ginamite/api/route/user"
 
 	"github.com/gin-gonic/gin"
 )
@@ -18,24 +22,27 @@ func newDefaultRoutes() route.DefaultRoutes {
 	return route.NewRouter(gin.New(), "v1", false, "secret", "", nil, nil, nil, nil).DefaultRoutes
 }
 
-// definedFunctions returns the functions of an application which defines every function.
-func definedFunctions() Handlers {
-	var h Handlers
+// fill sets every function of the struct pointed by groups to a function doing nothing.
+func fill(groups ...any) {
+	for _, group := range groups {
+		values := reflect.ValueOf(group).Elem()
+		for i := range values.NumField() {
+			field := values.Field(i)
+			field.Set(reflect.MakeFunc(field.Type(), func([]reflect.Value) []reflect.Value {
+				out := make([]reflect.Value, field.Type().NumOut())
+				for j := range out {
+					out[j] = reflect.Zero(field.Type().Out(j))
+				}
 
-	values := reflect.ValueOf(&h).Elem()
-	for i := range values.NumField() {
-		field := values.Field(i)
-		field.Set(reflect.MakeFunc(field.Type(), func([]reflect.Value) []reflect.Value {
-			out := make([]reflect.Value, field.Type().NumOut())
-			for j := range out {
-				out[j] = reflect.Zero(field.Type().Out(j))
-			}
-
-			return out
-		}))
+				return out
+			}))
+		}
 	}
+}
 
-	return h
+// defineAllFunctions makes the server define every function of the features.
+func defineAllFunctions(s *Server) {
+	fill(&s.Account, &s.Users, &s.Contacts, &s.Terms)
 }
 
 func TestServer_selectRoutes(t *testing.T) {
@@ -69,7 +76,7 @@ func TestServer_selectRoutes(t *testing.T) {
 
 	t.Run("a feature loads its administration routes", func(t *testing.T) {
 		s := NewServer()
-		s.Functions = definedFunctions()
+		defineAllFunctions(s)
 		routes := newDefaultRoutes()
 
 		needsJWT, err := s.selectRoutes(&routes, []string{FeatureContact})
@@ -87,7 +94,9 @@ func TestServer_selectRoutes(t *testing.T) {
 
 	t.Run("undefined functions are named", func(t *testing.T) {
 		s := NewServer()
-		s.Functions.CreateContact = definedFunctions().CreateContact
+		var defined contact.Functions
+		fill(&defined)
+		s.Contacts.CreateContact = defined.CreateContact
 		routes := newDefaultRoutes()
 
 		_, err := s.selectRoutes(&routes, []string{FeatureContact})
@@ -117,7 +126,10 @@ func TestFeatures(t *testing.T) {
 }
 
 // TestServer_features_areConsistent fails when a default route is added without being in a feature, when a route is in
-// two features, or when a requirement names a function which is not in Handlers.
+// two features, or when a requirement names a function which is not in a group of functions.
+// functionGroups are the types of the groups of functions of the server.
+var functionGroups = []reflect.Type{reflect.TypeFor[account.Functions](), reflect.TypeFor[user.Functions](), reflect.TypeFor[contact.Functions](), reflect.TypeFor[terms.Functions]()}
+
 func TestServer_features_areConsistent(t *testing.T) {
 	routes := newDefaultRoutes()
 
@@ -130,8 +142,8 @@ func TestServer_features_areConsistent(t *testing.T) {
 			listed[r.route] = f.name
 
 			for _, function := range r.functions {
-				if _, ok := reflect.TypeFor[Handlers]().FieldByName(function); !ok {
-					t.Errorf("the route %q needs %q, which is not a function of Handlers", r.route.Path, function)
+				if !slices.ContainsFunc(functionGroups, func(group reflect.Type) bool { _, ok := group.FieldByName(function); return ok }) {
+					t.Errorf("the route %q needs %q, which is not a function of the server", r.route.Path, function)
 				}
 			}
 		}

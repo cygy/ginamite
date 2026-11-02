@@ -34,8 +34,15 @@ type Server struct {
 	// starts.
 	Notifications *notifications.Registry
 	// Requests counts the requests handled by the API for the metrics. Nothing is counted if nil.
-	Requests  *metrics.Requests
-	Functions Handlers
+	Requests *metrics.Requests
+
+	// The functions of the application, such as the ones of the storage plugin, by feature. A feature whose functions
+	// are undefined can not be enabled, see api_features.
+	Account  account.Functions
+	Users    user.Functions
+	Contacts contact.Functions
+	Terms    terms.Functions
+	Hooks    Hooks
 
 	// RevokedTokens are the auth tokens revoked, which are rejected until they expire. The cache messages of the queue
 	// add tokens to it.
@@ -48,88 +55,18 @@ type Server struct {
 	customRoutes []route.ConfigureCustomRoutes
 }
 
-// Handlers lists the functions of an API.
-type Handlers struct {
-	RecurringTasks                                                func()
-	IsValidID                                                     func(id string) bool
-	NewMessageFromQueueCache                                      func(message string) bool
-	MiddlewareIsValidAuthToken                                    ctxAuthToken.IsValidFunc
-	MiddlewareGetUserAndLocaleFromAuthToken                       ctxAuthToken.GetUserAndLocaleFunc
-	MiddlewareGetUserAbilities                                    rights.GetUserAbilitiesFunc
-	MiddlewareGetLatestVersionOfTermsAcceptedByUser               terms.GetLatestVersionOfTermsAcceptedByUserFunc
-	BuildTokenFromID                                              authentication.BuildTokenFunc
-	ExtraPropertiesForTokenWithID                                 authentication.ExtraPropertiesForTokenWithIDFunc
-	ExtendTokenExpirationDateFromID                               authentication.ExtendTokenExpirationDateFunc
-	RouterConfigureDefaultRoutes                                  route.ConfigureDefaultRoutes
-	UpdateVersionOfTermsAcceptedByUser                            terms.UpdateVersionOfTermsAcceptedByUserFunc
-	GetEnabledUsersForAdmin                                       user.GetUsersForAdminFunc
-	GetDisabledUsersForAdmin                                      user.GetUsersForAdminFunc
-	UpdatePasswordByAdmin                                         user.UpdatePasswordByAdminFunc
-	UpdateInformationsByAdmin                                     user.UpdateInformationsByAdminFunc
-	UpdateDescriptionByAdmin                                      user.UpdateDescriptionByAdminFunc
-	UpdateSocialByAdmin                                           user.UpdateSocialByAdminFunc
-	UpdateSettingsByAdmin                                         user.UpdateSettingsByAdminFunc
-	UpdateNotificationsByAdmin                                    user.UpdateNotificationsByAdminFunc
-	GetTokensForAdmin                                             user.GetTokensForAdminFunc
-	DeleteTokenByIDByAdmin                                        user.DeleteTokenByIDByAdminFunc
-	SetAbilitiesToUser                                            user.SetAbilitiesToUserFunc
-	AddAbilitiesToUser                                            user.AddAbilitiesToUserFunc
-	RemoveAbilitiesFromUser                                       user.RemoveAbilitiesFromUserFunc
-	NotificationsReceivedByUser                                   account.NotificationsReceivedByUserFunc
-	NotificationReceivedByUser                                    account.NotificationReceivedByUserFunc
-	UpdateUserNotificationRead                                    account.UpdateUserNotificationReadFunc
-	UpdateUserNotificationNotified                                account.UpdateUserNotificationNotifiedFunc
-	DeleteUserNotification                                        account.DeleteUserNotificationFunc
-	NotificationsSubscribedByUser                                 account.NotificationsSubscribedByUserFunc
-	SubscribeNotificationsToUser                                  account.SubscribeNotificationsToUserFunc
-	UnsubscribeNotificationFromUser                               account.UnsubscribeNotificationFromUserFunc
-	GetUserDetailsByIdentifier                                    account.GetUserDetailsByIdentifierFunc
-	GetUserDetailsByID                                            account.GetUserDetailsByIDFunc
-	NewForgotPasswordProcessForUser                               account.NewForgotPasswordProcessForUserFunc
-	GetForgotPasswordProcessDetailsByID                           account.GetForgotPasswordProcessDetailsByIDFunc
-	WrongAccessToForgotPasswordProcess                            account.WrongAccessToForgotPasswordProcessFunc
-	UpdateUserPassword                                            account.UpdateUserPasswordFunc
-	UpdateUserEmailAddress                                        account.UpdateUserEmailAddressFunc
-	UserEmailAddressIsVerified                                    account.UserEmailAddressIsVerifiedFunc
-	UpdateUserSocialNetworks                                      account.UpdateUserSocialNetworksFunc
-	DeleteForgotPasswordProcess                                   account.DeleteForgotPasswordProcessFunc
-	ValidateUserRegistration                                      account.ValidateUserRegistrationFunc
-	CancelUserRegistration                                        account.CancelUserRegistrationFunc
-	GetRegistrationDetails                                        account.GetRegistrationDetailsFunc
-	SaveAuthenticationToken                                       account.SaveAuthenticationTokenFunc
-	DoesAccountWithUsernameExist                                  account.DoesAccountWithUsernameExistFunc
-	DoesAccountWithEmailAddressExist                              account.DoesAccountWithEmailAddressExistFunc
-	RegisterByEmailAddress                                        account.RegisterByEmailAddressFunc
-	RegisterByThirdPartyToken                                     account.RegisterByThirdPartyTokenFunc
-	DoesUserWithFacebookUserIDExist                               account.DoesUserWithSocialNetworkUserIDExistFunc
-	DoesUserWithGoogleUserIDExist                                 account.DoesUserWithSocialNetworkUserIDExistFunc
-	GetUserDetailsByFacebookUserID                                account.GetUserDetailsBySocialNetworkIDFunc
-	GetUserDetailsByGoogleUserID                                  account.GetUserDetailsBySocialNetworkIDFunc
-	SaveFacebookUserTokenDetailsToUser                            account.SaveSocialNetworkUserTokenDetailsToUserFunc
-	SaveGoogleUserTokenDetailsToUser                              account.SaveSocialNetworkUserTokenDetailsToUserFunc
-	GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser account.GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUserFunc
-	UpdateEncryptedPasswordByUserID                               account.UpdateEncryptedPasswordByUserIDFunc
-	GetTokenExpirationDate                                        account.GetTokenExpirationDateFunc
-	DeleteTokenByID                                               account.DeleteTokenByIDFunc
-	GetTokenDetailsByID                                           account.GetTokenDetailsByIDFunc
-	GetOwnedTokens                                                account.GetOwnedTokensFunc
-	GetOwnedTokenByID                                             account.GetOwnedTokenByIDFunc
-	UpdateTokenByID                                               account.UpdateTokenByIDFunc
-	GetOwnedAccountDetails                                        account.GetOwnedAccountDetailsFunc
-	UpdatedAccountInfos                                           account.UpdatedAccountInfosFunc
-	UpdatedAccountSettings                                        account.UpdatedAccountSettingsFunc
-	CreateNewDeleteAccountProcess                                 account.CreateNewProcessFunc
-	CreateNewDisableAccountProcess                                account.CreateNewProcessFunc
-	CreateNewUpdatePasswordProcess                                account.CreateNewProcessWithValueFunc
-	CreateNewUpdateEmailAddressProcess                            account.CreateNewProcessWithValueFunc
-	CreateNewVerifyEmailAddressProcess                            account.CreateNewProcessFunc
-	VerifyProcess                                                 account.VerifyProcessFunc
-	DeleteProcessByID                                             account.DeleteProcessByIDFunc
-	DeleteUserByID                                                account.DeleteUserByIDFunc
-	DisableUserByID                                               account.DisableUserByIDFunc
-	EnableUserByID                                                account.EnableUserByIDFunc
-	CreateContact                                                 contact.CreateContactFunc
-	UpdateContact                                                 contact.UpdateContactFunc
-	GetContacts                                                   contact.GetContactsFunc
-	GetContact                                                    contact.GetContactFunc
+// Hooks are the functions of the application which are not tied to a feature: the validation of the identifiers and of
+// the auth tokens, the tokens signed by the API, and the extensions of the server. A database plugin sets most of them.
+type Hooks struct {
+	RecurringTasks                                  func()
+	IsValidID                                       func(id string) bool
+	NewMessageFromQueueCache                        func(message string) bool
+	MiddlewareIsValidAuthToken                      ctxAuthToken.IsValidFunc
+	MiddlewareGetUserAndLocaleFromAuthToken         ctxAuthToken.GetUserAndLocaleFunc
+	MiddlewareGetUserAbilities                      rights.GetUserAbilitiesFunc
+	MiddlewareGetLatestVersionOfTermsAcceptedByUser terms.GetLatestVersionOfTermsAcceptedByUserFunc
+	BuildTokenFromID                                authentication.BuildTokenFunc
+	ExtraPropertiesForTokenWithID                   authentication.ExtraPropertiesForTokenWithIDFunc
+	ExtendTokenExpirationDateFromID                 authentication.ExtendTokenExpirationDateFunc
+	RouterConfigureDefaultRoutes                    route.ConfigureDefaultRoutes
 }

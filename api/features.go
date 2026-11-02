@@ -39,7 +39,7 @@ const (
 	FeatureContact = "contact"
 )
 
-// requirement is a default route and the names of the functions of the application, see Handlers, its handler calls.
+// requirement is a default route and the names of the functions of the application, see Server.Account and the other groups of functions, its handler calls.
 type requirement struct {
 	route     *route.PathProperties
 	functions []string
@@ -185,7 +185,7 @@ func (s *Server) selectRoutes(routes *route.DefaultRoutes, enabled []string) (ne
 		return false, fmt.Errorf("unknown features %v in the setting api_features, the features are: %s", unknown, strings.Join(names, ", "))
 	}
 
-	values := reflect.ValueOf(s.Functions)
+	groups := []reflect.Value{reflect.ValueOf(s.Account), reflect.ValueOf(s.Users), reflect.ValueOf(s.Contacts), reflect.ValueOf(s.Terms)}
 	missing := map[string]bool{}
 	for _, f := range features {
 		isEnabled := slices.Contains(enabled, f.name)
@@ -198,7 +198,7 @@ func (s *Server) selectRoutes(routes *route.DefaultRoutes, enabled []string) (ne
 			}
 
 			for _, function := range r.functions {
-				if values.FieldByName(function).IsNil() {
+				if isUndefined(groups, function) {
 					missing[function] = true
 				}
 			}
@@ -216,4 +216,15 @@ func (s *Server) selectRoutes(routes *route.DefaultRoutes, enabled []string) (ne
 	}
 
 	return needsJWT, nil
+}
+
+// isUndefined reports whether the function with the name, a field of one of the groups of functions, is nil.
+func isUndefined(groups []reflect.Value, name string) bool {
+	for _, group := range groups {
+		if field := group.FieldByName(name); field.IsValid() {
+			return field.IsNil()
+		}
+	}
+
+	panic("api: the feature needs the unknown function " + name)
 }

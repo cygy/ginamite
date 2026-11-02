@@ -107,7 +107,7 @@ func TestPlugin_Configure_IsValidID(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if isValid := server.API.Functions.IsValidID; isValid == nil || !isValid("507f1f77bcf86cd799439011") || isValid("xyz") {
+	if isValid := server.API.Hooks.IsValidID; isValid == nil || !isValid("507f1f77bcf86cd799439011") || isValid("xyz") {
 		t.Error("the API must validate the IDs as ObjectIDs")
 	}
 }
@@ -222,16 +222,16 @@ func TestPlugin_Configure_Functions(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	api, worker := server.API.Functions, server.Worker.Functions
+	api, worker := server.API, server.Worker.Functions
 
 	// The functions which do not need the database are set as they are.
 	for name, pair := range map[string][2]any{
-		"MiddlewareIsValidAuthToken": {api.MiddlewareIsValidAuthToken, apiFunctions.IsValidAuthToken},
-		"GetUserDetailsByID":         {api.GetUserDetailsByID, apiFunctions.GetUserDetailsByID},
-		"RegisterByEmailAddress":     {api.RegisterByEmailAddress, apiFunctions.RegisterByEmailAddress},
-		"CreateContact":              {api.CreateContact, apiFunctions.CreateContact},
-		"GetContacts":                {api.GetContacts, apiFunctions.GetContactsForAdmin},
-		"GetOwnedAccountDetails":     {api.GetOwnedAccountDetails, apiFunctions.GetOwnedAccountDetails},
+		"MiddlewareIsValidAuthToken": {api.Hooks.MiddlewareIsValidAuthToken, apiFunctions.IsValidAuthToken},
+		"GetUserDetailsByID":         {api.Account.GetUserDetailsByID, apiFunctions.GetUserDetailsByID},
+		"RegisterByEmailAddress":     {api.Account.RegisterByEmailAddress, apiFunctions.RegisterByEmailAddress},
+		"CreateContact":              {api.Contacts.CreateContact, apiFunctions.CreateContact},
+		"GetContacts":                {api.Contacts.GetContacts, apiFunctions.GetContactsForAdmin},
+		"GetOwnedAccountDetails":     {api.Account.GetOwnedAccountDetails, apiFunctions.GetOwnedAccountDetails},
 	} {
 		if pair[0] == nil || !sameFunction(pair[0], pair[1]) {
 			t.Errorf("%s is not the function of the plugin", name)
@@ -240,8 +240,8 @@ func TestPlugin_Configure_Functions(t *testing.T) {
 
 	// The functions working on the database, and the ones built from the hooks of the plugin, are defined too.
 	for name, defined := range map[string]bool{
-		"BuildTokenFromID":                    api.BuildTokenFromID != nil,
-		"ExtendTokenExpirationDateFromID":     api.ExtendTokenExpirationDateFromID != nil,
+		"BuildTokenFromID":                    api.Hooks.BuildTokenFromID != nil,
+		"ExtendTokenExpirationDateFromID":     api.Hooks.ExtendTokenExpirationDateFromID != nil,
 		"DeleteExpiredTokens":                 worker.DeleteExpiredTokens != nil,
 		"GetNeverUsedAccounts":                worker.GetNeverUsedAccounts != nil,
 		"GetInactiveAccounts":                 worker.GetInactiveAccounts != nil,

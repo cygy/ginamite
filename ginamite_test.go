@@ -53,7 +53,7 @@ func TestNewServer(t *testing.T) {
 		t.Fatalf("server = %+v", s)
 	}
 
-	f := s.API.Functions
+	f := s.API.Hooks
 	if f.NewMessageFromQueueCache == nil || f.BuildTokenFromID == nil || f.ExtraPropertiesForTokenWithID == nil ||
 		f.ExtendTokenExpirationDateFromID == nil || f.MiddlewareIsValidAuthToken == nil || f.MiddlewareGetUserAbilities == nil {
 		t.Fatal("a placeholder function is missing")
@@ -72,7 +72,7 @@ func TestNewServer_SharedServices(t *testing.T) {
 }
 
 func TestNewServer_Placeholders(t *testing.T) {
-	f := NewServer().API.Functions
+	f := NewServer().API.Hooks
 	c, _ := gin.CreateTestContext(nil)
 
 	if !f.NewMessageFromQueueCache("message") {

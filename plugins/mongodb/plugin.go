@@ -228,104 +228,104 @@ func (p *Plugin) startUpTasks(ctx context.Context, environment, version string) 
 // configureAPI sets the functions of the API, the validation of the identifiers and the middleware which saves the
 // database in the context of the requests, if the session is open, and adds its routes.
 func (p *Plugin) configureAPI(a *api.Server) {
-	a.Functions.IsValidID = isValidID
+	a.Hooks.IsValidID = isValidID
 	a.Middlewares = append(a.Middlewares, ctxsettings.InjectSettings(p.Settings()))
 	if p.session != nil {
 		a.Middlewares = append(a.Middlewares, p.session.Inject())
 	}
 
 	tokens := apiFunctions.NewTokens(p.database)
-	a.Functions.BuildTokenFromID = tokens.BuildTokenFromID
-	a.Functions.ExtendTokenExpirationDateFromID = tokens.ExtendTokenExpirationDateFromID
+	a.Hooks.BuildTokenFromID = tokens.BuildTokenFromID
+	a.Hooks.ExtendTokenExpirationDateFromID = tokens.ExtendTokenExpirationDateFromID
 
-	a.Functions.MiddlewareIsValidAuthToken = apiFunctions.IsValidAuthToken
-	a.Functions.MiddlewareGetUserAndLocaleFromAuthToken = apiFunctions.GetUserAndLocaleFromAuthToken
-	a.Functions.MiddlewareGetUserAbilities = apiFunctions.GetUserAbilities
-	a.Functions.MiddlewareGetLatestVersionOfTermsAcceptedByUser = apiFunctions.GetLatestVersionOfTermsAcceptedByUser
+	a.Hooks.MiddlewareIsValidAuthToken = apiFunctions.IsValidAuthToken
+	a.Hooks.MiddlewareGetUserAndLocaleFromAuthToken = apiFunctions.GetUserAndLocaleFromAuthToken
+	a.Hooks.MiddlewareGetUserAbilities = apiFunctions.GetUserAbilities
+	a.Hooks.MiddlewareGetLatestVersionOfTermsAcceptedByUser = apiFunctions.GetLatestVersionOfTermsAcceptedByUser
 
-	a.Functions.GetEnabledUsersForAdmin = apiFunctions.GetEnabledUsersForAdmin
-	a.Functions.GetDisabledUsersForAdmin = apiFunctions.GetDisabledUsersForAdmin
-	a.Functions.UpdatePasswordByAdmin = apiFunctions.UpdateUserPasswordByAdmin
-	a.Functions.UpdateInformationsByAdmin = apiFunctions.UpdateUserInformationsByAdmin
-	a.Functions.UpdateDescriptionByAdmin = apiFunctions.UpdateUserDescriptionByAdmin
-	a.Functions.UpdateSocialByAdmin = apiFunctions.UpdateUserSocialByAdmin
-	a.Functions.UpdateSettingsByAdmin = apiFunctions.UpdateUserSettingsByAdmin
-	a.Functions.UpdateNotificationsByAdmin = apiFunctions.UpdateUserNotificationsByAdmin
-	a.Functions.GetTokensForAdmin = apiFunctions.GetTokensForAdmin
-	a.Functions.DeleteTokenByIDByAdmin = apiFunctions.DeleteTokenByIDByAdmin
-	a.Functions.SetAbilitiesToUser = apiFunctions.SetAbilitiesToUser
-	a.Functions.AddAbilitiesToUser = apiFunctions.AddAbilitiesToUser
-	a.Functions.RemoveAbilitiesFromUser = apiFunctions.RemoveAbilitiesFromUser
+	a.Users.GetEnabledUsersForAdmin = apiFunctions.GetEnabledUsersForAdmin
+	a.Users.GetDisabledUsersForAdmin = apiFunctions.GetDisabledUsersForAdmin
+	a.Users.UpdatePasswordByAdmin = apiFunctions.UpdateUserPasswordByAdmin
+	a.Users.UpdateInformationsByAdmin = apiFunctions.UpdateUserInformationsByAdmin
+	a.Users.UpdateDescriptionByAdmin = apiFunctions.UpdateUserDescriptionByAdmin
+	a.Users.UpdateSocialByAdmin = apiFunctions.UpdateUserSocialByAdmin
+	a.Users.UpdateSettingsByAdmin = apiFunctions.UpdateUserSettingsByAdmin
+	a.Users.UpdateNotificationsByAdmin = apiFunctions.UpdateUserNotificationsByAdmin
+	a.Users.GetTokensForAdmin = apiFunctions.GetTokensForAdmin
+	a.Users.DeleteTokenByIDByAdmin = apiFunctions.DeleteTokenByIDByAdmin
+	a.Users.SetAbilitiesToUser = apiFunctions.SetAbilitiesToUser
+	a.Users.AddAbilitiesToUser = apiFunctions.AddAbilitiesToUser
+	a.Users.RemoveAbilitiesFromUser = apiFunctions.RemoveAbilitiesFromUser
 
-	a.Functions.NotificationsReceivedByUser = apiFunctions.NotificationsReceivedByUser
-	a.Functions.NotificationReceivedByUser = apiFunctions.NotificationReceivedByUser
-	a.Functions.UpdateUserNotificationRead = apiFunctions.UpdateUserNotificationRead
-	a.Functions.UpdateUserNotificationNotified = apiFunctions.UpdateUserNotificationNotified
-	a.Functions.DeleteUserNotification = apiFunctions.DeleteUserNotification
-	a.Functions.NotificationsSubscribedByUser = apiFunctions.NotificationsSubscribedByUser
-	a.Functions.SubscribeNotificationsToUser = apiFunctions.SubscribeNotificationsToUser
-	a.Functions.UnsubscribeNotificationFromUser = apiFunctions.UnsubscribeNotificationFromUser
+	a.Account.NotificationsReceivedByUser = apiFunctions.NotificationsReceivedByUser
+	a.Account.NotificationReceivedByUser = apiFunctions.NotificationReceivedByUser
+	a.Account.UpdateUserNotificationRead = apiFunctions.UpdateUserNotificationRead
+	a.Account.UpdateUserNotificationNotified = apiFunctions.UpdateUserNotificationNotified
+	a.Account.DeleteUserNotification = apiFunctions.DeleteUserNotification
+	a.Account.NotificationsSubscribedByUser = apiFunctions.NotificationsSubscribedByUser
+	a.Account.SubscribeNotificationsToUser = apiFunctions.SubscribeNotificationsToUser
+	a.Account.UnsubscribeNotificationFromUser = apiFunctions.UnsubscribeNotificationFromUser
 
-	a.Functions.GetUserDetailsByIdentifier = apiFunctions.GetUserDetailsByIdentifier
-	a.Functions.GetUserDetailsByID = apiFunctions.GetUserDetailsByID
-	a.Functions.GetUserDetailsByFacebookUserID = apiFunctions.GetUserDetailsByFacebookUserID
-	a.Functions.GetUserDetailsByGoogleUserID = apiFunctions.GetUserDetailsByGoogleUserID
-	a.Functions.GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser = apiFunctions.GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser
+	a.Account.GetUserDetailsByIdentifier = apiFunctions.GetUserDetailsByIdentifier
+	a.Account.GetUserDetailsByID = apiFunctions.GetUserDetailsByID
+	a.Account.GetUserDetailsByFacebookUserID = apiFunctions.GetUserDetailsByFacebookUserID
+	a.Account.GetUserDetailsByGoogleUserID = apiFunctions.GetUserDetailsByGoogleUserID
+	a.Account.GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser = apiFunctions.GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser
 
-	a.Functions.UpdateEncryptedPasswordByUserID = apiFunctions.UpdateEncryptedPasswordByUserID
-	a.Functions.NewForgotPasswordProcessForUser = apiFunctions.NewForgotPasswordProcessForUser
-	a.Functions.GetForgotPasswordProcessDetailsByID = apiFunctions.GetForgotPasswordProcessDetailsByID
-	a.Functions.WrongAccessToForgotPasswordProcess = apiFunctions.WrongAccessToForgotPasswordProcess
-	a.Functions.DeleteForgotPasswordProcess = apiFunctions.DeleteForgotPasswordProcess
+	a.Account.UpdateEncryptedPasswordByUserID = apiFunctions.UpdateEncryptedPasswordByUserID
+	a.Account.NewForgotPasswordProcessForUser = apiFunctions.NewForgotPasswordProcessForUser
+	a.Account.GetForgotPasswordProcessDetailsByID = apiFunctions.GetForgotPasswordProcessDetailsByID
+	a.Account.WrongAccessToForgotPasswordProcess = apiFunctions.WrongAccessToForgotPasswordProcess
+	a.Account.DeleteForgotPasswordProcess = apiFunctions.DeleteForgotPasswordProcess
 
-	a.Functions.UpdateUserPassword = apiFunctions.UpdateUserPassword
-	a.Functions.UpdateUserEmailAddress = apiFunctions.UpdateUserEmailAddress
-	a.Functions.UserEmailAddressIsVerified = apiFunctions.UserEmailAddressIsVerified
-	a.Functions.UpdateUserSocialNetworks = apiFunctions.UpdateUserSocialNetworks
-	a.Functions.UpdateVersionOfTermsAcceptedByUser = apiFunctions.UpdateVersionOfTermsAcceptedByUser
+	a.Account.UpdateUserPassword = apiFunctions.UpdateUserPassword
+	a.Account.UpdateUserEmailAddress = apiFunctions.UpdateUserEmailAddress
+	a.Account.UserEmailAddressIsVerified = apiFunctions.UserEmailAddressIsVerified
+	a.Account.UpdateUserSocialNetworks = apiFunctions.UpdateUserSocialNetworks
+	a.Terms.UpdateVersionOfTermsAcceptedByUser = apiFunctions.UpdateVersionOfTermsAcceptedByUser
 
-	a.Functions.ValidateUserRegistration = apiFunctions.ValidateUserRegistration
-	a.Functions.CancelUserRegistration = apiFunctions.CancelUserRegistration
-	a.Functions.GetRegistrationDetails = apiFunctions.GetRegistrationDetails
-	a.Functions.RegisterByEmailAddress = apiFunctions.RegisterByEmailAddress
-	a.Functions.RegisterByThirdPartyToken = apiFunctions.RegisterByThirdPartyToken
+	a.Account.ValidateUserRegistration = apiFunctions.ValidateUserRegistration
+	a.Account.CancelUserRegistration = apiFunctions.CancelUserRegistration
+	a.Account.GetRegistrationDetails = apiFunctions.GetRegistrationDetails
+	a.Account.RegisterByEmailAddress = apiFunctions.RegisterByEmailAddress
+	a.Account.RegisterByThirdPartyToken = apiFunctions.RegisterByThirdPartyToken
 
-	a.Functions.DoesAccountWithUsernameExist = apiFunctions.DoesAccountWithUsernameExist
-	a.Functions.DoesAccountWithEmailAddressExist = apiFunctions.DoesAccountWithEmailAddressExist
-	a.Functions.DoesUserWithFacebookUserIDExist = apiFunctions.DoesUserWithFacebookUserIDExist
-	a.Functions.DoesUserWithGoogleUserIDExist = apiFunctions.DoesUserWithGoogleUserIDExist
+	a.Account.DoesAccountWithUsernameExist = apiFunctions.DoesAccountWithUsernameExist
+	a.Account.DoesAccountWithEmailAddressExist = apiFunctions.DoesAccountWithEmailAddressExist
+	a.Account.DoesUserWithFacebookUserIDExist = apiFunctions.DoesUserWithFacebookUserIDExist
+	a.Account.DoesUserWithGoogleUserIDExist = apiFunctions.DoesUserWithGoogleUserIDExist
 
-	a.Functions.SaveFacebookUserTokenDetailsToUser = apiFunctions.SaveFacebookUserTokenDetailsToUser
-	a.Functions.SaveGoogleUserTokenDetailsToUser = apiFunctions.SaveGoogleUserTokenDetailsToUser
+	a.Account.SaveFacebookUserTokenDetailsToUser = apiFunctions.SaveFacebookUserTokenDetailsToUser
+	a.Account.SaveGoogleUserTokenDetailsToUser = apiFunctions.SaveGoogleUserTokenDetailsToUser
 
-	a.Functions.SaveAuthenticationToken = apiFunctions.SaveAuthenticationToken
-	a.Functions.GetTokenExpirationDate = apiFunctions.GetTokenExpirationDate
-	a.Functions.DeleteTokenByID = apiFunctions.DeleteTokenByID
-	a.Functions.GetTokenDetailsByID = apiFunctions.GetTokenDetailsByID
-	a.Functions.GetOwnedTokens = apiFunctions.GetOwnedTokens
-	a.Functions.GetOwnedTokenByID = apiFunctions.GetOwnedTokenByID
-	a.Functions.UpdateTokenByID = apiFunctions.UpdateTokenByID
+	a.Account.SaveAuthenticationToken = apiFunctions.SaveAuthenticationToken
+	a.Account.GetTokenExpirationDate = apiFunctions.GetTokenExpirationDate
+	a.Account.DeleteTokenByID = apiFunctions.DeleteTokenByID
+	a.Account.GetTokenDetailsByID = apiFunctions.GetTokenDetailsByID
+	a.Account.GetOwnedTokens = apiFunctions.GetOwnedTokens
+	a.Account.GetOwnedTokenByID = apiFunctions.GetOwnedTokenByID
+	a.Account.UpdateTokenByID = apiFunctions.UpdateTokenByID
 
-	a.Functions.GetOwnedAccountDetails = apiFunctions.GetOwnedAccountDetails
-	a.Functions.UpdatedAccountInfos = apiFunctions.UpdatedAccountInfos
-	a.Functions.UpdatedAccountSettings = apiFunctions.UpdatedAccountSettings
+	a.Account.GetOwnedAccountDetails = apiFunctions.GetOwnedAccountDetails
+	a.Account.UpdatedAccountInfos = apiFunctions.UpdatedAccountInfos
+	a.Account.UpdatedAccountSettings = apiFunctions.UpdatedAccountSettings
 
-	a.Functions.CreateNewDeleteAccountProcess = apiFunctions.CreateNewDeleteAccountProcess
-	a.Functions.CreateNewDisableAccountProcess = apiFunctions.CreateNewDisableAccountProcess
-	a.Functions.CreateNewUpdatePasswordProcess = apiFunctions.CreateNewUpdatePasswordProcess
-	a.Functions.CreateNewUpdateEmailAddressProcess = apiFunctions.CreateNewUpdateEmailAddressProcess
-	a.Functions.CreateNewVerifyEmailAddressProcess = apiFunctions.CreateNewVerifyEmailAddressProcess
-	a.Functions.VerifyProcess = apiFunctions.VerifyProcess
-	a.Functions.DeleteProcessByID = apiFunctions.DeleteProcessByID
+	a.Account.CreateNewDeleteAccountProcess = apiFunctions.CreateNewDeleteAccountProcess
+	a.Account.CreateNewDisableAccountProcess = apiFunctions.CreateNewDisableAccountProcess
+	a.Account.CreateNewUpdatePasswordProcess = apiFunctions.CreateNewUpdatePasswordProcess
+	a.Account.CreateNewUpdateEmailAddressProcess = apiFunctions.CreateNewUpdateEmailAddressProcess
+	a.Account.CreateNewVerifyEmailAddressProcess = apiFunctions.CreateNewVerifyEmailAddressProcess
+	a.Account.VerifyProcess = apiFunctions.VerifyProcess
+	a.Account.DeleteProcessByID = apiFunctions.DeleteProcessByID
 
-	a.Functions.DeleteUserByID = apiFunctions.DeleteUserByID
-	a.Functions.DisableUserByID = apiFunctions.DisableUserByID
-	a.Functions.EnableUserByID = apiFunctions.EnableUserByID
+	a.Account.DeleteUserByID = apiFunctions.DeleteUserByID
+	a.Account.DisableUserByID = apiFunctions.DisableUserByID
+	a.Account.EnableUserByID = apiFunctions.EnableUserByID
 
-	a.Functions.CreateContact = apiFunctions.CreateContact
-	a.Functions.UpdateContact = apiFunctions.UpdateContact
-	a.Functions.GetContacts = apiFunctions.GetContactsForAdmin
-	a.Functions.GetContact = apiFunctions.GetContactForAdmin
+	a.Contacts.CreateContact = apiFunctions.CreateContact
+	a.Contacts.UpdateContact = apiFunctions.UpdateContact
+	a.Contacts.GetContacts = apiFunctions.GetContactsForAdmin
+	a.Contacts.GetContact = apiFunctions.GetContactForAdmin
 
 	a.AddCustomRoutes(addRoutes)
 }
