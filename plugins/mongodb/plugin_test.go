@@ -222,7 +222,7 @@ func TestPlugin_Configure_Functions(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	api, worker := server.API, server.Worker.Functions
+	api, worker := server.API, server.Worker
 
 	// The functions which do not need the database are set as they are.
 	for name, pair := range map[string][2]any{
@@ -240,23 +240,17 @@ func TestPlugin_Configure_Functions(t *testing.T) {
 		t.Errorf("Contacts = %T, want the storage of the plugin", api.Contacts)
 	}
 
-	// The functions working on the database, and the ones built from the hooks of the plugin, are defined too.
+	// The functions working on the database, and the storages of the worker, are defined too.
 	for name, defined := range map[string]bool{
-		"BuildTokenFromID":                    api.Hooks.BuildTokenFromID != nil,
-		"ExtendTokenExpirationDateFromID":     api.Hooks.ExtendTokenExpirationDateFromID != nil,
-		"DeleteExpiredTokens":                 worker.DeleteExpiredTokens != nil,
-		"GetNeverUsedAccounts":                worker.GetNeverUsedAccounts != nil,
-		"GetInactiveAccounts":                 worker.GetInactiveAccounts != nil,
-		"SaveIPAddressDetails":                worker.SaveIPAddressDetails != nil,
-		"IsEmailAddressValid":                 worker.IsEmailAddressValid != nil,
-		"GetNotificationTargetsByUserAndType": worker.GetNotificationTargetsByUserAndType != nil,
-		"IsUserEmpty":                         worker.IsUserEmpty != nil,
-		"SanitizeAccounts":                    worker.SanitizeAccounts != nil,
-		"DeleteUserByID":                      worker.DeleteUserByID != nil,
-		"DisableUserByID":                     worker.DisableUserByID != nil,
-		"EnableUserByID":                      worker.EnableUserByID != nil,
-		"UpdateUserSocialNetworksByID":        worker.UpdateUserSocialNetworksByID != nil,
-		"StartUpTasks":                        worker.StartUpTasks != nil,
+		"BuildTokenFromID":                api.Hooks.BuildTokenFromID != nil,
+		"ExtendTokenExpirationDateFromID": api.Hooks.ExtendTokenExpirationDateFromID != nil,
+		"Tokens":                          worker.Storage.Tokens != nil,
+		"Accounts":                        worker.Storage.Accounts != nil,
+		"Users":                           worker.Storage.Users != nil,
+		"Notifications":                   worker.Storage.Notifications != nil,
+		"Locations":                       worker.Storage.Locations != nil,
+		"Emails":                          worker.Storage.Emails != nil,
+		"StartUpTasks":                    worker.Hooks.StartUpTasks != nil,
 	} {
 		if !defined {
 			t.Errorf("worker.%s is not defined", name)
@@ -279,18 +273,18 @@ func TestPlugin_Configure_WorkerHooks(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if got := server.Worker.Functions.SanitizeAccounts(); got != 5 || !sanitized {
-		t.Errorf("SanitizeAccounts() = %d", got)
+	if got, err := server.Worker.Storage.Accounts.Sanitize(context.Background()); err != nil || got != 5 || !sanitized {
+		t.Errorf("Sanitize() = %d, %v", got, err)
 	}
 	// The ID is not an ObjectID: the deletion fails, after the hook ran.
-	if _, err := server.Worker.Functions.DeleteUserByID(context.Background(), "user-1"); err == nil {
+	if _, err := server.Worker.Storage.Users.Delete(context.Background(), "user-1"); err == nil {
 		t.Error("an invalid user ID must fail")
 	}
 	if !deleted {
 		t.Error("the hook that updates the documents of a deleted user is not called")
 	}
-	if server.Worker.Functions.IsUserEmpty(context.Background(), "user-1") || !empty {
-		t.Error("IsUserEmpty() does not use the hook")
+	if got, err := server.Worker.Storage.Accounts.IsEmpty(context.Background(), "user-1"); err != nil || got || !empty {
+		t.Error("IsEmpty() does not use the hook")
 	}
 }
 

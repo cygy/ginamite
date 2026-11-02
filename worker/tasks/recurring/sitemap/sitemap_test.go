@@ -1,6 +1,8 @@
 package sitemap
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -56,19 +58,19 @@ func TestGenerate(t *testing.T) {
 	})
 
 	var requests []string
-	Generate("generate", testConfig, testRoutes, func(key string, offset, limit int) map[string][]map[string]string {
+	Generate(t.Context(), "generate", testConfig, testRoutes, func(_ context.Context, key string, offset, limit int) (map[string][]map[string]string, error) {
 		requests = append(requests, fmt.Sprintf("%s:%d:%d", key, offset, limit))
 
 		// Three batches: the maximum of 1000 URLs per file is reached at the second one.
 		if offset >= 3*batchSize {
-			return nil
+			return nil, nil
 		}
 
 		return map[string][]map[string]string{
 			"en":      {{"id": fmt.Sprint(offset)}},
 			"fr":      {{"id": fmt.Sprint(offset)}},
 			"unknown": {{"id": "x"}}, // Neither a supported locale nor a locale of the route.
-		}
+		}, nil
 	})
 
 	if got, want := strings.Join(requests, " "), "page:0:500 page:500:500 page:1000:500 page:1500:500"; got != want {
@@ -126,12 +128,12 @@ func TestGenerate(t *testing.T) {
 func TestGenerate_NoMaximum(t *testing.T) {
 	dir := setup(t, 0, map[string]weburl.Route{"page": route("/page/:id")})
 
-	Generate("generate", testConfig, testRoutes, func(_ string, offset, _ int) map[string][]map[string]string {
+	Generate(t.Context(), "generate", testConfig, testRoutes, func(_ context.Context, _ string, offset, _ int) (map[string][]map[string]string, error) {
 		if offset >= 4*batchSize {
-			return nil
+			return nil, nil
 		}
 
-		return map[string][]map[string]string{"en": {{"id": "x"}}}
+		return map[string][]map[string]string{"en": {{"id": "x"}}}, nil
 	})
 
 	if content := readGzip(t, filepath.Join(dir, "sitemap_en_page_0.xml.gz")); strings.Count(content, "<url>") != 4 {
@@ -143,12 +145,34 @@ func TestGenerate_NoMaximum(t *testing.T) {
 }
 
 func TestGenerate_Errors(t *testing.T) {
+	t.Run("variables which can not be read", func(t *testing.T) {
+		workertest.Hook.Reset()
+		dir := setup(t, 1000, map[string]weburl.Route{"page": route("/page/:id")})
+
+		Generate(t.Context(), "generate", testConfig, testRoutes, func(context.Context, string, int, int) (map[string][]map[string]string, error) {
+			return nil, errors.New("boom")
+		})
+
+		failed := false
+		for _, entry := range workertest.Hook.AllEntries() {
+			if entry.Message == "task error" && strings.Contains(fmt.Sprint(entry.Data["error"]), "boom") {
+				failed = true
+			}
+		}
+		if !failed {
+			t.Errorf("the error of the variables is not logged: %+v", workertest.Hook.AllEntries())
+		}
+		if names := files(t, dir); len(names) != 5 {
+			t.Errorf("files = %v, want the sitemaps closed as they are", names)
+		}
+	})
+
 	t.Run("no index", func(t *testing.T) {
 		workertest.Hook.Reset()
 		dir := setup(t, 1000, map[string]weburl.Route{"home": route("/home")})
 		testConfig.Sitemap.Path = filepath.Join(dir, "missing")
 
-		Generate("generate", testConfig, testRoutes, nil)
+		Generate(t.Context(), "generate", testConfig, testRoutes, nil)
 
 		entry := workertest.Hook.LastEntry()
 		if entry == nil || entry.Message != "task error" || entry.Data["filename"] != "sitemap_index" {
@@ -166,7 +190,7 @@ func TestGenerate_Errors(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		Generate("generate", testConfig, testRoutes, func(string, int, int) map[string][]map[string]string { return nil })
+		Generate(t.Context(), "generate", testConfig, testRoutes, func(context.Context, string, int, int) (map[string][]map[string]string, error) { return nil, nil })
 
 		errors := 0
 		for _, entry := range workertest.Hook.AllEntries() {

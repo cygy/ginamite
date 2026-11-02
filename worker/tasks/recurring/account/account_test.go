@@ -3,7 +3,9 @@ package account
 import (
 	"context"
 	"errors"
+	"fmt"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -86,11 +88,11 @@ func TestDeleteNeverUsed(t *testing.T) {
 	var deleted []string
 	var gotDays uint
 	DeleteNeverUsed(context.Background(), q.Sender, "task", 10,
-		func(_ context.Context, days uint) []string {
+		func(_ context.Context, days uint) ([]string, error) {
 			gotDays = days
-			return []string{"u1", "u2", "u3"}
+			return []string{"u1", "u2", "u3"}, nil
 		},
-		func(_ context.Context, userID string) bool { return userID != "u2" },
+		func(_ context.Context, userID string) (bool, error) { return userID != "u2", nil },
 		deleter(&deleted),
 	)
 
@@ -110,8 +112,8 @@ func TestDeleteNeverUsed_Failure(t *testing.T) {
 
 	var deleted []string
 	DeleteNeverUsed(context.Background(), q.Sender, "task", 10,
-		func(context.Context, uint) []string { return []string{"bad", "u1"} },
-		func(context.Context, string) bool { return true },
+		func(context.Context, uint) ([]string, error) { return []string{"bad", "u1"}, nil },
+		func(context.Context, string) (bool, error) { return true, nil },
 		deleter(&deleted),
 	)
 
@@ -140,7 +142,7 @@ func TestDeleteInactive_Failure(t *testing.T) {
 
 	var deleted []string
 	DeleteInactive(context.Background(), q.Sender, "task", 48,
-		func(context.Context, uint) []string { return []string{"bad", "u1"} },
+		func(context.Context, uint) ([]string, error) { return []string{"bad", "u1"}, nil },
 		deleter(&deleted),
 	)
 
@@ -156,9 +158,9 @@ func TestDeleteInactive(t *testing.T) {
 	var deleted []string
 	var gotMonths uint
 	DeleteInactive(context.Background(), q.Sender, "task", 48,
-		func(_ context.Context, months uint) []string {
+		func(_ context.Context, months uint) ([]string, error) {
 			gotMonths = months
-			return []string{"u1", "u2"}
+			return []string{"u1", "u2"}, nil
 		},
 		deleter(&deleted),
 	)
@@ -170,10 +172,96 @@ func TestDeleteInactive(t *testing.T) {
 	checkCount(t, 2)
 }
 
+func TestDeleteNeverUsed_Errors(t *testing.T) {
+	boom := errors.New("boom")
+
+	t.Run("the list fails", func(t *testing.T) {
+		q := workertest.CaptureQueue(t)
+		workertest.Hook.Reset()
+
+		var deleted []string
+		DeleteNeverUsed(context.Background(), q.Sender, "task", 10,
+			func(context.Context, uint) ([]string, error) { return nil, boom },
+			func(context.Context, string) (bool, error) { return true, nil },
+			deleter(&deleted),
+		)
+
+		checkDeletion(t, q)
+		checkTaskError(t, "unable to get the accounts never used")
+	})
+
+	t.Run("a user can not be checked", func(t *testing.T) {
+		q := workertest.CaptureQueue(t)
+		workertest.Hook.Reset()
+
+		var deleted []string
+		DeleteNeverUsed(context.Background(), q.Sender, "task", 10,
+			func(context.Context, uint) ([]string, error) { return []string{"u1", "u2"}, nil },
+			func(_ context.Context, userID string) (bool, error) {
+				return userID == "u1", errIf(userID == "u2", boom)
+			},
+			deleter(&deleted),
+		)
+
+		if !slices.Equal(deleted, []string{"u1"}) {
+			t.Errorf("deleted = %v, want only u1", deleted)
+		}
+		checkDeletion(t, q, "u1")
+		checkCount(t, 1)
+	})
+}
+
+func TestDeleteInactive_ListFails(t *testing.T) {
+	q := workertest.CaptureQueue(t)
+	workertest.Hook.Reset()
+
+	var deleted []string
+	DeleteInactive(context.Background(), q.Sender, "task", 48,
+		func(context.Context, uint) ([]string, error) { return nil, errors.New("boom") },
+		deleter(&deleted),
+	)
+
+	checkDeletion(t, q)
+	checkTaskError(t, "unable to get the inactive accounts")
+}
+
+// errIf returns err if cond is true.
+func errIf(cond bool, err error) error {
+	if cond {
+		return err
+	}
+
+	return nil
+}
+
+// checkTaskError checks that the error of the task is logged, with the message.
+func checkTaskError(t *testing.T, message string) {
+	t.Helper()
+
+	for _, entry := range workertest.Hook.AllEntries() {
+		if entry.Message == "task error" && strings.Contains(fmt.Sprint(entry.Data["error"]), message) {
+			return
+		}
+		if entry.Message == "task done" {
+			t.Errorf("the task is logged as done: %+v", entry)
+		}
+	}
+
+	t.Errorf("the error %q is not logged", message)
+}
+
 func TestSanitize(t *testing.T) {
 	workertest.Hook.Reset()
 
-	Sanitize("task", func() uint { return 7 })
+	Sanitize(context.Background(), "task", func(context.Context) (uint, error) { return 7, nil })
 
 	checkCount(t, uint(7))
+}
+
+func TestSanitize_Failure(t *testing.T) {
+	workertest.Hook.Reset()
+
+	Sanitize(context.Background(), "task", func(context.Context) (uint, error) { return 0, errors.New("boom") })
+
+	checkTaskError(t, "unable to sanitize the accounts")
 }

@@ -8,18 +8,15 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/log"
-	"github.com/cygy/ginamite/common/notifications"
 	"github.com/cygy/ginamite/common/queue"
 	"github.com/cygy/ginamite/common/template/html"
 	"github.com/cygy/ginamite/common/template/text"
 	"github.com/cygy/ginamite/common/weburl"
 	"github.com/cygy/ginamite/worker/mail"
-	"github.com/cygy/ginamite/worker/tasks/async/location"
 	"github.com/cygy/ginamite/worker/tasks/recurring"
 	"github.com/cygy/ginamite/worker/tasks/recurring/account"
 	"github.com/cygy/ginamite/worker/tasks/recurring/authtokens"
@@ -35,84 +32,14 @@ type Server struct {
 	// Localization translates the emails, set by the main server before it starts.
 	Localization *localization.Engine
 	RoutesFile   string
-	Functions    Handlers
+	// Storage is the storage of the application, such as the one of the storage plugin.
+	Storage Storage
+	// Hooks are the optional functions of the application.
+	Hooks Hooks
 
 	routes    *weburl.Configuration // The routes of the website, loaded when the worker starts.
 	mailer    *mail.Mailer          // Sends the emails, created when the worker starts.
 	scheduler *recurring.Scheduler  // Runs the recurring tasks.
-}
-
-// Handlers are the functions of a worker, which depend on the storage of the application.
-// The worker warns about the undefined functions: the features relying on them are disabled.
-type Handlers struct {
-	// DeleteExpiredTokens deletes the expired auth tokens and returns their count.
-	DeleteExpiredTokens func(ctx context.Context) int64
-
-	// SanitizeAccounts deletes, or updates, the data associated to the deleted accounts and returns their count.
-	SanitizeAccounts func() uint
-
-	// The functions handling a message of Kafka return an error if they failed: the message is then handled again,
-	// then dead-lettered if the error persists, see broker.MessageConsumer. An error marked with broker.Permanent is not
-	// retried. The functions must tolerate a message handled twice.
-
-	// DeleteUserByID deletes a user and returns the auth tokens revoked, with their expiration date, by ID.
-	DeleteUserByID func(ctx context.Context, userID string) (map[string]time.Time, error)
-
-	// DisableUserByID disables a user and returns the auth tokens revoked, with their expiration date, by ID.
-	DisableUserByID func(ctx context.Context, userID string) (map[string]time.Time, error)
-
-	// EnableUserByID enables a user.
-	EnableUserByID func(ctx context.Context, userID string) error
-
-	// UpdateUserSocialNetworksByID updates the documents referencing the social networks of a user.
-	UpdateUserSocialNetworksByID func(ctx context.Context, userID string) error
-
-	// RegistrationDone handles a user who registered.
-	RegistrationDone func(ctx context.Context, userID string) error
-
-	// RegistrationValidated handles a user who validated their registration.
-	RegistrationValidated func(ctx context.Context, userID string) error
-
-	// GetNotificationTargetsByUserAndType returns the targets of a user for a type of notification.
-	GetNotificationTargetsByUserAndType notifications.GetNotificationTargetsByUserAndTypeFunc
-
-	// SaveIPAddressDetails saves the location of an IP address, returned by getIPAddressDetailsFunc, for an auth token.
-	SaveIPAddressDetails func(ctx context.Context, IPAddress, tokenID string, getIPAddressDetailsFunc location.DetailsFunc) error
-
-	// StartUpTasks runs once when the worker starts, if the configuration asks for it.
-	StartUpTasks func(ctx context.Context, environment, version string)
-
-	// SetFuncOfRecurringTasks sets the functions of the custom recurring tasks with the function it receives.
-	SetFuncOfRecurringTasks func(registerTaskFunc func(taskName string, task func(string)))
-
-	// HandleTask handles the custom messages of the topic of the tasks and reports whether it did, and its error.
-	HandleTask func(ctx context.Context, messageType string, payload []byte) (bool, error)
-
-	// HandleUserNotification handles the custom messages of the topic of the user notifications and reports whether it
-	// did, and its error.
-	HandleUserNotification func(ctx context.Context, messageType string, payload []byte, getNotificationTargetsByUserAndTypeFunc notifications.GetNotificationTargetsByUserAndTypeFunc) (bool, error)
-
-	// HandleMail handles the custom messages of the topic of the mails and reports whether it did, and its error.
-	HandleMail func(ctx context.Context, messageType string, payload []byte, isEmailAddressValidFunc mail.IsEmailAddressValidFunc) (bool, error)
-
-	// HandleNotificationForUsersWithAbility handles the messages of the topic of the group notifications and reports
-	// whether it did, and its error.
-	HandleNotificationForUsersWithAbility func(ctx context.Context, ability, messageType string, payload []byte) (bool, error)
-
-	// IsEmailAddressValid reports whether an email can be sent to an email address.
-	IsEmailAddressValid mail.IsEmailAddressValidFunc
-
-	// GetLocalizedRouteVariables returns the variables of the URLs of a route, by locale, from offset, up to limit.
-	GetLocalizedRouteVariables func(routeKey string, offset, limit int) map[string][]map[string]string
-
-	// GetNeverUsedAccounts returns the IDs of the accounts which never logged in for intervalInDays days.
-	GetNeverUsedAccounts func(ctx context.Context, intervalInDays uint) []string
-
-	// GetInactiveAccounts returns the IDs of the accounts inactive for intervalInMonths months.
-	GetInactiveAccounts func(ctx context.Context, intervalInMonths uint) []string
-
-	// IsUserEmpty reports whether a user has no data.
-	IsUserEmpty func(ctx context.Context, userID string) bool
 }
 
 // NewServer returns a new worker.
@@ -143,7 +70,7 @@ func (s *Server) Run() error {
 // setup prepares and starts the worker, except the consumption of the messages. It returns an error if the routes or
 // the templates can not be loaded.
 func (s *Server) setup() error {
-	s.warnUndefinedFunctions()
+	s.warnUndefinedStorages()
 
 	routes, err := weburl.Load(s.RoutesFile, s.Config.Hosts.Web)
 	if err != nil {
@@ -179,9 +106,9 @@ func (s *Server) setup() error {
 		TextTemplates: textTemplates,
 	})
 
-	if s.Functions.StartUpTasks != nil && s.Config.RunStartUpTasks {
+	if s.Hooks.StartUpTasks != nil && s.Config.RunStartUpTasks {
 		log.Info("check up started")
-		s.Functions.StartUpTasks(context.Background(), s.Config.Environment, s.Config.Version)
+		s.Hooks.StartUpTasks(context.Background(), s.Config.Environment, s.Config.Version)
 		log.Info("check up done")
 	}
 
@@ -222,48 +149,48 @@ func (s *Server) loadRecurringTasks() {
 		}
 	}
 
-	if s.Functions.SetFuncOfRecurringTasks != nil {
-		s.Functions.SetFuncOfRecurringTasks(s.scheduler.SetFunc)
+	if s.Hooks.SetFuncOfRecurringTasks != nil {
+		s.Hooks.SetFuncOfRecurringTasks(s.scheduler.SetFunc)
 	}
 }
 
 // recurringFuncs returns the functions of the built-in recurring tasks which can run, by name of task.
 func (s *Server) recurringFuncs() map[string]func(taskName string) {
-	h := s.Functions
+	st := s.Storage
 	funcs := map[string]func(taskName string){}
 
 	// Delete the expired auth tokens.
-	if h.DeleteExpiredTokens != nil {
+	if st.Tokens != nil {
 		funcs[recurring.DeleteExpiredTokens] = func(taskName string) {
-			authtokens.DeleteExpired(context.Background(), taskName, h.DeleteExpiredTokens)
+			authtokens.DeleteExpired(context.Background(), taskName, st.Tokens.DeleteExpired)
 		}
 	}
 
 	// Delete, or update, the data associated to the deleted accounts.
-	if h.SanitizeAccounts != nil {
+	if st.Accounts != nil {
 		funcs[recurring.SanitizeAccounts] = func(taskName string) {
-			account.Sanitize(taskName, h.SanitizeAccounts)
+			account.Sanitize(context.Background(), taskName, st.Accounts.Sanitize)
 		}
 	}
 
 	// Delete the never used accounts.
-	if s.Config.Account.EmailAddressMustBeConfirmed && h.GetNeverUsedAccounts != nil && h.IsUserEmpty != nil && h.DeleteUserByID != nil {
+	if s.Config.Account.EmailAddressMustBeConfirmed && st.Accounts != nil && st.Users != nil {
 		funcs[recurring.DeleteNeverUsedAccounts] = func(taskName string) {
-			account.DeleteNeverUsed(context.Background(), s.Queue, taskName, s.Config.Account.DeleteNeverUsedAfter, h.GetNeverUsedAccounts, h.IsUserEmpty, h.DeleteUserByID)
+			account.DeleteNeverUsed(context.Background(), s.Queue, taskName, s.Config.Account.DeleteNeverUsedAfter, st.Accounts.NeverUsed, st.Accounts.IsEmpty, st.Users.Delete)
 		}
 	}
 
 	// Delete the inactive accounts.
-	if h.GetInactiveAccounts != nil && h.DeleteUserByID != nil {
+	if st.Accounts != nil && st.Users != nil {
 		funcs[recurring.DeleteInactiveAccounts] = func(taskName string) {
-			account.DeleteInactive(context.Background(), s.Queue, taskName, s.Config.Account.DeleteInactiveAfter, h.GetInactiveAccounts, h.DeleteUserByID)
+			account.DeleteInactive(context.Background(), s.Queue, taskName, s.Config.Account.DeleteInactiveAfter, st.Accounts.Inactive, st.Users.Delete)
 		}
 	}
 
 	// Generate the XML sitemap files.
-	if h.GetLocalizedRouteVariables != nil {
+	if st.Sitemap != nil {
 		funcs[recurring.GenerateSitemaps] = func(taskName string) {
-			sitemap.Generate(taskName, s.Config, s.routes, h.GetLocalizedRouteVariables)
+			sitemap.Generate(context.Background(), taskName, s.Config, s.routes, st.Sitemap.LocalizedRouteVariables)
 		}
 	}
 
@@ -272,34 +199,26 @@ func (s *Server) recurringFuncs() map[string]func(taskName string) {
 	return funcs
 }
 
-// warnUndefinedFunctions logs a warning for each undefined function.
-func (s *Server) warnUndefinedFunctions() {
-	h := s.Functions
+// warnUndefinedStorages logs a warning for each undefined storage, since the features relying on it are disabled.
+func (s *Server) warnUndefinedStorages() {
+	st := s.Storage
 
-	functions := []struct {
+	storages := []struct {
 		name    string
 		defined bool
 	}{
-		{"DeleteExpiredTokens", h.DeleteExpiredTokens != nil},
-		{"DeleteUserByID", h.DeleteUserByID != nil},
-		{"DisableUserByID", h.DisableUserByID != nil},
-		{"EnableUserByID", h.EnableUserByID != nil},
-		{"UpdateUserSocialNetworksByID", h.UpdateUserSocialNetworksByID != nil},
-		{"GetNotificationTargetsByUserAndType", h.GetNotificationTargetsByUserAndType != nil},
-		{"SaveIPAddressDetails", h.SaveIPAddressDetails != nil},
-		{"SetFuncOfRecurringTasks", h.SetFuncOfRecurringTasks != nil},
-		{"StartUpTasks", h.StartUpTasks != nil},
-		{"HandleTask", h.HandleTask != nil},
-		{"HandleUserNotification", h.HandleUserNotification != nil},
-		{"HandleMail", h.HandleMail != nil},
-		{"HandleNotificationForUsersWithAbility", h.HandleNotificationForUsersWithAbility != nil},
-		{"IsEmailAddressValid", h.IsEmailAddressValid != nil},
-		{"GetLocalizedRouteVariables", h.GetLocalizedRouteVariables != nil},
+		{"Tokens", st.Tokens != nil},
+		{"Accounts", st.Accounts != nil},
+		{"Users", st.Users != nil},
+		{"Notifications", st.Notifications != nil},
+		{"Locations", st.Locations != nil},
+		{"Emails", st.Emails != nil},
+		{"Sitemap", st.Sitemap != nil},
 	}
 
-	for _, function := range functions {
-		if !function.defined {
-			log.Warn(fmt.Sprintf("The function '%s' is undefined.", function.name))
+	for _, storage := range storages {
+		if !storage.defined {
+			log.Warn(fmt.Sprintf("The storage '%s' is undefined.", storage.name))
 		}
 	}
 }

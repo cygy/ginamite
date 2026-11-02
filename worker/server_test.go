@@ -8,33 +8,12 @@ import (
 	"sort"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/cygy/ginamite/common/config"
-	"github.com/cygy/ginamite/common/notifications"
 	"github.com/cygy/ginamite/common/weburl"
 	"github.com/cygy/ginamite/worker/internal/workertest"
-	"github.com/cygy/ginamite/worker/mail"
-	"github.com/cygy/ginamite/worker/tasks/async/location"
 	"github.com/cygy/ginamite/worker/tasks/recurring"
 )
-
-// allHandlers returns handlers which do nothing, except the ones of the tasks which log their count.
-func allHandlers() Handlers {
-	return Handlers{
-		DeleteExpiredTokens: func(context.Context) int64 { return 3 },
-		SanitizeAccounts:    func() uint { return 4 },
-		DeleteUserByID:      func(context.Context, string) (map[string]time.Time, error) { return nil, nil },
-		GetNeverUsedAccounts: func(_ context.Context, days uint) []string {
-			return []string{"never-used"}
-		},
-		IsUserEmpty: func(context.Context, string) bool { return true },
-		GetInactiveAccounts: func(_ context.Context, months uint) []string {
-			return []string{"inactive-1", "inactive-2"}
-		},
-		GetLocalizedRouteVariables: func(string, int, int) map[string][]map[string]string { return nil },
-	}
-}
 
 func TestNewServer(t *testing.T) {
 	if s := NewServer(); s == nil || s.RoutesFile != "" {
@@ -42,10 +21,10 @@ func TestNewServer(t *testing.T) {
 	}
 }
 
-func TestServer_warnUndefinedFunctions(t *testing.T) {
+func TestServer_warnUndefinedStorages(t *testing.T) {
 	undefined := func(s *Server) []string {
 		workertest.Hook.Reset()
-		s.warnUndefinedFunctions()
+		s.warnUndefinedStorages()
 
 		names := []string{}
 		for _, entry := range workertest.Hook.AllEntries() {
@@ -56,35 +35,19 @@ func TestServer_warnUndefinedFunctions(t *testing.T) {
 	}
 
 	got := undefined(&Server{})
-	if len(got) != 15 {
-		t.Fatalf("logged %d warnings, want 15: %v", len(got), got)
+	if len(got) != 7 {
+		t.Fatalf("logged %d warnings, want 7: %v", len(got), got)
 	}
-	if got[0] != "The function 'DeleteExpiredTokens' is undefined." {
+	if got[0] != "The storage 'Tokens' is undefined." {
 		t.Errorf("first warning = %q", got[0])
 	}
-	for _, name := range []string{"HandleMail", "IsEmailAddressValid", "GetLocalizedRouteVariables"} {
-		if !slices.Contains(got, "The function '"+name+"' is undefined.") {
+	for _, name := range []string{"Emails", "Sitemap", "Locations"} {
+		if !slices.Contains(got, "The storage '"+name+"' is undefined.") {
 			t.Errorf("no warning for %s", name)
 		}
 	}
 
-	h := allHandlers()
-	h.DisableUserByID = h.DeleteUserByID
-	h.EnableUserByID = func(context.Context, string) error { return nil }
-	h.UpdateUserSocialNetworksByID = h.EnableUserByID
-	h.GetNotificationTargetsByUserAndType = func(context.Context, string, string) ([]notifications.Target, error) { return nil, nil }
-	h.SaveIPAddressDetails = func(context.Context, string, string, location.DetailsFunc) error { return nil }
-	h.SetFuncOfRecurringTasks = func(func(string, func(string))) {}
-	h.StartUpTasks = func(context.Context, string, string) {}
-	h.HandleTask = func(context.Context, string, []byte) (bool, error) { return true, nil }
-	h.HandleUserNotification = func(context.Context, string, []byte, notifications.GetNotificationTargetsByUserAndTypeFunc) (bool, error) {
-		return true, nil
-	}
-	h.HandleMail = func(context.Context, string, []byte, mail.IsEmailAddressValidFunc) (bool, error) { return true, nil }
-	h.HandleNotificationForUsersWithAbility = func(context.Context, string, string, []byte) (bool, error) { return true, nil }
-	h.IsEmailAddressValid = func(context.Context, string) (bool, error) { return true, nil }
-
-	if got := undefined(&Server{Functions: h}); len(got) != 0 {
+	if got := undefined(&Server{Storage: allStorages()}); len(got) != 0 {
 		t.Errorf("warnings = %v, want none", got)
 	}
 }
@@ -133,38 +96,38 @@ func TestServer_recurringFuncs(t *testing.T) {
 		return keys
 	}
 
-	t.Run("no function", func(t *testing.T) {
+	t.Run("no storage", func(t *testing.T) {
 		if got := names(&Server{Config: &config.Configuration{}}); len(got) != 0 {
 			t.Errorf("tasks = %v, want none", got)
 		}
 	})
 
-	t.Run("all the functions", func(t *testing.T) {
+	t.Run("all the storages", func(t *testing.T) {
 		c := &config.Configuration{}
 		c.Account.EmailAddressMustBeConfirmed = true
 
 		want := []string{recurring.DeleteExpiredTokens, recurring.DeleteInactiveAccounts, recurring.DeleteNeverUsedAccounts, recurring.GenerateSitemaps, recurring.SanitizeAccounts}
 		sort.Strings(want)
-		if got := names(&Server{Config: c, Functions: allHandlers()}); !slices.Equal(got, want) {
+		if got := names(&Server{Config: c, Storage: allStorages()}); !slices.Equal(got, want) {
 			t.Errorf("tasks = %v, want %v", got, want)
 		}
 	})
 
 	t.Run("the never used accounts are kept if the email address does not need to be confirmed", func(t *testing.T) {
-		if got := names(&Server{Config: &config.Configuration{}, Functions: allHandlers()}); slices.Contains(got, recurring.DeleteNeverUsedAccounts) {
+		if got := names(&Server{Config: &config.Configuration{}, Storage: allStorages()}); slices.Contains(got, recurring.DeleteNeverUsedAccounts) {
 			t.Errorf("tasks = %v", got)
 		}
 	})
 
-	t.Run("missing dependencies", func(t *testing.T) {
+	t.Run("missing storages", func(t *testing.T) {
 		c := &config.Configuration{}
 		c.Account.EmailAddressMustBeConfirmed = true
 
-		h := allHandlers()
-		h.DeleteUserByID = nil
-		h.GetLocalizedRouteVariables = nil
+		st := allStorages()
+		st.Users = nil
+		st.Sitemap = nil
 
-		if got, want := names(&Server{Config: c, Functions: h}), []string{recurring.DeleteExpiredTokens, recurring.SanitizeAccounts}; !slices.Equal(got, want) {
+		if got, want := names(&Server{Config: c, Storage: st}), []string{recurring.DeleteExpiredTokens, recurring.SanitizeAccounts}; !slices.Equal(got, want) {
 			t.Errorf("tasks = %v, want %v", got, want)
 		}
 	})
@@ -178,7 +141,7 @@ func TestServer_recurringFuncs_run(t *testing.T) {
 	c.Sitemap = config.SitemapConfiguration{Path: t.TempDir(), Name: "sitemap", MaximumURLsPerPage: 1000}
 
 	q := workertest.CaptureQueue(t)
-	s := &Server{Config: c, Queue: q.Sender, routes: weburl.NewConfiguration(), Functions: allHandlers()}
+	s := &Server{Config: c, Queue: q.Sender, routes: weburl.NewConfiguration(), Storage: allStorages()}
 
 	// The count logged by each task.
 	wantCounts := map[string]any{
@@ -219,22 +182,22 @@ func TestServer_loadRecurringTasks(t *testing.T) {
 		{Name: "custom"},
 	}
 
-	h := Handlers{DeleteExpiredTokens: allHandlers().DeleteExpiredTokens}
+	h := Hooks{}
 	var custom bool
 	h.SetFuncOfRecurringTasks = func(register func(taskName string, task func(string))) {
 		register("custom", func(string) {})
 		custom = true
 	}
 
-	server := &Server{Config: c, Functions: h, scheduler: recurring.NewScheduler()}
+	server := &Server{Config: c, Storage: Storage{Tokens: allStorages().Tokens}, Hooks: h, scheduler: recurring.NewScheduler()}
 	server.loadRecurringTasks()
 
 	if !custom {
 		t.Error("the functions of the custom tasks are not set")
 	}
 	for name, want := range map[string]bool{
-		recurring.DeleteExpiredTokens:   true,  // The function is defined.
-		recurring.SanitizeAccounts:      false, // The function is not defined.
+		recurring.DeleteExpiredTokens:   true,  // The storage is defined.
+		recurring.SanitizeAccounts:      false, // The storage is not defined.
 		recurring.SendRegistrationMails: false, // The task has no function.
 		"custom":                        true,  // The function is set by SetFuncOfRecurringTasks.
 		"unknown":                       false,
@@ -273,12 +236,12 @@ func TestServer_setup(t *testing.T) {
 	var env, version string
 	var calls []string
 	s := &Server{Config: c, scheduler: recurring.NewScheduler(), RoutesFile: filepath.Join(dir, "routes.yml")}
-	s.Functions.StartUpTasks = func(_ context.Context, environment, v string) {
+	s.Hooks.StartUpTasks = func(_ context.Context, environment, v string) {
 		env, version = environment, v
 		calls = append(calls, "start up")
 	}
-	s.Functions.SetFuncOfRecurringTasks = func(func(string, func(string))) { calls = append(calls, "recurring") }
-	s.Functions.DeleteExpiredTokens = allHandlers().DeleteExpiredTokens
+	s.Hooks.SetFuncOfRecurringTasks = func(func(string, func(string))) { calls = append(calls, "recurring") }
+	s.Storage.Tokens = allStorages().Tokens
 
 	if err := s.setup(); err != nil {
 		t.Fatal(err)

@@ -15,22 +15,23 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
-func TestSanitizeAccounts(t *testing.T) {
+func TestSanitize(t *testing.T) {
 	fns, db := withMainSession(t)
 
-	sanitize := fns.SanitizeAccounts(func(got store.Database) uint {
+	fns.Hooks.SanitizeAccounts = func(got store.Database) uint {
 		if got != store.Database(db) {
 			t.Errorf("database = %v", got)
 		}
 
 		return 3
-	})
-	if got := sanitize(); got != 3 {
-		t.Errorf("sanitize() = %d", got)
+	}
+	if got, err := fns.Sanitize(context.Background()); err != nil || got != 3 {
+		t.Errorf("Sanitize() = %d, %v", got, err)
 	}
 
-	if got := fns.SanitizeAccounts(nil)(); got != 0 {
-		t.Errorf("sanitize() = %d without function", got)
+	fns.Hooks.SanitizeAccounts = nil
+	if got, err := fns.Sanitize(context.Background()); err != nil || got != 0 {
+		t.Errorf("Sanitize() = %d, %v without hook", got, err)
 	}
 }
 
@@ -47,7 +48,7 @@ func userTokens(db *mock.Database, expires ...time.Time) []bson.ObjectID {
 	return ids
 }
 
-func TestDeleteUserByID(t *testing.T) {
+func TestDelete(t *testing.T) {
 	ctx := context.Background()
 	userID := bson.NewObjectID()
 	expires := time.Now().Add(time.Hour).Truncate(time.Millisecond)
@@ -56,14 +57,15 @@ func TestDeleteUserByID(t *testing.T) {
 	ids := userTokens(db, expires, expires.Add(time.Hour))
 
 	var updated string
-	revoked, err := fns.DeleteUserByID(func(_ context.Context, id string, got store.Database) error {
+	fns.Hooks.UpdateDocumentsReferencingToDeletedUser = func(_ context.Context, id string, got store.Database) error {
 		updated = id
 		if got != store.Database(db) {
 			t.Errorf("database = %v", got)
 		}
 
 		return nil
-	})(ctx, userID.Hex())
+	}
+	revoked, err := fns.Delete(ctx, userID.Hex())
 	if err != nil {
 		t.Fatalf("error = %v", err)
 	}
@@ -88,12 +90,12 @@ func TestDeleteUserByID(t *testing.T) {
 	db.Coll(model.UserCollection).Errs = map[string]error{"DeleteOne": mongo.ErrNoDocuments}
 	userTokens(db, expires)
 
-	if revoked, err := fns.DeleteUserByID(nil)(ctx, userID.Hex()); err != nil || len(revoked) != 1 {
+	if revoked, err := fns.Delete(ctx, userID.Hex()); err != nil || len(revoked) != 1 {
 		t.Errorf("revoked = %v, error = %v", revoked, err)
 	}
 }
 
-func TestDeleteUserByID_Failures(t *testing.T) {
+func TestDelete_Failures(t *testing.T) {
 	ctx := context.Background()
 	userID := bson.NewObjectID().Hex()
 	expires := time.Now().Add(time.Hour)
@@ -116,7 +118,7 @@ func TestDeleteUserByID_Failures(t *testing.T) {
 			userTokens(db, expires)
 			tt.prepare(db)
 
-			revoked, err := fns.DeleteUserByID(nil)(ctx, userID)
+			revoked, err := fns.Delete(ctx, userID)
 
 			if !errors.Is(err, errBoom) || revoked != nil {
 				t.Errorf("revoked = %v, error = %v, want the error of the database", revoked, err)
@@ -132,7 +134,7 @@ func TestDeleteUserByID_Failures(t *testing.T) {
 		fns, db := withMainSession(t)
 		db.Coll(model.AuthTokenCollection).Errs = map[string]error{"Find": errBoom}
 
-		if _, err := fns.DeleteUserByID(nil)(ctx, userID); err == nil {
+		if _, err := fns.Delete(ctx, userID); err == nil {
 			t.Fatal("error = nil")
 		}
 		for _, method := range methods(db, model.AuthTokenCollection) {
@@ -143,7 +145,7 @@ func TestDeleteUserByID_Failures(t *testing.T) {
 	})
 }
 
-func TestDisableUserByID(t *testing.T) {
+func TestDisable(t *testing.T) {
 	ctx := context.Background()
 	userID := bson.NewObjectID()
 	expires := time.Now().Add(time.Hour).Truncate(time.Millisecond)
@@ -152,7 +154,8 @@ func TestDisableUserByID(t *testing.T) {
 	ids := userTokens(db, expires)
 
 	var updated string
-	revoked, err := fns.DisableUserByID(func(_ context.Context, id string, _ store.Database) error { updated = id; return nil })(ctx, userID.Hex())
+	fns.Hooks.UpdateDocumentsReferencingToDisabledUser = func(_ context.Context, id string, _ store.Database) error { updated = id; return nil }
+	revoked, err := fns.Disable(ctx, userID.Hex())
 
 	if err != nil || updated != userID.Hex() || len(revoked) != 1 || !revoked[ids[0].Hex()].Equal(expires) {
 		t.Errorf("updated = %q, revoked = %v, error = %v", updated, revoked, err)
@@ -166,25 +169,26 @@ func TestDisableUserByID(t *testing.T) {
 
 	fns, db = withMainSession(t)
 	db.Coll(model.UserCollection).Err = errBoom
-	if revoked, err := fns.DisableUserByID(nil)(ctx, userID.Hex()); !errors.Is(err, errBoom) || len(revoked) != 0 {
+	if revoked, err := fns.Disable(ctx, userID.Hex()); !errors.Is(err, errBoom) || len(revoked) != 0 {
 		t.Errorf("revoked = %v, error = %v", revoked, err)
 	}
 
 	// A user already deleted is not a failure.
 	fns, db = withMainSession(t)
 	db.Coll(model.UserCollection).Errs = map[string]error{"DeleteOne": mongo.ErrNoDocuments}
-	if _, err := fns.DisableUserByID(nil)(ctx, userID.Hex()); err != nil {
+	if _, err := fns.Disable(ctx, userID.Hex()); err != nil {
 		t.Errorf("error = %v", err)
 	}
 }
 
-func TestEnableUserByID(t *testing.T) {
+func TestEnable(t *testing.T) {
 	ctx := context.Background()
 	userID := bson.NewObjectID()
 
 	fns, db := withMainSession(t)
 	var updated string
-	if err := fns.EnableUserByID(func(_ context.Context, id string, _ store.Database) error { updated = id; return nil })(ctx, userID.Hex()); err != nil {
+	fns.Hooks.UpdateDocumentsReferencingToEnabledUser = func(_ context.Context, id string, _ store.Database) error { updated = id; return nil }
+	if err := fns.Enable(ctx, userID.Hex()); err != nil {
 		t.Errorf("error = %v", err)
 	}
 
@@ -197,29 +201,31 @@ func TestEnableUserByID(t *testing.T) {
 
 	fns, db = withMainSession(t)
 	db.Coll(model.DisabledUserCollection).Err = errBoom
-	if err := fns.EnableUserByID(nil)(ctx, userID.Hex()); !errors.Is(err, errBoom) {
+	if err := fns.Enable(ctx, userID.Hex()); !errors.Is(err, errBoom) {
 		t.Errorf("error = %v", err)
 	}
 }
 
-func TestUpdateUserSocialNetworksByID(t *testing.T) {
+func TestUpdateSocialNetworks(t *testing.T) {
 	fns, _ := withMainSession(t)
 
 	var updated string
-	if err := fns.UpdateUserSocialNetworksByID(func(_ context.Context, id string, _ store.Database) error { updated = id; return nil })(context.Background(), "user-1"); err != nil {
+	fns.Hooks.UpdateDocumentsReferencingToUpdatedUserSocialNetworks = func(_ context.Context, id string, _ store.Database) error { updated = id; return nil }
+	if err := fns.UpdateSocialNetworks(context.Background(), "user-1"); err != nil {
 		t.Errorf("error = %v", err)
 	}
 	if updated != "user-1" {
 		t.Errorf("updated = %q", updated)
 	}
 
-	// Nothing to do without function.
-	if err := fns.UpdateUserSocialNetworksByID(nil)(context.Background(), "user-1"); err != nil {
+	// Nothing to do without hook.
+	fns.Hooks.UpdateDocumentsReferencingToUpdatedUserSocialNetworks = nil
+	if err := fns.UpdateSocialNetworks(context.Background(), "user-1"); err != nil {
 		t.Errorf("error = %v", err)
 	}
 }
 
-func TestGetNotificationTargetsByUserAndType(t *testing.T) {
+func TestTargets(t *testing.T) {
 	ctx := context.Background()
 	userID := bson.NewObjectID()
 
@@ -227,18 +233,18 @@ func TestGetNotificationTargetsByUserAndType(t *testing.T) {
 	db.Coll(model.AuthTokenCollection).Docs = []any{bson.M{"type": "ios", "token": "token-1"}}
 	db.Coll(model.UserCollection).One = mock.Result{Value: bson.M{"_id": userID, "privateInfos": bson.M{"email": "j@example.com", "isEmailValid": true}}}
 
-	targets, err := fns.GetNotificationTargetsByUserAndType(ctx, userID.Hex(), "news")
+	targets, err := fns.Targets(ctx, userID.Hex(), "news")
 	want := []notifications.Target{{Target: "ios", Value: "token-1"}, {Target: notifications.TargetEmail, Value: "j@example.com"}}
 	if err != nil || len(targets) != 2 || targets[0] != want[0] || targets[1] != want[1] {
 		t.Errorf("got %+v, %v", targets, err)
 	}
 
-	if targets, err := fns.GetNotificationTargetsByUserAndType(ctx, "nope", "news"); err == nil || targets == nil || len(targets) != 0 {
+	if targets, err := fns.Targets(ctx, "nope", "news"); err == nil || targets == nil || len(targets) != 0 {
 		t.Errorf("an invalid user ID must fail with an empty list: %+v, %v", targets, err)
 	}
 }
 
-func TestIsEmailAddressValid(t *testing.T) {
+func TestIsValid(t *testing.T) {
 	ctx := context.Background()
 
 	tests := []struct {
@@ -256,7 +262,7 @@ func TestIsEmailAddressValid(t *testing.T) {
 			fns, db := withMainSession(t)
 			db.Coll(tt.collection).Count = tt.count
 
-			if got, err := fns.IsEmailAddressValid(ctx, "j@example.com"); err != nil || got != tt.want {
+			if got, err := fns.IsValid(ctx, "j@example.com"); err != nil || got != tt.want {
 				t.Errorf("got %v, %v", got, err)
 			}
 		})
@@ -266,13 +272,13 @@ func TestIsEmailAddressValid(t *testing.T) {
 		fns, db := withMainSession(t)
 		db.Coll(collection).Err = errBoom
 
-		if got, err := fns.IsEmailAddressValid(ctx, "j@example.com"); err == nil || got {
+		if got, err := fns.IsValid(ctx, "j@example.com"); err == nil || got {
 			t.Errorf("%s failing: got %v, %v", collection, got, err)
 		}
 	}
 }
 
-func TestGetAccounts(t *testing.T) {
+func TestAccountsQueries(t *testing.T) {
 	ctx := context.Background()
 	first, second := bson.NewObjectID(), bson.NewObjectID()
 
@@ -282,13 +288,13 @@ func TestGetAccounts(t *testing.T) {
 	// The inactive accounts come last: the following checks are about the last query.
 	for _, tt := range []struct {
 		name string
-		get  func() []string
+		get  func() ([]string, error)
 	}{
-		{"never used", func() []string { return fns.GetNeverUsedAccounts(ctx, 30) }},
-		{"inactive", func() []string { return fns.GetInactiveAccounts(ctx, 6) }},
+		{"never used", func() ([]string, error) { return fns.NeverUsed(ctx, 30) }},
+		{"inactive", func() ([]string, error) { return fns.Inactive(ctx, 6) }},
 	} {
-		if ids := tt.get(); len(ids) != 2 || ids[0] != first.Hex() || ids[1] != second.Hex() {
-			t.Errorf("%s: ids = %v", tt.name, ids)
+		if ids, err := tt.get(); err != nil || len(ids) != 2 || ids[0] != first.Hex() || ids[1] != second.Hex() {
+			t.Errorf("%s: ids = %v, error = %v", tt.name, ids, err)
 		}
 	}
 
@@ -299,28 +305,32 @@ func TestGetAccounts(t *testing.T) {
 		t.Errorf("the inactive limit is %v ago, want 180 days", got)
 	}
 
-	// A failing query is logged and gives no account.
+	// A failing query gives the error of the database and no account.
 	db.Coll(model.UserCollection).Err = errBoom
-	if ids := fns.GetNeverUsedAccounts(ctx, 30); len(ids) != 0 {
-		t.Errorf("ids = %v", ids)
+	if ids, err := fns.NeverUsed(ctx, 30); !errors.Is(err, errBoom) || len(ids) != 0 {
+		t.Errorf("NeverUsed() = %v, %v", ids, err)
 	}
-	if ids := fns.GetInactiveAccounts(ctx, 6); len(ids) != 0 {
-		t.Errorf("ids = %v", ids)
+	if ids, err := fns.Inactive(ctx, 6); !errors.Is(err, errBoom) || len(ids) != 0 {
+		t.Errorf("Inactive() = %v, %v", ids, err)
 	}
 }
 
-func TestIsEmptyUser(t *testing.T) {
+func TestIsEmpty(t *testing.T) {
 	fns, db := withMainSession(t)
 
-	isEmpty := fns.IsEmptyUser(func(_ context.Context, id string, got store.Database) bool {
+	fns.Hooks.IsUserEmpty = func(_ context.Context, id string, got store.Database) bool {
 		return id == "empty" && got == store.Database(db)
-	})
-	if !isEmpty(context.Background(), "empty") || isEmpty(context.Background(), "used") {
-		t.Error("fns.IsEmptyUser() does not follow the function")
+	}
+	if empty, err := fns.IsEmpty(context.Background(), "empty"); err != nil || !empty {
+		t.Errorf("IsEmpty(empty) = %v, %v", empty, err)
+	}
+	if empty, err := fns.IsEmpty(context.Background(), "used"); err != nil || empty {
+		t.Errorf("IsEmpty(used) = %v, %v", empty, err)
 	}
 
-	if !fns.IsEmptyUser(nil)(context.Background(), "anyone") {
-		t.Error("every user is empty without function")
+	fns.Hooks.IsUserEmpty = nil
+	if empty, err := fns.IsEmpty(context.Background(), "anyone"); err != nil || !empty {
+		t.Error("every user is empty without hook")
 	}
 }
 
@@ -329,17 +339,23 @@ func TestUsers_HookErrors(t *testing.T) {
 	ctx := context.Background()
 	userID := bson.NewObjectID().Hex()
 	failing := func(context.Context, string, store.Database) error { return errBoom }
+	fns.Hooks = Hooks{
+		UpdateDocumentsReferencingToDeletedUser:               failing,
+		UpdateDocumentsReferencingToDisabledUser:              failing,
+		UpdateDocumentsReferencingToEnabledUser:               failing,
+		UpdateDocumentsReferencingToUpdatedUserSocialNetworks: failing,
+	}
 
-	if revoked, err := fns.DeleteUserByID(failing)(ctx, userID); !errors.Is(err, errBoom) || revoked != nil {
-		t.Errorf("DeleteUserByID() = %v, %v", revoked, err)
+	if revoked, err := fns.Delete(ctx, userID); !errors.Is(err, errBoom) || revoked != nil {
+		t.Errorf("Delete() = %v, %v", revoked, err)
 	}
-	if revoked, err := fns.DisableUserByID(failing)(ctx, userID); !errors.Is(err, errBoom) || revoked != nil {
-		t.Errorf("DisableUserByID() = %v, %v", revoked, err)
+	if revoked, err := fns.Disable(ctx, userID); !errors.Is(err, errBoom) || revoked != nil {
+		t.Errorf("Disable() = %v, %v", revoked, err)
 	}
-	if err := fns.EnableUserByID(failing)(ctx, userID); !errors.Is(err, errBoom) {
-		t.Errorf("EnableUserByID() = %v", err)
+	if err := fns.Enable(ctx, userID); !errors.Is(err, errBoom) {
+		t.Errorf("Enable() = %v", err)
 	}
-	if err := fns.UpdateUserSocialNetworksByID(failing)(ctx, userID); !errors.Is(err, errBoom) {
-		t.Errorf("UpdateUserSocialNetworksByID() = %v", err)
+	if err := fns.UpdateSocialNetworks(ctx, userID); !errors.Is(err, errBoom) {
+		t.Errorf("UpdateSocialNetworks() = %v", err)
 	}
 }

@@ -347,7 +347,7 @@ the extension points below, and is registered with `server.AddPlugin`.
 
 | Extension point | Role |
 | --- | --- |
-| `ginamite.Plugin.Configure` | Sets the storages and the hooks of the API (`api.Server.Contacts`, `Account`, `Hooks`, etc.) and the functions of the worker (`worker.Server.Functions`). An error stops `Run`. |
+| `ginamite.Plugin.Configure` | Sets the storages and the hooks of the API (`api.Server.Contacts`, `Account`, `Hooks`, etc.) and the storages and the hooks of the worker (`worker.Server.Storage`, `Hooks`). An error stops `Run`. |
 | `ginamite.Connector` (optional) | `Connect` opens the connection before the plugins are configured, and returns an error if it fails; `Close` closes it when the server stops. Called only for the API and worker servers. |
 | `api.Server.Middlewares` | Gin middlewares added before the routes, for instance to put the database in the context of the requests. |
 | `api.Server.Hooks.IsValidID` | Reports whether an identifier in a URL is well-formed. It depends on the database (an ObjectID for MongoDB, a UUID or an integer for SQL). By default every identifier is accepted. |

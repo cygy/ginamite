@@ -151,17 +151,15 @@ func TestServer_handleTask(t *testing.T) {
 		}
 	}
 
-	s := &Server{Config: config.NewConfiguration(), Functions: Handlers{
-		SaveIPAddressDetails: func(_ context.Context, IPAddress, tokenID string, _ location.DetailsFunc) error {
+	s := &Server{Config: config.NewConfiguration(), Storage: Storage{
+		Locations: fakeLocations{save: func(_ context.Context, IPAddress, tokenID string, _ location.DetailsFunc) error {
 			calls = append(calls, "ip:"+IPAddress+":"+tokenID)
 			return nil
-		},
-		DeleteUserByID:               revoke("delete"),
-		DisableUserByID:              revoke("disable"),
-		EnableUserByID:               record("enable"),
-		UpdateUserSocialNetworksByID: record("social"),
-		RegistrationDone:             record("done"),
-		RegistrationValidated:        record("validated"),
+		}},
+		Users: fakeUsers{del: revoke("delete"), disable: revoke("disable"), enable: record("enable"), social: record("social")},
+	}, Hooks: Hooks{
+		RegistrationDone:      record("done"),
+		RegistrationValidated: record("validated"),
 	}}
 	action := consumer(t, s, queue.TopicTasks)
 
@@ -214,7 +212,7 @@ func TestServer_handleTask(t *testing.T) {
 
 	t.Run("custom message", func(t *testing.T) {
 		var got string
-		s.Functions.HandleTask = func(_ context.Context, messageType string, payload []byte) (bool, error) {
+		s.Hooks.HandleTask = func(_ context.Context, messageType string, payload []byte) (bool, error) {
 			got = messageType + string(payload)
 			return true, nil
 		}
@@ -229,9 +227,9 @@ func TestServer_handleTask(t *testing.T) {
 
 	t.Run("unknown message", func(t *testing.T) {
 		workertest.Hook.Reset()
-		s.Functions.HandleTask = func(context.Context, string, []byte) (bool, error) { return false, nil }
+		s.Hooks.HandleTask = func(context.Context, string, []byte) (bool, error) { return false, nil }
 		action(message(t, "unknown", nil))
-		s.Functions.HandleTask = nil
+		s.Hooks.HandleTask = nil
 		action(message(t, "unknown2", nil))
 
 		if got := warnings(queue.TopicTasks); !slices.Equal(got, []string{"unknown", "unknown2"}) {
@@ -257,20 +255,21 @@ func TestServer_handleTask_Errors(t *testing.T) {
 		name        string
 		messageType string
 		payload     any
-		functions   Handlers
+		storage     Storage
+		hooks       Hooks
 	}{
-		{"IP location", queue.MessageTaskIPLocation, queue.TaskIPLocation{IPAddress: "1.2.3.4"}, Handlers{SaveIPAddressDetails: func(context.Context, string, string, location.DetailsFunc) error { return boom }}},
-		{"delete user", queue.MessageTaskDeleteUser, queue.TaskDeleteUser{UserID: "u"}, Handlers{DeleteUserByID: func(context.Context, string) (map[string]time.Time, error) { return nil, boom }}},
-		{"disable user", queue.MessageTaskDisableUser, queue.TaskDisableUser{UserID: "u"}, Handlers{DisableUserByID: func(context.Context, string) (map[string]time.Time, error) { return nil, boom }}},
-		{"enable user", queue.MessageTaskEnableUser, queue.TaskEnableUser{UserID: "u"}, Handlers{EnableUserByID: fail}},
-		{"social networks", queue.MessageTaskUpdateUserSocialNetworks, queue.TaskUpdateUserSocialNetworks{UserID: "u"}, Handlers{UpdateUserSocialNetworksByID: fail}},
-		{"registration done", queue.MessageTaskRegistrationDone, queue.TaskRegistrationDone{UserID: "u"}, Handlers{RegistrationDone: fail}},
-		{"registration validated", queue.MessageTaskRegistrationValidated, queue.TaskRegistrationValidated{UserID: "u"}, Handlers{RegistrationValidated: fail}},
-		{"custom", "custom", nil, Handlers{HandleTask: func(context.Context, string, []byte) (bool, error) { return true, boom }}},
+		{"IP location", queue.MessageTaskIPLocation, queue.TaskIPLocation{IPAddress: "1.2.3.4"}, Storage{Locations: fakeLocations{save: func(context.Context, string, string, location.DetailsFunc) error { return boom }}}, Hooks{}},
+		{"delete user", queue.MessageTaskDeleteUser, queue.TaskDeleteUser{UserID: "u"}, Storage{Users: fakeUsers{del: func(context.Context, string) (map[string]time.Time, error) { return nil, boom }}}, Hooks{}},
+		{"disable user", queue.MessageTaskDisableUser, queue.TaskDisableUser{UserID: "u"}, Storage{Users: fakeUsers{disable: func(context.Context, string) (map[string]time.Time, error) { return nil, boom }}}, Hooks{}},
+		{"enable user", queue.MessageTaskEnableUser, queue.TaskEnableUser{UserID: "u"}, Storage{Users: fakeUsers{enable: fail}}, Hooks{}},
+		{"social networks", queue.MessageTaskUpdateUserSocialNetworks, queue.TaskUpdateUserSocialNetworks{UserID: "u"}, Storage{Users: fakeUsers{social: fail}}, Hooks{}},
+		{"registration done", queue.MessageTaskRegistrationDone, queue.TaskRegistrationDone{UserID: "u"}, Storage{}, Hooks{RegistrationDone: fail}},
+		{"registration validated", queue.MessageTaskRegistrationValidated, queue.TaskRegistrationValidated{UserID: "u"}, Storage{}, Hooks{RegistrationValidated: fail}},
+		{"custom", "custom", nil, Storage{}, Hooks{HandleTask: func(context.Context, string, []byte) (bool, error) { return true, boom }}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &Server{Config: config.NewConfiguration(), Functions: tt.functions, Queue: workertest.CaptureQueue(t).Sender}
+			s := &Server{Config: config.NewConfiguration(), Storage: tt.storage, Hooks: tt.hooks, Queue: workertest.CaptureQueue(t).Sender}
 
 			err := consumerErr(t, s, queue.TopicTasks)(message(t, tt.messageType, tt.payload))
 
@@ -282,7 +281,7 @@ func TestServer_handleTask_Errors(t *testing.T) {
 
 	t.Run("an unhandled custom message is not a failure", func(t *testing.T) {
 		workertest.Hook.Reset()
-		s := &Server{Functions: Handlers{HandleTask: func(context.Context, string, []byte) (bool, error) { return false, boom }}}
+		s := &Server{Hooks: Hooks{HandleTask: func(context.Context, string, []byte) (bool, error) { return false, boom }}}
 
 		if err := consumerErr(t, s, queue.TopicTasks)(message(t, "custom", nil)); err != nil {
 			t.Errorf("error = %v", err)
@@ -298,7 +297,7 @@ func TestServer_handleOtherTopics_Errors(t *testing.T) {
 	valid := func(context.Context, string) (bool, error) { return true, nil }
 
 	t.Run("group notification", func(t *testing.T) {
-		s := &Server{Functions: Handlers{HandleNotificationForUsersWithAbility: func(context.Context, string, string, []byte) (bool, error) { return true, boom }}}
+		s := &Server{Hooks: Hooks{HandleNotificationForUsersWithAbility: func(context.Context, string, string, []byte) (bool, error) { return true, boom }}}
 
 		value := message(t, "type", queue.GroupNotification{Ability: "admin", Payload: map[string]string{"a": "b"}})
 		if err := consumerErr(t, s, queue.TopicGroupNotification)(value); !errors.Is(err, boom) {
@@ -307,7 +306,7 @@ func TestServer_handleOtherTopics_Errors(t *testing.T) {
 	})
 
 	t.Run("user notification", func(t *testing.T) {
-		s := &Server{Functions: Handlers{HandleUserNotification: func(context.Context, string, []byte, notifications.GetNotificationTargetsByUserAndTypeFunc) (bool, error) {
+		s := &Server{Hooks: Hooks{HandleUserNotification: func(context.Context, string, []byte, notifications.GetNotificationTargetsByUserAndTypeFunc) (bool, error) {
 			return true, boom
 		}}}
 
@@ -317,9 +316,9 @@ func TestServer_handleOtherTopics_Errors(t *testing.T) {
 	})
 
 	t.Run("new login", func(t *testing.T) {
-		s := &Server{Functions: Handlers{GetNotificationTargetsByUserAndType: func(context.Context, string, string) ([]notifications.Target, error) {
+		s := &Server{Storage: Storage{Notifications: fakeNotifications{targets: func(context.Context, string, string) ([]notifications.Target, error) {
 			return nil, boom
-		}}}
+		}}}}
 
 		value := message(t, notifications.TypeNewLogin, queue.UserNotificationNewLogin{UserID: "u"})
 		if err := consumerErr(t, s, queue.TopicUserNotification)(value); !errors.Is(err, boom) || broker.IsPermanent(err) {
@@ -328,7 +327,7 @@ func TestServer_handleOtherTopics_Errors(t *testing.T) {
 	})
 
 	t.Run("mail", func(t *testing.T) {
-		s := &Server{Functions: Handlers{IsEmailAddressValid: valid, HandleMail: func(context.Context, string, []byte, mail.IsEmailAddressValidFunc) (bool, error) {
+		s := &Server{Storage: Storage{Emails: fakeEmails{isValid: valid}}, Hooks: Hooks{HandleMail: func(context.Context, string, []byte, mail.IsEmailAddressValidFunc) (bool, error) {
 			return true, boom
 		}}}
 
@@ -345,7 +344,7 @@ func TestServer_handleGroupNotification(t *testing.T) {
 
 	t.Run("handled", func(t *testing.T) {
 		var got string
-		s.Functions.HandleNotificationForUsersWithAbility = func(_ context.Context, ability, messageType string, payload []byte) (bool, error) {
+		s.Hooks.HandleNotificationForUsersWithAbility = func(_ context.Context, ability, messageType string, payload []byte) (bool, error) {
 			got = ability + ":" + messageType + ":" + string(payload)
 			return true, nil
 		}
@@ -360,9 +359,9 @@ func TestServer_handleGroupNotification(t *testing.T) {
 
 	t.Run("not handled", func(t *testing.T) {
 		workertest.Hook.Reset()
-		s.Functions.HandleNotificationForUsersWithAbility = func(context.Context, string, string, []byte) (bool, error) { return false, nil }
+		s.Hooks.HandleNotificationForUsersWithAbility = func(context.Context, string, string, []byte) (bool, error) { return false, nil }
 		action(value)
-		s.Functions.HandleNotificationForUsersWithAbility = nil
+		s.Hooks.HandleNotificationForUsersWithAbility = nil
 		action(value)
 
 		if got := warnings(queue.TopicGroupNotification); !slices.Equal(got, []string{"type", "type"}) {
@@ -372,7 +371,7 @@ func TestServer_handleGroupNotification(t *testing.T) {
 
 	t.Run("invalid messages", func(t *testing.T) {
 		workertest.Hook.Reset()
-		s.Functions.HandleNotificationForUsersWithAbility = func(context.Context, string, string, []byte) (bool, error) {
+		s.Hooks.HandleNotificationForUsersWithAbility = func(context.Context, string, string, []byte) (bool, error) {
 			t.Error("the function must not be called")
 			return true, nil
 		}
@@ -386,12 +385,10 @@ func TestServer_handleGroupNotification(t *testing.T) {
 
 func TestServer_handleUserNotification(t *testing.T) {
 	var gotTarget string
-	s := &Server{Functions: Handlers{
-		GetNotificationTargetsByUserAndType: func(_ context.Context, userID, notificationType string) ([]notifications.Target, error) {
-			gotTarget = userID + ":" + notificationType
-			return nil, nil
-		},
-	}}
+	s := &Server{Storage: Storage{Notifications: fakeNotifications{targets: func(_ context.Context, userID, notificationType string) ([]notifications.Target, error) {
+		gotTarget = userID + ":" + notificationType
+		return nil, nil
+	}}}}
 	action := consumer(t, s, queue.TopicUserNotification)
 
 	t.Run("new login", func(t *testing.T) {
@@ -404,7 +401,7 @@ func TestServer_handleUserNotification(t *testing.T) {
 
 	t.Run("custom message", func(t *testing.T) {
 		var got string
-		s.Functions.HandleUserNotification = func(ctx context.Context, messageType string, payload []byte, getTargets notifications.GetNotificationTargetsByUserAndTypeFunc) (bool, error) {
+		s.Hooks.HandleUserNotification = func(ctx context.Context, messageType string, payload []byte, getTargets notifications.GetNotificationTargetsByUserAndTypeFunc) (bool, error) {
 			_, _ = getTargets(ctx, "u2", "custom")
 			got = messageType + string(payload)
 			return true, nil
@@ -420,11 +417,11 @@ func TestServer_handleUserNotification(t *testing.T) {
 
 	t.Run("unknown message", func(t *testing.T) {
 		workertest.Hook.Reset()
-		s.Functions.HandleUserNotification = func(context.Context, string, []byte, notifications.GetNotificationTargetsByUserAndTypeFunc) (bool, error) {
+		s.Hooks.HandleUserNotification = func(context.Context, string, []byte, notifications.GetNotificationTargetsByUserAndTypeFunc) (bool, error) {
 			return false, nil
 		}
 		action(message(t, "unknown", nil))
-		s.Functions.HandleUserNotification = nil
+		s.Hooks.HandleUserNotification = nil
 		action(message(t, "unknown2", nil))
 
 		if got := warnings(queue.TopicUserNotification); !slices.Equal(got, []string{"unknown", "unknown2"}) {
@@ -439,12 +436,12 @@ func TestServer_handleUserNotification(t *testing.T) {
 
 func TestServer_handleMail(t *testing.T) {
 	validFunc := func(context.Context, string) (bool, error) { return true, nil }
-	s := &Server{Functions: Handlers{IsEmailAddressValid: validFunc}}
+	s := &Server{Storage: Storage{Emails: fakeEmails{isValid: validFunc}}}
 	action := consumer(t, s, queue.TopicMail)
 
 	t.Run("built-in message", func(t *testing.T) {
 		workertest.Hook.Reset()
-		s.Functions.HandleMail = func(context.Context, string, []byte, mail.IsEmailAddressValidFunc) (bool, error) {
+		s.Hooks.HandleMail = func(context.Context, string, []byte, mail.IsEmailAddressValidFunc) (bool, error) {
 			t.Error("a built-in message must not be passed to the custom handler")
 			return true, nil
 		}
@@ -462,7 +459,7 @@ func TestServer_handleMail(t *testing.T) {
 	t.Run("custom message", func(t *testing.T) {
 		var got string
 		var checked bool
-		s.Functions.HandleMail = func(ctx context.Context, messageType string, payload []byte, isValid mail.IsEmailAddressValidFunc) (bool, error) {
+		s.Hooks.HandleMail = func(ctx context.Context, messageType string, payload []byte, isValid mail.IsEmailAddressValidFunc) (bool, error) {
 			checked, _ = isValid(ctx, "john@example.com")
 			got = messageType + string(payload)
 			return true, nil
@@ -478,9 +475,9 @@ func TestServer_handleMail(t *testing.T) {
 
 	t.Run("unknown message", func(t *testing.T) {
 		workertest.Hook.Reset()
-		s.Functions.HandleMail = func(context.Context, string, []byte, mail.IsEmailAddressValidFunc) (bool, error) { return false, nil }
+		s.Hooks.HandleMail = func(context.Context, string, []byte, mail.IsEmailAddressValidFunc) (bool, error) { return false, nil }
 		action(message(t, "unknown", nil))
-		s.Functions.HandleMail = nil
+		s.Hooks.HandleMail = nil
 		action(message(t, "unknown2", nil))
 
 		if got := warnings(queue.TopicMail); !slices.Equal(got, []string{"unknown", "unknown2"}) {

@@ -2,6 +2,7 @@
 package sitemap
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"sort"
@@ -20,8 +21,8 @@ import (
 const batchSize = 500
 
 // GetLocalizedVariablesFunc returns the variables of the URLs of a route, from offset, up to limit, by locale.
-// An empty result means there are no more variables.
-type GetLocalizedVariablesFunc = func(routeKey string, offset, limit int) map[string][]map[string]string
+// An empty result means there are no more variables. The sitemap of a route is closed as it is if the function fails.
+type GetLocalizedVariablesFunc = func(ctx context.Context, routeKey string, offset, limit int) (map[string][]map[string]string, error)
 
 // generator generates the sitemaps of the routes and their index.
 type generator struct {
@@ -41,7 +42,7 @@ type generator struct {
 // of the configuration, which is given. The routes without variables are in a sitemap per locale. The routes with variables, whose
 // values come from getLocalizedVariables, have one sitemap per locale and per maximum number of URLs.
 // The errors are logged.
-func Generate(taskName string, configuration *config.Configuration, routes *weburl.Configuration, getLocalizedVariables GetLocalizedVariablesFunc) {
+func Generate(ctx context.Context, taskName string, configuration *config.Configuration, routes *weburl.Configuration, getLocalizedVariables GetLocalizedVariablesFunc) {
 	g := generator{
 		taskName:       taskName,
 		name:           configuration.Sitemap.Name,
@@ -54,11 +55,11 @@ func Generate(taskName string, configuration *config.Configuration, routes *webu
 		getVariables:   getLocalizedVariables,
 	}
 
-	g.generate()
+	g.generate(ctx)
 }
 
 // generate generates the sitemaps and their index.
-func (g *generator) generate() {
+func (g *generator) generate(ctx context.Context) {
 	index, ok := g.newFile(fmt.Sprintf("%s_index", g.name), true)
 	if !ok {
 		return
@@ -79,7 +80,7 @@ func (g *generator) generate() {
 		}
 
 		if route.HasVariable() {
-			g.addRouteWithVariables(key, route)
+			g.addRouteWithVariables(ctx, key, route)
 			continue
 		}
 
@@ -100,12 +101,16 @@ func (g *generator) generate() {
 
 // addRouteWithVariables adds the URLs of a route with variables, by batch, to sitemaps which are
 // closed and replaced by new ones when the maximum number of URLs is reached.
-func (g *generator) addRouteWithVariables(key string, route weburl.Route) {
+func (g *generator) addRouteWithVariables(ctx context.Context, key string, route weburl.Route) {
 	round := 0
 	sitemaps := g.createSitemaps(key, round)
 
 	for offset := 0; ; offset += batchSize {
-		localizedVariables := g.getVariables(key, offset, batchSize)
+		localizedVariables, err := g.getVariables(ctx, key, offset, batchSize)
+		if err != nil {
+			tasks.LogError(g.taskName, fmt.Errorf("unable to get the variables of the route %s: %w", key, err), nil)
+			break
+		}
 		if len(localizedVariables) == 0 {
 			break
 		}

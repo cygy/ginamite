@@ -73,23 +73,23 @@ func (s *Server) handleTaskMessage(topic string, value []byte) error {
 
 	switch msgType {
 	case queue.MessageTaskIPLocation:
-		return location.GetIPInfo(payload, s.Config.IPStack, s.Functions.SaveIPAddressDetails)
+		return location.GetIPInfo(payload, s.Config.IPStack, s.Storage.saveIPAddressDetailsFunc())
 	case queue.MessageTaskDeleteUser:
-		return user.DeleteByID(payload, s.Queue, s.Functions.DeleteUserByID)
+		return user.DeleteByID(payload, s.Queue, s.Storage.deleteUserFunc())
 	case queue.MessageTaskDisableUser:
-		return user.DisableByID(payload, s.Queue, s.Functions.DisableUserByID)
+		return user.DisableByID(payload, s.Queue, s.Storage.disableUserFunc())
 	case queue.MessageTaskEnableUser:
-		return user.EnableByID(payload, s.Functions.EnableUserByID)
+		return user.EnableByID(payload, s.Storage.enableUserFunc())
 	case queue.MessageTaskUpdateUserSocialNetworks:
-		return user.UpdateSocialNetworksByID(payload, s.Functions.UpdateUserSocialNetworksByID)
+		return user.UpdateSocialNetworksByID(payload, s.Storage.updateSocialNetworksFunc())
 	case queue.MessageTaskRegistrationDone:
-		return user.RegistrationDone(payload, s.Functions.RegistrationDone)
+		return user.RegistrationDone(payload, s.Hooks.RegistrationDone)
 	case queue.MessageTaskRegistrationValidated:
-		return user.RegistrationValidated(payload, s.Functions.RegistrationValidated)
+		return user.RegistrationValidated(payload, s.Hooks.RegistrationValidated)
 	}
 
-	if s.Functions.HandleTask != nil {
-		handled, err := s.Functions.HandleTask(context.Background(), msgType, payload)
+	if s.Hooks.HandleTask != nil {
+		handled, err := s.Hooks.HandleTask(context.Background(), msgType, payload)
 		if handled {
 			return err
 		}
@@ -111,8 +111,8 @@ func (s *Server) handleGroupNotification(value []byte) error {
 		return errUndecodable
 	}
 
-	if s.Functions.HandleNotificationForUsersWithAbility != nil {
-		handled, err := s.Functions.HandleNotificationForUsersWithAbility(context.Background(), ability, msgType, payload)
+	if s.Hooks.HandleNotificationForUsersWithAbility != nil {
+		handled, err := s.Hooks.HandleNotificationForUsersWithAbility(context.Background(), ability, msgType, payload)
 		if handled {
 			return err
 		}
@@ -130,11 +130,11 @@ func (s *Server) handleUserNotification(value []byte) error {
 	}
 
 	if msgType == notifications.TypeNewLogin {
-		return notification.NewLogin(context.Background(), s.Queue, payload, s.Functions.GetNotificationTargetsByUserAndType)
+		return notification.NewLogin(context.Background(), s.Queue, payload, s.Storage.targetsFunc())
 	}
 
-	if s.Functions.HandleUserNotification != nil {
-		handled, err := s.Functions.HandleUserNotification(context.Background(), msgType, payload, s.Functions.GetNotificationTargetsByUserAndType)
+	if s.Hooks.HandleUserNotification != nil {
+		handled, err := s.Hooks.HandleUserNotification(context.Background(), msgType, payload, s.Storage.targetsFunc())
 		if handled {
 			return err
 		}
@@ -151,12 +151,12 @@ func (s *Server) handleMail(value []byte) error {
 		return errUndecodable
 	}
 
-	if handled, err := s.mailer.Handle(context.Background(), msgType, payload, s.Functions.IsEmailAddressValid); handled {
+	if handled, err := s.mailer.Handle(context.Background(), msgType, payload, s.Storage.emailCheckFunc()); handled {
 		return err
 	}
 
-	if s.Functions.HandleMail != nil {
-		handled, err := s.Functions.HandleMail(context.Background(), msgType, payload, s.Functions.IsEmailAddressValid)
+	if s.Hooks.HandleMail != nil {
+		handled, err := s.Hooks.HandleMail(context.Background(), msgType, payload, s.Storage.emailCheckFunc())
 		if handled {
 			return err
 		}

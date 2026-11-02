@@ -149,7 +149,17 @@ func (p *Plugin) database() store.Database {
 
 // workers returns the functions of the workers working on the database of the plugin.
 func (p *Plugin) workers() *workerFunctions.Functions {
-	return workerFunctions.New(p.database)
+	f := workerFunctions.New(p.database)
+	f.Hooks = workerFunctions.Hooks{
+		SanitizeAccounts:                                      p.SanitizeAccounts,
+		IsUserEmpty:                                           p.IsUserEmpty,
+		UpdateDocumentsReferencingToDeletedUser:               p.UpdateDocumentsReferencingToDeletedUser,
+		UpdateDocumentsReferencingToDisabledUser:              p.UpdateDocumentsReferencingToDisabledUser,
+		UpdateDocumentsReferencingToEnabledUser:               p.UpdateDocumentsReferencingToEnabledUser,
+		UpdateDocumentsReferencingToUpdatedUserSocialNetworks: p.UpdateDocumentsReferencingToUpdatedUserSocialNetworks,
+	}
+
+	return f
 }
 
 // isValidID reports whether id is the hexadecimal representation of a MongoDB ObjectID.
@@ -158,23 +168,17 @@ func isValidID(id string) bool {
 	return err == nil
 }
 
-// configureWorker sets the functions of the worker.
+// configureWorker sets the storages and the hooks of the worker.
 func (p *Plugin) configureWorker(w *worker.Server) {
 	workers := p.workers()
 
-	w.Functions.DeleteExpiredTokens = workers.DeleteExpiredTokens
-	w.Functions.GetNeverUsedAccounts = workers.GetNeverUsedAccounts
-	w.Functions.GetInactiveAccounts = workers.GetInactiveAccounts
-	w.Functions.IsUserEmpty = workers.IsEmptyUser(p.IsUserEmpty)
-	w.Functions.SanitizeAccounts = workers.SanitizeAccounts(p.SanitizeAccounts)
-	w.Functions.DeleteUserByID = workers.DeleteUserByID(p.UpdateDocumentsReferencingToDeletedUser)
-	w.Functions.DisableUserByID = workers.DisableUserByID(p.UpdateDocumentsReferencingToDisabledUser)
-	w.Functions.EnableUserByID = workers.EnableUserByID(p.UpdateDocumentsReferencingToEnabledUser)
-	w.Functions.UpdateUserSocialNetworksByID = workers.UpdateUserSocialNetworksByID(p.UpdateDocumentsReferencingToUpdatedUserSocialNetworks)
-	w.Functions.SaveIPAddressDetails = workers.SaveIPAddressDetails
-	w.Functions.GetNotificationTargetsByUserAndType = workers.GetNotificationTargetsByUserAndType
-	w.Functions.IsEmailAddressValid = workers.IsEmailAddressValid
-	w.Functions.StartUpTasks = p.startUpTasks
+	w.Storage.Tokens = workers
+	w.Storage.Accounts = workers
+	w.Storage.Users = workers
+	w.Storage.Notifications = workers
+	w.Storage.Locations = workers
+	w.Storage.Emails = workers
+	w.Hooks.StartUpTasks = p.startUpTasks
 }
 
 // startUpTasks creates and cleans the collections, the indexes and the default documents, when the worker starts.
