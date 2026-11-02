@@ -32,7 +32,7 @@ jobs:
     runs-on: ubuntu-24.04
     services:
       mongo:
-        image: mongo:7
+        image: mongo:9
         ports:
           - 27017:27017
         options: >-
@@ -41,7 +41,7 @@ jobs:
       # A single-node, single-broker cluster: the replication factors of its own topics are lowered to 1, otherwise
       # their partitions stay leaderless and every consumer group hangs forever.
       kafka:
-        image: apache/kafka:3.8.0
+        image: apache/kafka:4.4.0
         ports:
           - 9092:9092
         env:

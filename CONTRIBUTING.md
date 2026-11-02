@@ -28,7 +28,7 @@ test.
 `KAFKA_HOST`/`KAFKA_PORT` otherwise:
 
 ```bash
-docker run -d -p 27017:27017 mongo:7
+docker run -d -p 27017:27017 mongo:9
 docker run -d -p 9092:9092 \
   -e KAFKA_NODE_ID=0 -e KAFKA_PROCESS_ROLES=controller,broker \
   -e KAFKA_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093 \
@@ -40,7 +40,7 @@ docker run -d -p 9092:9092 \
   -e KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1 \
   -e KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1 -e KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1 \
   -e CLUSTER_ID=ciWo7IWazngRchmPES6q5A \
-  apache/kafka:3.8.0
+  apache/kafka:4.4.0
 ```
 
 The low replication factors are only needed because this is a single broker: a real cluster uses its own defaults.
