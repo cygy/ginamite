@@ -14,5 +14,5 @@ func jwtWithClaims(t *testing.T, claims map[string]any) string {
 		t.Fatalf("unable to encode the claims: %v", err)
 	}
 
-	return "header." + base64.StdEncoding.EncodeToString(payload) + ".signature"
+	return "header." + base64.RawURLEncoding.EncodeToString(payload) + ".signature"
 }

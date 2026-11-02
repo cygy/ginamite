@@ -25,7 +25,7 @@ func newTokenValidator(c *gin.Context, method string) validator.TokenValidator {
 
 	switch method {
 	case authentication.MethodFacebook:
-		return validator.NewFacebookTokenValidator(ctxkey.Config.Get(c).Facebook.AppID, ctxkey.Config.Get(c).Facebook.APIVersion, ctxkey.Config.Get(c).Facebook.TimeOut, ctxkey.Config.Get(c).Facebook.RetryCount, ctxkey.Config.Get(c).IsDebugModeEnabled())
+		return validator.NewFacebookTokenValidator(ctxkey.Config.Get(c).Facebook.AppID, ctxkey.Config.Get(c).Facebook.AppSecret, ctxkey.Config.Get(c).Facebook.APIVersion, ctxkey.Config.Get(c).Facebook.TimeOut, ctxkey.Config.Get(c).Facebook.RetryCount, ctxkey.Config.Get(c).IsDebugModeEnabled())
 	case authentication.MethodGoogle:
 		return validator.NewGoogleTokenValidator(ctxkey.Config.Get(c).Google.ClientID, ctxkey.Config.Get(c).Google.APIVersion, ctxkey.Config.Get(c).Google.TimeOut, ctxkey.Config.Get(c).Google.RetryCount, ctxkey.Config.Get(c).IsDebugModeEnabled())
 	}

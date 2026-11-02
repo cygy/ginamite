@@ -28,33 +28,30 @@ func extractClaimsFromJWTToken(token string, value any, validator TokenValidator
 	segments := strings.Split(token, ".")
 	if len(segments) != 3 {
 		log.WithFields(logrus.Fields{
-			"token":  token,
 			"source": validator.SourceName(),
 		}).Error("wrong JWT token format")
 		return false
 	}
 
-	parsed, err := base64.StdEncoding.DecodeString(segments[1])
+	parsed, err := base64.RawURLEncoding.DecodeString(segments[1])
 	if err != nil {
 		log.WithFields(logrus.Fields{
-			"token":  token,
 			"source": validator.SourceName(),
 			"error":  err.Error(),
-		}).Error("unable to parse JWT oken")
+		}).Error("unable to parse JWT token")
 		return false
 	}
 
-	if !logParseToken(token, validator, parsed, value) {
+	if !logParseToken(validator, parsed, value) {
 		return false
 	}
 
 	return true
 }
 
-func logResponseToken(token string, validator TokenValidator, r *resty.Response, err error) bool {
+func logResponseToken(validator TokenValidator, r *resty.Response, err error) bool {
 	if err != nil || r.StatusCode() != http.StatusOK {
 		entry := log.WithFields(logrus.Fields{
-			"token":      token,
 			"source":     validator.SourceName(),
 			"statusCode": r.StatusCode(),
 		})
@@ -69,10 +66,9 @@ func logResponseToken(token string, validator TokenValidator, r *resty.Response,
 	return true
 }
 
-func logParseToken(token string, validator TokenValidator, rawToken []byte, value any) bool {
+func logParseToken(validator TokenValidator, rawToken []byte, value any) bool {
 	if err := json.Unmarshal(rawToken, value); err != nil {
 		log.WithFields(logrus.Fields{
-			"token":  token,
 			"source": validator.SourceName(),
 			"error":  err.Error(),
 		}).Error("unable to parse token")

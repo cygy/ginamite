@@ -98,8 +98,10 @@ type ConsumerConfiguration struct {
 
 // FacebookConfiguration holds the settings of the Facebook developer application.
 type FacebookConfiguration struct {
-	Enabled    bool
-	AppID      string `yaml:"app_id"`
+	Enabled bool
+	AppID   string `yaml:"app_id"`
+	// AppSecret is the secret of the application, which verifies the tokens of the users: read it with !file or !env.
+	AppSecret  string `yaml:"app_secret"`
 	APIVersion string `yaml:"api_version"`
 	TimeOut    int    `yaml:"time_out"` // in milliseconds
 	RetryCount int    `yaml:"retry_count"`

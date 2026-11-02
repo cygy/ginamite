@@ -38,7 +38,7 @@ func TestGoogleTokenValidator(t *testing.T) {
 		{"missing subject", jwtWithClaims(t, with("sub", "")), http.StatusOK, false},
 		{"not a JWT", "not-a-jwt", http.StatusOK, false},
 		{"payload not base64", "a.%%%.c", http.StatusOK, false},
-		{"payload not json", "a." + base64.StdEncoding.EncodeToString([]byte("nope")) + ".c", http.StatusOK, false},
+		{"payload not json", "a." + base64.RawURLEncoding.EncodeToString([]byte("nope")) + ".c", http.StatusOK, false},
 		{"rejected by the provider", jwtWithClaims(t, validClaims), http.StatusBadRequest, false},
 	}
 	for _, tt := range tests {

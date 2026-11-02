@@ -4,6 +4,7 @@ package api
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/cygy/ginamite/api/route/contact"
@@ -149,6 +150,9 @@ func (s *Server) Run() error {
 	if err != nil {
 		return fmt.Errorf("unable to load the routes of the API: %w", err)
 	}
+	if err := s.checkProviders(); err != nil {
+		return err
+	}
 	if s.Config.JWT.Secret == "" {
 		if needsJWT {
 			return errors.New("the setting 'jwt.secret' is required by the features of the setting api_features")
@@ -227,6 +231,19 @@ func (s *Server) idValidator() gin.HandlerFunc {
 func (s *Server) configureProxies(server *gin.Engine) error {
 	if err := commonRequest.ConfigureClientIP(server, s.Config.Server.TrustedProxies); err != nil {
 		return fmt.Errorf("invalid setting 'server.trusted_proxies': %w", err)
+	}
+
+	return nil
+}
+
+// checkProviders returns an error if the features facebook or google are enabled without the settings which verify the
+// tokens of their users.
+func (s *Server) checkProviders() error {
+	if slices.Contains(s.Config.APIFeatures, FeatureFacebook) && (s.Config.Facebook.AppID == "" || s.Config.Facebook.AppSecret == "") {
+		return errors.New("the feature facebook needs the settings 'facebook.app_id' and 'facebook.app_secret'")
+	}
+	if slices.Contains(s.Config.APIFeatures, FeatureGoogle) && s.Config.Google.ClientID == "" {
+		return errors.New("the feature google needs the setting 'google.client_id'")
 	}
 
 	return nil

@@ -35,7 +35,7 @@ func TestAPIClient(t *testing.T) {
 
 func TestExtractClaimsFromJWTToken(t *testing.T) {
 	validator := NewGoogleTokenValidator("id", "v3", 1000, 0, false)
-	payload := func(s string) string { return "a." + base64.StdEncoding.EncodeToString([]byte(s)) + ".c" }
+	payload := func(s string) string { return "a." + base64.RawURLEncoding.EncodeToString([]byte(s)) + ".c" }
 
 	tests := []struct {
 		name  string
@@ -86,8 +86,8 @@ func TestLogResponseToken(t *testing.T) {
 				t.Fatalf("Get() error = %v", err)
 			}
 
-			validator := NewFacebookTokenValidator("id", "v3", 1000, 0, false)
-			if got := logResponseToken("token", validator, response, tt.err); got != tt.want {
+			validator := NewFacebookTokenValidator("id", "secret", "v3", 1000, 0, false)
+			if got := logResponseToken(validator, response, tt.err); got != tt.want {
 				t.Errorf("logResponseToken() = %v, want %v", got, tt.want)
 			}
 		})
@@ -98,10 +98,10 @@ func TestLogParseToken(t *testing.T) {
 	validator := NewGoogleTokenValidator("id", "v3", 1000, 0, false)
 
 	var value map[string]any
-	if !logParseToken("token", validator, []byte(`{"a":1}`), &value) || value["a"] == nil {
+	if !logParseToken(validator, []byte(`{"a":1}`), &value) || value["a"] == nil {
 		t.Errorf("logParseToken() must parse a valid payload, got %v", value)
 	}
-	if logParseToken("token", validator, []byte("nope"), &value) {
+	if logParseToken(validator, []byte("nope"), &value) {
 		t.Error("logParseToken() = true, want false for an invalid payload")
 	}
 }

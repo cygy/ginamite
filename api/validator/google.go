@@ -20,10 +20,9 @@ func (v *googleTokenValidator) SourceName() string {
 
 // VerifyTokenAndExtractInfos verifies a google access token
 func (v *googleTokenValidator) VerifyTokenAndExtractInfos(token string) (TokenInfos, bool) {
-	endpoint := fmt.Sprintf("tokeninfo?id_token=%s", token)
-	r, err := v.client.R().Get(endpoint)
+	r, err := v.client.R().SetQueryParam("id_token", token).Get("tokeninfo")
 
-	if !logResponseToken(token, v, r, err) {
+	if !logResponseToken(v, r, err) {
 		return TokenInfos{}, false
 	}
 

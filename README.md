@@ -300,7 +300,7 @@ api_features: [status, locales, timezones, auth, account, contact]
 | `registration` | The registration with a password, and the availability of the usernames. |
 | `forgot_password` | The reset of a forgotten password. |
 | `auth` | The login with a password, the auth tokens of the users, and their administration. |
-| `facebook`, `google` | The registration and the login with the provider. |
+| `facebook`, `google` | The registration and the login with the provider. They need `facebook.app_id` and `facebook.app_secret`, or `google.client_id`. |
 | `account` | The account of the users, and the administration of the users: list, update, disable, delete, abilities. |
 | `contact` | The contact messages, and their administration. |
 
@@ -313,7 +313,7 @@ etc.) of the custom routes answer an error: set `jwt.secret` as soon as a route 
 ### Secrets
 
 The configuration file should hold no secret (`jwt.secret`, `database.password`, `kafka.sasl.password`, `smtp.password`,
-API keys): it is committed and copied into the images. Any value can be read from outside of the file with a tag:
+`facebook.app_secret`, API keys): it is committed and copied into the images. Any value can be read from outside of the file with a tag:
 
 ```yaml
 jwt:

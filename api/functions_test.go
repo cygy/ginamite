@@ -206,6 +206,41 @@ func TestServer_configureProxies_Invalid(t *testing.T) {
 	}
 }
 
+func TestServer_checkProviders(t *testing.T) {
+	tests := []struct {
+		name  string
+		setup func(s *Server)
+		want  string
+	}{
+		{"no provider", func(s *Server) {}, ""},
+		{"facebook without secret", func(s *Server) {
+			s.Config.APIFeatures = []string{FeatureFacebook}
+			s.Config.Facebook.AppID = "id"
+		}, "facebook.app_secret"},
+		{"facebook", func(s *Server) {
+			s.Config.APIFeatures = []string{FeatureFacebook}
+			s.Config.Facebook.AppID, s.Config.Facebook.AppSecret = "id", "secret"
+		}, ""},
+		{"google without client ID", func(s *Server) { s.Config.APIFeatures = []string{FeatureGoogle} }, "google.client_id"},
+		{"google", func(s *Server) {
+			s.Config.APIFeatures = []string{FeatureGoogle}
+			s.Config.Google.ClientID = "id"
+		}, ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := NewServer()
+			tt.setup(s)
+
+			err := s.checkProviders()
+			if (tt.want == "") != (err == nil) || (err != nil && !strings.Contains(err.Error(), tt.want)) {
+				t.Errorf("checkProviders() = %v, want an error naming %q", err, tt.want)
+			}
+		})
+	}
+}
+
 func TestServer_Run_SetUpErrors(t *testing.T) {
 	tests := []struct {
 		name  string
