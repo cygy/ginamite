@@ -200,7 +200,7 @@ func (s *Notifications) userNotification(ctx context.Context, userID, notificati
 	}
 
 	if notification.UserID.Hex() != userID {
-		return nil, commonErrors.NotFound()
+		return nil, commonErrors.ErrNotFound
 	}
 
 	return notification, nil

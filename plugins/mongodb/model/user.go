@@ -238,7 +238,7 @@ func (user *User) GetByIdentifier(ctx context.Context, identifier string, db sto
 	}
 
 	if !user.IsSaved() {
-		return errors.NotFound()
+		return errors.ErrNotFound
 	}
 
 	return nil

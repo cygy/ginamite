@@ -97,7 +97,7 @@ func GetDocumentByID(ctx context.Context, document Document, collection string, 
 	log.DatabaseError(err, collection)
 
 	if stderrors.Is(err, mongo.ErrNoDocuments) || (err == nil && !document.IsSaved()) {
-		return errors.NotFound()
+		return errors.ErrNotFound
 	}
 
 	return err

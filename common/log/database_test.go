@@ -14,7 +14,7 @@ func TestDatabaseError(t *testing.T) {
 		want bool
 	}{
 		{"nil", nil, false},
-		{"not found", commonErrors.NotFound(), false},
+		{"not found", commonErrors.ErrNotFound, false},
 		{"other", errors.New("boom"), true},
 	}
 

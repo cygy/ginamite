@@ -95,7 +95,7 @@ func (a *Accounts) GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser
 	}
 
 	if !user.IsSaved() {
-		return authentication.User{}, "", errors.NotFound()
+		return authentication.User{}, "", errors.ErrNotFound
 	}
 
 	return user.ToUser(), user.IdentificationMethods.Password, nil

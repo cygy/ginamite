@@ -6,13 +6,6 @@ import (
 	"testing"
 )
 
-func TestNotFound(t *testing.T) {
-	err := NotFound()
-	if !errors.Is(err, ErrNotFound) || err.Error() != NotFoundErrorMessage {
-		t.Errorf("NotFound() = %v, want ErrNotFound", err)
-	}
-}
-
 func TestIsNotFound(t *testing.T) {
 	tests := []struct {
 		name string
@@ -20,7 +13,7 @@ func TestIsNotFound(t *testing.T) {
 		want bool
 	}{
 		{"nil", nil, false},
-		{"not found", NotFound(), true},
+		{"not found", ErrNotFound, true},
 		{"wrapped", fmt.Errorf("user 42: %w", ErrNotFound), true},
 		{"same text", errors.New(NotFoundErrorMessage), false},
 		{"other error", errors.New("boom"), false},

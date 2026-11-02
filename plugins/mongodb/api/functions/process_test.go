@@ -74,7 +74,7 @@ func TestCreateProcess_NothingToDelete(t *testing.T) {
 	db := mock.NewDatabase("app")
 	c, p := context.Background(), processesOn(db)
 
-	deleteNothing := func(context.Context, string, store.Database) error { return commonErrors.NotFound() }
+	deleteNothing := func(context.Context, string, store.Database) error { return commonErrors.ErrNotFound }
 	id, _, err := p.createProcess(c, bson.NewObjectID().Hex(), deleteNothing, func() (*model.UpdatePropertyProcess, error) {
 		return model.NewDeleteAccountProcess(bson.NewObjectID().Hex())
 	})

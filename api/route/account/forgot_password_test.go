@@ -26,7 +26,7 @@ func TestForgotPassword(t *testing.T) {
 		{name: "storage of the accounts not defined", body: body, setup: all(create(nil), withoutAccounts), want: http.StatusInternalServerError},
 		{name: "storage of the processes not defined", body: body, setup: all(lookup(nil), withoutProcesses), want: http.StatusInternalServerError},
 		{name: "missing identifier", body: `{}`, setup: all(lookup(nil), create(nil)), want: http.StatusBadRequest},
-		{name: "unknown account", body: body, setup: all(lookup(commonErrors.NotFound()), create(nil)), want: http.StatusNotFound},
+		{name: "unknown account", body: body, setup: all(lookup(commonErrors.ErrNotFound), create(nil)), want: http.StatusNotFound},
 		{name: "lookup error", body: body, setup: all(lookup(errBoom), create(nil)), want: http.StatusInternalServerError},
 		{name: "process error", body: body, setup: all(lookup(nil), create(errBoom)), want: http.StatusInternalServerError},
 		{name: "success", body: body, setup: all(lookup(nil), create(nil)), want: http.StatusOK},

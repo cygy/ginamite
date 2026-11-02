@@ -35,7 +35,7 @@ func TestShorthands_Status(t *testing.T) {
 		{"MaxFileSizeExceeded", func(c *gin.Context) { MaxFileSizeExceeded(c, "en", "key", 1024) }, http.StatusPreconditionFailed},
 		{"InvalidMimeType", func(c *gin.Context) { InvalidMimeType(c, "en", "key") }, http.StatusPreconditionFailed},
 		{"UnableToUpdateDatabase", func(c *gin.Context) { UnableToUpdateDatabase(c, "en", "key") }, http.StatusInternalServerError},
-		{"SendError not found", func(c *gin.Context) { SendError(c, commonErrors.NotFound()) }, http.StatusNotFound},
+		{"SendError not found", func(c *gin.Context) { SendError(c, commonErrors.ErrNotFound) }, http.StatusNotFound},
 		{"SendError other", func(c *gin.Context) { SendError(c, http.ErrAbortHandler) }, http.StatusInternalServerError},
 	}
 	for _, tt := range tests {

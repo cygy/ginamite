@@ -59,16 +59,29 @@ type Server struct {
 // Hooks are the functions of the application which are not tied to a feature: the validation of the identifiers and of
 // the auth tokens, the tokens signed by the API, and the extensions of the server. A database plugin sets most of them.
 type Hooks struct {
-	RecurringTasks                          func()
-	IsValidID                               func(id string) bool
-	NewMessageFromQueueCache                func(message string) bool
-	MiddlewareIsValidAuthToken              ctxAuthToken.IsValidFunc
+	// RecurringTasks is run once when the API starts, to start the periodic tasks of the application. Optional.
+	RecurringTasks func()
+	// IsValidID reports whether a string is a valid identifier of the storage, such as in the paths of the routes. The
+	// identifiers are not checked if nil.
+	IsValidID func(id string) bool
+	// NewMessageFromQueueCache handles the cache messages of the queue the API does not know, and reports whether it
+	// handled the message. Optional.
+	NewMessageFromQueueCache func(message string) bool
+	// MiddlewareIsValidAuthToken reports whether the auth token of a request is still valid: not expired nor revoked.
+	MiddlewareIsValidAuthToken ctxAuthToken.IsValidFunc
+	// MiddlewareGetUserAndLocaleFromAuthToken loads the user and the locale of an auth token.
 	MiddlewareGetUserAndLocaleFromAuthToken ctxAuthToken.GetUserAndLocaleFunc
-	MiddlewareGetUserAbilities              rights.GetUserAbilitiesFunc
-	BuildTokenFromID                        authentication.BuildTokenFunc
-	ExtraPropertiesForTokenWithID           authentication.ExtraPropertiesForTokenWithIDFunc
-	ExtendTokenExpirationDateFromID         authentication.ExtendTokenExpirationDateFunc
-	RouterConfigureDefaultRoutes            route.ConfigureDefaultRoutes
+	// MiddlewareGetUserAbilities returns the abilities of a user and whether the user is an administrator.
+	MiddlewareGetUserAbilities rights.GetUserAbilitiesFunc
+	// BuildTokenFromID builds the auth token stored under an identifier.
+	BuildTokenFromID authentication.BuildTokenFunc
+	// ExtraPropertiesForTokenWithID returns the extra properties signed in the auth token of an identifier. Optional.
+	ExtraPropertiesForTokenWithID authentication.ExtraPropertiesForTokenWithIDFunc
+	// ExtendTokenExpirationDateFromID extends the expiration date of the auth token of an identifier.
+	ExtendTokenExpirationDateFromID authentication.ExtendTokenExpirationDateFunc
+	// RouterConfigureDefaultRoutes changes the default routes before they are registered, to replace or remove some of
+	// them. Optional.
+	RouterConfigureDefaultRoutes route.ConfigureDefaultRoutes
 
 	// NewRateLimiter returns the limiters of the requests which try to guess a secret, see the setting rate_limits. The
 	// default limiters keep their counters in memory, by instance of the API.

@@ -24,7 +24,7 @@ func TestDeleteAuthenticationToken(t *testing.T) {
 	t.Run("without key", func(t *testing.T) {
 		runCases(t, DeleteAuthToken, []testCase{
 			{name: "storage not defined", userID: testUserID, id: "t1", setup: withoutTokens, want: http.StatusInternalServerError},
-			{name: "token not found", userID: testUserID, id: "t1", setup: deleteStubs(token, commonErrors.NotFound(), nil), want: http.StatusNotFound},
+			{name: "token not found", userID: testUserID, id: "t1", setup: deleteStubs(token, commonErrors.ErrNotFound, nil), want: http.StatusNotFound},
 			{name: "lookup error", userID: testUserID, id: "t1", setup: deleteStubs(token, errBoom, nil), want: http.StatusInternalServerError},
 			{name: "deletion error", userID: testUserID, id: "t1", setup: deleteStubs(token, nil, errBoom), want: http.StatusInternalServerError},
 		})
@@ -32,7 +32,7 @@ func TestDeleteAuthenticationToken(t *testing.T) {
 
 	t.Run("with key", func(t *testing.T) {
 		runCases(t, DeleteAuthTokenWithKey, []testCase{
-			{name: "token not found", id: "t1", key: "token-key", setup: deleteStubs(token, commonErrors.NotFound(), nil), want: http.StatusBadRequest},
+			{name: "token not found", id: "t1", key: "token-key", setup: deleteStubs(token, commonErrors.ErrNotFound, nil), want: http.StatusBadRequest},
 			{name: "storage not defined", id: "t1", key: "token-key", setup: withoutTokens, want: http.StatusInternalServerError},
 		})
 	})

@@ -8,17 +8,17 @@ import (
 	"github.com/cygy/ginamite/common/weburl"
 )
 
-// withoutContext adapts a sender of the registration emails, which have no context and no check.
-func withoutContext(f func(m *Mailer, payload []byte) error) sender {
-	return func(m *Mailer, _ context.Context, payload []byte, _ IsEmailAddressValidFunc) error {
-		return f(m, payload)
+// withoutCheck adapts a sender of the registration emails, which have no check of the email address.
+func withoutCheck(f func(m *Mailer, ctx context.Context, payload []byte) error) sender {
+	return func(m *Mailer, ctx context.Context, payload []byte, _ IsEmailAddressValidFunc) error {
+		return f(m, ctx, payload)
 	}
 }
 
 func TestRegistrationNotifications(t *testing.T) {
 	tests := []struct {
 		name string
-		send func(m *Mailer, payload []byte) error
+		send func(m *Mailer, ctx context.Context, payload []byte) error
 		key  string
 	}{
 		{"RegistrationWelcome", (*Mailer).RegistrationWelcome, "registration.welcome"},
@@ -28,7 +28,7 @@ func TestRegistrationNotifications(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			checkNotification(t, withoutContext(tt.send), tt.key, false)
+			checkNotification(t, withoutCheck(tt.send), tt.key, false)
 		})
 	}
 }
@@ -36,7 +36,7 @@ func TestRegistrationNotifications(t *testing.T) {
 func TestRegistrationConfirmation(t *testing.T) {
 	t.Run("sent", func(t *testing.T) {
 		mailer, delivered := stub(t)
-		if err := mailer.RegistrationConfirmation(encode(t, map[string]string{
+		if err := mailer.RegistrationConfirmation(t.Context(), encode(t, map[string]string{
 			"email": address, "user_id": "uid", "username": "john", "locale": "en", "registration_code": "code",
 		})); err != nil {
 			t.Fatalf("error = %v", err)
@@ -57,7 +57,7 @@ func TestRegistrationConfirmation(t *testing.T) {
 
 	t.Run("invalid payload", func(t *testing.T) {
 		mailer, delivered := stub(t)
-		if err := mailer.RegistrationConfirmation([]byte("{")); !broker.IsPermanent(err) {
+		if err := mailer.RegistrationConfirmation(t.Context(), []byte("{")); !broker.IsPermanent(err) {
 			t.Errorf("error = %v, want a permanent error", err)
 		}
 

@@ -60,7 +60,7 @@ func TestLogout(t *testing.T) {
 
 	runCases(t, Logout, []testCase{
 		{name: "storage not defined", setup: withoutTokens, userID: testUserID, want: http.StatusInternalServerError},
-		{name: "unknown token", userID: testUserID, setup: remove(commonErrors.NotFound()), want: http.StatusNoContent},
+		{name: "unknown token", userID: testUserID, setup: remove(commonErrors.ErrNotFound), want: http.StatusNoContent},
 		{name: "deletion error", userID: testUserID, setup: remove(errBoom), want: http.StatusInternalServerError},
 		{name: "success", userID: testUserID, setup: remove(nil), want: http.StatusNoContent},
 		{name: "success with expiration date", userID: testUserID, setup: all(remove(nil), expiration(nil)), want: http.StatusNoContent},
@@ -77,7 +77,7 @@ func TestGetAuthTokens(t *testing.T) {
 
 	runCases(t, GetAuthTokens, []testCase{
 		{name: "storage not defined", setup: withoutTokens, userID: testUserID, want: http.StatusInternalServerError},
-		{name: "not found", userID: testUserID, setup: list(commonErrors.NotFound()), want: http.StatusNotFound},
+		{name: "not found", userID: testUserID, setup: list(commonErrors.ErrNotFound), want: http.StatusNotFound},
 		{name: "error", userID: testUserID, setup: list(errBoom), want: http.StatusInternalServerError},
 		{name: "success", userID: testUserID, setup: list(nil), want: http.StatusOK, check: contains("t1")},
 	})
@@ -92,7 +92,7 @@ func TestGetAuthToken(t *testing.T) {
 
 	runCases(t, GetAuthToken, []testCase{
 		{name: "storage not defined", setup: withoutTokens, userID: testUserID, id: "t1", want: http.StatusInternalServerError},
-		{name: "not found", userID: testUserID, id: "t1", setup: get("", commonErrors.NotFound()), want: http.StatusNotFound},
+		{name: "not found", userID: testUserID, id: "t1", setup: get("", commonErrors.ErrNotFound), want: http.StatusNotFound},
 		{name: "error", userID: testUserID, id: "t1", setup: get("", errBoom), want: http.StatusInternalServerError},
 		{name: "token of another user", userID: testUserID, id: "t1", setup: get("someone-else", nil), want: http.StatusNotFound},
 		{name: "success", userID: testUserID, id: "t1", setup: get(testUserID, nil), want: http.StatusOK, check: contains("t1")},
@@ -132,7 +132,7 @@ func TestUpdateAuthToken(t *testing.T) {
 		{name: "storage not defined", userID: testUserID, id: "t1", body: body, setup: withoutTokens, want: http.StatusInternalServerError},
 		{name: "missing name", userID: testUserID, id: "t1", body: `{}`, setup: stubs(token, nil, nil), want: http.StatusBadRequest},
 		{name: "unsupported notification", userID: testUserID, id: "t1", body: `{"name":"x","notifications":["unknown"]}`, setup: stubs(token, nil, nil), want: http.StatusBadRequest},
-		{name: "token not found", userID: testUserID, id: "t1", body: body, setup: stubs(token, commonErrors.NotFound(), nil), want: http.StatusNotFound},
+		{name: "token not found", userID: testUserID, id: "t1", body: body, setup: stubs(token, commonErrors.ErrNotFound, nil), want: http.StatusNotFound},
 		{name: "token of another user", userID: "someone-else", id: "t1", body: body, setup: stubs(token, nil, nil), want: http.StatusNotFound},
 		{name: "update error", userID: testUserID, id: "t1", body: body, setup: stubs(token, nil, errBoom), want: http.StatusInternalServerError},
 		{name: "success", userID: testUserID, id: "t1", body: body, setup: stubs(token, nil, nil), want: http.StatusOK},

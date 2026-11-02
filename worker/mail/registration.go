@@ -9,12 +9,12 @@ import (
 )
 
 // RegistrationWelcome sends an email to welcome the user after the registration.
-func (m *Mailer) RegistrationWelcome(payload []byte) error {
-	return m.sendNotification(context.Background(), payload, "registration.welcome", alwaysValid)
+func (m *Mailer) RegistrationWelcome(ctx context.Context, payload []byte) error {
+	return m.sendNotification(ctx, payload, "registration.welcome", alwaysValid)
 }
 
 // RegistrationConfirmation sends an email asking to confirm, or to cancel, the registration.
-func (m *Mailer) RegistrationConfirmation(payload []byte) error {
+func (m *Mailer) RegistrationConfirmation(ctx context.Context, payload []byte) error {
 	p := queue.MailRegistrationConfirmation{}
 	if err := queue.UnmarshalPayload(payload, &p); err != nil {
 		return broker.Permanent(err)
@@ -32,11 +32,11 @@ func (m *Mailer) RegistrationConfirmation(payload []byte) error {
 }
 
 // RegistrationConfirmed sends an email to notify the registration is confirmed.
-func (m *Mailer) RegistrationConfirmed(payload []byte) error {
-	return m.sendNotification(context.Background(), payload, "registration.confirmed", alwaysValid)
+func (m *Mailer) RegistrationConfirmed(ctx context.Context, payload []byte) error {
+	return m.sendNotification(ctx, payload, "registration.confirmed", alwaysValid)
 }
 
 // RegistrationCancelled sends an email to notify the registration is cancelled.
-func (m *Mailer) RegistrationCancelled(payload []byte) error {
-	return m.sendNotification(context.Background(), payload, "registration.cancelled", alwaysValid)
+func (m *Mailer) RegistrationCancelled(ctx context.Context, payload []byte) error {
+	return m.sendNotification(ctx, payload, "registration.cancelled", alwaysValid)
 }

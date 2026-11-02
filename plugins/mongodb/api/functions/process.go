@@ -96,7 +96,7 @@ func (p *Processes) VerifyProcess(ctx context.Context, processID, key string) (s
 
 	process := &model.UpdatePropertyProcess{}
 	if err := process.GetByID(ctx, processID, mongoSession); err != nil || !process.IsSaved() {
-		return "", "", errors.NotFound()
+		return "", "", errors.ErrNotFound
 	}
 
 	// Do not validate or cancel if the key is not verified.
@@ -110,7 +110,7 @@ func (p *Processes) VerifyProcess(ctx context.Context, processID, key string) (s
 				log.WithField("error", err).Error("unable to increment")
 			}
 		}
-		return "", "", errors.NotFound()
+		return "", "", errors.ErrNotFound
 	}
 
 	return process.UserID.Hex(), process.Value, nil

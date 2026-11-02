@@ -7,7 +7,7 @@ import (
 	"github.com/cygy/ginamite/common/weburl"
 )
 
-var (
+const (
 	// WebHostKeyword is the name of the variable replaced by the host of the web server.
 	WebHostKeyword = "WebHost"
 	// StaticHostKeyword is the name of the variable replaced by the host of the static assets.

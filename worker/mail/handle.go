@@ -9,17 +9,17 @@ import (
 // handlers returns the senders of the emails, by type of message.
 func (m *Mailer) handlers() map[string]func(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) error {
 	return map[string]func(ctx context.Context, payload []byte, isEmailAddressValid IsEmailAddressValidFunc) error{
-		queue.MessageMailRegistrationConfirmation: func(_ context.Context, payload []byte, _ IsEmailAddressValidFunc) error {
-			return m.RegistrationConfirmation(payload)
+		queue.MessageMailRegistrationConfirmation: func(ctx context.Context, payload []byte, _ IsEmailAddressValidFunc) error {
+			return m.RegistrationConfirmation(ctx, payload)
 		},
-		queue.MessageMailRegistrationConfirmed: func(_ context.Context, payload []byte, _ IsEmailAddressValidFunc) error {
-			return m.RegistrationConfirmed(payload)
+		queue.MessageMailRegistrationConfirmed: func(ctx context.Context, payload []byte, _ IsEmailAddressValidFunc) error {
+			return m.RegistrationConfirmed(ctx, payload)
 		},
-		queue.MessageMailRegistrationCancelled: func(_ context.Context, payload []byte, _ IsEmailAddressValidFunc) error {
-			return m.RegistrationCancelled(payload)
+		queue.MessageMailRegistrationCancelled: func(ctx context.Context, payload []byte, _ IsEmailAddressValidFunc) error {
+			return m.RegistrationCancelled(ctx, payload)
 		},
-		queue.MessageMailRegistrationWelcome: func(_ context.Context, payload []byte, _ IsEmailAddressValidFunc) error {
-			return m.RegistrationWelcome(payload)
+		queue.MessageMailRegistrationWelcome: func(ctx context.Context, payload []byte, _ IsEmailAddressValidFunc) error {
+			return m.RegistrationWelcome(ctx, payload)
 		},
 		queue.MessageMailForgotPasswordConfirmation:     m.ForgotPasswordConfirmation,
 		queue.MessageMailForgotPasswordConfirmed:        m.ForgotPasswordConfirmed,

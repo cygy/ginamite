@@ -197,9 +197,9 @@ func TestAdminDeleteUserToken(t *testing.T) {
 		{"storage not defined", "", both(withoutStorage, getToken(token, nil)), http.StatusInternalServerError},
 		{"tokens storage not defined", "", both(deleteToken(nil), func() { testAccountFunctions.Tokens = nil }), http.StatusInternalServerError},
 		{"details error", "", both(deleteToken(nil), getToken(token, errBoom)), http.StatusInternalServerError},
-		{"token not found", "", both(deleteToken(nil), getToken(authentication.Token{}, commonErrors.NotFound())), http.StatusOK},
+		{"token not found", "", both(deleteToken(nil), getToken(authentication.Token{}, commonErrors.ErrNotFound)), http.StatusOK},
 		{"delete error", "", both(deleteToken(errBoom), getToken(token, nil)), http.StatusInternalServerError},
-		{"delete not found", "", both(deleteToken(commonErrors.NotFound()), getToken(token, nil)), http.StatusOK},
+		{"delete not found", "", both(deleteToken(commonErrors.ErrNotFound), getToken(token, nil)), http.StatusOK},
 		{"success", "", both(deleteToken(nil), getToken(token, nil)), http.StatusOK},
 	})
 }

@@ -43,7 +43,7 @@ func TestUpdateAbilities(t *testing.T) {
 		{"no abilities", `{"abilities":[]}`, true, nil, http.StatusBadRequest},
 		{"storage not defined", `{"abilities":["a"]}`, false, nil, http.StatusInternalServerError},
 		{"success", `{"abilities":["a"]}`, true, nil, http.StatusOK},
-		{"user not found", `{"abilities":["a"]}`, true, commonErrors.NotFound(), http.StatusNotFound},
+		{"user not found", `{"abilities":["a"]}`, true, commonErrors.ErrNotFound, http.StatusNotFound},
 		{"other error", `{"abilities":["a"]}`, true, errors.New("boom"), http.StatusInternalServerError},
 	}
 	for _, h := range handlers {
