@@ -1,5 +1,10 @@
 # ginamite
 
+[![CI](https://github.com/cygy/ginamite/actions/workflows/ci.yml/badge.svg)](https://github.com/cygy/ginamite/actions/workflows/ci.yml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/cygy/ginamite.svg)](https://pkg.go.dev/github.com/cygy/ginamite)
+[![Go Report Card](https://goreportcard.com/badge/github.com/cygy/ginamite)](https://goreportcard.com/report/github.com/cygy/ginamite)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 A Go framework to build an application made of three servers, built on [Gin](https://github.com/gin-gonic/gin):
 
 - an **API server**: a JSON REST API with the accounts, the authentication (JWT, Facebook and Google sign-in), the
@@ -154,7 +159,9 @@ make cover   # tests and total coverage
 make fmt     # gofumpt and goimports
 ```
 
-The code is formatted with `gofumpt`, `golangci-lint` must report no issue, and the code is tested along with it.
+The code is formatted with `gofumpt`, `golangci-lint` must report no issue, and the code is tested along with it. The
+CI runs `make check` and `govulncheck` on every pull request. See [CONTRIBUTING.md](CONTRIBUTING.md) to contribute, and
+[SECURITY.md](SECURITY.md) to report a vulnerability.
 
 ### Release
 
