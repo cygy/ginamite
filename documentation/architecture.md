@@ -57,3 +57,7 @@ configuration).
 | `common/` | Shared packages: configuration, flags, logger, localization, templates, broker interfaces, JWT, timezones. |
 | `plugins/` | The plugins: the database (`mongodb`) and the message broker (`kafka`). |
 | `examples/` | Small projects built with ginamite, deployed with a Dockerfile. See [examples](../examples/README.md). |
+
+The packages under an `internal/` directory are the implementation of the servers: the HTTP server, the handlers of
+the built-in routes and tasks, the dead letters tool of Kafka. An application can not import them; the other packages
+are the API of ginamite, which an application and a third-party plugin use.

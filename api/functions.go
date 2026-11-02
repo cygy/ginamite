@@ -22,7 +22,6 @@ import (
 	"github.com/cygy/ginamite/common/broker"
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/ctxkey"
-	"github.com/cygy/ginamite/common/httpserver"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/notifications"
@@ -30,6 +29,7 @@ import (
 	commonRequest "github.com/cygy/ginamite/common/request"
 	"github.com/cygy/ginamite/common/template/html"
 	"github.com/cygy/ginamite/common/timezone"
+	"github.com/cygy/ginamite/internal/httpserver"
 
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"

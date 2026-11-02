@@ -11,7 +11,7 @@ import (
 	"github.com/cygy/ginamite/web/context"
 	"github.com/cygy/ginamite/web/html"
 	"github.com/cygy/ginamite/web/response"
-	"github.com/cygy/ginamite/web/route/robots"
+	"github.com/cygy/ginamite/web/route/internal/robots"
 
 	"github.com/gin-gonic/gin"
 )

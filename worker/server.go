@@ -13,11 +13,11 @@ import (
 	"github.com/cygy/ginamite/common/template/html"
 	"github.com/cygy/ginamite/common/template/text"
 	"github.com/cygy/ginamite/common/weburl"
+	"github.com/cygy/ginamite/worker/internal/recurring/account"
+	"github.com/cygy/ginamite/worker/internal/recurring/authtokens"
+	"github.com/cygy/ginamite/worker/internal/recurring/sitemap"
 	"github.com/cygy/ginamite/worker/mail"
 	"github.com/cygy/ginamite/worker/tasks/recurring"
-	"github.com/cygy/ginamite/worker/tasks/recurring/account"
-	"github.com/cygy/ginamite/worker/tasks/recurring/authtokens"
-	"github.com/cygy/ginamite/worker/tasks/recurring/sitemap"
 )
 
 // Server is a worker.

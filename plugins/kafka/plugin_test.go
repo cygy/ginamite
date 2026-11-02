@@ -15,7 +15,7 @@ import (
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/flags"
 	"github.com/cygy/ginamite/common/log"
-	"github.com/cygy/ginamite/plugins/kafka/dlq"
+	"github.com/cygy/ginamite/plugins/kafka/internal/dlq"
 
 	"github.com/IBM/sarama"
 )

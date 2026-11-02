@@ -3,14 +3,16 @@ package robots
 import (
 	"errors"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"testing"
-
-	"github.com/cygy/ginamite/web/internal/webtest"
 )
 
 func TestLoad(t *testing.T) {
-	path := webtest.WriteFile(t, t.TempDir(), "robots.txt", "User-agent: *\nDisallow: /private\n")
+	path := filepath.Join(t.TempDir(), "robots.txt")
+	if err := os.WriteFile(path, []byte("User-agent: *\nDisallow: /private\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
 
 	content, err := Load(path)
 	if err != nil {

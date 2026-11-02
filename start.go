@@ -14,7 +14,7 @@ import (
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/timezone"
-	"github.com/cygy/ginamite/web/robots"
+	"github.com/cygy/ginamite/internal/robots"
 )
 
 // dedupSize is the number of messages the consumers remember to ignore the ones delivered twice.

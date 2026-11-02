@@ -11,7 +11,7 @@ import (
 	"github.com/cygy/ginamite/common/config/environment"
 	"github.com/cygy/ginamite/common/flags"
 	"github.com/cygy/ginamite/common/log"
-	"github.com/cygy/ginamite/plugins/kafka/dlq"
+	"github.com/cygy/ginamite/plugins/kafka/internal/dlq"
 )
 
 // openDLQ connects to the topics of the dead letters; the tests replace it.
