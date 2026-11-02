@@ -23,8 +23,6 @@ import (
 	"github.com/cygy/ginamite/common/timezone"
 	"github.com/cygy/ginamite/web"
 	"github.com/cygy/ginamite/worker"
-
-	"github.com/gin-gonic/gin"
 )
 
 // Server is the main struct of the application, containing all the settings.
@@ -124,11 +122,11 @@ func NewServer() *Server {
 	server.API.Hooks.ExtendTokenExpirationDateFromID = func(ctx context.Context, tokenID string, ttl time.Duration) error {
 		return nil
 	}
-	server.API.Hooks.MiddlewareIsValidAuthToken = func(c *gin.Context, tokenID string) (bool, error) {
+	server.API.Hooks.MiddlewareIsValidAuthToken = func(context.Context, string) (bool, error) {
 		return false, nil
 	}
-	server.API.Hooks.MiddlewareGetUserAbilities = func(c *gin.Context, userID string) (bool, []string) {
-		return false, []string{}
+	server.API.Hooks.MiddlewareGetUserAbilities = func(context.Context, string) (bool, []string, error) {
+		return false, []string{}, nil
 	}
 
 	return server

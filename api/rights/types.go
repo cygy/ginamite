@@ -1,6 +1,7 @@
 package rights
 
-import "github.com/gin-gonic/gin"
+import "context"
 
-// GetUserAbilitiesFunc returns the abilities of a user and a flag to know if he is admin or not.
-type GetUserAbilitiesFunc func(c *gin.Context, userID string) (bool, []string)
+// GetUserAbilitiesFunc returns a flag to know if a user is an administrator, and the abilities of the user. The request
+// fails if it returns an error.
+type GetUserAbilitiesFunc func(ctx context.Context, userID string) (bool, []string, error)

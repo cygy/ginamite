@@ -6,14 +6,14 @@ import (
 	"context"
 
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
+	ctxUser "github.com/cygy/ginamite/api/context/user"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common/ctxkey"
 	"github.com/cygy/ginamite/common/localization"
 	pluginContext "github.com/cygy/ginamite/plugins/mongodb/api/context"
-	"github.com/cygy/ginamite/plugins/mongodb/api/ctxsettings"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/session"
+	"github.com/cygy/ginamite/plugins/mongodb/mongo/store"
 	pluginQueue "github.com/cygy/ginamite/plugins/mongodb/queue"
 
 	"github.com/gin-gonic/gin"
@@ -49,9 +49,32 @@ func (a *Accounts) UpdatedAccountSettings(ctx context.Context, userID, locale, t
 	return user.UpdateSettings(ctx, locale, timezone, a.database())
 }
 
-// UpdateAccountPublicProfile updates the public profile of an account.
-func UpdateAccountPublicProfile(c *gin.Context) {
-	settings := ctxsettings.GetSettings(c)
+// PublicAccount handles the requests about the public profile of the account: its description and its image. Create it
+// with NewPublicAccount.
+type PublicAccount struct {
+	database func() store.Database
+	settings func() model.Settings
+}
+
+// NewPublicAccount returns the handlers working on the database returned by the function, which is called each time a
+// handler needs the database, with the limits of the settings.
+func NewPublicAccount(database func() store.Database, settings func() model.Settings) *PublicAccount {
+	return &PublicAccount{database: database, settings: settings}
+}
+
+// user loads the authenticated user from the database. It returns nil if the user can not be loaded.
+func (p *PublicAccount) user(c *gin.Context) *model.User {
+	user := &model.User{}
+	if err := user.GetByID(c, ctxUser.GetID(c), p.database()); err != nil || !user.IsSaved() {
+		return nil
+	}
+
+	return user
+}
+
+// UpdateProfile updates the public profile of an account.
+func (p *PublicAccount) UpdateProfile(c *gin.Context) {
+	settings := p.settings()
 	errorMessageKey := "error.account.public.profile.update.message"
 
 	var jsonBody struct {
@@ -82,9 +105,7 @@ func UpdateAccountPublicProfile(c *gin.Context) {
 	}
 
 	user := pluginContext.GetUser(c)
-	mongoSession := session.Get(c)
-
-	if err := user.UpdatePublicProfile(c, usedLocale, description, mongoSession); err != nil {
+	if err := user.UpdatePublicProfile(c, usedLocale, description, p.database()); err != nil {
 		response.InternalServerError(c)
 		return
 	}

@@ -274,3 +274,18 @@ func TestTokens_UpdateTokenByID(t *testing.T) {
 		t.Error("an invalid token ID must be rejected")
 	}
 }
+
+func TestTokens_IsValid(t *testing.T) {
+	id := bson.NewObjectID()
+	db := mock.NewDatabase("app")
+	tokens := tokensOn(db)
+
+	if ok, err := tokens.IsValid(context.Background(), id.Hex()); err != nil || ok {
+		t.Errorf("unknown token: got %v, %v", ok, err)
+	}
+
+	db.Coll(model.AuthTokenCollection).Count = 1
+	if ok, err := tokens.IsValid(context.Background(), id.Hex()); err != nil || !ok {
+		t.Errorf("valid token: got %v, %v", ok, err)
+	}
+}

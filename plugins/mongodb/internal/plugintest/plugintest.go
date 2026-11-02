@@ -1,5 +1,5 @@
-// Package plugintest provides helpers shared by the tests of the MongoDB plugin: a gin context bound to a stub
-// database, and optionally to a signed-in user.
+// Package plugintest provides helpers shared by the tests of the MongoDB plugin: a gin context, and optionally a
+// signed-in user.
 package plugintest
 
 import (
@@ -26,10 +26,7 @@ import (
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/queue"
-	"github.com/cygy/ginamite/plugins/mongodb/api/ctxsettings"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/session"
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/store/mock"
 
 	"github.com/gin-gonic/gin"
 	jwt "github.com/golang-jwt/jwt/v5"
@@ -44,20 +41,18 @@ func init() {
 	log.Main.Logger.SetOutput(io.Discard)
 }
 
-// NewContext returns a gin context bound to a request, to the stub database and to the recorder of the response.
+// NewContext returns a gin context bound to a request and to the recorder of the response.
 // The locale of the context is "en", see InitLocalization. The configuration of the context is the default one, and
 // can be changed with ctxkey.Config.Get, and has no auth token hooks and no timezones.
-func NewContext(db *mock.Database, method, target string, body io.Reader) (*gin.Context, *httptest.ResponseRecorder) {
+func NewContext(method, target string, body io.Reader) (*gin.Context, *httptest.ResponseRecorder) {
 	recorder := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(recorder)
 	c.Request = httptest.NewRequest(method, target, body)
-	session.Set(c, db)
 	ctxkey.Config.Set(c, config.NewConfiguration())
 	ctxAuthToken.SetHooks(c, authentication.Hooks{})
 	ctxkey.Queue.Set(c, senderInUse)
 	ctxkey.Timezones.Set(c, timezone.NewConfiguration())
 	ctxkey.Notifications.Set(c, notifications.NewRegistry())
-	ctxsettings.SetSettings(c, model.DefaultSettings())
 	if Localization != nil {
 		ctxkey.Localization.Set(c, Localization)
 	}
@@ -68,10 +63,10 @@ func NewContext(db *mock.Database, method, target string, body io.Reader) (*gin.
 
 // SignedInContext returns a gin context like NewContext, with the user signed in: the auth token is parsed and the
 // user is built from it, as the authentication middleware does.
-func SignedInContext(t *testing.T, db *mock.Database, user model.User) (*gin.Context, *httptest.ResponseRecorder) {
+func SignedInContext(t *testing.T, user model.User) (*gin.Context, *httptest.ResponseRecorder) {
 	t.Helper()
 
-	c, recorder := NewContext(db, http.MethodGet, "/", nil)
+	c, recorder := NewContext(http.MethodGet, "/", nil)
 	c.Request.Header.Set("Authorization", "Bearer "+signToken(t, user.ID.Hex(), "token-1"))
 
 	buildUser := func(*jwt.Token) (any, string, error) { return user, user.Settings.Locale, nil }

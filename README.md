@@ -349,7 +349,7 @@ the extension points below, and is registered with `server.AddPlugin`.
 | --- | --- |
 | `ginamite.Plugin.Configure` | Sets the storages and the hooks of the API (`api.Server.Contacts`, `Account`, `Hooks`, etc.) and the storages and the hooks of the worker (`worker.Server.Storage`, `Hooks`). An error stops `Run`. |
 | `ginamite.Connector` (optional) | `Connect` opens the connection before the plugins are configured, and returns an error if it fails; `Close` closes it when the server stops. Called only for the API and worker servers. |
-| `api.Server.Middlewares` | Gin middlewares added before the routes, for instance to put the database in the context of the requests. |
+| `api.Server.Middlewares` | Gin middlewares added before the routes, for instance to add a request ID or a CORS policy. A database plugin does not need them. |
 | `api.Server.Hooks.IsValidID` | Reports whether an identifier in a URL is well-formed. It depends on the database (an ObjectID for MongoDB, a UUID or an integer for SQL). By default every identifier is accepted. |
 
 A plugin for another database implements the same extension points. `plugins/mongodb` is the reference.
@@ -360,10 +360,9 @@ The packages `plugins/mongodb/mongo/session`, `store`, `document` and `bson` are
 generic documents, BSON builders): an application can use them for its own collections.
 
 `plugins/mongodb` opens its own MongoDB session in `Connect`, with no global state: the functions of the API and of the
-worker work on the database of the plugin, and the middleware of the plugin saves it in the context of the requests.
-Its settings (`Plugin.UserMaxImageSize`, etc., see `Plugin.Settings`) are saved in the context of the requests with
-`ctxsettings`. It stores the users, their auth tokens, their notifications and the contacts. Create it with
-`mongodb.NewPlugin()`, set the properties that differ from the defaults (abilities, size of the images, etc.), then
+worker work on the database of the plugin, which they receive when they are created, not through the context of the
+requests. Its settings (`Plugin.UserMaxImageSize`, etc., see `Plugin.Settings`) are given the same way. It stores the users, their auth tokens, their notifications and the contacts. Create it
+with `mongodb.NewPlugin()`, set the properties that differ from the defaults (abilities, size of the images, etc.), then
 register it. Its hooks let the application add its own collections, indexes and default documents, and update the
 documents which reference the users.
 

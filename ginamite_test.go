@@ -90,8 +90,8 @@ func TestNewServer_Placeholders(t *testing.T) {
 	if valid, err := f.MiddlewareIsValidAuthToken(c, "id"); valid || err != nil {
 		t.Errorf("MiddlewareIsValidAuthToken() = %v, %v, want false, nil", valid, err)
 	}
-	if ok, abilities := f.MiddlewareGetUserAbilities(c, "id"); ok || abilities == nil || len(abilities) != 0 {
-		t.Errorf("MiddlewareGetUserAbilities() = %v, %v", ok, abilities)
+	if ok, abilities, err := f.MiddlewareGetUserAbilities(c, "id"); ok || abilities == nil || len(abilities) != 0 || err != nil {
+		t.Errorf("MiddlewareGetUserAbilities() = %v, %v, %v", ok, abilities, err)
 	}
 }
 

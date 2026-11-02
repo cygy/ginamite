@@ -20,6 +20,25 @@ func NewUsers(database func() store.Database, settings func() model.Settings) *U
 	return &Users{database: database, settings: settings}
 }
 
+// Abilities reports whether a user is an administrator, and returns the abilities of the user. The user is not an
+// administrator and has no ability if the user does not exist.
+func (s *Users) Abilities(ctx context.Context, userID string) (bool, []string, error) {
+	user := &model.User{}
+	if err := user.GetByID(ctx, userID, s.database()); err != nil {
+		if model.IsNotFound(err) || errors.IsNotFound(err) {
+			return false, nil, nil
+		}
+
+		return false, nil, err
+	}
+
+	if !user.IsSaved() {
+		return false, nil, nil
+	}
+
+	return user.IsAdmin, user.Abilities, nil
+}
+
 // GetEnabledUsersForAdmin returns the enabled users for the admin panel.
 func (s *Users) GetEnabledUsersForAdmin(ctx context.Context) (any, error) {
 	users, err := model.GetEnabledUsersForAdmin(ctx, s.database())

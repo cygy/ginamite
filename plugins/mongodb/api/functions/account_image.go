@@ -9,8 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cygy/ginamite/plugins/mongodb/api/ctxsettings"
-
 	"github.com/cygy/ginamite/common/ctxkey"
 
 	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
@@ -20,16 +18,14 @@ import (
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common/log"
-	"github.com/cygy/ginamite/plugins/mongodb/api/context"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/session"
 	pluginQueue "github.com/cygy/ginamite/plugins/mongodb/queue"
 	"github.com/gin-gonic/gin"
 )
 
-// UpdateAccountPublicImage updates the image of the public profile.
-func UpdateAccountPublicImage(c *gin.Context) {
-	settings := ctxsettings.GetSettings(c)
+// UpdateImage updates the image of the public profile.
+func (p *PublicAccount) UpdateImage(c *gin.Context) {
+	settings := p.settings()
 	errorMessageKey := "error.account.public.image.update.message"
 	logContext := "account image"
 
@@ -40,7 +36,7 @@ func UpdateAccountPublicImage(c *gin.Context) {
 	}
 
 	// The user is loaded first: nothing is saved if it can not be.
-	user := context.GetFullUser(c)
+	user := p.user(c)
 	if user == nil {
 		response.InternalServerError(c)
 		return
@@ -111,9 +107,7 @@ func UpdateAccountPublicImage(c *gin.Context) {
 	user.PublicInfos.Image.Thumb.Size2x.Path = versions.Thumb.Size2x.RelativePath
 	user.PublicInfos.Image.Thumb.Size2x.URL = ctxkey.Config.Get(c).Hosts.Static + versions.Thumb.Size2x.AbsolutePath
 
-	mongoSession := session.Get(c)
-
-	if err := user.UpdateImage(c, mongoSession); err != nil {
+	if err := user.UpdateImage(c, p.database()); err != nil {
 		image.Delete([]string{
 			versions.Full.Size1x.RelativePath,
 			versions.Full.Size2x.RelativePath,
@@ -142,17 +136,15 @@ func UpdateAccountPublicImage(c *gin.Context) {
 	})
 }
 
-// DeleteAccountPublicImage deletes the image of the public profile.
-func DeleteAccountPublicImage(c *gin.Context) {
-	settings := ctxsettings.GetSettings(c)
+// DeleteImage deletes the image of the public profile.
+func (p *PublicAccount) DeleteImage(c *gin.Context) {
+	settings := p.settings()
 	locale := ctxLocale.Get(c)
-	user := context.GetFullUser(c)
+	user := p.user(c)
 	if user == nil {
 		response.InternalServerError(c)
 		return
 	}
-
-	mongoSession := session.Get(c)
 
 	// The images to delete.
 	oldImages := []string{
@@ -166,7 +158,7 @@ func DeleteAccountPublicImage(c *gin.Context) {
 
 	// Remove the images.
 	user.PublicInfos.Image = model.Image{}
-	if err := user.UpdateImage(c, mongoSession); err != nil {
+	if err := user.UpdateImage(c, p.database()); err != nil {
 		response.UnableToUpdateDatabase(c, locale, "error.account.public.image.delete.message")
 		return
 	}

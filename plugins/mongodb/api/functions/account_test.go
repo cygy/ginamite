@@ -54,18 +54,18 @@ func TestUpdatedAccountInfosAndSettings(t *testing.T) {
 func publicProfileRequest(t *testing.T, db *mock.Database, id bson.ObjectID, body string) *httptest.ResponseRecorder {
 	t.Helper()
 
-	c, recorder := plugintest.SignedInContext(t, db, model.User{ID: id})
+	c, recorder := plugintest.SignedInContext(t, model.User{ID: id})
 	ctxkey.Config.Get(c).SupportedLocales = []string{"en", "fr"}
 	c.Request = httptest.NewRequest(http.MethodPut, "/", strings.NewReader(body))
 	c.Request.Header.Set("Content-Type", "application/json")
 	c.Request.Header.Set("Authorization", "Bearer x")
 
-	UpdateAccountPublicProfile(c)
+	publicAccountOn(db, model.DefaultSettings()).UpdateProfile(c)
 
 	return recorder
 }
 
-func TestUpdateAccountPublicProfile(t *testing.T) {
+func TestPublicAccount_UpdateProfile(t *testing.T) {
 	plugintest.InitLocalization(t, map[string]string{"status.account.public.profile.updated": "updated"})
 	id := bson.NewObjectID()
 

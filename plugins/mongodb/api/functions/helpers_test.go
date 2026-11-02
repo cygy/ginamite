@@ -18,6 +18,11 @@ func tokensOn(db store.Database) *Tokens {
 	return NewTokens(func() store.Database { return db })
 }
 
+// publicAccountOn returns the handlers of the public profile working on the database, with the settings.
+func publicAccountOn(db store.Database, settings model.Settings) *PublicAccount {
+	return NewPublicAccount(func() store.Database { return db }, func() model.Settings { return settings })
+}
+
 // processesOn returns the functions of the processes working on the database.
 func processesOn(db store.Database) *Processes {
 	return NewProcesses(func() store.Database { return db })

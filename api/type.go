@@ -50,7 +50,7 @@ type Server struct {
 	RevokedTokens *tokencache.Revoked
 
 	// Middlewares are added to the Gin engine, in order, before the middleware that sets the locale and the routes.
-	// A database plugin uses them to put its connection in the context of the requests.
+	// They are meant for the needs of the application, such as a request ID or a CORS policy.
 	Middlewares []gin.HandlerFunc
 
 	customRoutes []route.ConfigureCustomRoutes

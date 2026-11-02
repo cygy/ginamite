@@ -12,8 +12,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cygy/ginamite/plugins/mongodb/api/ctxsettings"
-
 	"github.com/cygy/ginamite/common/ctxkey"
 	"github.com/cygy/ginamite/plugins/mongodb/internal/plugintest"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
@@ -68,13 +66,12 @@ func uploadImageRequest(t *testing.T, db *mock.Database, id bson.ObjectID, conte
 		t.Fatal(err)
 	}
 
-	c, recorder := plugintest.SignedInContext(t, db, model.User{ID: id})
+	c, recorder := plugintest.SignedInContext(t, model.User{ID: id})
 	ctxkey.Config.Get(c).Hosts.Static = "https://static.example.com"
-	ctxsettings.SetSettings(c, testSettings)
 	c.Request = httptest.NewRequest(http.MethodPost, "/", &body)
 	c.Request.Header.Set("Content-Type", writer.FormDataContentType())
 
-	UpdateAccountPublicImage(c)
+	publicAccountOn(db, testSettings).UpdateImage(c)
 
 	return recorder
 }
@@ -107,7 +104,7 @@ func userWithImage(id bson.ObjectID, paths ...string) bson.M {
 	return bson.M{"_id": id, "publicInfos": bson.M{"image": image}}
 }
 
-func TestUpdateAccountPublicImage(t *testing.T) {
+func TestPublicAccount_UpdateImage(t *testing.T) {
 	id := bson.NewObjectID()
 
 	t.Run("saves the image", func(t *testing.T) {
@@ -208,15 +205,14 @@ func TestUpdateAccountPublicImage(t *testing.T) {
 	})
 }
 
-func TestDeleteAccountPublicImage(t *testing.T) {
+func TestPublicAccount_DeleteImage(t *testing.T) {
 	id := bson.NewObjectID()
 
 	deleteImage := func(t *testing.T, db *mock.Database) *httptest.ResponseRecorder {
 		t.Helper()
 
-		c, recorder := plugintest.SignedInContext(t, db, model.User{ID: id})
-		ctxsettings.SetSettings(c, testSettings)
-		DeleteAccountPublicImage(c)
+		c, recorder := plugintest.SignedInContext(t, model.User{ID: id})
+		publicAccountOn(db, testSettings).DeleteImage(c)
 
 		return recorder
 	}

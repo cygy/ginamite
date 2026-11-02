@@ -95,7 +95,14 @@ func Verify(verifyToken IsValidFunc) gin.HandlerFunc {
 		}
 
 		tokenID := GetID(c)
-		if isVerified, _ := verifyToken(c, tokenID); isVerified {
+		isVerified, err := verifyToken(c, tokenID)
+		if err != nil {
+			_ = c.Error(err)
+			response.InternalServerError(c)
+
+			return
+		}
+		if isVerified {
 			return
 		}
 

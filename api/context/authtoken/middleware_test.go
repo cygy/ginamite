@@ -1,6 +1,8 @@
 package authtoken
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -80,8 +82,9 @@ func TestVerify(t *testing.T) {
 		wantStatus int
 	}{
 		{"no function", nil, http.StatusOK},
-		{"valid token", func(*gin.Context, string) (bool, error) { return true, nil }, http.StatusOK},
-		{"invalid token", func(*gin.Context, string) (bool, error) { return false, nil }, http.StatusUnauthorized},
+		{"valid token", func(context.Context, string) (bool, error) { return true, nil }, http.StatusOK},
+		{"invalid token", func(context.Context, string) (bool, error) { return false, nil }, http.StatusUnauthorized},
+		{"token which can not be verified", func(context.Context, string) (bool, error) { return false, errors.New("boom") }, http.StatusInternalServerError},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

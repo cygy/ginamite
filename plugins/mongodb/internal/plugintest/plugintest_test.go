@@ -8,19 +8,12 @@ import (
 	ctxUser "github.com/cygy/ginamite/api/context/user"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
 	"github.com/cygy/ginamite/plugins/mongodb/mongo/bson"
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/session"
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/store/mock"
 )
 
 func TestNewContext(t *testing.T) {
-	db := mock.NewDatabase("app")
-
-	c, recorder := NewContext(db, http.MethodPost, "/path", nil)
+	c, recorder := NewContext(http.MethodPost, "/path", nil)
 	if c.Request.Method != http.MethodPost || c.Request.URL.Path != "/path" || recorder == nil {
 		t.Errorf("request = %+v", c.Request)
-	}
-	if session.Get(c) == nil || session.Get(c).Name() != "app" {
-		t.Error("the stub database must be in the context")
 	}
 	if ctxLocale.Get(c) != "en" {
 		t.Errorf("locale = %q", ctxLocale.Get(c))
@@ -33,7 +26,7 @@ func TestNewContext(t *testing.T) {
 func TestSignedInContext(t *testing.T) {
 	id := bson.NewObjectID()
 
-	c, _ := SignedInContext(t, mock.NewDatabase("app"), model.User{ID: id, Username: "john"})
+	c, _ := SignedInContext(t, model.User{ID: id, Username: "john"})
 	if got := ctxUser.GetID(c); got != id.Hex() {
 		t.Errorf("user ID = %q", got)
 	}

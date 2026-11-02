@@ -1,6 +1,8 @@
 package rights
 
 import (
+	"context"
+	"errors"
 	"net/http"
 	"testing"
 
@@ -19,7 +21,7 @@ func TestCheck(t *testing.T) {
 	apitest.InitLocalization(t, map[string]string{"placeholder": "placeholder"})
 
 	userAbilities := func(isAdmin bool, abilities ...string) GetUserAbilitiesFunc {
-		return func(*gin.Context, string) (bool, []string) { return isAdmin, abilities }
+		return func(context.Context, string) (bool, []string, error) { return isAdmin, abilities, nil }
 	}
 
 	tests := []struct {
@@ -34,6 +36,7 @@ func TestCheck(t *testing.T) {
 		{"admin required and user is not admin", true, nil, userAbilities(false), http.StatusUnauthorized},
 		{"ability held", false, []string{AbilityToManageUsers}, userAbilities(false, AbilityToManageUsers), http.StatusOK},
 		{"ability missing", false, []string{AbilityToManageUsers}, userAbilities(false, AbilityToManageContacts), http.StatusUnauthorized},
+		{"the abilities can not be read", false, []string{AbilityToManageUsers}, func(context.Context, string) (bool, []string, error) { return false, nil, errors.New("boom") }, http.StatusInternalServerError},
 		{"one ability missing among several", false, []string{AbilityToManageUsers, AbilityToManageContacts}, userAbilities(false, AbilityToManageUsers), http.StatusUnauthorized},
 	}
 	for _, tt := range tests {

@@ -1,8 +1,6 @@
 package session
 
 import (
-	"net/http"
-	"net/http/httptest"
 	"os"
 	"testing"
 
@@ -10,7 +8,6 @@ import (
 	"github.com/cygy/ginamite/plugins/mongodb/mongo/store"
 	"github.com/cygy/ginamite/plugins/mongodb/mongo/store/mock"
 
-	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
@@ -70,34 +67,6 @@ func TestSession_Database(t *testing.T) {
 	}
 }
 
-func TestSession_InjectAndGet(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
-	s := offline(t)
-	router := gin.New()
-	router.GET("/with", s.Inject(), func(c *gin.Context) {
-		if db := Get(c); db == nil || db.Name() != "app" {
-			t.Errorf("Get() = %v", db)
-		}
-		c.Status(http.StatusNoContent)
-	})
-	router.GET("/without", func(c *gin.Context) {
-		if db := Get(c); db != nil {
-			t.Errorf("Get() = %v, want nil", db)
-		}
-		c.Status(http.StatusNoContent)
-	})
-
-	for _, path := range []string{"/with", "/without"} {
-		rec := httptest.NewRecorder()
-		router.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))
-
-		if rec.Code != http.StatusNoContent {
-			t.Errorf("%s: status = %d", path, rec.Code)
-		}
-	}
-}
-
 func TestSession_Store(t *testing.T) {
 	stub := mock.NewDatabase("stub")
 
@@ -107,24 +76,6 @@ func TestSession_Store(t *testing.T) {
 		t.Error("Database() must return the store when there is one")
 	}
 
-	// Without client, the session can still be injected and closed.
-	gin.SetMode(gin.TestMode)
-	c, _ := gin.CreateTestContext(httptest.NewRecorder())
-	s.Inject()(c)
-	if Get(c) != store.Database(stub) {
-		t.Errorf("Get() = %v", Get(c))
-	}
+	// Without client, the session can still be closed.
 	s.Close()
-}
-
-func TestSet(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	c, _ := gin.CreateTestContext(httptest.NewRecorder())
-
-	stub := mock.NewDatabase("stub")
-	Set(c, stub)
-
-	if Get(c) != store.Database(stub) {
-		t.Errorf("Get() = %v", Get(c))
-	}
 }

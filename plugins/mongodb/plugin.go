@@ -12,7 +12,6 @@ import (
 	"github.com/cygy/ginamite/api/route"
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/queue"
-	"github.com/cygy/ginamite/plugins/mongodb/api/ctxsettings"
 	apiFunctions "github.com/cygy/ginamite/plugins/mongodb/api/functions"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
 	"github.com/cygy/ginamite/plugins/mongodb/mongo/bson"
@@ -230,14 +229,10 @@ func (p *Plugin) startUpTasks(ctx context.Context, environment, version string) 
 	}
 }
 
-// configureAPI sets the functions of the API, the validation of the identifiers and the middleware which saves the
-// database in the context of the requests, if the session is open, and adds its routes.
+// configureAPI sets the storages and the hooks of the API, which work on the database of the plugin, and adds its
+// routes.
 func (p *Plugin) configureAPI(a *api.Server) {
 	a.Hooks.IsValidID = isValidID
-	a.Middlewares = append(a.Middlewares, ctxsettings.InjectSettings(p.Settings()))
-	if p.session != nil {
-		a.Middlewares = append(a.Middlewares, p.session.Inject())
-	}
 
 	tokens := apiFunctions.NewTokens(p.database)
 	a.Hooks.BuildTokenFromID = tokens.BuildTokenFromID
@@ -255,26 +250,29 @@ func (p *Plugin) configureAPI(a *api.Server) {
 		func(userID string) { a.Queue.DeleteUser(queue.TaskDeleteUser{UserID: userID}) },
 	)
 
-	a.Hooks.MiddlewareIsValidAuthToken = apiFunctions.IsValidAuthToken
+	a.Hooks.MiddlewareIsValidAuthToken = tokens.IsValid
 	a.Hooks.MiddlewareGetUserAndLocaleFromAuthToken = apiFunctions.GetUserAndLocaleFromAuthToken
-	a.Hooks.MiddlewareGetUserAbilities = apiFunctions.GetUserAbilities
 
 	a.Terms = apiFunctions.NewTerms(p.database)
 	a.Account.Notifications = apiFunctions.NewNotifications(p.database, func() string { return a.Config.DefaultLocale })
-	a.Users = apiFunctions.NewUsers(p.database, p.Settings)
+	users := apiFunctions.NewUsers(p.database, p.Settings)
+	a.Users = users
+	a.Hooks.MiddlewareGetUserAbilities = users.Abilities
 
 	a.Contacts = apiFunctions.NewContacts(p.database)
 
-	a.AddCustomRoutes(addRoutes)
+	a.AddCustomRoutes(addRoutes(apiFunctions.NewPublicAccount(p.database, p.Settings)))
 }
 
 // addRoutes adds the routes of the plugin: the image and the public profile of the account.
-func addRoutes(v *gin.RouterGroup, handlers route.Middlewares, isProductionEnvironment bool, rights func(admin bool, abilities []string) gin.HandlerFunc) {
-	mustBeAuthenticated := handlers.MustBeAuthenticated
-	mustAuthenticationBeValid := handlers.MustAuthenticationBeValid
-	mustHaveAcceptedTheLatestVersionOfTerms := handlers.MustHaveAcceptedTheLatestVersionOfTerms
+func addRoutes(account *apiFunctions.PublicAccount) route.ConfigureCustomRoutes {
+	return func(v *gin.RouterGroup, handlers route.Middlewares, _ bool, _ func(admin bool, abilities []string) gin.HandlerFunc) {
+		mustBeAuthenticated := handlers.MustBeAuthenticated
+		mustAuthenticationBeValid := handlers.MustAuthenticationBeValid
+		mustHaveAcceptedTheLatestVersionOfTerms := handlers.MustHaveAcceptedTheLatestVersionOfTerms
 
-	v.PUT("/account/image", mustBeAuthenticated, mustAuthenticationBeValid, mustHaveAcceptedTheLatestVersionOfTerms, apiFunctions.UpdateAccountPublicImage)
-	v.DELETE("/account/image", mustBeAuthenticated, mustAuthenticationBeValid, mustHaveAcceptedTheLatestVersionOfTerms, apiFunctions.DeleteAccountPublicImage)
-	v.PUT("/account/public", mustBeAuthenticated, mustAuthenticationBeValid, mustHaveAcceptedTheLatestVersionOfTerms, apiFunctions.UpdateAccountPublicProfile)
+		v.PUT("/account/image", mustBeAuthenticated, mustAuthenticationBeValid, mustHaveAcceptedTheLatestVersionOfTerms, account.UpdateImage)
+		v.DELETE("/account/image", mustBeAuthenticated, mustAuthenticationBeValid, mustHaveAcceptedTheLatestVersionOfTerms, account.DeleteImage)
+		v.PUT("/account/public", mustBeAuthenticated, mustAuthenticationBeValid, mustHaveAcceptedTheLatestVersionOfTerms, account.UpdateProfile)
+	}
 }

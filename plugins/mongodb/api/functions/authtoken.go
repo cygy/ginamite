@@ -25,6 +25,11 @@ func NewTokens(database func() store.Database) *Tokens {
 	return &Tokens{database: database}
 }
 
+// IsValid reports whether the auth token is valid: neither expired nor revoked.
+func (t *Tokens) IsValid(ctx context.Context, tokenID string) (bool, error) {
+	return model.IsValidAuthToken(ctx, tokenID, t.database())
+}
+
 // BuildTokenFromID builds the authentication.Token of an auth token, with the details of its user.
 func (t *Tokens) BuildTokenFromID(ctx context.Context, tokenID string) (*authentication.Token, error) {
 	db := t.database()

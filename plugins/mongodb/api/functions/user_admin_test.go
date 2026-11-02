@@ -1,6 +1,8 @@
 package functions
 
 import (
+	"context"
+	"errors"
 	"testing"
 
 	"github.com/cygy/ginamite/plugins/mongodb/model"
@@ -156,4 +158,28 @@ func TestUsers_DeleteTokenByIDByAdmin(t *testing.T) {
 		t.Fatal(err)
 	}
 	checkCall(t, db, model.AuthTokenCollection, "DeleteOne", bson.D{{Key: "_id", Value: id}})
+}
+
+func TestUsers_UserAbilities(t *testing.T) {
+	ctx := context.Background()
+	id := bson.NewObjectID()
+
+	db := mock.NewDatabase("app")
+	db.Coll(model.UserCollection).One = mock.Result{Value: bson.M{"_id": id, "isAdmin": true, "abilities": []string{"a"}, "versionOfTermsAccepted": "v2"}}
+	isAdmin, abilities, err := newUsers(db).Abilities(ctx, id.Hex())
+	if err != nil || !isAdmin || len(abilities) != 1 || abilities[0] != "a" {
+		t.Errorf("got %v, %v, %v", isAdmin, abilities, err)
+	}
+
+	// An unknown user has no right.
+	if isAdmin, abilities, err := newUsers(mock.NewDatabase("app")).Abilities(ctx, id.Hex()); err != nil || isAdmin || abilities != nil {
+		t.Errorf("unknown user: got %v, %v, %v", isAdmin, abilities, err)
+	}
+
+	// The failure of the database is reported.
+	failing := mock.NewDatabase("app")
+	failing.Coll(model.UserCollection).Err = errBoom
+	if _, _, err := newUsers(failing).Abilities(ctx, id.Hex()); !errors.Is(err, errBoom) {
+		t.Errorf("error = %v, want the error of the database", err)
+	}
 }

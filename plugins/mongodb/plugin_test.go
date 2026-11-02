@@ -12,7 +12,6 @@ import (
 	"github.com/cygy/ginamite/api/rights"
 	"github.com/cygy/ginamite/api/route"
 	"github.com/cygy/ginamite/common/config"
-	"github.com/cygy/ginamite/plugins/mongodb/api/ctxsettings"
 	apiFunctions "github.com/cygy/ginamite/plugins/mongodb/api/functions"
 	_ "github.com/cygy/ginamite/plugins/mongodb/internal/plugintest" // Initializes the logger and gin.
 	"github.com/cygy/ginamite/plugins/mongodb/model"
@@ -124,40 +123,17 @@ func TestPlugin_Configure_Deduplicator(t *testing.T) {
 	}
 }
 
-func TestPlugin_Configure_Middlewares(t *testing.T) {
-	t.Run("without session", func(t *testing.T) {
-		server := ginamite.NewServer()
-		if err := NewPlugin().Configure(server); err != nil {
-			t.Fatal(err)
-		}
+func TestPlugin_Configure_NoMiddleware(t *testing.T) {
+	// The functions of the plugin get the database and the settings when they are created: there is nothing to put in
+	// the context of the requests.
+	server := ginamite.NewServer()
+	if err := NewPlugin().Configure(server); err != nil {
+		t.Fatal(err)
+	}
 
-		if len(server.API.Middlewares) != 1 {
-			t.Errorf("len(Middlewares) = %d, want only the one of the settings", len(server.API.Middlewares))
-		}
-	})
-
-	t.Run("with a session", func(t *testing.T) {
-		db := mock.NewDatabase("app")
-		p := NewPlugin()
-		p.session = &session.Session{Store: db}
-
-		server := ginamite.NewServer()
-		if err := p.Configure(server); err != nil {
-			t.Fatal(err)
-		}
-
-		if len(server.API.Middlewares) != 2 {
-			t.Fatalf("len(Middlewares) = %d, want 2", len(server.API.Middlewares))
-		}
-
-		c, _ := gin.CreateTestContext(httptest.NewRecorder())
-		c.Request = httptest.NewRequest(http.MethodGet, "/", nil)
-		server.API.Middlewares[1](c)
-
-		if session.Get(c) != store.Database(db) {
-			t.Error("the middleware must save the database in the context")
-		}
-	})
+	if len(server.API.Middlewares) != 0 {
+		t.Errorf("len(Middlewares) = %d, want none", len(server.API.Middlewares))
+	}
 }
 
 func TestPlugin_Settings(t *testing.T) {
@@ -189,33 +165,6 @@ func TestPlugin_Settings(t *testing.T) {
 	}
 }
 
-func TestPlugin_Configure_Settings(t *testing.T) {
-	p := NewPlugin()
-	p.UserMaxDescriptionLength = 10
-
-	server := ginamite.NewServer()
-	if err := p.Configure(server); err != nil {
-		t.Fatal(err)
-	}
-
-	if len(server.API.Middlewares) == 0 {
-		t.Fatal("the middleware of the settings is missing")
-	}
-
-	c, _ := gin.CreateTestContext(httptest.NewRecorder())
-	c.Request = httptest.NewRequest(http.MethodGet, "/", nil)
-	server.API.Middlewares[0](c)
-
-	if got := ctxsettings.GetSettings(c).UserMaxDescriptionLength; got != 10 {
-		t.Errorf("UserMaxDescriptionLength = %d, want 10", got)
-	}
-}
-
-// sameFunction reports whether the two values are the same function.
-func sameFunction(a, b any) bool {
-	return reflect.ValueOf(a).Pointer() == reflect.ValueOf(b).Pointer()
-}
-
 func TestPlugin_Configure_Functions(t *testing.T) {
 	server := ginamite.NewServer()
 	if err := NewPlugin().Configure(server); err != nil {
@@ -223,15 +172,6 @@ func TestPlugin_Configure_Functions(t *testing.T) {
 	}
 
 	api, worker := server.API, server.Worker
-
-	// The functions which do not need the database are set as they are.
-	for name, pair := range map[string][2]any{
-		"MiddlewareIsValidAuthToken": {api.Hooks.MiddlewareIsValidAuthToken, apiFunctions.IsValidAuthToken},
-	} {
-		if pair[0] == nil || !sameFunction(pair[0], pair[1]) {
-			t.Errorf("%s is not the function of the plugin", name)
-		}
-	}
 
 	if _, ok := api.Account.Accounts.(*apiFunctions.Accounts); !ok {
 		t.Errorf("Accounts = %T, want the storage of the plugin", api.Account.Accounts)
@@ -242,6 +182,8 @@ func TestPlugin_Configure_Functions(t *testing.T) {
 
 	// The functions working on the database, and the storages of the worker, are defined too.
 	for name, defined := range map[string]bool{
+		"MiddlewareIsValidAuthToken":      api.Hooks.MiddlewareIsValidAuthToken != nil,
+		"MiddlewareGetUserAbilities":      api.Hooks.MiddlewareGetUserAbilities != nil,
 		"BuildTokenFromID":                api.Hooks.BuildTokenFromID != nil,
 		"ExtendTokenExpirationDateFromID": api.Hooks.ExtendTokenExpirationDateFromID != nil,
 		"Tokens":                          worker.Storage.Tokens != nil,
@@ -369,7 +311,7 @@ func TestAddRoutes(t *testing.T) {
 		order = append(order, "terms")
 		c.AbortWithStatus(http.StatusForbidden)
 	}
-	addRoutes(engine.Group("/v1"), route.Middlewares{
+	addRoutes(apiFunctions.NewPublicAccount(func() store.Database { return mock.NewDatabase("app") }, model.DefaultSettings))(engine.Group("/v1"), route.Middlewares{
 		MustBeAuthenticated:                     middleware("authenticated"),
 		MustAuthenticationBeValid:               middleware("valid"),
 		MustHaveAcceptedTheLatestVersionOfTerms: last,

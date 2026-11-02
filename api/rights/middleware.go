@@ -19,7 +19,13 @@ func Check(adminRequired bool, abilities []string, getUserAbilites GetUserAbilit
 
 		// Get the user's abilities.
 		userID := ctxUser.GetID(c)
-		isUserAdmin, userAbilities := getUserAbilites(c, userID)
+		isUserAdmin, userAbilities, err := getUserAbilites(c, userID)
+		if err != nil {
+			_ = c.Error(err)
+			response.InternalServerError(c)
+
+			return
+		}
 
 		locale := ctxLocale.Get(c)
 
