@@ -124,7 +124,7 @@ func (s *Server) Run() error {
 	}))
 	server.Use(
 		account.Inject(&s.Account),
-		user.Inject(&s.Users),
+		user.Inject(s.Users),
 		contact.Inject(s.Contacts),
 		terms.Inject(s.Terms),
 	)

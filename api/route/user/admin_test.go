@@ -1,6 +1,7 @@
 package user
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"testing"
@@ -43,24 +44,24 @@ func runHandlerCases(t *testing.T, handler gin.HandlerFunc, tests []handlerCase)
 
 func TestGetAdminEnabledUsers(t *testing.T) {
 	runHandlerCases(t, GetAdminEnabledUsers, []handlerCase{
-		{"function not defined", "", nil, http.StatusInternalServerError},
+		{"storage not defined", "", withoutStorage, http.StatusInternalServerError},
 		{"error", "", func() {
-			testFunctions.GetEnabledUsersForAdmin = func(*gin.Context) (any, error) { return nil, errBoom }
+			testStorage.GetEnabledUsersForAdminFn = func(context.Context) (any, error) { return nil, errBoom }
 		}, http.StatusInternalServerError},
 		{"success", "", func() {
-			testFunctions.GetEnabledUsersForAdmin = func(*gin.Context) (any, error) { return []string{"u"}, nil }
+			testStorage.GetEnabledUsersForAdminFn = func(context.Context) (any, error) { return []string{"u"}, nil }
 		}, http.StatusOK},
 	})
 }
 
 func TestGetAdminDisabledUsers(t *testing.T) {
 	runHandlerCases(t, GetAdminDisabledUsers, []handlerCase{
-		{"function not defined", "", nil, http.StatusInternalServerError},
+		{"storage not defined", "", withoutStorage, http.StatusInternalServerError},
 		{"error", "", func() {
-			testFunctions.GetDisabledUsersForAdmin = func(*gin.Context) (any, error) { return nil, errBoom }
+			testStorage.GetDisabledUsersForAdminFn = func(context.Context) (any, error) { return nil, errBoom }
 		}, http.StatusInternalServerError},
 		{"success", "", func() {
-			testFunctions.GetDisabledUsersForAdmin = func(*gin.Context) (any, error) { return []string{"u"}, nil }
+			testStorage.GetDisabledUsersForAdminFn = func(context.Context) (any, error) { return []string{"u"}, nil }
 		}, http.StatusOK},
 	})
 }
@@ -69,12 +70,12 @@ func TestAdminUpdatePassword(t *testing.T) {
 	var gotUser, gotPassword string
 	runHandlerCases(t, AdminUpdatePassword, []handlerCase{
 		{"missing password", `{}`, nil, http.StatusBadRequest},
-		{"function not defined", `{"password":"secret"}`, nil, http.StatusInternalServerError},
+		{"storage not defined", `{"password":"secret"}`, withoutStorage, http.StatusInternalServerError},
 		{"error", `{"password":"secret"}`, func() {
-			testFunctions.UpdatePasswordByAdmin = func(*gin.Context, string, string) error { return errBoom }
+			testStorage.UpdatePasswordByAdminFn = func(context.Context, string, string) error { return errBoom }
 		}, http.StatusInternalServerError},
 		{"success", `{"password":"secret"}`, func() {
-			testFunctions.UpdatePasswordByAdmin = func(_ *gin.Context, userID, password string) error {
+			testStorage.UpdatePasswordByAdminFn = func(_ context.Context, userID, password string) error {
 				gotUser, gotPassword = userID, password
 				return nil
 			}
@@ -91,12 +92,12 @@ func TestAdminUpdateInformations(t *testing.T) {
 	runHandlerCases(t, AdminUpdateInformations, []handlerCase{
 		{"missing email address", `{}`, nil, http.StatusBadRequest},
 		{"invalid email address", `{"email_address":"john"}`, nil, http.StatusBadRequest},
-		{"function not defined", body, nil, http.StatusInternalServerError},
+		{"storage not defined", body, withoutStorage, http.StatusInternalServerError},
 		{"error", body, func() {
-			testFunctions.UpdateInformationsByAdmin = func(*gin.Context, string, string, string, string, bool) error { return errBoom }
+			testStorage.UpdateInformationsByAdminFn = func(context.Context, string, string, string, string, bool) error { return errBoom }
 		}, http.StatusInternalServerError},
 		{"success", body, func() {
-			testFunctions.UpdateInformationsByAdmin = func(*gin.Context, string, string, string, string, bool) error { return nil }
+			testStorage.UpdateInformationsByAdminFn = func(context.Context, string, string, string, string, bool) error { return nil }
 		}, http.StatusOK},
 	})
 }
@@ -106,12 +107,12 @@ func TestAdminUpdateDescription(t *testing.T) {
 	runHandlerCases(t, AdminUpdateDescription, []handlerCase{
 		{"missing locale", `{"description":"hello"}`, nil, http.StatusBadRequest},
 		{"unsupported locale", `{"locale":"xx"}`, nil, http.StatusBadRequest},
-		{"function not defined", body, nil, http.StatusInternalServerError},
+		{"storage not defined", body, withoutStorage, http.StatusInternalServerError},
 		{"error", body, func() {
-			testFunctions.UpdateDescriptionByAdmin = func(*gin.Context, string, string, string) error { return errBoom }
+			testStorage.UpdateDescriptionByAdminFn = func(context.Context, string, string, string) error { return errBoom }
 		}, http.StatusInternalServerError},
 		{"success", body, func() {
-			testFunctions.UpdateDescriptionByAdmin = func(*gin.Context, string, string, string) error { return nil }
+			testStorage.UpdateDescriptionByAdminFn = func(context.Context, string, string, string) error { return nil }
 		}, http.StatusOK},
 	})
 }
@@ -122,15 +123,15 @@ func TestAdminUpdateSocial(t *testing.T) {
 		{"invalid facebook", `{"facebook":"me"}`, nil, http.StatusBadRequest},
 		{"invalid twitter", `{"twitter":"me"}`, nil, http.StatusBadRequest},
 		{"invalid instagram", `{"instagram":"me"}`, nil, http.StatusBadRequest},
-		{"function not defined", body, nil, http.StatusInternalServerError},
+		{"storage not defined", body, withoutStorage, http.StatusInternalServerError},
 		{"error", body, func() {
-			testFunctions.UpdateSocialByAdmin = func(*gin.Context, string, string, string, string) error { return errBoom }
+			testStorage.UpdateSocialByAdminFn = func(context.Context, string, string, string, string) error { return errBoom }
 		}, http.StatusInternalServerError},
 		{"success", body, func() {
-			testFunctions.UpdateSocialByAdmin = func(*gin.Context, string, string, string, string) error { return nil }
+			testStorage.UpdateSocialByAdminFn = func(context.Context, string, string, string, string) error { return nil }
 		}, http.StatusOK},
 		{"success without network", `{}`, func() {
-			testFunctions.UpdateSocialByAdmin = func(*gin.Context, string, string, string, string) error { return nil }
+			testStorage.UpdateSocialByAdminFn = func(context.Context, string, string, string, string) error { return nil }
 		}, http.StatusOK},
 	})
 }
@@ -142,12 +143,12 @@ func TestAdminUpdateSettings(t *testing.T) {
 		{"missing timezone", `{"locale":"en"}`, nil, http.StatusBadRequest},
 		{"unsupported locale", `{"locale":"xx","timezone":"Europe/Paris"}`, nil, http.StatusBadRequest},
 		{"unsupported timezone", `{"locale":"en","timezone":"Mars/Base"}`, nil, http.StatusBadRequest},
-		{"function not defined", body, nil, http.StatusInternalServerError},
+		{"storage not defined", body, withoutStorage, http.StatusInternalServerError},
 		{"error", body, func() {
-			testFunctions.UpdateSettingsByAdmin = func(*gin.Context, string, string, string) error { return errBoom }
+			testStorage.UpdateSettingsByAdminFn = func(context.Context, string, string, string) error { return errBoom }
 		}, http.StatusInternalServerError},
 		{"success", body, func() {
-			testFunctions.UpdateSettingsByAdmin = func(*gin.Context, string, string, string) error { return nil }
+			testStorage.UpdateSettingsByAdminFn = func(context.Context, string, string, string) error { return nil }
 		}, http.StatusOK},
 	})
 }
@@ -156,24 +157,24 @@ func TestAdminUpdateNotifications(t *testing.T) {
 	body := `{"notifications":["` + notifications.TypeNewLogin + `"]}`
 	runHandlerCases(t, AdminUpdateNotifications, []handlerCase{
 		{"unsupported notification", `{"notifications":["unknown"]}`, nil, http.StatusBadRequest},
-		{"function not defined", body, nil, http.StatusInternalServerError},
+		{"storage not defined", body, withoutStorage, http.StatusInternalServerError},
 		{"error", body, func() {
-			testFunctions.UpdateNotificationsByAdmin = func(*gin.Context, string, []string) error { return errBoom }
+			testStorage.UpdateNotificationsByAdminFn = func(context.Context, string, []string) error { return errBoom }
 		}, http.StatusInternalServerError},
 		{"success", body, func() {
-			testFunctions.UpdateNotificationsByAdmin = func(*gin.Context, string, []string) error { return nil }
+			testStorage.UpdateNotificationsByAdminFn = func(context.Context, string, []string) error { return nil }
 		}, http.StatusOK},
 	})
 }
 
 func TestGetAdminUserTokens(t *testing.T) {
 	runHandlerCases(t, GetAdminUserTokens, []handlerCase{
-		{"function not defined", "", nil, http.StatusInternalServerError},
+		{"storage not defined", "", withoutStorage, http.StatusInternalServerError},
 		{"error", "", func() {
-			testFunctions.GetTokensForAdmin = func(*gin.Context, string) (any, error) { return nil, errBoom }
+			testStorage.GetTokensForAdminFn = func(context.Context, string) (any, error) { return nil, errBoom }
 		}, http.StatusInternalServerError},
 		{"success", "", func() {
-			testFunctions.GetTokensForAdmin = func(*gin.Context, string) (any, error) { return []string{"t"}, nil }
+			testStorage.GetTokensForAdminFn = func(context.Context, string) (any, error) { return []string{"t"}, nil }
 		}, http.StatusOK},
 	})
 }
@@ -187,13 +188,13 @@ func TestAdminDeleteUserToken(t *testing.T) {
 	}
 	deleteToken := func(err error) func() {
 		return func() {
-			testFunctions.DeleteTokenByIDByAdmin = func(*gin.Context, string) error { return err }
+			testStorage.DeleteTokenByIDByAdminFn = func(context.Context, string) error { return err }
 		}
 	}
 	both := func(a, b func()) func() { return func() { a(); b() } }
 
 	runHandlerCases(t, AdminDeleteUserToken, []handlerCase{
-		{"delete function not defined", "", getToken(token, nil), http.StatusInternalServerError},
+		{"storage not defined", "", both(withoutStorage, getToken(token, nil)), http.StatusInternalServerError},
 		{"details function not defined", "", deleteToken(nil), http.StatusInternalServerError},
 		{"details error", "", both(deleteToken(nil), getToken(token, errBoom)), http.StatusInternalServerError},
 		{"token not found", "", both(deleteToken(nil), getToken(authentication.Token{}, commonErrors.NotFound())), http.StatusOK},

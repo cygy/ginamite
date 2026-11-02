@@ -242,20 +242,6 @@ func (p *Plugin) configureAPI(a *api.Server) {
 	a.Hooks.MiddlewareGetUserAndLocaleFromAuthToken = apiFunctions.GetUserAndLocaleFromAuthToken
 	a.Hooks.MiddlewareGetUserAbilities = apiFunctions.GetUserAbilities
 
-	a.Users.GetEnabledUsersForAdmin = apiFunctions.GetEnabledUsersForAdmin
-	a.Users.GetDisabledUsersForAdmin = apiFunctions.GetDisabledUsersForAdmin
-	a.Users.UpdatePasswordByAdmin = apiFunctions.UpdateUserPasswordByAdmin
-	a.Users.UpdateInformationsByAdmin = apiFunctions.UpdateUserInformationsByAdmin
-	a.Users.UpdateDescriptionByAdmin = apiFunctions.UpdateUserDescriptionByAdmin
-	a.Users.UpdateSocialByAdmin = apiFunctions.UpdateUserSocialByAdmin
-	a.Users.UpdateSettingsByAdmin = apiFunctions.UpdateUserSettingsByAdmin
-	a.Users.UpdateNotificationsByAdmin = apiFunctions.UpdateUserNotificationsByAdmin
-	a.Users.GetTokensForAdmin = apiFunctions.GetTokensForAdmin
-	a.Users.DeleteTokenByIDByAdmin = apiFunctions.DeleteTokenByIDByAdmin
-	a.Users.SetAbilitiesToUser = apiFunctions.SetAbilitiesToUser
-	a.Users.AddAbilitiesToUser = apiFunctions.AddAbilitiesToUser
-	a.Users.RemoveAbilitiesFromUser = apiFunctions.RemoveAbilitiesFromUser
-
 	a.Account.NotificationsReceivedByUser = apiFunctions.NotificationsReceivedByUser
 	a.Account.NotificationReceivedByUser = apiFunctions.NotificationReceivedByUser
 	a.Account.UpdateUserNotificationRead = apiFunctions.UpdateUserNotificationRead
@@ -282,6 +268,7 @@ func (p *Plugin) configureAPI(a *api.Server) {
 	a.Account.UserEmailAddressIsVerified = apiFunctions.UserEmailAddressIsVerified
 	a.Account.UpdateUserSocialNetworks = apiFunctions.UpdateUserSocialNetworks
 	a.Terms = apiFunctions.NewTerms(p.database)
+	a.Users = apiFunctions.NewUsers(p.database, p.Settings)
 
 	a.Account.ValidateUserRegistration = apiFunctions.ValidateUserRegistration
 	a.Account.CancelUserRegistration = apiFunctions.CancelUserRegistration

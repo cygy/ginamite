@@ -19,15 +19,19 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// errNoStorage is logged when a route of the administration is called without storage of the users.
+var errNoStorage = errors.New("undefined storage of the users")
+
 // GetAdminEnabledUsers returns the enabled users.
 func GetAdminEnabledUsers(c *gin.Context) {
-	if FunctionsOf(c).GetEnabledUsersForAdmin == nil {
-		c.Error(errors.New("undefined function 'GetEnabledUsersForAdmin'"))
+	storage := StorageOf(c)
+	if storage == nil {
+		c.Error(errNoStorage)
 		response.InternalServerError(c)
 		return
 	}
 
-	users, err := FunctionsOf(c).GetEnabledUsersForAdmin(c)
+	users, err := storage.GetEnabledUsersForAdmin(c)
 	if err != nil {
 		response.InternalServerError(c)
 		return
@@ -40,13 +44,14 @@ func GetAdminEnabledUsers(c *gin.Context) {
 
 // GetAdminDisabledUsers returns the disabled users.
 func GetAdminDisabledUsers(c *gin.Context) {
-	if FunctionsOf(c).GetDisabledUsersForAdmin == nil {
-		c.Error(errors.New("undefined function 'GetDisabledUsersForAdmin'"))
+	storage := StorageOf(c)
+	if storage == nil {
+		c.Error(errNoStorage)
 		response.InternalServerError(c)
 		return
 	}
 
-	users, err := FunctionsOf(c).GetDisabledUsersForAdmin(c)
+	users, err := storage.GetDisabledUsersForAdmin(c)
 	if err != nil {
 		response.InternalServerError(c)
 		return
@@ -79,14 +84,15 @@ func AdminUpdatePassword(c *gin.Context) {
 		return
 	}
 
-	var err error
-	if FunctionsOf(c).UpdatePasswordByAdmin == nil {
-		err = c.Error(errors.New("undefined function 'UpdatePasswordByAdmin'"))
-	} else {
-		userID := getUserID(c)
-		err = FunctionsOf(c).UpdatePasswordByAdmin(c, userID, jsonBody.Password)
+	storage := StorageOf(c)
+	if storage == nil {
+		c.Error(errNoStorage)
+		response.InternalServerError(c)
+		return
 	}
 
+	userID := getUserID(c)
+	err := storage.UpdatePasswordByAdmin(c, userID, jsonBody.Password)
 	if err != nil {
 		response.InternalServerError(c)
 		return
@@ -130,14 +136,15 @@ func AdminUpdateInformations(c *gin.Context) {
 		return
 	}
 
-	var err error
-	if FunctionsOf(c).UpdateInformationsByAdmin == nil {
-		err = c.Error(errors.New("undefined function 'UpdateInformationsByAdmin'"))
-	} else {
-		userID := getUserID(c)
-		err = FunctionsOf(c).UpdateInformationsByAdmin(c, userID, jsonBody.FirstName, jsonBody.LastName, newEmailAddress, jsonBody.ValidEmailAddress)
+	storage := StorageOf(c)
+	if storage == nil {
+		c.Error(errNoStorage)
+		response.InternalServerError(c)
+		return
 	}
 
+	userID := getUserID(c)
+	err := storage.UpdateInformationsByAdmin(c, userID, jsonBody.FirstName, jsonBody.LastName, newEmailAddress, jsonBody.ValidEmailAddress)
 	if err != nil {
 		response.InternalServerError(c)
 		return
@@ -175,14 +182,15 @@ func AdminUpdateDescription(c *gin.Context) {
 		return
 	}
 
-	var err error
-	if FunctionsOf(c).UpdateDescriptionByAdmin == nil {
-		err = c.Error(errors.New("undefined function 'UpdateDescriptionByAdmin'"))
-	} else {
-		userID := getUserID(c)
-		err = FunctionsOf(c).UpdateDescriptionByAdmin(c, userID, newLocale, jsonBody.Description)
+	storage := StorageOf(c)
+	if storage == nil {
+		c.Error(errNoStorage)
+		response.InternalServerError(c)
+		return
 	}
 
+	userID := getUserID(c)
+	err := storage.UpdateDescriptionByAdmin(c, userID, newLocale, jsonBody.Description)
 	if err != nil {
 		response.InternalServerError(c)
 		return
@@ -240,13 +248,14 @@ func AdminUpdateSocial(c *gin.Context) {
 
 	userID := getUserID(c)
 
-	var err error
-	if FunctionsOf(c).UpdateSocialByAdmin == nil {
-		err = c.Error(errors.New("undefined function 'UpdateSocialByAdmin'"))
-	} else {
-		err = FunctionsOf(c).UpdateSocialByAdmin(c, userID, facebook, twitter, instagram)
+	storage := StorageOf(c)
+	if storage == nil {
+		c.Error(errNoStorage)
+		response.InternalServerError(c)
+		return
 	}
 
+	err := storage.UpdateSocialByAdmin(c, userID, facebook, twitter, instagram)
 	if err != nil {
 		response.InternalServerError(c)
 		return
@@ -308,14 +317,15 @@ func AdminUpdateSettings(c *gin.Context) {
 		return
 	}
 
-	var err error
-	if FunctionsOf(c).UpdateSettingsByAdmin == nil {
-		err = c.Error(errors.New("undefined function 'UpdateSettingsByAdmin'"))
-	} else {
-		userID := getUserID(c)
-		err = FunctionsOf(c).UpdateSettingsByAdmin(c, userID, newLocale, newTimezone)
+	storage := StorageOf(c)
+	if storage == nil {
+		c.Error(errNoStorage)
+		response.InternalServerError(c)
+		return
 	}
 
+	userID := getUserID(c)
+	err := storage.UpdateSettingsByAdmin(c, userID, newLocale, newTimezone)
 	if err != nil {
 		response.InternalServerError(c)
 		return
@@ -347,14 +357,15 @@ func AdminUpdateNotifications(c *gin.Context) {
 		}
 	}
 
-	var err error
-	if FunctionsOf(c).UpdateNotificationsByAdmin == nil {
-		err = c.Error(errors.New("undefined function 'UpdateNotificationsByAdmin'"))
-	} else {
-		userID := getUserID(c)
-		err = FunctionsOf(c).UpdateNotificationsByAdmin(c, userID, notificationsToSave)
+	storage := StorageOf(c)
+	if storage == nil {
+		c.Error(errNoStorage)
+		response.InternalServerError(c)
+		return
 	}
 
+	userID := getUserID(c)
+	err := storage.UpdateNotificationsByAdmin(c, userID, notificationsToSave)
 	if err != nil {
 		response.InternalServerError(c)
 		return
@@ -365,15 +376,16 @@ func AdminUpdateNotifications(c *gin.Context) {
 
 // GetAdminUserTokens returns the user's auth tokens.
 func GetAdminUserTokens(c *gin.Context) {
-	if FunctionsOf(c).GetTokensForAdmin == nil {
-		c.Error(errors.New("undefined function 'GetTokensForAdmin'"))
+	storage := StorageOf(c)
+	if storage == nil {
+		c.Error(errNoStorage)
 		response.InternalServerError(c)
 		return
 	}
 
 	userID := getUserID(c)
 
-	tokens, err := FunctionsOf(c).GetTokensForAdmin(c, userID)
+	tokens, err := storage.GetTokensForAdmin(c, userID)
 	if err != nil {
 		response.InternalServerError(c)
 		return
@@ -386,8 +398,9 @@ func GetAdminUserTokens(c *gin.Context) {
 
 // AdminDeleteUserToken deletes a user's auth token.
 func AdminDeleteUserToken(c *gin.Context) {
-	if FunctionsOf(c).DeleteTokenByIDByAdmin == nil {
-		c.Error(errors.New("undefined function 'DeleteTokenByIDByAdmin'"))
+	storage := StorageOf(c)
+	if storage == nil {
+		c.Error(errNoStorage)
 		response.InternalServerError(c)
 		return
 	}
@@ -408,7 +421,7 @@ func AdminDeleteUserToken(c *gin.Context) {
 
 	// If the token does exist, delete it.
 	if len(token.UserID) > 0 {
-		if err := FunctionsOf(c).DeleteTokenByIDByAdmin(c, tokenID); err != nil && !commonErrors.IsNotFound(err) {
+		if err := storage.DeleteTokenByIDByAdmin(c, tokenID); err != nil && !commonErrors.IsNotFound(err) {
 			response.InternalServerError(c)
 			return
 		}

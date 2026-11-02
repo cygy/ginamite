@@ -1,6 +1,7 @@
 package user
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -31,10 +32,136 @@ var (
 	// testQueue is the queue of the handlers: it has no producer, the messages are only logged.
 	testQueue = queue.New(broker.NewMemory())
 
-	// testFunctions and testAccountFunctions are the functions of the handlers, reset at the end of each test.
-	testFunctions        Functions
+	// testStorage is the storage of the handlers and testAccountFunctions their account functions, reset at the end of
+	// each test. The storage is removed from the context by withoutStorage.
+	testStorage          = &fakeStorage{}
 	testAccountFunctions account.Functions
+	storageRemoved       bool
 )
+
+// withoutStorage makes the handlers run as an application which provides no storage of the users.
+func withoutStorage() { storageRemoved = true }
+
+// fakeStorage is a Storage whose methods call the function set by the test, if any.
+type fakeStorage struct {
+	GetEnabledUsersForAdminFn    func(context.Context) (any, error)
+	GetDisabledUsersForAdminFn   func(context.Context) (any, error)
+	UpdatePasswordByAdminFn      func(context.Context, string, string) error
+	UpdateInformationsByAdminFn  func(context.Context, string, string, string, string, bool) error
+	UpdateDescriptionByAdminFn   func(context.Context, string, string, string) error
+	UpdateSocialByAdminFn        func(context.Context, string, string, string, string) error
+	UpdateSettingsByAdminFn      func(context.Context, string, string, string) error
+	UpdateNotificationsByAdminFn func(context.Context, string, []string) error
+	GetTokensForAdminFn          func(context.Context, string) (any, error)
+	DeleteTokenByIDByAdminFn     func(context.Context, string) error
+	SetAbilitiesToUserFn         func(context.Context, string, []string) error
+	AddAbilitiesToUserFn         func(context.Context, string, []string) error
+	RemoveAbilitiesFromUserFn    func(context.Context, string, []string) error
+}
+
+func (f *fakeStorage) GetEnabledUsersForAdmin(ctx context.Context) (any, error) {
+	if f.GetEnabledUsersForAdminFn == nil {
+		return nil, nil
+	}
+
+	return f.GetEnabledUsersForAdminFn(ctx)
+}
+
+func (f *fakeStorage) GetDisabledUsersForAdmin(ctx context.Context) (any, error) {
+	if f.GetDisabledUsersForAdminFn == nil {
+		return nil, nil
+	}
+
+	return f.GetDisabledUsersForAdminFn(ctx)
+}
+
+func (f *fakeStorage) UpdatePasswordByAdmin(ctx context.Context, userID, password string) error {
+	if f.UpdatePasswordByAdminFn == nil {
+		return nil
+	}
+
+	return f.UpdatePasswordByAdminFn(ctx, userID, password)
+}
+
+func (f *fakeStorage) UpdateInformationsByAdmin(ctx context.Context, userID, firstName, lastName, emailAddress string, validEmailAddress bool) error {
+	if f.UpdateInformationsByAdminFn == nil {
+		return nil
+	}
+
+	return f.UpdateInformationsByAdminFn(ctx, userID, firstName, lastName, emailAddress, validEmailAddress)
+}
+
+func (f *fakeStorage) UpdateDescriptionByAdmin(ctx context.Context, userID, locale, description string) error {
+	if f.UpdateDescriptionByAdminFn == nil {
+		return nil
+	}
+
+	return f.UpdateDescriptionByAdminFn(ctx, userID, locale, description)
+}
+
+func (f *fakeStorage) UpdateSocialByAdmin(ctx context.Context, userID, facebook, twitter, instagram string) error {
+	if f.UpdateSocialByAdminFn == nil {
+		return nil
+	}
+
+	return f.UpdateSocialByAdminFn(ctx, userID, facebook, twitter, instagram)
+}
+
+func (f *fakeStorage) UpdateSettingsByAdmin(ctx context.Context, userID, locale, timezone string) error {
+	if f.UpdateSettingsByAdminFn == nil {
+		return nil
+	}
+
+	return f.UpdateSettingsByAdminFn(ctx, userID, locale, timezone)
+}
+
+func (f *fakeStorage) UpdateNotificationsByAdmin(ctx context.Context, userID string, notifications []string) error {
+	if f.UpdateNotificationsByAdminFn == nil {
+		return nil
+	}
+
+	return f.UpdateNotificationsByAdminFn(ctx, userID, notifications)
+}
+
+func (f *fakeStorage) GetTokensForAdmin(ctx context.Context, userID string) (any, error) {
+	if f.GetTokensForAdminFn == nil {
+		return nil, nil
+	}
+
+	return f.GetTokensForAdminFn(ctx, userID)
+}
+
+func (f *fakeStorage) DeleteTokenByIDByAdmin(ctx context.Context, tokenID string) error {
+	if f.DeleteTokenByIDByAdminFn == nil {
+		return nil
+	}
+
+	return f.DeleteTokenByIDByAdminFn(ctx, tokenID)
+}
+
+func (f *fakeStorage) SetAbilitiesToUser(ctx context.Context, userID string, abilities []string) error {
+	if f.SetAbilitiesToUserFn == nil {
+		return nil
+	}
+
+	return f.SetAbilitiesToUserFn(ctx, userID, abilities)
+}
+
+func (f *fakeStorage) AddAbilitiesToUser(ctx context.Context, userID string, abilities []string) error {
+	if f.AddAbilitiesToUserFn == nil {
+		return nil
+	}
+
+	return f.AddAbilitiesToUserFn(ctx, userID, abilities)
+}
+
+func (f *fakeStorage) RemoveAbilitiesFromUser(ctx context.Context, userID string, abilities []string) error {
+	if f.RemoveAbilitiesFromUserFn == nil {
+		return nil
+	}
+
+	return f.RemoveAbilitiesFromUserFn(ctx, userID, abilities)
+}
 
 // setup initializes the global dependencies of the handlers and resets the injected functions at the end of the test.
 func setup(t *testing.T) {
@@ -46,7 +173,8 @@ func setup(t *testing.T) {
 	testConfig.SupportedLocales = []string{"en"}
 
 	t.Cleanup(func() {
-		testFunctions = Functions{}
+		*testStorage = fakeStorage{}
+		storageRemoved = false
 		testAccountFunctions = account.Functions{}
 	})
 }
@@ -54,7 +182,7 @@ func setup(t *testing.T) {
 // serve sends a request with the given JSON body to the handler, mounted on "/:id", and returns the HTTP status.
 func serve(handler gin.HandlerFunc, body string) int {
 	router := gin.New()
-	router.Use(ctxkey.Config.Inject(testConfig), ctxkey.Queue.Inject(testQueue), ctxkey.Timezones.Inject(testTimezones), ctxkey.Notifications.Inject(notifications.NewRegistry()), Inject(&testFunctions), account.Inject(&testAccountFunctions), ctxkey.Localization.Inject(apitest.Localization), ctxLocale.Inject("en", []string{"en"}))
+	router.Use(ctxkey.Config.Inject(testConfig), ctxkey.Queue.Inject(testQueue), ctxkey.Timezones.Inject(testTimezones), ctxkey.Notifications.Inject(notifications.NewRegistry()), Inject(testStorage), withoutStorageIf(), account.Inject(&testAccountFunctions), ctxkey.Localization.Inject(apitest.Localization), ctxLocale.Inject("en", []string{"en"}))
 	router.Any("/:id", handler)
 
 	req, _ := http.NewRequest(http.MethodPost, "/42", strings.NewReader(body))
@@ -69,9 +197,18 @@ func newTestContext(body string) (*gin.Context, *httptest.ResponseRecorder) {
 	ctxkey.Queue.Set(c, testQueue)
 	ctxkey.Timezones.Set(c, testTimezones)
 	ctxkey.Notifications.Set(c, notifications.NewRegistry())
-	SetFunctions(c, &testFunctions)
+	SetStorage(c, testStorage)
 	account.SetFunctions(c, &testAccountFunctions)
 	ctxLocale.Set(c, "en", "en")
 
 	return c, recorder
+}
+
+// withoutStorageIf is a middleware removing the storage if the test asks for it with withoutStorage.
+func withoutStorageIf() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if storageRemoved {
+			SetStorage(c, nil)
+		}
+	}
 }

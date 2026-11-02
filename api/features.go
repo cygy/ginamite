@@ -89,7 +89,7 @@ func (s *Server) features(routes *route.DefaultRoutes) []feature {
 			{&account.GetNotificationsSettings, []string{"NotificationsSubscribedByUser"}},
 			{&account.SaveNotificationsSettings, []string{"SubscribeNotificationsToUser"}},
 			{&account.UnsubscribeFromNotification, []string{"UnsubscribeNotificationFromUser"}},
-			{&admin.UpdateUserNotifications, []string{"UpdateNotificationsByAdmin"}},
+			{&admin.UpdateUserNotifications, []string{"Users"}},
 		}, true},
 		{FeatureRegistration, []requirement{
 			{&routes.Username.Paths.Availability, []string{"DoesAccountWithUsernameExist"}},
@@ -111,8 +111,8 @@ func (s *Server) features(routes *route.DefaultRoutes) []feature {
 			{&authentication.RefreshToken, []string{"SaveAuthenticationToken"}},
 			{&authentication.DeleteToken, []string{"GetTokenDetailsByID", "DeleteTokenByID"}},
 			{&authentication.DeleteTokenWithKey, []string{"GetTokenDetailsByID", "DeleteTokenByID"}},
-			{&admin.GetUserTokens, []string{"GetTokensForAdmin"}},
-			{&admin.DeleteUserToken, []string{"DeleteTokenByIDByAdmin", "GetTokenDetailsByID"}},
+			{&admin.GetUserTokens, []string{"Users"}},
+			{&admin.DeleteUserToken, []string{"Users", "GetTokenDetailsByID"}},
 		}, true},
 		{FeatureFacebook, []requirement{
 			{&registration.RegisterWithFacebook, []string{"RegisterByThirdPartyToken", "DoesUserWithFacebookUserIDExist"}},
@@ -141,16 +141,16 @@ func (s *Server) features(routes *route.DefaultRoutes) []feature {
 			{&account.Disable, []string{"CreateNewDisableAccountProcess", "GetUserDetailsByID"}},
 			{&account.ValidateDisable, []string{"VerifyProcess", "DisableUserByID", "DeleteProcessByID"}},
 			{&account.CancelDisable, []string{"VerifyProcess", "DeleteProcessByID"}},
-			{&admin.GetEnabledUsers, []string{"GetEnabledUsersForAdmin"}},
-			{&admin.GetDisabledUsers, []string{"GetDisabledUsersForAdmin"}},
-			{&admin.UpdateUserPassword, []string{"UpdatePasswordByAdmin"}},
-			{&admin.UpdateUserInformations, []string{"UpdateInformationsByAdmin"}},
-			{&admin.UpdateUserDescription, []string{"UpdateDescriptionByAdmin"}},
-			{&admin.UpdateUserSocial, []string{"UpdateSocialByAdmin"}},
-			{&admin.UpdateUserSettings, []string{"UpdateSettingsByAdmin"}},
-			{&admin.SetAbilitiesToUser, []string{"SetAbilitiesToUser"}},
-			{&admin.AddAbilitiesToUser, []string{"AddAbilitiesToUser"}},
-			{&admin.RemoveAbilitiesFromUser, []string{"RemoveAbilitiesFromUser"}},
+			{&admin.GetEnabledUsers, []string{"Users"}},
+			{&admin.GetDisabledUsers, []string{"Users"}},
+			{&admin.UpdateUserPassword, []string{"Users"}},
+			{&admin.UpdateUserInformations, []string{"Users"}},
+			{&admin.UpdateUserDescription, []string{"Users"}},
+			{&admin.UpdateUserSocial, []string{"Users"}},
+			{&admin.UpdateUserSettings, []string{"Users"}},
+			{&admin.SetAbilitiesToUser, []string{"Users"}},
+			{&admin.AddAbilitiesToUser, []string{"Users"}},
+			{&admin.RemoveAbilitiesFromUser, []string{"Users"}},
 			{&admin.DeleteUser, []string{"DeleteUserByID", "GetUserDetailsByID"}},
 			{&admin.DisableUser, []string{"DisableUserByID"}},
 			{&admin.EnableUser, []string{"EnableUserByID"}},
@@ -185,7 +185,7 @@ func (s *Server) selectRoutes(routes *route.DefaultRoutes, enabled []string) (ne
 		return false, fmt.Errorf("unknown features %v in the setting api_features, the features are: %s", unknown, strings.Join(names, ", "))
 	}
 
-	groups := []reflect.Value{reflect.ValueOf(s.Account), reflect.ValueOf(s.Users)}
+	groups := []reflect.Value{reflect.ValueOf(s.Account)}
 	missing := map[string]bool{}
 	for _, f := range features {
 		isEnabled := slices.Contains(enabled, f.name)
@@ -226,6 +226,8 @@ func (s *Server) isUndefined(groups []reflect.Value, name string) bool {
 		return s.Contacts == nil
 	case "Terms":
 		return s.Terms == nil
+	case "Users":
+		return s.Users == nil
 	}
 
 	for _, group := range groups {

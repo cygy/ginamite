@@ -1,6 +1,7 @@
 package user
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"testing"
@@ -26,11 +27,11 @@ func TestUpdateAbilities(t *testing.T) {
 	handlers := []struct {
 		name    string
 		handler gin.HandlerFunc
-		inject  func(fn func(c *gin.Context, abilities []string, userID string) error)
+		inject  func(fn func(ctx context.Context, userID string, abilities []string) error)
 	}{
-		{"SetAbilities", SetAbilities, func(fn func(*gin.Context, []string, string) error) { testFunctions.SetAbilitiesToUser = fn }},
-		{"AddAbilities", AddAbilities, func(fn func(*gin.Context, []string, string) error) { testFunctions.AddAbilitiesToUser = fn }},
-		{"RemoveAbilities", RemoveAbilities, func(fn func(*gin.Context, []string, string) error) { testFunctions.RemoveAbilitiesFromUser = fn }},
+		{"SetAbilities", SetAbilities, func(fn func(context.Context, string, []string) error) { testStorage.SetAbilitiesToUserFn = fn }},
+		{"AddAbilities", AddAbilities, func(fn func(context.Context, string, []string) error) { testStorage.AddAbilitiesToUserFn = fn }},
+		{"RemoveAbilities", RemoveAbilities, func(fn func(context.Context, string, []string) error) { testStorage.RemoveAbilitiesFromUserFn = fn }},
 	}
 	tests := []struct {
 		name    string
@@ -40,7 +41,7 @@ func TestUpdateAbilities(t *testing.T) {
 		want    int
 	}{
 		{"no abilities", `{"abilities":[]}`, true, nil, http.StatusBadRequest},
-		{"function not defined", `{"abilities":["a"]}`, false, nil, http.StatusInternalServerError},
+		{"storage not defined", `{"abilities":["a"]}`, false, nil, http.StatusInternalServerError},
 		{"success", `{"abilities":["a"]}`, true, nil, http.StatusOK},
 		{"user not found", `{"abilities":["a"]}`, true, commonErrors.NotFound(), http.StatusNotFound},
 		{"other error", `{"abilities":["a"]}`, true, errors.New("boom"), http.StatusInternalServerError},
@@ -52,12 +53,13 @@ func TestUpdateAbilities(t *testing.T) {
 
 				var gotUser string
 				var gotAbilities []string
-				if tt.defined {
-					h.inject(func(_ *gin.Context, abilities []string, userID string) error {
-						gotUser, gotAbilities = userID, abilities
-						return tt.err
-					})
+				if !tt.defined {
+					withoutStorage()
 				}
+				h.inject(func(_ context.Context, userID string, abilities []string) error {
+					gotUser, gotAbilities = userID, abilities
+					return tt.err
+				})
 
 				if got := serve(h.handler, tt.body); got != tt.want {
 					t.Fatalf("status = %d, want %d", got, tt.want)

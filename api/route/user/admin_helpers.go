@@ -1,8 +1,6 @@
 package user
 
 import (
-	"errors"
-
 	"github.com/cygy/ginamite/common/ctxkey"
 
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
@@ -42,26 +40,21 @@ func updateAbilities(c *gin.Context, action string) {
 		return
 	}
 
+	storage := StorageOf(c)
+	if storage == nil {
+		c.Error(errNoStorage)
+		response.InternalServerError(c)
+		return
+	}
+
 	var err error
 	switch action {
 	case "add":
-		if FunctionsOf(c).AddAbilitiesToUser == nil {
-			err = c.Error(errors.New("undefined function 'AddAbilitiesToUser'"))
-		} else {
-			err = FunctionsOf(c).AddAbilitiesToUser(c, abilities, userID)
-		}
+		err = storage.AddAbilitiesToUser(c, userID, abilities)
 	case "remove":
-		if FunctionsOf(c).RemoveAbilitiesFromUser == nil {
-			err = c.Error(errors.New("undefined function 'RemoveAbilitiesFromUser'"))
-		} else {
-			err = FunctionsOf(c).RemoveAbilitiesFromUser(c, abilities, userID)
-		}
+		err = storage.RemoveAbilitiesFromUser(c, userID, abilities)
 	case "set":
-		if FunctionsOf(c).SetAbilitiesToUser == nil {
-			err = c.Error(errors.New("undefined function 'SetAbilitiesToUser'"))
-		} else {
-			err = FunctionsOf(c).SetAbilitiesToUser(c, abilities, userID)
-		}
+		err = storage.SetAbilitiesToUser(c, userID, abilities)
 	}
 
 	if err != nil {

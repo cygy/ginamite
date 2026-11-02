@@ -3,68 +3,73 @@ package functions
 import (
 	"testing"
 
-	"github.com/cygy/ginamite/plugins/mongodb/api/ctxsettings"
-
-	"github.com/cygy/ginamite/plugins/mongodb/internal/plugintest"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
 	"github.com/cygy/ginamite/plugins/mongodb/mongo/bson"
+	"github.com/cygy/ginamite/plugins/mongodb/mongo/store"
 	"github.com/cygy/ginamite/plugins/mongodb/mongo/store/mock"
-
-	"github.com/gin-gonic/gin"
 )
 
-func TestGetUsersForAdmin(t *testing.T) {
+// newUsers returns the storage of the users working on the database, with the default settings.
+func newUsers(db *mock.Database) *Users {
+	return NewUsers(func() store.Database { return db }, model.DefaultSettings)
+}
+
+func TestUsers_GetUsersForAdmin(t *testing.T) {
 	db := mock.NewDatabase("app")
 	db.Coll(model.UserCollection).Docs = []any{model.User{Username: "a"}}
 	db.Coll(model.DisabledUserCollection).Docs = []any{model.DisabledUser{Username: "b"}}
-	c, _ := plugintest.NewContext(db, "GET", "/", nil)
+	users := newUsers(db)
 
-	enabled, err := GetEnabledUsersForAdmin(c)
-	if users, ok := enabled.([]model.AdminUser); err != nil || !ok || len(users) != 1 || users[0].Username != "a" {
+	enabled, err := users.GetEnabledUsersForAdmin(ctx)
+	if got, ok := enabled.([]model.AdminUser); err != nil || !ok || len(got) != 1 || got[0].Username != "a" {
 		t.Errorf("enabled users = %+v, %v", enabled, err)
 	}
 
-	disabled, err := GetDisabledUsersForAdmin(c)
-	if users, ok := disabled.([]model.AdminDisabledUser); err != nil || !ok || len(users) != 1 || users[0].Username != "b" {
+	disabled, err := users.GetDisabledUsersForAdmin(ctx)
+	if got, ok := disabled.([]model.AdminDisabledUser); err != nil || !ok || len(got) != 1 || got[0].Username != "b" {
 		t.Errorf("disabled users = %+v, %v", disabled, err)
 	}
 }
 
-func TestUserUpdatesByAdmin(t *testing.T) {
+func TestUsers_UpdatesByAdmin(t *testing.T) {
 	id := bson.NewObjectID()
 
 	tests := []struct {
 		name string
-		call func(c *gin.Context, userID string) error
+		call func(users *Users, userID string) error
 		want bson.M
 	}{
-		{"UpdateUserInformationsByAdmin", func(c *gin.Context, userID string) error {
-			return UpdateUserInformationsByAdmin(c, userID, "John", "Doe", "j@example.com", true)
+		{"UpdateInformationsByAdmin", func(users *Users, userID string) error {
+			return users.UpdateInformationsByAdmin(ctx, userID, "John", "Doe", "j@example.com", true)
 		}, bson.M{"$set": bson.M{"privateInfos.firstName": "John", "privateInfos.lastName": "Doe", "privateInfos.email": "j@example.com", "privateInfos.isEmailValid": true}}},
 		{
-			"UpdateUserDescriptionByAdmin", func(c *gin.Context, userID string) error {
-				return UpdateUserDescriptionByAdmin(c, userID, "FR", "bonjour")
+			"UpdateDescriptionByAdmin", func(users *Users, userID string) error {
+				return users.UpdateDescriptionByAdmin(ctx, userID, "FR", "bonjour")
 			},
 			bson.M{"$set": bson.M{"publicInfos.description.fr": "bonjour"}},
 		},
 		{
-			"UpdateUserSocialByAdmin", func(c *gin.Context, userID string) error { return UpdateUserSocialByAdmin(c, userID, "fb", "tw", "ig") },
+			"UpdateSocialByAdmin", func(users *Users, userID string) error {
+				return users.UpdateSocialByAdmin(ctx, userID, "fb", "tw", "ig")
+			},
 			bson.M{"$set": bson.M{"publicInfos.facebook": "fb", "publicInfos.twitter": "tw", "publicInfos.instagram": "ig"}},
 		},
 		{
-			"UpdateUserSettingsByAdmin", func(c *gin.Context, userID string) error {
-				return UpdateUserSettingsByAdmin(c, userID, "fr-FR", "Europe/Paris")
+			"UpdateSettingsByAdmin", func(users *Users, userID string) error {
+				return users.UpdateSettingsByAdmin(ctx, userID, "fr-FR", "Europe/Paris")
 			},
 			bson.M{"$set": bson.M{"settings.locale": "fr-fr", "settings.timezone": "Europe/Paris"}},
 		},
 		{
-			"UpdateUserNotificationsByAdmin", func(c *gin.Context, userID string) error {
-				return UpdateUserNotificationsByAdmin(c, userID, []string{"a"})
+			"UpdateNotificationsByAdmin", func(users *Users, userID string) error {
+				return users.UpdateNotificationsByAdmin(ctx, userID, []string{"a"})
 			},
 			bson.M{"$set": bson.M{"notifications": []string{"a"}}},
 		},
 		{
-			"RemoveAbilitiesFromUser", func(c *gin.Context, userID string) error { return RemoveAbilitiesFromUser(c, []string{"a"}, userID) },
+			"RemoveAbilitiesFromUser", func(users *Users, userID string) error {
+				return users.RemoveAbilitiesFromUser(ctx, userID, []string{"a"})
+			},
 			bson.M{"$pullAll": bson.M{"abilities": []string{"a"}}},
 		},
 	}
@@ -72,26 +77,26 @@ func TestUserUpdatesByAdmin(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			db := mock.NewDatabase("app")
-			c, _ := plugintest.NewContext(db, "GET", "/", nil)
+			users := newUsers(db)
 
-			if err := tt.call(c, id.Hex()); err != nil {
+			if err := tt.call(users, id.Hex()); err != nil {
 				t.Fatal(err)
 			}
 			checkUpdate(t, db, model.UserCollection, id, tt.want)
 
-			if err := tt.call(c, "nope"); err == nil {
+			if err := tt.call(users, "nope"); err == nil {
 				t.Error("an invalid user ID must be rejected")
 			}
 		})
 	}
 }
 
-func TestUpdateUserPasswordByAdmin(t *testing.T) {
+func TestUsers_UpdatePasswordByAdmin(t *testing.T) {
 	id := bson.NewObjectID()
 	db := mock.NewDatabase("app")
-	c, _ := plugintest.NewContext(db, "GET", "/", nil)
+	users := newUsers(db)
 
-	if err := UpdateUserPasswordByAdmin(c, id.Hex(), "Password1"); err != nil {
+	if err := users.UpdatePasswordByAdmin(ctx, id.Hex(), "Password1"); err != nil {
 		t.Fatal(err)
 	}
 	stored := db.Coll(model.UserCollection).LastCall().Args[1].(bson.M)["$set"].(bson.M)["identificationMethods.password"]
@@ -99,57 +104,55 @@ func TestUpdateUserPasswordByAdmin(t *testing.T) {
 		t.Error("the password must be encrypted")
 	}
 
-	if err := UpdateUserPasswordByAdmin(c, "nope", "Password1"); err == nil {
+	if err := users.UpdatePasswordByAdmin(ctx, "nope", "Password1"); err == nil {
 		t.Error("an invalid user ID must be rejected")
 	}
 }
 
-func TestAbilitiesOfUser(t *testing.T) {
+func TestUsers_Abilities(t *testing.T) {
 	id := bson.NewObjectID()
 	db := mock.NewDatabase("app")
-	c, _ := plugintest.NewContext(db, "GET", "/", nil)
 	settings := model.DefaultSettings()
 	settings.AllUserAbilities = []string{"read", "write"}
-	ctxsettings.SetSettings(c, settings)
+	users := NewUsers(func() store.Database { return db }, func() model.Settings { return settings })
 
-	if err := SetAbilitiesToUser(c, []string{"read", "root"}, id.Hex()); err != nil {
+	if err := users.SetAbilitiesToUser(ctx, id.Hex(), []string{"read", "root"}); err != nil {
 		t.Fatal(err)
 	}
 	checkUpdate(t, db, model.UserCollection, id, bson.M{"$set": bson.M{"abilities": []string{"read"}}})
 
-	if err := AddAbilitiesToUser(c, []string{"write", "root"}, id.Hex()); err != nil {
+	if err := users.AddAbilitiesToUser(ctx, id.Hex(), []string{"write", "root"}); err != nil {
 		t.Fatal(err)
 	}
 	checkUpdate(t, db, model.UserCollection, id, bson.M{"$addToSet": bson.M{"abilities": bson.M{"$each": []string{"write"}}}})
 
-	if SetAbilitiesToUser(c, nil, "nope") == nil || AddAbilitiesToUser(c, nil, "nope") == nil {
+	if users.SetAbilitiesToUser(ctx, "nope", nil) == nil || users.AddAbilitiesToUser(ctx, "nope", nil) == nil {
 		t.Error("an invalid user ID must be rejected")
 	}
 }
 
-func TestGetTokensForAdmin(t *testing.T) {
+func TestUsers_GetTokensForAdmin(t *testing.T) {
 	userID := bson.NewObjectID()
 	db := mock.NewDatabase("app")
 	db.Coll(model.AuthTokenCollection).Docs = []any{model.AuthToken{Source: "web", UserID: userID}, model.AuthToken{Source: "mobile", UserID: userID}}
-	c, _ := plugintest.NewContext(db, "GET", "/", nil)
+	users := newUsers(db)
 
-	got, err := GetTokensForAdmin(c, userID.Hex())
+	got, err := users.GetTokensForAdmin(ctx, userID.Hex())
 	tokens, ok := got.([]*model.AdminAuthToken)
 	if err != nil || !ok || len(tokens) != 2 || tokens[0].Source != "web" || tokens[1].Source != "mobile" {
 		t.Errorf("got %+v, %v", got, err)
 	}
 
-	if _, err := GetTokensForAdmin(c, "nope"); err == nil {
+	if _, err := users.GetTokensForAdmin(ctx, "nope"); err == nil {
 		t.Error("an invalid user ID must be rejected")
 	}
 }
 
-func TestDeleteTokenByIDByAdmin(t *testing.T) {
+func TestUsers_DeleteTokenByIDByAdmin(t *testing.T) {
 	id := bson.NewObjectID()
 	db := mock.NewDatabase("app")
-	c, _ := plugintest.NewContext(db, "GET", "/", nil)
 
-	if err := DeleteTokenByIDByAdmin(c, id.Hex()); err != nil {
+	if err := newUsers(db).DeleteTokenByIDByAdmin(ctx, id.Hex()); err != nil {
 		t.Fatal(err)
 	}
 	checkCall(t, db, model.AuthTokenCollection, "DeleteOne", bson.D{{Key: "_id", Value: id}})
