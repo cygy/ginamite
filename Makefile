@@ -7,7 +7,7 @@ FUZZTIME ?= 30s
 
 .DEFAULT_GOAL := help
 
-.PHONY: help fmt fmt-check vet lint test cover fuzz build tidy check clean \
+.PHONY: help fmt fmt-check vet lint test integration cover fuzz build tidy check clean \
 	bump_major bump_minor bump_patch release ensure-clean
 
 help: ## List the targets
@@ -29,6 +29,9 @@ lint: ## Run golangci-lint
 
 test: ## Run the tests with the race detector
 	$(GO) test -race -count=1 ./...
+
+integration: ## Run the tests needing a real MongoDB and Kafka (MONGO_HOST, KAFKA_HOST, ... override localhost)
+	$(GO) test -race -count=1 -tags=integration ./plugins/mongodb/... ./plugins/kafka/...
 
 cover: ## Run the tests and print the coverage per function
 	$(GO) test -race -count=1 -coverprofile=$(COVERAGE) ./...
