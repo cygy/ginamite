@@ -2,13 +2,14 @@ package errors
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 )
 
 func TestNotFound(t *testing.T) {
 	err := NotFound()
-	if err == nil || err.Error() != NotFoundErrorMessage {
-		t.Errorf("NotFound() = %v, want %q", err, NotFoundErrorMessage)
+	if !errors.Is(err, ErrNotFound) || err.Error() != NotFoundErrorMessage {
+		t.Errorf("NotFound() = %v, want ErrNotFound", err)
 	}
 }
 
@@ -20,9 +21,9 @@ func TestIsNotFound(t *testing.T) {
 	}{
 		{"nil", nil, false},
 		{"not found", NotFound(), true},
-		{"different case", errors.New("Not Found"), true},
+		{"wrapped", fmt.Errorf("user 42: %w", ErrNotFound), true},
+		{"same text", errors.New(NotFoundErrorMessage), false},
 		{"other error", errors.New("boom"), false},
-		{"wrapped", errors.New("x: not found"), false},
 	}
 
 	for _, tt := range tests {
