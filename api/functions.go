@@ -165,9 +165,9 @@ func (s *Server) Run() error {
 	}
 	router.Notifications = s.Notifications
 	router.Limits = route.RateLimits{
-		Authentication: request.RateLimitFromConfiguration(s.Config.RateLimits.Authentication),
-		Registration:   request.RateLimitFromConfiguration(s.Config.RateLimits.Registration),
-		ForgotPassword: request.RateLimitFromConfiguration(s.Config.RateLimits.ForgotPassword),
+		Authentication: request.RateLimitFromConfiguration("authentication", s.Config.RateLimits.Authentication, s.Hooks.NewRateLimiter),
+		Registration:   request.RateLimitFromConfiguration("registration", s.Config.RateLimits.Registration, s.Hooks.NewRateLimiter),
+		ForgotPassword: request.RateLimitFromConfiguration("forgot_password", s.Config.RateLimits.ForgotPassword, s.Hooks.NewRateLimiter),
 	}
 	router.LoadDefaultRoutes()
 	for _, customRoute := range s.customRoutes {

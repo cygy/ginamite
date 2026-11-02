@@ -3,6 +3,7 @@ package api
 import (
 	tokencache "github.com/cygy/ginamite/api/cache/authtoken"
 	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
+	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/rights"
 	"github.com/cygy/ginamite/api/route"
 	"github.com/cygy/ginamite/api/route/account"
@@ -68,4 +69,8 @@ type Hooks struct {
 	ExtraPropertiesForTokenWithID           authentication.ExtraPropertiesForTokenWithIDFunc
 	ExtendTokenExpirationDateFromID         authentication.ExtendTokenExpirationDateFunc
 	RouterConfigureDefaultRoutes            route.ConfigureDefaultRoutes
+
+	// NewRateLimiter returns the limiters of the requests which try to guess a secret, see the setting rate_limits. The
+	// default limiters keep their counters in memory, by instance of the API.
+	NewRateLimiter request.NewRateLimiterFunc
 }

@@ -224,14 +224,14 @@ command line with `RegisterFlags`.
 ### Security
 
 - **Passwords** are hashed with Argon2id (PHC format, random salt, constant-time comparison). The legacy SHA-512 crypt
-  hashes (`$6$`) are still accepted, and replaced by an Argon2id hash after a successful login when the database plugin
-  defines `UpdateEncryptedPasswordByUserID` (a warning is logged at start-up if it is undefined). Logging in with an
+  hashes (`$6$`) are still accepted, and replaced by an Argon2id hash after a successful login. Logging in with an
   unknown email costs as much time as with a wrong password.
 - **JWT**: only HS256, HS384 and HS512 are accepted, and the `exp` claim is required. The tokens are never logged.
   A `jwt` secret shorter than 32 characters logs a warning.
-- **Rate limiting**: the sign-in, registration and forgot-password routes are limited per client IP (token bucket in the
-  memory of each instance, so the limit applies per API instance). A refused request gets a `429` and a `Retry-After`
-  header.
+- **Rate limiting**: the sign-in, registration and forgot-password routes are limited per client IP. A refused request
+  gets a `429` and a `Retry-After` header. By default the counters are a token bucket in the memory of each instance,
+  so the limit applies per API instance: with several instances, set `api.Server.Hooks.NewRateLimiter` to a
+  `request.RateLimiter` sharing them. A failure of the limiter lets the request through.
 
   ```yaml
   rate_limits:

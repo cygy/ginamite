@@ -175,8 +175,8 @@ type RateLimitConfiguration struct {
 	Seconds  int
 }
 
-// RateLimitsConfiguration holds the limits of the requests which try to guess a secret, by group of routes. The counters
-// are kept in memory by each instance of the API.
+// RateLimitsConfiguration holds the limits of the requests which try to guess a secret, by group of routes. By default
+// the counters are kept in memory by each instance of the API, see api.Server.Hooks.NewRateLimiter.
 type RateLimitsConfiguration struct {
 	Authentication RateLimitConfiguration `yaml:"authentication"`
 	Registration   RateLimitConfiguration `yaml:"registration"`

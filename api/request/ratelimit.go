@@ -1,6 +1,8 @@
 package request
 
 import (
+	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -10,8 +12,23 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// Limiter limits the requests of each client to a number in a period, with a token bucket: a client can send a burst
-// of requests, then as many as the period allows. The counters are kept in memory, by instance of the server.
+// RateLimiter decides whether a client can send a request now. The API uses a Limiter, kept in memory, by default: with
+// several instances of the API each one counts the requests it receives, so a client can send as many requests as the
+// limit times the number of instances. Set api.Server.Hooks.NewRateLimiter to share the counters, in a database for
+// instance.
+type RateLimiter interface {
+	// Allow reports whether the client can send a request now, and the delay to wait for otherwise. An error lets the
+	// request through: the limit must not stop the API when its storage fails.
+	Allow(ctx context.Context, client string) (ok bool, retryAfter time.Duration, err error)
+}
+
+// NewRateLimiterFunc returns the RateLimiter allowing requests in period to each client, for the group of routes with
+// the name, such as "authentication": the groups have their own counters.
+type NewRateLimiterFunc func(name string, requests int, period time.Duration) RateLimiter
+
+// Limiter is a RateLimiter keeping its counters in memory, by instance of the server. It limits the requests of each
+// client to a number in a period with a token bucket: a client can send a burst of requests, then as many as the period
+// allows.
 type Limiter struct {
 	mu        sync.Mutex
 	requests  float64
@@ -37,10 +54,10 @@ func NewLimiter(requests int, period time.Duration) *Limiter {
 	return &Limiter{requests: float64(requests), period: period, buckets: map[string]*bucket{}, now: time.Now}
 }
 
-// Allow reports whether the client can send a request now, and the delay to wait for otherwise.
-func (l *Limiter) Allow(client string) (ok bool, retryAfter time.Duration) {
+// Allow reports whether the client can send a request now, and the delay to wait for otherwise. It never fails.
+func (l *Limiter) Allow(_ context.Context, client string) (ok bool, retryAfter time.Duration, err error) {
 	if l == nil {
-		return true, 0
+		return true, 0, nil
 	}
 
 	l.mu.Lock()
@@ -63,10 +80,10 @@ func (l *Limiter) Allow(client string) (ok bool, retryAfter time.Duration) {
 	if b.tokens >= 1 {
 		b.tokens--
 
-		return true, 0
+		return true, 0, nil
 	}
 
-	return false, time.Duration((1 - b.tokens) / rate * float64(time.Second))
+	return false, time.Duration((1 - b.tokens) / rate * float64(time.Second)), nil
 }
 
 // sweep forgets the clients whose bucket is full again, at most once per period: it keeps the memory bounded.
@@ -96,22 +113,38 @@ func (l *Limiter) Size() int {
 }
 
 // RateLimit returns the middleware that answers 429 Too Many Requests, with the header Retry-After, to a client who sent
-// too many requests. The client is identified by its IP address: see the setting server.trusted_proxies. It returns nil,
-// which means no limit, if the limiter is nil.
-func RateLimit(l *Limiter) gin.HandlerFunc {
+// too many requests. The client is identified by its IP address: see the setting server.trusted_proxies. A failure of
+// the limiter is saved in the errors of the context and lets the request through. It returns nil, which means no
+// limit, if the limiter is nil.
+func RateLimit(l RateLimiter) gin.HandlerFunc {
 	if l == nil {
 		return nil
 	}
 
 	return func(c *gin.Context) {
-		if ok, retryAfter := l.Allow(c.ClientIP()); !ok {
+		ok, retryAfter, err := l.Allow(c, c.ClientIP())
+		if err != nil {
+			c.Error(fmt.Errorf("unable to limit the requests: %w", err))
+			return
+		}
+		if !ok {
 			response.TooManyRequests(c, retryAfter)
 		}
 	}
 }
 
-// RateLimitFromConfiguration returns the middleware limiting the requests as the configuration says, or nil if it
-// does not limit them.
-func RateLimitFromConfiguration(c config.RateLimitConfiguration) gin.HandlerFunc {
-	return RateLimit(NewLimiter(c.Requests, time.Duration(c.Seconds)*time.Second))
+// RateLimitFromConfiguration returns the middleware limiting the requests of the group of routes with the name as the
+// configuration says, or nil if it does not limit them. The limiter is the one returned by newLimiter, or a Limiter
+// if newLimiter is nil.
+func RateLimitFromConfiguration(name string, c config.RateLimitConfiguration, newLimiter NewRateLimiterFunc) gin.HandlerFunc {
+	if c.Requests <= 0 || c.Seconds <= 0 {
+		return nil
+	}
+
+	period := time.Duration(c.Seconds) * time.Second
+	if newLimiter == nil {
+		return RateLimit(NewLimiter(c.Requests, period))
+	}
+
+	return RateLimit(newLimiter(name, c.Requests, period))
 }
