@@ -9,9 +9,9 @@ import (
 	"github.com/cygy/ginamite/common/authentication"
 	"github.com/cygy/ginamite/common/config"
 	commonErrors "github.com/cygy/ginamite/common/errors"
-	"github.com/cygy/ginamite/common/mongo/bson"
-	"github.com/cygy/ginamite/common/mongo/document"
-	"github.com/cygy/ginamite/common/mongo/store/mock"
+	"github.com/cygy/ginamite/plugins/mongodb/mongo/bson"
+	"github.com/cygy/ginamite/plugins/mongodb/mongo/document"
+	"github.com/cygy/ginamite/plugins/mongodb/mongo/store/mock"
 
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )

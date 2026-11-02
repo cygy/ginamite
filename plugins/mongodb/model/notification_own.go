@@ -3,7 +3,7 @@ package model
 import (
 	"time"
 
-	"github.com/cygy/ginamite/common/mongo/bson"
+	"github.com/cygy/ginamite/plugins/mongodb/mongo/bson"
 )
 
 // OwnSummarizedNotification is the short view of a Notification exposed to its owner.

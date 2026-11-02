@@ -3,9 +3,9 @@ package model
 import (
 	"context"
 
-	"github.com/cygy/ginamite/common/mongo/bson"
-	"github.com/cygy/ginamite/common/mongo/document"
-	"github.com/cygy/ginamite/common/mongo/store"
+	"github.com/cygy/ginamite/plugins/mongodb/mongo/bson"
+	"github.com/cygy/ginamite/plugins/mongodb/mongo/document"
+	"github.com/cygy/ginamite/plugins/mongodb/mongo/store"
 )
 
 // ForgotPasswordProcessCollection is the name of the collection of the forgotPassword documents.

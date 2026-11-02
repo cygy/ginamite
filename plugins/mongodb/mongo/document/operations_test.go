@@ -10,9 +10,9 @@ import (
 
 	commonErrors "github.com/cygy/ginamite/common/errors"
 	"github.com/cygy/ginamite/common/log"
-	"github.com/cygy/ginamite/common/mongo/bson"
-	"github.com/cygy/ginamite/common/mongo/store"
-	"github.com/cygy/ginamite/common/mongo/store/mock"
+	"github.com/cygy/ginamite/plugins/mongodb/mongo/bson"
+	"github.com/cygy/ginamite/plugins/mongodb/mongo/store"
+	"github.com/cygy/ginamite/plugins/mongodb/mongo/store/mock"
 
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"

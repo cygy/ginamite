@@ -6,11 +6,11 @@ import (
 
 	"github.com/cygy/ginamite/common/authentication"
 	commonErrors "github.com/cygy/ginamite/common/errors"
-	"github.com/cygy/ginamite/common/mongo/bson"
-	"github.com/cygy/ginamite/common/mongo/store"
-	"github.com/cygy/ginamite/common/mongo/store/mock"
 	"github.com/cygy/ginamite/plugins/mongodb/internal/plugintest"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
+	"github.com/cygy/ginamite/plugins/mongodb/mongo/bson"
+	"github.com/cygy/ginamite/plugins/mongodb/mongo/store"
+	"github.com/cygy/ginamite/plugins/mongodb/mongo/store/mock"
 
 	"github.com/gin-gonic/gin"
 )

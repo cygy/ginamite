@@ -5,9 +5,9 @@ import (
 	"context"
 
 	"github.com/cygy/ginamite/common/log"
-	"github.com/cygy/ginamite/common/mongo/bson"
-	"github.com/cygy/ginamite/common/mongo/store"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
+	"github.com/cygy/ginamite/plugins/mongodb/mongo/bson"
+	"github.com/cygy/ginamite/plugins/mongodb/mongo/store"
 )
 
 // CreateStoredNotification saves a notification for a user, and updates the counts of notifications of the user.

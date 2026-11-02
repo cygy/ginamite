@@ -10,10 +10,10 @@ import (
 	"github.com/cygy/ginamite/common/ctxlocalization"
 	"github.com/cygy/ginamite/common/ctxqueue"
 	"github.com/cygy/ginamite/common/localization"
-	"github.com/cygy/ginamite/common/mongo/session"
 	"github.com/cygy/ginamite/plugins/mongodb/api/context"
 	"github.com/cygy/ginamite/plugins/mongodb/api/ctxsettings"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
+	"github.com/cygy/ginamite/plugins/mongodb/mongo/session"
 	pluginQueue "github.com/cygy/ginamite/plugins/mongodb/queue"
 
 	"github.com/gin-gonic/gin"

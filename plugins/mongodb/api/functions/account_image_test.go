@@ -15,10 +15,10 @@ import (
 	"github.com/cygy/ginamite/plugins/mongodb/api/ctxsettings"
 
 	"github.com/cygy/ginamite/common/ctxconfig"
-	"github.com/cygy/ginamite/common/mongo/bson"
-	"github.com/cygy/ginamite/common/mongo/store/mock"
 	"github.com/cygy/ginamite/plugins/mongodb/internal/plugintest"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
+	"github.com/cygy/ginamite/plugins/mongodb/mongo/bson"
+	"github.com/cygy/ginamite/plugins/mongodb/mongo/store/mock"
 )
 
 // testSettings are the settings of the plugin of the requests, replaced by withImageDirectory.

@@ -1,7 +1,7 @@
 // Package functions provides the functions of the workers working on the MongoDB database of the plugin.
 package functions
 
-import "github.com/cygy/ginamite/common/mongo/store"
+import "github.com/cygy/ginamite/plugins/mongodb/mongo/store"
 
 // Functions are the functions of the workers working on a database.
 // Create it with New.

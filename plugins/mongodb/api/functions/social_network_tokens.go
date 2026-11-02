@@ -2,9 +2,9 @@ package functions
 
 import (
 	"github.com/cygy/ginamite/api/validator"
-	"github.com/cygy/ginamite/common/mongo/bson"
-	"github.com/cygy/ginamite/common/mongo/session"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
+	"github.com/cygy/ginamite/plugins/mongodb/mongo/bson"
+	"github.com/cygy/ginamite/plugins/mongodb/mongo/session"
 	"github.com/gin-gonic/gin"
 )
 

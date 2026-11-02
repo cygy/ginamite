@@ -3,7 +3,7 @@ package model
 import (
 	"time"
 
-	"github.com/cygy/ginamite/common/mongo/bson"
+	"github.com/cygy/ginamite/plugins/mongodb/mongo/bson"
 )
 
 // OwnAuthToken is the view of an AuthToken exposed to its owner.

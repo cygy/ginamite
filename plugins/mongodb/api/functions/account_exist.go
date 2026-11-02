@@ -3,9 +3,9 @@ package functions
 import (
 	"context"
 
-	"github.com/cygy/ginamite/common/mongo/session"
-	"github.com/cygy/ginamite/common/mongo/store"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
+	"github.com/cygy/ginamite/plugins/mongodb/mongo/session"
+	"github.com/cygy/ginamite/plugins/mongodb/mongo/store"
 
 	"github.com/gin-gonic/gin"
 )

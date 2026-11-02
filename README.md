@@ -347,6 +347,9 @@ A plugin for another database implements the same extension points. `plugins/mon
 
 ### MongoDB
 
+The packages `plugins/mongodb/mongo/session`, `store`, `document` and `bson` are the MongoDB helpers (session, driver,
+generic documents, BSON builders): an application can use them for its own collections.
+
 `plugins/mongodb` opens its own MongoDB session in `Connect`, with no global state: the functions of the API and of the
 worker work on the database of the plugin, and the middleware of the plugin saves it in the context of the requests.
 Its settings (`Plugin.UserMaxImageSize`, etc., see `Plugin.Settings`) are saved in the context of the requests with

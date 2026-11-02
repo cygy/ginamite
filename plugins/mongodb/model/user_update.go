@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/cygy/ginamite/common/authentication"
-	"github.com/cygy/ginamite/common/mongo/bson"
-	"github.com/cygy/ginamite/common/mongo/store"
+	"github.com/cygy/ginamite/plugins/mongodb/mongo/bson"
+	"github.com/cygy/ginamite/plugins/mongodb/mongo/store"
 )
 
 // UpdateAllInformations updates the infos of an account.

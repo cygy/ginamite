@@ -30,11 +30,11 @@ import (
 	"github.com/cygy/ginamite/common/broker"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/log"
-	"github.com/cygy/ginamite/common/mongo/session"
-	"github.com/cygy/ginamite/common/mongo/store/mock"
 	"github.com/cygy/ginamite/common/queue"
 	"github.com/cygy/ginamite/plugins/mongodb/api/ctxsettings"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
+	"github.com/cygy/ginamite/plugins/mongodb/mongo/session"
+	"github.com/cygy/ginamite/plugins/mongodb/mongo/store/mock"
 
 	"github.com/gin-gonic/gin"
 	jwt "github.com/golang-jwt/jwt/v5"

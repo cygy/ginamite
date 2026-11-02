@@ -5,7 +5,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/cygy/ginamite/common/mongo/store"
+	"github.com/cygy/ginamite/plugins/mongodb/mongo/store"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 

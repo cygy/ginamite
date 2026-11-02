@@ -13,13 +13,13 @@ import (
 	"github.com/cygy/ginamite/api/route"
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/config/database"
-	"github.com/cygy/ginamite/common/mongo/session"
-	"github.com/cygy/ginamite/common/mongo/store"
-	"github.com/cygy/ginamite/common/mongo/store/mock"
 	"github.com/cygy/ginamite/plugins/mongodb/api/ctxsettings"
 	apiFunctions "github.com/cygy/ginamite/plugins/mongodb/api/functions"
 	_ "github.com/cygy/ginamite/plugins/mongodb/internal/plugintest" // Initializes the logger and gin.
 	"github.com/cygy/ginamite/plugins/mongodb/model"
+	"github.com/cygy/ginamite/plugins/mongodb/mongo/session"
+	"github.com/cygy/ginamite/plugins/mongodb/mongo/store"
+	"github.com/cygy/ginamite/plugins/mongodb/mongo/store/mock"
 	workerFunctions "github.com/cygy/ginamite/plugins/mongodb/worker/functions"
 
 	"github.com/gin-gonic/gin"

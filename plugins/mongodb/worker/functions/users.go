@@ -8,9 +8,9 @@ import (
 
 	errs "github.com/cygy/ginamite/common/errors"
 	"github.com/cygy/ginamite/common/log"
-	"github.com/cygy/ginamite/common/mongo/store"
 	"github.com/cygy/ginamite/common/notifications"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
+	"github.com/cygy/ginamite/plugins/mongodb/mongo/store"
 
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )

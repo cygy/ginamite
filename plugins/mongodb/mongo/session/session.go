@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/cygy/ginamite/common/log"
-	"github.com/cygy/ginamite/common/mongo/store"
+	"github.com/cygy/ginamite/plugins/mongodb/mongo/store"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"

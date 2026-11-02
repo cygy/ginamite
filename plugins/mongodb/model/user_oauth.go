@@ -6,7 +6,7 @@ import (
 
 	"github.com/cygy/ginamite/api/validator"
 	"github.com/cygy/ginamite/common/authentication"
-	"github.com/cygy/ginamite/common/mongo/store"
+	"github.com/cygy/ginamite/plugins/mongodb/mongo/store"
 )
 
 // SaveFacebookInfos saves the facebook access token to the document.

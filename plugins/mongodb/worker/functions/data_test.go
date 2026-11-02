@@ -3,7 +3,7 @@ package functions
 import (
 	"testing"
 
-	"github.com/cygy/ginamite/common/mongo/store"
+	"github.com/cygy/ginamite/plugins/mongodb/mongo/store"
 )
 
 func TestDefaultDocumentsWrappers(t *testing.T) {

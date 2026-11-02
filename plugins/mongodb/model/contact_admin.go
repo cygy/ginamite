@@ -3,7 +3,7 @@ package model
 import (
 	"time"
 
-	"github.com/cygy/ginamite/common/mongo/bson"
+	"github.com/cygy/ginamite/plugins/mongodb/mongo/bson"
 )
 
 // AdminContact is the view of a Contact exposed to the administrators.

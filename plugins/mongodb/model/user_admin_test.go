@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/cygy/ginamite/common/mongo/store/mock"
+	"github.com/cygy/ginamite/plugins/mongodb/mongo/store/mock"
 )
 
 func TestNewAdminUser(t *testing.T) {

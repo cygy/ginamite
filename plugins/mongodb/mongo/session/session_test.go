@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	"github.com/cygy/ginamite/common/log"
-	"github.com/cygy/ginamite/common/mongo/store"
-	"github.com/cygy/ginamite/common/mongo/store/mock"
+	"github.com/cygy/ginamite/plugins/mongodb/mongo/store"
+	"github.com/cygy/ginamite/plugins/mongodb/mongo/store/mock"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/v2/mongo"
