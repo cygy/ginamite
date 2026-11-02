@@ -191,7 +191,10 @@ func TestNewEngine(t *testing.T) {
 			conf.Server.GZip.Level = gzip.DefaultCompression
 			webtest.Hook.Reset()
 
-			engine := (&Server{Config: conf}).newEngine()
+			engine, err := (&Server{Config: conf}).newEngine()
+			if err != nil {
+				t.Fatal(err)
+			}
 			engine.GET("/", func(c *gin.Context) { c.String(http.StatusOK, strings.Repeat("hello ", 100)) })
 
 			req := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -302,5 +305,15 @@ func TestServer_Run_SetUpErrors(t *testing.T) {
 				t.Errorf("Run() = %v, want an error about %q", err, tt.want)
 			}
 		})
+	}
+}
+
+func TestServer_newEngine_InvalidProxies(t *testing.T) {
+	t.Cleanup(func() { gin.SetMode(gin.TestMode) })
+	conf := testConfiguration(t, environment.Development)
+	conf.Server.TrustedProxies = []string{"not a network"}
+
+	if _, err := (&Server{Config: conf}).newEngine(); err == nil {
+		t.Error("an invalid trusted proxy must be rejected")
 	}
 }

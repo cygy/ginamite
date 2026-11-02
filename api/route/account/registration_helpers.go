@@ -14,7 +14,6 @@ import (
 	registrationError "github.com/cygy/ginamite/common/errors/registration"
 	"github.com/cygy/ginamite/common/queue"
 	"github.com/cygy/ginamite/common/random"
-	req "github.com/cygy/ginamite/common/request"
 	res "github.com/cygy/ginamite/common/response"
 
 	"github.com/gin-gonic/gin"
@@ -196,7 +195,7 @@ func register(c *gin.Context, method string) {
 	registrationCode := random.String(authentication.RegisterCodeLength)
 	privateKey := random.String(authentication.PrivateKeyLength)
 	mustBeLoggedin := !ctxkey.Config.Get(c).Account.EmailAddressMustBeConfirmed
-	IPAddress := req.GetRealIPAddress(c)
+	IPAddress := c.ClientIP()
 
 	// Register with a third party service
 	if isThirdPartyTokenMethod {
@@ -401,7 +400,7 @@ func validateOrCancelRegistration(c *gin.Context, validate bool) {
 			UserID: user.ID,
 		})
 
-		IPAddress := req.GetRealIPAddress(c)
+		IPAddress := c.ClientIP()
 		// The errors are already reported to the client.
 		if _, err := createAuthenticationToken(c, user, IPAddress, registrationDetails.Source, registrationDetails.Device, registrationDetails.Method, true, true); err != nil {
 			return

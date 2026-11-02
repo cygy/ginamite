@@ -57,7 +57,7 @@ func gzipped(t *testing.T, s string) []byte {
 
 func TestInjectRequestLogger_Request(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/login?x=1", strings.NewReader(`{"password":"secret","email":"john.doe@example.com"}`))
-	req.Header.Set("X-User-IP", "1.2.3.4")
+	req.RemoteAddr = "1.2.3.4:1234"
 
 	var body string
 	fields, rec, seen := do(t, false, func(c *gin.Context) {

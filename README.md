@@ -239,11 +239,13 @@ command line with `RegisterFlags`.
     registration:    { requests: 5,  seconds: 60 }
     forgot_password: { requests: 5,  seconds: 60 }
   server:
-    trusted_proxies: ["10.0.0.0/8"]  # the proxies allowed to set X-Forwarded-For
+    trusted_proxies: ["10.0.0.0/8"]  # the proxies allowed to give the client IP
   ```
 
-  No proxy is trusted by default: the client IP, hence the limit, is the one of the connection. Set
-  `server.trusted_proxies` behind a reverse proxy, otherwise every client has the IP of the proxy.
+  No proxy is trusted by default: the client IP, hence the limit and the IP saved with the auth tokens, is the one of
+  the connection. Set `server.trusted_proxies` behind a reverse proxy, otherwise every client has the IP of the proxy.
+  Only the trusted proxies can give the client IP, in `X-User-IP`, `X-Forwarded-For` or `X-Real-IP`: list the web
+  servers in the setting of the API, since they send the IP of the user in `X-User-IP`.
 
 ### Metrics
 

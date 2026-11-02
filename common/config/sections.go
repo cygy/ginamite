@@ -19,8 +19,9 @@ type ServerConfiguration struct {
 	Host string
 	Port int
 	// TrustedProxies are the addresses or the networks of the proxies allowed to give the address of the client in the
-	// header X-Forwarded-For, such as ["10.0.0.0/8"]. Without this setting every proxy is trusted, and the client address,
-	// used to limit the requests, can be forged: set it, even to an empty list if there is no proxy.
+	// headers X-User-IP, X-Forwarded-For and X-Real-IP, such as ["10.0.0.0/8"]: the reverse proxies and, for the API,
+	// the web servers. No proxy is trusted by default: the client address, used to limit the requests and saved with
+	// the auth tokens, is the one of the connection.
 	TrustedProxies []string          `yaml:"trusted_proxies"`
 	GZip           GZipConfiguration `yaml:"gzip"`
 	SSL            SSLConfiguration  `yaml:"ssl"`

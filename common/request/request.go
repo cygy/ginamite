@@ -4,29 +4,24 @@ package request
 import "github.com/gin-gonic/gin"
 
 const (
-	// IPAddressSourceHeaderName is the name of the header containing the IP address of the client behind the reverse proxy.
-	IPAddressSourceHeaderName = "X-Real-IP"
-
-	// UserIPAddressHeaderName is the name of the header containing the IP address of the user when the call comes from the web servers.
+	// UserIPAddressHeaderName is the name of the header containing the IP address of the user when the call comes from
+	// the web servers. It is read only on the requests of the trusted proxies, see ConfigureClientIP.
 	UserIPAddressHeaderName = "X-User-IP"
 
 	// LocaleHeaderName is the name of the HTTP header containing the localization used.
 	LocaleHeaderName = "X-Api-Locale"
 )
 
-// GetRealIPAddress returns the real IP address of the user, even behind a proxy.
-// It uses, in this order, the headers UserIPAddressHeaderName and
-// IPAddressSourceHeaderName, then the address of the client.
-func GetRealIPAddress(c *gin.Context) string {
-	source := c.Request.Header.Get(UserIPAddressHeaderName)
+// remoteIPHeaders are the headers giving the address of the client, in the order they are read.
+var remoteIPHeaders = []string{UserIPAddressHeaderName, "X-Forwarded-For", "X-Real-IP"}
 
-	if len(source) == 0 {
-		source = c.Request.Header.Get(IPAddressSourceHeaderName)
-	}
+// ConfigureClientIP makes c.ClientIP() return the address of the client. The headers UserIPAddressHeaderName,
+// X-Forwarded-For and X-Real-IP are read only on the requests coming from the trusted proxies, such as a reverse proxy
+// or the web servers calling the API: on the other requests the address is the one of the connection, so a client can
+// not forge it. No proxy is trusted if trustedProxies is empty. It returns an error if a proxy is not an address or a
+// network.
+func ConfigureClientIP(engine *gin.Engine, trustedProxies []string) error {
+	engine.RemoteIPHeaders = remoteIPHeaders
 
-	if len(source) == 0 {
-		source = c.ClientIP()
-	}
-
-	return source
+	return engine.SetTrustedProxies(trustedProxies)
 }

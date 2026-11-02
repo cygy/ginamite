@@ -11,6 +11,7 @@ import (
 	"github.com/cygy/ginamite/common/httpserver"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/log"
+	"github.com/cygy/ginamite/common/request"
 	htmlTemplate "github.com/cygy/ginamite/common/template/html"
 	"github.com/cygy/ginamite/web/api"
 	"github.com/cygy/ginamite/web/html"
@@ -72,14 +73,16 @@ func (s *Server) CreateConsumers() []broker.MessageConsumer {
 // Run sets up the web server, then serves it until SIGINT or SIGTERM. It returns an error if the set up fails or if
 // the server stops for another reason.
 func (s *Server) Run() error {
-	engine := s.newEngine()
+	engine, err := s.newEngine()
+	if err != nil {
+		return err
+	}
 	if err := s.setUp(engine); err != nil {
 		return err
 	}
 
 	address := fmt.Sprintf(":%d", s.Config.Server.Port)
 
-	var err error
 	if s.Config.Server.SSL.Enabled {
 		err = listenAndServeTLS(address, s.Config.Server.SSL.CertPath, s.Config.Server.SSL.KeyPath, engine)
 	} else {
@@ -94,8 +97,10 @@ func (s *Server) Run() error {
 }
 
 // newEngine returns the Gin engine, in debug mode if enabled by the configuration. The requests are logged by the
-// request logger in production, by the default logger else, and the responses are gzipped if enabled.
-func (s *Server) newEngine() *gin.Engine {
+// request logger in production, by the default logger else, and the responses are gzipped if enabled. Only the proxies
+// of the setting server.trusted_proxies give the address of the client, which the web server sends to the API. It
+// returns an error if the setting is invalid.
+func (s *Server) newEngine() (*gin.Engine, error) {
 	if s.Config.IsDebugModeEnabled() {
 		gin.SetMode(gin.DebugMode)
 	} else {
@@ -111,11 +116,15 @@ func (s *Server) newEngine() *gin.Engine {
 		engine = gin.Default()
 	}
 
+	if err := request.ConfigureClientIP(engine, s.Config.Server.TrustedProxies); err != nil {
+		return nil, fmt.Errorf("invalid setting 'server.trusted_proxies': %w", err)
+	}
+
 	if s.Config.Server.GZip.Enabled {
 		engine.Use(gzip.Gzip(s.Config.Server.GZip.Level))
 	}
 
-	return engine
+	return engine, nil
 }
 
 // setUp initializes the API client, the HTML templates and pages, and loads the routes into the engine. The pages are

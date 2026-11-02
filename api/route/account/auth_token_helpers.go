@@ -16,7 +16,6 @@ import (
 	"github.com/cygy/ginamite/common/notifications"
 	"github.com/cygy/ginamite/common/queue"
 	"github.com/cygy/ginamite/common/random"
-	req "github.com/cygy/ginamite/common/request"
 
 	"github.com/gin-gonic/gin"
 )
@@ -147,7 +146,7 @@ func createAuthenticationToken(c *gin.Context, user authentication.User, IPAddre
 			UnsubscribeKey: notifications.GenerateUnsubscribeKey(user.ID, user.PrivateKey, notifications.TypeNewLogin),
 			Source:         source,
 			Device:         fmt.Sprintf("%s (%s)", authDetails.Device.Name, authDetails.Device.Details),
-			IPAddress:      req.GetRealIPAddress(c),
+			IPAddress:      c.ClientIP(),
 			TokenID:        tokenID,
 			TokenKey:       authDetails.Key,
 			Locale:         user.Locale,

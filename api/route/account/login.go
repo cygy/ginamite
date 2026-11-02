@@ -10,7 +10,6 @@ import (
 	"github.com/cygy/ginamite/common/authentication"
 	commonErrors "github.com/cygy/ginamite/common/errors"
 	authError "github.com/cygy/ginamite/common/errors/auth"
-	req "github.com/cygy/ginamite/common/request"
 	res "github.com/cygy/ginamite/common/response"
 
 	"github.com/gin-gonic/gin"
@@ -136,7 +135,7 @@ func loginWithThirdParty(c *gin.Context, v validator.TokenValidator) {
 		return
 	}
 
-	IPAddress := req.GetRealIPAddress(c)
+	IPAddress := c.ClientIP()
 	// The errors are already reported to the client.
 	if _, err := createAuthenticationToken(c, user, IPAddress, source, device, authenticationMethod, true, false); err != nil {
 		return

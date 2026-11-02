@@ -25,6 +25,7 @@ import (
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/notifications"
 	"github.com/cygy/ginamite/common/queue"
+	commonRequest "github.com/cygy/ginamite/common/request"
 	"github.com/cygy/ginamite/common/template/html"
 	"github.com/cygy/ginamite/common/timezone"
 
@@ -219,11 +220,12 @@ func (s *Server) idValidator() gin.HandlerFunc {
 	return request.InjectIDValidator(s.Hooks.IsValidID)
 }
 
-// configureProxies sets the proxies trusted to give the address of the client, which limits the requests. No proxy is
-// trusted unless the setting server.trusted_proxies lists them: Gin trusts every proxy by default, so a client could
-// forge its address. It returns an error if the setting is invalid.
+// configureProxies sets the proxies trusted to give the address of the client, which limits the requests and is saved
+// with the auth tokens. No proxy is trusted unless the setting server.trusted_proxies lists them: Gin trusts every proxy
+// by default, so a client could forge its address. List the web servers too: they give the address of the user in the
+// header X-User-IP. It returns an error if the setting is invalid.
 func (s *Server) configureProxies(server *gin.Engine) error {
-	if err := server.SetTrustedProxies(s.Config.Server.TrustedProxies); err != nil {
+	if err := commonRequest.ConfigureClientIP(server, s.Config.Server.TrustedProxies); err != nil {
 		return fmt.Errorf("invalid setting 'server.trusted_proxies': %w", err)
 	}
 

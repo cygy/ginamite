@@ -11,8 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cygy/ginamite/common/request"
-
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
@@ -66,7 +64,7 @@ func InjectRequestLogger(logResponseBody bool) gin.HandlerFunc {
 			c.Request.Header.Set(RequestIDHeaderName, uuid.NewString())
 		}
 
-		requestIP := request.GetRealIPAddress(c)
+		requestIP := c.ClientIP()
 
 		requestMethod := c.Request.Method
 		requestPath := c.Request.URL.Path

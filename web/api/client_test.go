@@ -50,7 +50,7 @@ func TestClient_Call_ForwardsTheRequest(t *testing.T) {
 			c, _ := webtest.Context(http.MethodGet, "/", nil)
 			context.SaveLocale("fr-fr")(c)
 			c.Request.Header.Set("X-Request-ID", "request-1")
-			c.Request.Header.Set("X-User-IP", "1.2.3.4")
+			c.Request.RemoteAddr = "1.2.3.4:1234"
 			if tt.cookie != "" {
 				c.Request.AddCookie(&http.Cookie{Name: "auth", Value: tt.cookie})
 			}

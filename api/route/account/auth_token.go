@@ -17,7 +17,6 @@ import (
 	authError "github.com/cygy/ginamite/common/errors/auth"
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/log"
-	req "github.com/cygy/ginamite/common/request"
 	res "github.com/cygy/ginamite/common/response"
 
 	"github.com/gin-gonic/gin"
@@ -101,7 +100,7 @@ func LoginWithPassword(c *gin.Context) {
 
 	upgradePassword(c, user.ID, password, encryptedPassword)
 
-	IPAddress := req.GetRealIPAddress(c)
+	IPAddress := c.ClientIP()
 	// The errors are already reported to the client.
 	if _, err := createAuthenticationToken(c, user, IPAddress, source, device, authentication.MethodPassword, true, false); err != nil {
 		return

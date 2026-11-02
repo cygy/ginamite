@@ -104,7 +104,7 @@ func (client *Client) Call(c *gin.Context, req Request) (Result, bool) {
 func (client *Client) newRequest(c *gin.Context, req Request) *resty.Request {
 	request := client.client.R().
 		SetHeader(r.LocaleHeaderName, context.GetLocale(c)).
-		SetHeader(r.UserIPAddressHeaderName, r.GetRealIPAddress(c))
+		SetHeader(r.UserIPAddressHeaderName, c.ClientIP())
 
 	if requestID := c.Request.Header.Get(log.RequestIDHeaderName); len(requestID) > 0 {
 		request.SetHeader(log.RequestIDHeaderName, requestID)

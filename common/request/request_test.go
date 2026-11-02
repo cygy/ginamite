@@ -8,30 +8,48 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func TestGetRealIPAddress(t *testing.T) {
+func TestConfigureClientIP(t *testing.T) {
 	tests := []struct {
 		name    string
+		proxies []string
 		headers map[string]string
 		want    string
 	}{
-		{"user header first", map[string]string{UserIPAddressHeaderName: "1.1.1.1", IPAddressSourceHeaderName: "2.2.2.2"}, "1.1.1.1"},
-		{"proxy header", map[string]string{IPAddressSourceHeaderName: "2.2.2.2"}, "2.2.2.2"},
-		{"client address", nil, "192.0.2.1"},
+		{"no proxy trusted: the headers are ignored", nil, map[string]string{UserIPAddressHeaderName: "1.1.1.1", "X-Forwarded-For": "2.2.2.2", "X-Real-IP": "3.3.3.3"}, "10.1.2.3"},
+		{"untrusted proxy: the headers are ignored", []string{"192.168.0.0/16"}, map[string]string{UserIPAddressHeaderName: "1.1.1.1"}, "10.1.2.3"},
+		{"trusted proxy: the user header first", []string{"10.0.0.0/8"}, map[string]string{UserIPAddressHeaderName: "1.1.1.1", "X-Forwarded-For": "2.2.2.2"}, "1.1.1.1"},
+		{"trusted proxy: X-Forwarded-For", []string{"10.0.0.0/8"}, map[string]string{"X-Forwarded-For": "2.2.2.2"}, "2.2.2.2"},
+		{"trusted proxy: X-Real-IP", []string{"10.0.0.0/8"}, map[string]string{"X-Real-IP": "3.3.3.3"}, "3.3.3.3"},
+		{"trusted proxy: invalid header", []string{"10.0.0.0/8"}, map[string]string{UserIPAddressHeaderName: "nope"}, "10.1.2.3"},
+		{"trusted proxy without header", []string{"10.0.0.0/8"}, nil, "10.1.2.3"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			engine := gin.New()
+			if err := ConfigureClientIP(engine, tt.proxies); err != nil {
+				t.Fatal(err)
+			}
+
+			var got string
+			engine.GET("/", func(c *gin.Context) { got = c.ClientIP() })
+
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
+			req.RemoteAddr = "10.1.2.3:1234"
 			for k, v := range tt.headers {
 				req.Header.Set(k, v)
 			}
+			engine.ServeHTTP(httptest.NewRecorder(), req)
 
-			c, _ := gin.CreateTestContext(httptest.NewRecorder())
-			c.Request = req
-
-			if got := GetRealIPAddress(c); got != tt.want {
-				t.Errorf("GetRealIPAddress() = %q, want %q", got, tt.want)
+			if got != tt.want {
+				t.Errorf("ClientIP() = %q, want %q", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestConfigureClientIP_Invalid(t *testing.T) {
+	if err := ConfigureClientIP(gin.New(), []string{"not a network"}); err == nil {
+		t.Error("an invalid proxy must be rejected")
 	}
 }
