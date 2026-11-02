@@ -9,30 +9,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// NotificationsReceivedByUserFunc is a function to get all the notifications received by the user.
-type NotificationsReceivedByUserFunc func(c *gin.Context, userID string) (any, error)
-
-// NotificationReceivedByUserFunc is a function to get a notification received by the user.
-type NotificationReceivedByUserFunc func(c *gin.Context, userID, notificationID string) (any, error)
-
-// UpdateUserNotificationReadFunc is a function to update the read flag of a notification received by the user.
-type UpdateUserNotificationReadFunc func(c *gin.Context, userID, notificationID string) error
-
-// UpdateUserNotificationNotifiedFunc is a function to update the notified flag of a notification received by the user.
-type UpdateUserNotificationNotifiedFunc func(c *gin.Context, userID, notificationID string) error
-
-// DeleteUserNotificationFunc is a function to delete a notification received by the user.
-type DeleteUserNotificationFunc func(c *gin.Context, userID, notificationID string) error
-
-// NotificationsSubscribedByUserFunc is a function to get all the notifications subscribed by the user.
-type NotificationsSubscribedByUserFunc func(c *gin.Context, userID string) []string
-
-// SubscribeNotificationsToUserFunc is a function to subscribe some notifications to the user.
-type SubscribeNotificationsToUserFunc func(c *gin.Context, userID string, notifications []string) error
-
-// UnsubscribeNotificationFromUserFunc is a function to unsubscribe a notification from a user.
-type UnsubscribeNotificationFromUserFunc func(c *gin.Context, userID, notification, unsubscribeKey string) error
-
 // GetUserDetailsByIdentifierFunc is a function to get the user details from its identifier (username, email addresse, what you want.)
 type GetUserDetailsByIdentifierFunc func(c *gin.Context, identifier string) (authentication.User, error)
 

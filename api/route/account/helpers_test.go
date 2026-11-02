@@ -79,6 +79,8 @@ func setup(t *testing.T) {
 	testConfig.Terms.Version = "v1"
 	testConfig.Environment = environment.Development
 
+	resetFunctions()
+
 	testHooks.BuildTokenFromID = func(context.Context, string) (*authentication.Token, error) {
 		return &authentication.Token{UserID: testUserID, ExpirationDate: time.Now().Add(time.Hour), CreationDate: time.Now()}, nil
 	}
@@ -99,8 +101,93 @@ var (
 	testHooks authentication.Hooks
 )
 
-// resetFunctions removes every function of the handlers.
-func resetFunctions() { testFunctions = Functions{} }
+// testNotifications is the storage of the notifications of the handlers, reset at the end of each test.
+var testNotifications = &fakeNotifications{}
+
+// resetFunctions removes every function of the handlers and resets the storages.
+func resetFunctions() {
+	*testNotifications = fakeNotifications{}
+	testFunctions = Functions{Notifications: testNotifications}
+}
+
+// withoutNotifications removes the storage of the notifications.
+func withoutNotifications() { testFunctions.Notifications = nil }
+
+// fakeNotifications is a NotificationsStorage whose methods call the function set by the test, if any.
+type fakeNotifications struct {
+	receivedFn    func(ctx context.Context, userID, locale string) (any, error)
+	receivedOneFn func(ctx context.Context, userID, notificationID, locale string) (any, error)
+	readFn        func(ctx context.Context, userID, notificationID string) error
+	notifiedFn    func(ctx context.Context, userID, notificationID string) error
+	deleteFn      func(ctx context.Context, userID, notificationID string) error
+	subscribedFn  func(ctx context.Context, userID string) ([]string, error)
+	subscribeFn   func(ctx context.Context, userID string, notifications []string) error
+	unsubscribeFn func(ctx context.Context, userID, notification, unsubscribeKey string) error
+}
+
+func (f *fakeNotifications) NotificationsReceivedByUser(ctx context.Context, userID, locale string) (any, error) {
+	if f.receivedFn == nil {
+		return nil, nil
+	}
+
+	return f.receivedFn(ctx, userID, locale)
+}
+
+func (f *fakeNotifications) NotificationReceivedByUser(ctx context.Context, userID, notificationID, locale string) (any, error) {
+	if f.receivedOneFn == nil {
+		return nil, nil
+	}
+
+	return f.receivedOneFn(ctx, userID, notificationID, locale)
+}
+
+func (f *fakeNotifications) UpdateUserNotificationRead(ctx context.Context, userID, notificationID string) error {
+	if f.readFn == nil {
+		return nil
+	}
+
+	return f.readFn(ctx, userID, notificationID)
+}
+
+func (f *fakeNotifications) UpdateUserNotificationNotified(ctx context.Context, userID, notificationID string) error {
+	if f.notifiedFn == nil {
+		return nil
+	}
+
+	return f.notifiedFn(ctx, userID, notificationID)
+}
+
+func (f *fakeNotifications) DeleteUserNotification(ctx context.Context, userID, notificationID string) error {
+	if f.deleteFn == nil {
+		return nil
+	}
+
+	return f.deleteFn(ctx, userID, notificationID)
+}
+
+func (f *fakeNotifications) NotificationsSubscribedByUser(ctx context.Context, userID string) ([]string, error) {
+	if f.subscribedFn == nil {
+		return nil, nil
+	}
+
+	return f.subscribedFn(ctx, userID)
+}
+
+func (f *fakeNotifications) SubscribeNotificationsToUser(ctx context.Context, userID string, notifications []string) error {
+	if f.subscribeFn == nil {
+		return nil
+	}
+
+	return f.subscribeFn(ctx, userID, notifications)
+}
+
+func (f *fakeNotifications) UnsubscribeNotificationFromUser(ctx context.Context, userID, notification, unsubscribeKey string) error {
+	if f.unsubscribeFn == nil {
+		return nil
+	}
+
+	return f.unsubscribeFn(ctx, userID, notification, unsubscribeKey)
+}
 
 // newRouter returns a router with the locale and the auth token middlewares, serving the handler on every path shape.
 func newRouter(handler gin.HandlerFunc) *gin.Engine {

@@ -242,15 +242,6 @@ func (p *Plugin) configureAPI(a *api.Server) {
 	a.Hooks.MiddlewareGetUserAndLocaleFromAuthToken = apiFunctions.GetUserAndLocaleFromAuthToken
 	a.Hooks.MiddlewareGetUserAbilities = apiFunctions.GetUserAbilities
 
-	a.Account.NotificationsReceivedByUser = apiFunctions.NotificationsReceivedByUser
-	a.Account.NotificationReceivedByUser = apiFunctions.NotificationReceivedByUser
-	a.Account.UpdateUserNotificationRead = apiFunctions.UpdateUserNotificationRead
-	a.Account.UpdateUserNotificationNotified = apiFunctions.UpdateUserNotificationNotified
-	a.Account.DeleteUserNotification = apiFunctions.DeleteUserNotification
-	a.Account.NotificationsSubscribedByUser = apiFunctions.NotificationsSubscribedByUser
-	a.Account.SubscribeNotificationsToUser = apiFunctions.SubscribeNotificationsToUser
-	a.Account.UnsubscribeNotificationFromUser = apiFunctions.UnsubscribeNotificationFromUser
-
 	a.Account.GetUserDetailsByIdentifier = apiFunctions.GetUserDetailsByIdentifier
 	a.Account.GetUserDetailsByID = apiFunctions.GetUserDetailsByID
 	a.Account.GetUserDetailsByFacebookUserID = apiFunctions.GetUserDetailsByFacebookUserID
@@ -268,6 +259,7 @@ func (p *Plugin) configureAPI(a *api.Server) {
 	a.Account.UserEmailAddressIsVerified = apiFunctions.UserEmailAddressIsVerified
 	a.Account.UpdateUserSocialNetworks = apiFunctions.UpdateUserSocialNetworks
 	a.Terms = apiFunctions.NewTerms(p.database)
+	a.Account.Notifications = apiFunctions.NewNotifications(p.database, func() string { return a.Config.DefaultLocale })
 	a.Users = apiFunctions.NewUsers(p.database, p.Settings)
 
 	a.Account.ValidateUserRegistration = apiFunctions.ValidateUserRegistration

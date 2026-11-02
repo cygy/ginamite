@@ -81,14 +81,14 @@ func (s *Server) features(routes *route.DefaultRoutes) []feature {
 		}, true},
 		{FeatureNotifications, []requirement{
 			{&routes.Notifications.Paths.Get, nil},
-			{&account.GetNotifications, []string{"NotificationsReceivedByUser"}},
-			{&account.GetNotification, []string{"NotificationReceivedByUser"}},
-			{&account.DeleteNotification, []string{"DeleteUserNotification"}},
-			{&account.UpdateNotificationRead, []string{"UpdateUserNotificationRead"}},
-			{&account.UpdateNotificationNotified, []string{"UpdateUserNotificationNotified"}},
-			{&account.GetNotificationsSettings, []string{"NotificationsSubscribedByUser"}},
-			{&account.SaveNotificationsSettings, []string{"SubscribeNotificationsToUser"}},
-			{&account.UnsubscribeFromNotification, []string{"UnsubscribeNotificationFromUser"}},
+			{&account.GetNotifications, []string{"Notifications"}},
+			{&account.GetNotification, []string{"Notifications"}},
+			{&account.DeleteNotification, []string{"Notifications"}},
+			{&account.UpdateNotificationRead, []string{"Notifications"}},
+			{&account.UpdateNotificationNotified, []string{"Notifications"}},
+			{&account.GetNotificationsSettings, []string{"Notifications"}},
+			{&account.SaveNotificationsSettings, []string{"Notifications"}},
+			{&account.UnsubscribeFromNotification, []string{"Notifications"}},
 			{&admin.UpdateUserNotifications, []string{"Users"}},
 		}, true},
 		{FeatureRegistration, []requirement{
@@ -228,6 +228,8 @@ func (s *Server) isUndefined(groups []reflect.Value, name string) bool {
 		return s.Terms == nil
 	case "Users":
 		return s.Users == nil
+	case "Notifications":
+		return s.Account.Notifications == nil
 	}
 
 	for _, group := range groups {

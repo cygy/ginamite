@@ -16,29 +16,8 @@ type Functions struct {
 	// one validates the tokens of Facebook and Google with their API.
 	NewTokenValidator func(c *gin.Context, method string) validator.TokenValidator
 
-	// NotificationsReceivedByUser is a function to get all the notifications received by the user.
-	NotificationsReceivedByUser NotificationsReceivedByUserFunc
-
-	// NotificationReceivedByUser is a function to get a notification received by the user.
-	NotificationReceivedByUser NotificationReceivedByUserFunc
-
-	// UpdateUserNotificationRead is a function to update the read flag of a notification received by the user.
-	UpdateUserNotificationRead UpdateUserNotificationReadFunc
-
-	// UpdateUserNotificationNotified is a function to update the notified flag of a notification received by the user.
-	UpdateUserNotificationNotified UpdateUserNotificationNotifiedFunc
-
-	// DeleteUserNotification is a function to delete a notification received by the user.
-	DeleteUserNotification DeleteUserNotificationFunc
-
-	// NotificationsSubscribedByUser is a function to get all the notifications subscribed by the user.
-	NotificationsSubscribedByUser NotificationsSubscribedByUserFunc
-
-	// SubscribeNotificationsToUser is a function to subscribe some notifications to the user.
-	SubscribeNotificationsToUser SubscribeNotificationsToUserFunc
-
-	// UnsubscribeNotificationFromUser is a function to unsubscribe a notification from a user.
-	UnsubscribeNotificationFromUser UnsubscribeNotificationFromUserFunc
+	// Notifications is the storage of the notifications of the users.
+	Notifications NotificationsStorage
 
 	// GetUserDetailsByIdentifier is a function to get the user details from its identifier (username, email addresse, what you want.)
 	GetUserDetailsByIdentifier GetUserDetailsByIdentifierFunc

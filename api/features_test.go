@@ -27,6 +27,9 @@ func fill(groups ...any) {
 		values := reflect.ValueOf(group).Elem()
 		for i := range values.NumField() {
 			field := values.Field(i)
+			if field.Kind() == reflect.Interface {
+				continue
+			}
 			field.Set(reflect.MakeFunc(field.Type(), func([]reflect.Value) []reflect.Value {
 				out := make([]reflect.Value, field.Type().NumOut())
 				for j := range out {
@@ -42,6 +45,7 @@ func fill(groups ...any) {
 // defineAllFunctions makes the server define every function of the features.
 func defineAllFunctions(s *Server) {
 	fill(&s.Account)
+	s.Account.Notifications = noopNotifications{}
 	s.Contacts = noopContacts{}
 	s.Terms = noopTerms{}
 	s.Users = noopUsers{}
@@ -127,7 +131,7 @@ func TestFeatures(t *testing.T) {
 // TestServer_features_areConsistent fails when a default route is added without being in a feature, when a route is in
 // two features, or when a requirement names a function which is not in a group of functions.
 // storages are the names of the storages of the server which the features need.
-var storages = []string{"Contacts", "Terms", "Users"}
+var storages = []string{"Contacts", "Terms", "Users", "Notifications"}
 
 // noopContacts is a contact.Storage doing nothing.
 type noopContacts struct{}
@@ -150,6 +154,10 @@ func (noopTerms) GetLatestVersionOfTermsAcceptedByUser(context.Context, string) 
 
 // noopUsers is a user.Storage doing nothing: it embeds the interface, whose methods are never called.
 type noopUsers struct{ user.Storage }
+
+// noopNotifications is an account.NotificationsStorage doing nothing: it embeds the interface, whose methods are never
+// called.
+type noopNotifications struct{ account.NotificationsStorage }
 
 // functionGroups are the types of the groups of functions of the server.
 var functionGroups = []reflect.Type{reflect.TypeFor[account.Functions]()}
