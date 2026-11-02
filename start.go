@@ -140,7 +140,7 @@ func (s *Server) connectPlugins(configuration *config.Configuration) (closeAll f
 
 // specializedServer returns the server chosen by the arguments, with its routes file if it uses one, or nil if none is.
 // The API server wins over the worker, which wins over the web server.
-func (s *Server) specializedServer(f *flags.Flags) SpecializedServer {
+func (s *Server) specializedServer(f *flags.Flags) runner {
 	switch {
 	case f.IsAPIServer:
 		return s.API

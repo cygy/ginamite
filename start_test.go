@@ -47,14 +47,14 @@ func TestServer_SpecializedServer(t *testing.T) {
 	tests := []struct {
 		name  string
 		flags flags.Flags
-		want  func(s *Server) SpecializedServer
+		want  func(s *Server) runner
 	}{
-		{"api", flags.Flags{IsAPIServer: true}, func(s *Server) SpecializedServer { return s.API }},
-		{"worker", flags.Flags{IsWorkerServer: true, RoutesFile: "routes.yaml"}, func(s *Server) SpecializedServer { return s.Worker }},
-		{"web", flags.Flags{IsWebServer: true, RoutesFile: "routes.yaml"}, func(s *Server) SpecializedServer { return s.Web }},
-		{"api wins", flags.Flags{IsAPIServer: true, IsWorkerServer: true, IsWebServer: true}, func(s *Server) SpecializedServer { return s.API }},
-		{"worker wins over web", flags.Flags{IsWorkerServer: true, IsWebServer: true}, func(s *Server) SpecializedServer { return s.Worker }},
-		{"none", flags.Flags{}, func(*Server) SpecializedServer { return nil }},
+		{"api", flags.Flags{IsAPIServer: true}, func(s *Server) runner { return s.API }},
+		{"worker", flags.Flags{IsWorkerServer: true, RoutesFile: "routes.yaml"}, func(s *Server) runner { return s.Worker }},
+		{"web", flags.Flags{IsWebServer: true, RoutesFile: "routes.yaml"}, func(s *Server) runner { return s.Web }},
+		{"api wins", flags.Flags{IsAPIServer: true, IsWorkerServer: true, IsWebServer: true}, func(s *Server) runner { return s.API }},
+		{"worker wins over web", flags.Flags{IsWorkerServer: true, IsWebServer: true}, func(s *Server) runner { return s.Worker }},
+		{"none", flags.Flags{}, func(*Server) runner { return nil }},
 	}
 
 	for _, tt := range tests {

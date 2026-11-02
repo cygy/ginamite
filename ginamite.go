@@ -45,8 +45,8 @@ type Server struct {
 	plugins []Plugin
 }
 
-// SpecializedServer is the definition of a specialized server: API, worker or web.
-type SpecializedServer interface {
+// runner is a specialized server: API, worker or web.
+type runner interface {
 	CreateConsumers() []broker.MessageConsumer
 	Start()
 }
