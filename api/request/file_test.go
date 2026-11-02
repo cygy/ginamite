@@ -11,6 +11,7 @@ import (
 
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/internal/apitest"
+	commonRequest "github.com/cygy/ginamite/common/request"
 
 	"github.com/gin-gonic/gin"
 )
@@ -73,6 +74,22 @@ func TestGetUploadedFile(t *testing.T) {
 				t.Errorf("status = %d, want %d", recorder.Code, tt.wantStatus)
 			}
 		})
+	}
+}
+
+func TestGetUploadedFile_BodyTooLarge(t *testing.T) {
+	initLocalization(t)
+
+	c, recorder := uploadContext(t, "file", "image.png", bytes.Repeat(pngHeader, 10))
+	c.Request.ContentLength = -1 // a chunked body, read until the limit
+	commonRequest.LimitBodySize(64)(c)
+
+	if file := GetUploadedFile(c, "file", 1024, true, "test", "msg"); file != nil {
+		t.Error("a body over the limit must not return a file")
+	}
+	c.Writer.WriteHeaderNow()
+	if recorder.Code != http.StatusPreconditionFailed {
+		t.Errorf("status = %d, want %d", recorder.Code, http.StatusPreconditionFailed)
 	}
 }
 

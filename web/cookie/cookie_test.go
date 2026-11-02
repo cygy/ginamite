@@ -32,7 +32,7 @@ func TestCreate(t *testing.T) {
 	if got == nil {
 		t.Fatal("no cookie sent")
 	}
-	if got.Value != "token" || got.MaxAge != 3600 || got.Path != "/" || got.Domain != "web.test" || !got.Secure || !got.HttpOnly {
+	if got.Value != "token" || got.MaxAge != 3600 || got.Path != "/" || got.Domain != "web.test" || !got.Secure || !got.HttpOnly || got.SameSite != http.SameSiteLaxMode {
 		t.Errorf("cookie = %+v", got)
 	}
 	if rec.Header().Get("Location") != "" {

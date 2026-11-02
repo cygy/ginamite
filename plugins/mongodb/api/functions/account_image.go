@@ -3,6 +3,7 @@ package functions
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -77,6 +78,11 @@ func (p *PublicAccount) UpdateImage(c *gin.Context) {
 	versions, err := image.SaveFill(tmpFilePath, destinationDirectory,
 		int(settings.UserImageWidth), int(settings.UserImageHeight),
 		settings.UserImageSmallVersion, settings.UserImageThumbVersion)
+	if errors.Is(err, image.ErrTooManyPixels) {
+		// The image is refused as an invalid one: its dimensions are not usable as an image of account.
+		response.InvalidMimeType(c, locale, errorMessageKey)
+		return
+	}
 	if err != nil {
 		response.UnableToSaveFile(c, locale, errorMessageKey)
 		return

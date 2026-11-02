@@ -5,11 +5,11 @@ default values. The main sections are:
 
 | Section | Content |
 | --- | --- |
-| `server` | Host, port, gzip, SSL and log format of the HTTP server. |
-| `hosts` | Public hosts of the API, the web server and the static files. |
+| `server` | Host, port, trusted proxies, maximum body size (`max_body_size`, 10 MiB by default), gzip, SSL and log format of the HTTP server. |
+| `hosts` | Public hosts of the API, the web server and the static files. `hosts.web` is also the origin trusted by the web server for the cross-origin requests. |
 | `database` | `service` (for instance `mongodb`), `host`, `port`, `database`, `username`, `password`, `time_out` in seconds. |
 | `api_features` | The default routes of the API, by feature (see [API features](api-features.md)). |
-| `jwt`, `cookie` | Settings of the authentication tokens and of the cookie. |
+| `jwt`, `cookie` | Settings of the authentication tokens and of the cookie (`same_site`: `lax` by default, `strict` or `none`, which requires `secure`). |
 | `locales`, `default_locale`, `localization_path`, `templates_path` | Languages, translations and templates. |
 | `smtp`, `sender_*` | Sending of the emails. |
 | `facebook`, `google` | Sign-in with a social network. |

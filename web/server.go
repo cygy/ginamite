@@ -98,8 +98,9 @@ func (s *Server) Run() error {
 
 // newEngine returns the Gin engine, in debug mode if enabled by the configuration. The requests are logged by the
 // request logger in production, by the default logger else, and the responses are gzipped if enabled. Only the proxies
-// of the setting server.trusted_proxies give the address of the client, which the web server sends to the API. It
-// returns an error if the setting is invalid.
+// of the setting server.trusted_proxies give the address of the client, which the web server sends to the API. The
+// cross-origin requests with an unsafe method are rejected, except from hosts.web. It returns an error if a setting is
+// invalid.
 func (s *Server) newEngine() (*gin.Engine, error) {
 	if s.Config.IsDebugModeEnabled() {
 		gin.SetMode(gin.DebugMode)
@@ -119,6 +120,13 @@ func (s *Server) newEngine() (*gin.Engine, error) {
 	if err := request.ConfigureClientIP(engine, s.Config.Server.TrustedProxies); err != nil {
 		return nil, fmt.Errorf("invalid setting 'server.trusted_proxies': %w", err)
 	}
+
+	// The forms and the calls forwarded to the API are authenticated by the cookie: the cross-origin ones are rejected.
+	crossOrigin, err := request.CrossOriginProtection(s.Config.Hosts.Web)
+	if err != nil {
+		return nil, fmt.Errorf("invalid setting 'hosts.web': %w", err)
+	}
+	engine.Use(crossOrigin)
 
 	if s.Config.Server.GZip.Enabled {
 		engine.Use(gzip.Gzip(s.Config.Server.GZip.Level))

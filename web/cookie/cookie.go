@@ -43,6 +43,7 @@ func GetValue(c *gin.Context) (string, error) {
 // setCookie sends the authentication cookie with the maximum age in seconds, which deletes it if negative.
 func setCookie(c *gin.Context, value string, maxAge int) {
 	cookie := ctxkey.Config.Get(c).Cookie
+	c.SetSameSite(cookie.SameSiteMode())
 	c.SetCookie(cookie.Name, value, maxAge, cookie.Path, cookie.Domain, cookie.Secure, cookie.HTTPOnly)
 }
 

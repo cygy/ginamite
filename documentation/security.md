@@ -25,6 +25,18 @@
   Only the trusted proxies can give the client IP, in `X-User-IP`, `X-Forwarded-For` or `X-Real-IP`: list the web
   servers in the setting of the API, since they send the IP of the user in `X-User-IP`.
 
+- **Request bodies** are limited to `server.max_body_size` bytes, 10 MiB by default (`0` disables the limit), on the
+  API and the web server: a larger body gets a `413`, or a `412` for an uploaded file. Set it above the largest file
+  the application accepts.
+- **Images**: an uploaded image declaring more than 50 megapixels (`image.MaxPixels`) is refused before it is decoded,
+  so that a small file can not exhaust the memory.
+- **CSRF**: the web server rejects with a `403` the cross-origin requests whose method is not safe (POST, PUT, PATCH,
+  DELETE), using the headers `Sec-Fetch-Site` and `Origin`; `hosts.web` is trusted. The authentication cookie is
+  `SameSite=Lax` by default, see `cookie.same_site`.
+- **Logs**: the request logger masks the `Authorization`, `Proxy-Authorization` and `Cookie` headers, the JSON values
+  and the query parameters whose name contains `password`, `token` or `secret` (such as the `auth_token` of a login
+  response), and the local part of the email addresses. The multipart bodies are not logged.
+
 ## Secrets
 
 The configuration file should hold no secret (`jwt.secret`, `database.password`, `kafka.sasl.password`, `smtp.password`,

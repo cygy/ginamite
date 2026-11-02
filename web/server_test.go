@@ -317,3 +317,36 @@ func TestServer_newEngine_InvalidProxies(t *testing.T) {
 		t.Error("an invalid trusted proxy must be rejected")
 	}
 }
+
+func TestServer_newEngine_InvalidWebHost(t *testing.T) {
+	t.Cleanup(func() { gin.SetMode(gin.TestMode) })
+	conf := testConfiguration(t, environment.Development)
+	conf.Hosts.Web = "www.example.com"
+
+	if _, err := (&Server{Config: conf}).newEngine(); err == nil || !strings.Contains(err.Error(), "hosts.web") {
+		t.Errorf("newEngine() = %v, want an error about hosts.web", err)
+	}
+}
+
+func TestServer_newEngine_CrossOrigin(t *testing.T) {
+	t.Cleanup(func() { gin.SetMode(gin.TestMode) })
+	conf := testConfiguration(t, environment.Development)
+	conf.Hosts.Web = "https://www.example.com"
+
+	engine, err := (&Server{Config: conf}).newEngine()
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine.POST("/", func(c *gin.Context) { c.Status(http.StatusOK) })
+
+	for origin, want := range map[string]int{"https://www.example.com": http.StatusOK, "https://evil.test": http.StatusForbidden} {
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "http://web.internal/", nil)
+		req.Header.Set("Origin", origin)
+		rec := httptest.NewRecorder()
+		engine.ServeHTTP(rec, req)
+
+		if rec.Code != want {
+			t.Errorf("origin %s: status = %d, want %d", origin, rec.Code, want)
+		}
+	}
+}

@@ -1,6 +1,7 @@
 package request
 
 import (
+	"errors"
 	"mime/multipart"
 	"net/http"
 	"strings"
@@ -12,11 +13,18 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// GetUploadedFile returns the uploaded file.
+// GetUploadedFile returns the uploaded file, or nil after sending the error response: the file is missing, larger than
+// maxSize or than the limit of the request body (see request.LimitBodySize), or not an image while checkIsImage is
+// true.
 func GetUploadedFile(c *gin.Context, fieldName string, maxSize int64, checkIsImage bool, logContext, errorMessageKey string) *multipart.FileHeader {
 	locale := ctxLocale.Get(c)
 
 	file, err := c.FormFile(fieldName)
+	if maxBytesErr := (*http.MaxBytesError)(nil); errors.As(err, &maxBytesErr) {
+		log.Error("max body size exceeded", "context", logContext, "limit", maxBytesErr.Limit)
+		response.MaxFileSizeExceeded(c, locale, errorMessageKey, uint64(min(maxSize, maxBytesErr.Limit))) //nolint:gosec // both limits are positive
+		return nil
+	}
 	if err != nil {
 		log.Error("file not found",
 			"context", logContext,

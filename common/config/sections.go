@@ -1,6 +1,13 @@
 // Package config loads and exposes the configuration of the application.
 package config
 
+import (
+	"errors"
+	"fmt"
+	"net/http"
+	"strings"
+)
+
 // GZipConfiguration holds the GZip settings.
 type GZipConfiguration struct {
 	Enabled bool
@@ -74,6 +81,36 @@ type CookieConfiguration struct {
 	TTL      int `yaml:"ttl"`
 	Secure   bool
 	HTTPOnly bool `yaml:"http_only"`
+	// SameSite is the SameSite attribute of the cookie: lax (default), strict or none, which requires secure.
+	SameSite string `yaml:"same_site"`
+}
+
+// SameSiteMode returns the SameSite attribute of the cookie, http.SameSiteLaxMode if the setting is unknown.
+func (c CookieConfiguration) SameSiteMode() http.SameSite {
+	switch strings.ToLower(c.SameSite) {
+	case "strict":
+		return http.SameSiteStrictMode
+	case "none":
+		return http.SameSiteNoneMode
+	default:
+		return http.SameSiteLaxMode
+	}
+}
+
+// validate returns an error if the SameSite attribute is unknown, or none without secure: the browsers reject such a
+// cookie.
+func (c CookieConfiguration) validate() error {
+	switch strings.ToLower(c.SameSite) {
+	case "lax", "strict":
+		return nil
+	case "none":
+		if !c.Secure {
+			return errors.New("invalid setting 'cookie.same_site': none requires 'cookie.secure'")
+		}
+		return nil
+	default:
+		return fmt.Errorf("invalid setting 'cookie.same_site' %q: lax, strict or none expected", c.SameSite)
+	}
 }
 
 // JWTConfiguration holds the settings of the JWT tokens.

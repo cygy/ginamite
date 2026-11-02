@@ -1,6 +1,7 @@
 package config
 
 import (
+	"net/http"
 	"os"
 	"path/filepath"
 	"slices"
@@ -87,6 +88,8 @@ func TestConfiguration_Initialize_Errors(t *testing.T) {
 	}{
 		{"missing file", filepath.Join(t.TempDir(), "missing.yml")},
 		{"invalid yaml", writeFile(t, "server: [")},
+		{"unknown same site", writeFile(t, "cookie:\n  same_site: maybe")},
+		{"same site none without secure", writeFile(t, "cookie:\n  same_site: none\n  secure: false")},
 	}
 
 	for _, tt := range tests {
@@ -228,4 +231,29 @@ myplugin:
 			t.Errorf("Section() error = %v", err)
 		}
 	})
+}
+
+func TestCookieConfiguration_SameSite(t *testing.T) {
+	tests := []struct {
+		setting string
+		secure  bool
+		want    http.SameSite
+		wantErr bool
+	}{
+		{"lax", false, http.SameSiteLaxMode, false},
+		{"Strict", false, http.SameSiteStrictMode, false},
+		{"none", true, http.SameSiteNoneMode, false},
+		{"none", false, http.SameSiteNoneMode, true},
+		{"", false, http.SameSiteLaxMode, true},
+	}
+
+	for _, tt := range tests {
+		c := CookieConfiguration{SameSite: tt.setting, Secure: tt.secure}
+		if got := c.SameSiteMode(); got != tt.want {
+			t.Errorf("SameSiteMode(%q) = %v, want %v", tt.setting, got, tt.want)
+		}
+		if err := c.validate(); (err != nil) != tt.wantErr {
+			t.Errorf("validate(%q, secure %v) = %v, want an error: %v", tt.setting, tt.secure, err, tt.wantErr)
+		}
+	}
 }

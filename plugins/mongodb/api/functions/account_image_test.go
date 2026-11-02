@@ -2,6 +2,8 @@ package functions
 
 import (
 	"bytes"
+	"encoding/binary"
+	"hash/crc32"
 	"image"
 	"image/png"
 	"mime/multipart"
@@ -190,6 +192,23 @@ func TestPublicAccount_UpdateImage(t *testing.T) {
 
 		if recorder := uploadImageRequest(t, mock.NewDatabase("app"), id, corrupted); recorder.Code != http.StatusInternalServerError {
 			t.Errorf("status = %d", recorder.Code)
+		}
+	})
+
+	t.Run("too many pixels", func(t *testing.T) {
+		withImageDirectory(t)
+
+		// The header declares 100000x100000 pixels: the IHDR chunk follows the signature, its CRC is recomputed.
+		bomb := pngFile(t)
+		binary.BigEndian.PutUint32(bomb[16:20], 100_000)
+		binary.BigEndian.PutUint32(bomb[20:24], 100_000)
+		binary.BigEndian.PutUint32(bomb[29:33], crc32.ChecksumIEEE(bomb[12:29]))
+
+		db := mock.NewDatabase("app")
+		db.Coll(model.UserCollection).One = mock.Result{Value: bson.M{"_id": id}}
+
+		if recorder := uploadImageRequest(t, db, id, bomb); recorder.Code != http.StatusPreconditionFailed {
+			t.Errorf("status = %d, want %d", recorder.Code, http.StatusPreconditionFailed)
 		}
 	})
 

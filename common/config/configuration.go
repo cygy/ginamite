@@ -79,6 +79,7 @@ func NewConfiguration() (config *Configuration) {
 	config.Database.TimeOut = 60
 	config.Cookie.Secure = true
 	config.Cookie.HTTPOnly = true
+	config.Cookie.SameSite = "lax"
 	config.JWT.SigningMethod = "HS256"
 	config.JWT.TTL = 3600
 	config.API.TimeOut = 2000
@@ -122,6 +123,10 @@ func (config *Configuration) Initialize(file, env, ver string) error {
 
 	if config.IsProductionEnvironment() && strings.HasPrefix(config.JWT.Secret, placeholderSecretPrefix) {
 		return errPlaceholderSecret
+	}
+
+	if err := config.Cookie.validate(); err != nil {
+		return err
 	}
 
 	for locale, c := range config.Locales {
