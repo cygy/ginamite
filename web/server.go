@@ -100,8 +100,8 @@ func (s *Server) Run(ctx context.Context) error {
 // newEngine returns the Gin engine, in debug mode if enabled by the configuration. The requests are logged by the
 // request logger in production, by the default logger else, and the responses are gzipped if enabled. Only the proxies
 // of the setting server.trusted_proxies give the address of the client, which the web server sends to the API. The
-// cross-origin requests with an unsafe method are rejected, except from hosts.web. It returns an error if a setting is
-// invalid.
+// cross-origin requests with an unsafe method are rejected, except from hosts.web, and every response has the security
+// headers, with HSTS in production. It returns an error if a setting is invalid.
 func (s *Server) newEngine() (*gin.Engine, error) {
 	if s.Config.IsDebugModeEnabled() {
 		gin.SetMode(gin.DebugMode)
@@ -111,7 +111,7 @@ func (s *Server) newEngine() (*gin.Engine, error) {
 
 	// The body is limited before the logger reads it.
 	engine := gin.New()
-	engine.Use(gin.Recovery(), request.LimitBodySize(s.Config.Server.MaxBodySize))
+	engine.Use(gin.Recovery(), request.LimitBodySize(s.Config.Server.MaxBodySize), request.SecurityHeaders(s.Config.IsProductionEnvironment()))
 	if s.Config.IsProductionEnvironment() {
 		engine.Use(log.InjectRequestLogger(false))
 	} else {

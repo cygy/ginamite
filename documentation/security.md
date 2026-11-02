@@ -34,6 +34,11 @@
 - **CSRF**: the web server rejects with a `403` the cross-origin requests whose method is not safe (POST, PUT, PATCH,
   DELETE), using the headers `Sec-Fetch-Site` and `Origin`; `hosts.web` is trusted. The authentication cookie is
   `SameSite=Lax` by default, see `cookie.same_site`.
+- **Security headers**: every response of the web server has `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`
+  and `Content-Security-Policy: frame-ancestors 'none'` (no page in a frame of another site), and
+  `Referrer-Policy: strict-origin-when-cross-origin`; `Strict-Transport-Security` (one year) is added in production. A
+  handler can replace a header with `c.Header`. Add a full `Content-Security-Policy` in the reverse proxy or with a
+  middleware of the application, since it depends on the scripts and styles of the pages.
 - **Logs**: the request logger masks the `Authorization`, `Proxy-Authorization` and `Cookie` headers, the JSON values
   and the query parameters whose name contains `password`, `token` or `secret` (such as the `auth_token` of a login
   response), and the local part of the email addresses. The multipart bodies are not logged.

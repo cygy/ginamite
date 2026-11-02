@@ -329,6 +329,30 @@ func TestServer_newEngine_InvalidWebHost(t *testing.T) {
 	}
 }
 
+func TestServer_newEngine_SecurityHeaders(t *testing.T) {
+	for env, wantHSTS := range map[string]bool{environment.Development: false, environment.Production: true} {
+		t.Run(env, func(t *testing.T) {
+			t.Cleanup(func() { gin.SetMode(gin.TestMode) })
+
+			engine, err := (&Server{Config: testConfiguration(t, env)}).newEngine()
+			if err != nil {
+				t.Fatal(err)
+			}
+			engine.GET("/", func(c *gin.Context) { c.Status(http.StatusOK) })
+
+			rec := httptest.NewRecorder()
+			engine.ServeHTTP(rec, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil))
+
+			if rec.Header().Get("X-Frame-Options") != "DENY" {
+				t.Error("the security headers are missing")
+			}
+			if got := rec.Header().Get("Strict-Transport-Security") != ""; got != wantHSTS {
+				t.Errorf("HSTS = %v, want %v", got, wantHSTS)
+			}
+		})
+	}
+}
+
 func TestServer_newEngine_CrossOrigin(t *testing.T) {
 	t.Cleanup(func() { gin.SetMode(gin.TestMode) })
 	conf := testConfiguration(t, environment.Development)
