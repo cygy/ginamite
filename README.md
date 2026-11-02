@@ -165,6 +165,23 @@ routes:
   `error.internal_server`, `error.unauthorized`, etc. Without a locale, a request is redirected to the default locale.
 - The section `async` of the routes file forwards calls of the browser to the API (`api.host`, `api.port`).
 
+## End-to-end tests
+
+The package `api/e2e` tests the endpoints of a running API: each request is sent over HTTP, and the status code, the
+status, the error and the renewed auth token of its response are compared with the expected ones.
+
+```go
+var api = e2e.FromEnv("v1") // http://$API_HOST:$API_PORT/v1
+
+func TestLogin(t *testing.T) {
+	req := api.NewRequest(t)
+	req.Method = http.MethodPost
+	req.Endpoint = "/auth/login"
+	req.Body = e2e.H{"identifier": "john", "password": "wrong"}
+	req.Unauthorized()
+}
+```
+
 ## Configuration
 
 The server configuration is a YAML file, see `common/config.Configuration` for the complete list of settings and their
