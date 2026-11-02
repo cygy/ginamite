@@ -5,7 +5,6 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"syscall"
 	"testing"
 	"time"
 )
@@ -75,18 +74,19 @@ func TestServe_StopsGracefully(t *testing.T) {
 }
 
 func TestServe_ListenError(t *testing.T) {
-	if err := ListenAndServe("invalid address", http.NotFoundHandler()); err == nil {
+	if err := ListenAndServe(t.Context(), "invalid address", http.NotFoundHandler()); err == nil {
 		t.Error("an invalid address must fail")
 	}
-	if err := ListenAndServeTLS("invalid address", "cert", "key", http.NotFoundHandler()); err == nil {
+	if err := ListenAndServeTLS(t.Context(), "invalid address", "cert", "key", http.NotFoundHandler()); err == nil {
 		t.Error("an invalid address must fail")
 	}
 }
 
-func TestListenAndServe_Signal(t *testing.T) {
+func TestListenAndServe_Context(t *testing.T) {
 	address := freeAddress(t)
+	ctx, cancel := context.WithCancel(t.Context())
 	result := make(chan error, 1)
-	go func() { result <- ListenAndServe(address, http.NotFoundHandler()) }()
+	go func() { result <- ListenAndServe(ctx, address, http.NotFoundHandler()) }()
 
 	for range 100 {
 		if c, err := net.Dial("tcp", address); err == nil {
@@ -96,15 +96,13 @@ func TestListenAndServe_Signal(t *testing.T) {
 		time.Sleep(20 * time.Millisecond)
 	}
 
-	if err := syscall.Kill(syscall.Getpid(), syscall.SIGTERM); err != nil {
-		t.Fatal(err)
-	}
+	cancel()
 	select {
 	case err := <-result:
 		if err != nil {
 			t.Errorf("ListenAndServe() = %v", err)
 		}
 	case <-time.After(5 * time.Second):
-		t.Fatal("the server did not stop on SIGTERM")
+		t.Fatal("the server did not stop once the context is done")
 	}
 }

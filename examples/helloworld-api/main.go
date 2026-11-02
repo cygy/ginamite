@@ -2,8 +2,12 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/cygy/ginamite"
 	"github.com/cygy/ginamite/api/route"
@@ -18,7 +22,10 @@ func main() {
 		group.GET("/hello", hello)
 	})
 
-	if err := server.Run(); err != nil {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	if err := server.Run(ctx); err != nil {
 		log.Fatal(err)
 	}
 }

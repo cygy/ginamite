@@ -2,6 +2,7 @@
 package api
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"slices"
@@ -76,9 +77,9 @@ func (s *Server) CreateConsumers() []broker.MessageConsumer {
 	return consumers
 }
 
-// Run sets up the routes, then serves the API until SIGINT or SIGTERM. It returns an error if the set up fails or if
-// the server stops for another reason.
-func (s *Server) Run() error {
+// Run sets up the routes, then serves the API until ctx is done; the background tasks stop with ctx too. It returns an
+// error if the set up fails or if the server stops for another reason.
+func (s *Server) Run(ctx context.Context) error {
 	s.warnWeakSecret()
 
 	// Enable debug mode if needed.
@@ -162,10 +163,11 @@ func (s *Server) Run() error {
 		s.Hooks.RouterConfigureDefaultRoutes(&router.DefaultRoutes)
 	}
 	router.Notifications = s.Notifications
+	// The middlewares are built here, not called: each request limits itself with its own context.
 	router.Limits = route.RateLimits{
-		Authentication: request.RateLimitFromConfiguration("authentication", s.Config.RateLimits.Authentication, s.Hooks.NewRateLimiter),
-		Registration:   request.RateLimitFromConfiguration("registration", s.Config.RateLimits.Registration, s.Hooks.NewRateLimiter),
-		ForgotPassword: request.RateLimitFromConfiguration("forgot_password", s.Config.RateLimits.ForgotPassword, s.Hooks.NewRateLimiter),
+		Authentication: request.RateLimitFromConfiguration("authentication", s.Config.RateLimits.Authentication, s.Hooks.NewRateLimiter),  //nolint:contextcheck // see above
+		Registration:   request.RateLimitFromConfiguration("registration", s.Config.RateLimits.Registration, s.Hooks.NewRateLimiter),      //nolint:contextcheck // see above
+		ForgotPassword: request.RateLimitFromConfiguration("forgot_password", s.Config.RateLimits.ForgotPassword, s.Hooks.NewRateLimiter), //nolint:contextcheck // see above
 	}
 	router.LoadDefaultRoutes()
 	for _, customRoute := range s.customRoutes {
@@ -173,19 +175,19 @@ func (s *Server) Run() error {
 	}
 
 	// Start the built-in recurring tasks.
-	s.RevokedTokens.StartDeletingExpired(time.Duration(s.Config.ExpiredAuthTokens.FlushCacheInterval))
+	s.RevokedTokens.StartDeletingExpired(ctx, time.Duration(s.Config.ExpiredAuthTokens.FlushCacheInterval))
 
 	// Start the custom recurring tasks.
 	if s.Hooks.RecurringTasks != nil {
-		s.Hooks.RecurringTasks()
+		s.Hooks.RecurringTasks(ctx)
 	}
 
 	// Start the server.
 	address := fmt.Sprintf(":%d", s.Config.Server.Port)
 	if s.Config.Server.SSL.Enabled {
-		err = httpserver.ListenAndServeTLS(address, s.Config.Server.SSL.CertPath, s.Config.Server.SSL.KeyPath, server)
+		err = httpserver.ListenAndServeTLS(ctx, address, s.Config.Server.SSL.CertPath, s.Config.Server.SSL.KeyPath, server)
 	} else {
-		err = httpserver.ListenAndServe(address, server)
+		err = httpserver.ListenAndServe(ctx, address, server)
 	}
 	if err != nil {
 		return fmt.Errorf("the API stopped: %w", err)

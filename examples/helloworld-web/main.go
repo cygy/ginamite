@@ -3,7 +3,11 @@
 package main
 
 import (
+	"context"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/cygy/ginamite"
 	"github.com/cygy/ginamite/web/html"
@@ -17,7 +21,10 @@ func main() {
 
 	server.Web.AddCustomRoutes(configureRoutes)
 
-	if err := server.Run(); err != nil {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	if err := server.Run(ctx); err != nil {
 		log.Fatal(err)
 	}
 }

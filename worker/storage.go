@@ -7,6 +7,7 @@ import (
 	"github.com/cygy/ginamite/common/notifications"
 	"github.com/cygy/ginamite/worker/mail"
 	"github.com/cygy/ginamite/worker/tasks/async/location"
+	"github.com/cygy/ginamite/worker/tasks/recurring"
 )
 
 // Storage is the storage of the application used by a worker, by feature: a database plugin implements the interfaces.
@@ -92,8 +93,9 @@ type Hooks struct {
 	// StartUpTasks runs once when the worker starts, if the configuration asks for it.
 	StartUpTasks func(ctx context.Context, environment, version string)
 
-	// SetFuncOfRecurringTasks sets the functions of the custom recurring tasks with the function it receives.
-	SetFuncOfRecurringTasks func(registerTaskFunc func(taskName string, task func(string)))
+	// SetFuncOfRecurringTasks sets the functions of the custom recurring tasks with the function it receives. A task
+	// receives the context of the worker, done when it stops.
+	SetFuncOfRecurringTasks func(registerTaskFunc func(taskName string, task recurring.Func))
 
 	// RegistrationDone handles a user who registered.
 	RegistrationDone func(ctx context.Context, userID string) error

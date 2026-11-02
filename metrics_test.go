@@ -14,7 +14,7 @@ import (
 func TestServer_startMetrics(t *testing.T) {
 	t.Run("disabled", func(t *testing.T) {
 		s := NewServer()
-		s.startMetrics()()
+		s.startMetrics(t.Context())()
 
 		if s.API.Requests != nil {
 			t.Error("the requests must not be counted when the metrics are disabled")
@@ -29,7 +29,7 @@ func TestServer_startMetrics(t *testing.T) {
 		s := NewServer()
 		s.Broker = broker.NewMemory() // not a collector
 		s.Config.Metrics.Address = address
-		stop := s.startMetrics()
+		stop := s.startMetrics(t.Context())
 
 		if s.API.Requests == nil {
 			t.Fatal("the requests must be counted")
@@ -62,6 +62,6 @@ func TestServer_startMetrics(t *testing.T) {
 
 		s := NewServer()
 		s.Config.Metrics.Address = strings.TrimPrefix(probe.URL, "http://")
-		s.startMetrics()() // logs the error, does not block
+		s.startMetrics(t.Context())() // logs the error, does not block
 	})
 }

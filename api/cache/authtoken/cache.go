@@ -2,6 +2,7 @@
 package authtoken
 
 import (
+	"context"
 	"maps"
 	"sync"
 	"time"
@@ -63,14 +64,19 @@ func (c *cache) deleteExpired(now time.Time) int {
 	return count
 }
 
-// runDeleteExpired deletes the expired tokens every interval. It never returns.
-func (c *cache) runDeleteExpired(interval time.Duration) {
+// runDeleteExpired deletes the expired tokens every interval, until ctx is done.
+func (c *cache) runDeleteExpired(ctx context.Context, interval time.Duration) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
-	for now := range ticker.C {
-		if count := c.deleteExpired(now); count > 0 {
-			log.Info("remove expired tokens from the cache", "count", count)
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case now := <-ticker.C:
+			if count := c.deleteExpired(now); count > 0 {
+				log.Info("remove expired tokens from the cache", "count", count)
+			}
 		}
 	}
 }

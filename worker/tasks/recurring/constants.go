@@ -6,9 +6,6 @@ const (
 	// DeleteExpiredTokens is the task deleting the expired auth tokens from the database.
 	DeleteExpiredTokens = "delete_expired_tokens"
 
-	// SendRegistrationMails is the task sending mails to confirm the unconfirmed accounts.
-	SendRegistrationMails = "send_registration_mails"
-
 	// DeleteNeverUsedAccounts is the task deleting the never used accounts, never logged in, from the database.
 	DeleteNeverUsedAccounts = "delete_never_used_accounts"
 

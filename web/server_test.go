@@ -2,6 +2,7 @@ package web
 
 import (
 	"compress/gzip"
+	"context"
 	"errors"
 	"io"
 	"net/http"
@@ -256,16 +257,16 @@ func TestServer_Run(t *testing.T) {
 			var got *call
 			oldServe, oldServeTLS := listenAndServe, listenAndServeTLS
 			t.Cleanup(func() { listenAndServe, listenAndServeTLS = oldServe, oldServeTLS })
-			listenAndServe = func(address string, handler http.Handler) error {
+			listenAndServe = func(_ context.Context, address string, handler http.Handler) error {
 				got = &call{false, address, "", "", handler}
 				return tt.err
 			}
-			listenAndServeTLS = func(address, certPath, keyPath string, handler http.Handler) error {
+			listenAndServeTLS = func(_ context.Context, address, certPath, keyPath string, handler http.Handler) error {
 				got = &call{true, address, certPath, keyPath, handler}
 				return tt.err
 			}
 
-			err := server.Run()
+			err := server.Run(t.Context())
 
 			if !errors.Is(err, tt.err) || (err == nil) != (tt.err == nil) {
 				t.Errorf("Run() = %v, want %v", err, tt.err)
@@ -301,7 +302,7 @@ func TestServer_Run_SetUpErrors(t *testing.T) {
 			server, conf := newTestServer(t, environment.Test)
 			tt.setup(server, conf)
 
-			if err := server.Run(); err == nil || !strings.Contains(err.Error(), tt.want) {
+			if err := server.Run(t.Context()); err == nil || !strings.Contains(err.Error(), tt.want) {
 				t.Errorf("Run() = %v, want an error about %q", err, tt.want)
 			}
 		})

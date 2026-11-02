@@ -39,7 +39,7 @@ func TestRevoked_StartDeletingExpired(t *testing.T) {
 		"task-valid":   time.Now().Add(time.Hour),
 	})
 	// The interval is in seconds.
-	r.StartDeletingExpired(1)
+	r.StartDeletingExpired(t.Context(), 1)
 
 	deadline := time.Now().Add(5 * time.Second)
 	for r.IsRevoked("task-expired") {

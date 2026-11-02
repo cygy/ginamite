@@ -47,7 +47,7 @@ type Server struct {
 // runner is a specialized server: API, worker or web.
 type runner interface {
 	CreateConsumers() []broker.MessageConsumer
-	Run() error
+	Run(ctx context.Context) error
 }
 
 // UseBroker sets the message broker, and the queue sending the messages through it, which the API and the worker use.
@@ -70,13 +70,13 @@ type Plugin interface {
 // Commander is a Plugin which runs a command given by the command line arguments, instead of a server.
 //
 // Run calls RegisterFlags before it parses the command line arguments, so the plugin adds the flags of its command,
-// then Command with the arguments, before it checks that they describe a server and sets it up. A command handled by a
+// then Command with the context of Run and the arguments, before it checks that they describe a server and sets it up. A command handled by a
 // plugin is the last thing Run does. The plugins are asked in the order they were added, until one handles the
 // command.
 type Commander interface {
 	Plugin
 	RegisterFlags(set *flag.FlagSet)
-	Command(f *flags.Flags, out io.Writer) (handled bool, err error)
+	Command(ctx context.Context, f *flags.Flags, out io.Writer) (handled bool, err error)
 }
 
 // Connector is a Plugin which holds a connection to a database, or to any other service the API and the worker need.

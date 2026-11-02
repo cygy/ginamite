@@ -6,9 +6,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"os"
-	"os/signal"
-	"syscall"
 
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/config/environment"
@@ -47,7 +44,7 @@ func (p *Plugin) RegisterFlags(set *flag.FlagSet) {
 // Command lists, replays or purges the dead letters of the topic of the arguments, and writes the report to out, if the
 // arguments ask for it with -dlq. No server is started: it only needs the configuration of the server and of Kafka. It
 // returns an error if the arguments are invalid. It makes the plugin a ginamite.Commander.
-func (p *Plugin) Command(f *flags.Flags, out io.Writer) (handled bool, err error) {
+func (p *Plugin) Command(ctx context.Context, f *flags.Flags, out io.Writer) (handled bool, err error) {
 	if p.dlq.command == "" {
 		return false, nil
 	}
@@ -56,7 +53,7 @@ func (p *Plugin) Command(f *flags.Flags, out io.Writer) (handled bool, err error
 		return true, err
 	}
 
-	return true, runDLQ(f, p.dlq, out)
+	return true, runDLQ(ctx, f, p.dlq, out)
 }
 
 // validate checks the arguments of a command on the dead letters.
@@ -80,7 +77,7 @@ func (a dlqArguments) validate(f *flags.Flags) error {
 }
 
 // runDLQ runs the command on the dead letters of the arguments.
-func runDLQ(f *flags.Flags, a dlqArguments, out io.Writer) error {
+func runDLQ(ctx context.Context, f *flags.Flags, a dlqArguments, out io.Writer) error {
 	log.Initialize(f.ServerName, f.Environment == environment.Production)
 
 	configuration := config.NewConfiguration()
@@ -109,9 +106,6 @@ func runDLQ(f *flags.Flags, a dlqArguments, out io.Writer) error {
 		return err
 	}
 	defer func() { _ = backend.Close() }()
-
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
 
 	switch a.command {
 	case DLQList:

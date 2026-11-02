@@ -1,6 +1,9 @@
 package authtoken
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 // Revoked is the set of the revoked auth tokens, kept in memory until they expire.
 // It is safe for concurrent use. Create it with NewRevoked.
@@ -29,8 +32,8 @@ func (r *Revoked) Remove(token string) {
 }
 
 // StartDeletingExpired starts a background task that deletes the expired
-// tokens every interval seconds. The interval is a number of seconds, not a
-// nanosecond-based duration, and must be positive.
-func (r *Revoked) StartDeletingExpired(interval time.Duration) {
-	go r.tokens.runDeleteExpired(interval * time.Second)
+// tokens every interval seconds, until ctx is done. The interval is a number of
+// seconds, not a nanosecond-based duration, and must be positive.
+func (r *Revoked) StartDeletingExpired(ctx context.Context, interval time.Duration) {
+	go r.tokens.runDeleteExpired(ctx, interval*time.Second)
 }

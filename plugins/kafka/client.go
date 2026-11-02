@@ -6,12 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"maps"
-	"os"
-	"os/signal"
 	"slices"
 	"strconv"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/cygy/ginamite/common/broker"
@@ -123,7 +120,7 @@ func (client *Client) Initialize(host string, port int, prefix string, hasProduc
 	addresses := []string{fmt.Sprintf("%s:%d", host, port)}
 	config := client.Options.NewConfig()
 
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	ctx, stop := context.WithCancel(context.Background())
 	client.stop = stop
 
 	if client.HasProducer {
@@ -134,7 +131,7 @@ func (client *Client) Initialize(host string, port int, prefix string, hasProduc
 		}()
 	}
 
-	// The consumers are stopped by Close or by an interruption.
+	// The consumers are stopped by Close.
 	for _, consumer := range consumers {
 		client.background.Add(1)
 		go func() {

@@ -1,6 +1,8 @@
 package api
 
 import (
+	"context"
+
 	tokencache "github.com/cygy/ginamite/api/cache/authtoken"
 	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
 	"github.com/cygy/ginamite/api/request"
@@ -59,8 +61,9 @@ type Server struct {
 // Hooks are the functions of the application which are not tied to a feature: the validation of the identifiers and of
 // the auth tokens, the tokens signed by the API, and the extensions of the server. A database plugin sets most of them.
 type Hooks struct {
-	// RecurringTasks is run once when the API starts, to start the periodic tasks of the application. Optional.
-	RecurringTasks func()
+	// RecurringTasks is run once when the API starts, to start the periodic tasks of the application, which stop once
+	// ctx is done. Optional.
+	RecurringTasks func(ctx context.Context)
 	// IsValidID reports whether a string is a valid identifier of the storage, such as in the paths of the routes. The
 	// identifiers are not checked if nil.
 	IsValidID func(id string) bool

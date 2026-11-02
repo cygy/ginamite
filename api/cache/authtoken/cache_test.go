@@ -1,6 +1,7 @@
 package authtoken
 
 import (
+	"context"
 	"os"
 	"testing"
 	"time"
@@ -75,7 +76,12 @@ func TestCache_RunDeleteExpired(t *testing.T) {
 	c := newCache()
 	c.add(map[string]time.Time{"expired": time.Now().Add(-time.Minute)})
 
-	go c.runDeleteExpired(5 * time.Millisecond)
+	ctx, cancel := context.WithCancel(t.Context())
+	stopped := make(chan struct{})
+	go func() {
+		c.runDeleteExpired(ctx, 5*time.Millisecond)
+		close(stopped)
+	}()
 
 	deadline := time.Now().Add(2 * time.Second)
 	for c.has("expired") {
@@ -83,6 +89,13 @@ func TestCache_RunDeleteExpired(t *testing.T) {
 			t.Fatal("expired token was not removed by the background task")
 		}
 		time.Sleep(5 * time.Millisecond)
+	}
+
+	cancel()
+	select {
+	case <-stopped:
+	case <-time.After(2 * time.Second):
+		t.Fatal("the background task must stop once the context is done")
 	}
 }
 

@@ -122,7 +122,7 @@ func RateLimit(l RateLimiter) gin.HandlerFunc {
 	}
 
 	return func(c *gin.Context) {
-		ok, retryAfter, err := l.Allow(c, c.ClientIP())
+		ok, retryAfter, err := l.Allow(c.Request.Context(), c.ClientIP())
 		if err != nil {
 			c.Error(fmt.Errorf("unable to limit the requests: %w", err))
 			return

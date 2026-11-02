@@ -1,6 +1,7 @@
 package ginamite
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"io"
@@ -22,13 +23,16 @@ const dedupSize = 10000
 // Run parses the command line arguments, then runs the command of a plugin if they ask for it. Otherwise it sets up
 // the configuration, the translations and the services needed by the chosen server, configures the plugins, and runs
 // the API, worker or web server. It returns nil at once if the help is requested, and an error if the arguments or the
-// set up are invalid. Otherwise it returns once the server stopped, after the consumers of the broker are stopped,
-// the producer is flushed and the plugins are closed.
+// set up are invalid. Otherwise it returns once ctx is done and the server stopped, after the consumers of the broker
+// are stopped, the producer is flushed and the plugins are closed. The command of a plugin stops with ctx too.
 //
-//	if err := server.Run(); err != nil {
+//	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+//	defer stop()
+//
+//	if err := server.Run(ctx); err != nil {
 //		log.Fatal(err)
 //	}
-func (s *Server) Run() error {
+func (s *Server) Run(ctx context.Context) error {
 	f := flags.NewFlags()
 	if err := f.Parse(os.Args[1:], os.Stderr, s.registerFlags); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -38,7 +42,7 @@ func (s *Server) Run() error {
 		return err
 	}
 
-	if handled, err := s.runCommand(f, os.Stdout); handled {
+	if handled, err := s.runCommand(ctx, f, os.Stdout); handled {
 		return err
 	}
 
@@ -46,7 +50,7 @@ func (s *Server) Run() error {
 		return err
 	}
 
-	return s.run(f)
+	return s.run(ctx, f)
 }
 
 // registerFlags lets the plugins which are Commanders add their flags.
@@ -59,7 +63,7 @@ func (s *Server) registerFlags(set *flag.FlagSet) {
 }
 
 // run runs the server chosen by the arguments, which are valid.
-func (s *Server) run(f *flags.Flags) error {
+func (s *Server) run(ctx context.Context, f *flags.Flags) error {
 	server := s.specializedServer(f)
 	if server == nil {
 		return errors.New("no server selected: use one of the arguments -api, -worker or -web")
@@ -107,16 +111,16 @@ func (s *Server) run(f *flags.Flags) error {
 		defer s.Broker.Close()
 	}
 
-	defer s.startMetrics()()
+	defer s.startMetrics(ctx)()
 
-	return server.Run()
+	return server.Run(ctx)
 }
 
 // runCommand asks the plugins which are Commanders to run the command of the arguments, and reports whether one did.
-func (s *Server) runCommand(f *flags.Flags, out io.Writer) (handled bool, err error) {
+func (s *Server) runCommand(ctx context.Context, f *flags.Flags, out io.Writer) (handled bool, err error) {
 	for _, plugin := range s.plugins {
 		if commander, ok := plugin.(Commander); ok {
-			if handled, err = commander.Command(f, out); handled {
+			if handled, err = commander.Command(ctx, f, out); handled {
 				return handled, err
 			}
 		}

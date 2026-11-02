@@ -51,7 +51,10 @@ func main() {
 		group.GET("/hello", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"hello": "world"}) })
 	})
 
-	if err := server.Run(); err != nil {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	if err := server.Run(ctx); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -70,7 +73,11 @@ Create a server, register the plugins, add the functions and routes of the appli
 package main
 
 import (
+	"context"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/cygy/ginamite"
 	"github.com/cygy/ginamite/plugins/kafka"
@@ -84,15 +91,19 @@ func main() {
 
 	// Customize the servers before running: server.API, server.Worker and server.Web.
 
-	if err := server.Run(); err != nil {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	if err := server.Run(ctx); err != nil {
 		log.Fatal(err)
 	}
 }
 ```
 
-`Run` returns an error, without exiting the process, if the arguments, the configuration or a plugin are invalid, or
-if the server stops for another reason than SIGINT or SIGTERM; the connections already opened are closed first. It
-returns nil once the server stopped gracefully, or at once if `-help` is given.
+`Run` serves until its context is done, here on SIGINT or SIGTERM. It returns an error, without exiting the process, if
+the arguments, the configuration or a plugin are invalid, or if the server stops before its context is done; the
+connections already opened are closed first. It returns nil once the server stopped gracefully, or at once if `-help`
+is given.
 
 Run the same binary once per server:
 

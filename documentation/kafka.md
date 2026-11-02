@@ -88,7 +88,7 @@ myapp -name dlq -conf-server server.yaml -dlq purge -dlq-topic mail
 
 ### Shutdown and logs
 
-- When the process is interrupted or terminated, the consumers finish the message they are handling, commit it and
+- When the context of `Run` is done, such as on SIGINT or SIGTERM, the consumers finish the message they are handling, commit it and
   leave their group (30 seconds at most), then the producer sends the messages it still holds, then the plugins close
   their connections. `Run` returns nil, and the exit code is 0.
 - The logs give the topic, the partition, the offset and the size of the messages, never their body, which holds the

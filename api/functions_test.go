@@ -260,7 +260,7 @@ func TestServer_Run_SetUpErrors(t *testing.T) {
 			s.Terms = noopTerms{}
 			tt.setup(s)
 
-			if err := s.Run(); err == nil || !strings.Contains(err.Error(), tt.want) {
+			if err := s.Run(t.Context()); err == nil || !strings.Contains(err.Error(), tt.want) {
 				t.Errorf("Run() = %v, want an error about %q", err, tt.want)
 			}
 		})

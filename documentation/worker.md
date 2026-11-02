@@ -20,7 +20,9 @@ A handler which fails makes the message be handled again: the handlers must tole
 
 ## Recurring tasks
 
-Each task runs every `interval` seconds, from `start_at` (an hour in UTC), if it is `enabled`:
+Each task runs every `interval` seconds, from `start_at` (an hour in UTC), if it is `enabled`. A task runs one at a time:
+a run longer than the interval is followed by the next one at once. The panic of a run is logged and does not stop the
+worker. Each worker runs its own tasks: with several workers, enable the recurring tasks on one of them only.
 
 ```yaml
 recurring_tasks:
@@ -32,7 +34,9 @@ recurring_tasks:
 ```
 
 A task whose storage is not set is not scheduled, with a warning; `delete_never_used_accounts` also needs `account.email_address_must_be_confirmed`. The accounts are deleted after `account.delete_never_used_after` days without sign-in and `account.delete_inactive_after` months of inactivity. `Hooks.SetFuncOfRecurringTasks` adds the tasks of
-the application, which are then enabled in the same list. `run_start_up_tasks` runs `Hooks.StartUpTasks` when the worker
+the application, which are then enabled in the same list: a `recurring.Func` receives the context of the worker, done
+when it stops, and the worker waits for the running tasks before it returns, so a long task must return once its
+context is done. `run_start_up_tasks` runs `Hooks.StartUpTasks` when the worker
 starts.
 
 ## Storage

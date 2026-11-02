@@ -153,7 +153,7 @@ func TestRunDLQ(t *testing.T) {
 
 	run := func(command string, limit int, body bool) (string, error) {
 		var out bytes.Buffer
-		err := runDLQ(&flags.Flags{ServerName: "dlq", Environment: "test", Version: "final", ServerConfigurationFile: conf}, dlqArguments{command: command, topic: "mail", limit: limit, body: body}, &out)
+		err := runDLQ(t.Context(), &flags.Flags{ServerName: "dlq", Environment: "test", Version: "final", ServerConfigurationFile: conf}, dlqArguments{command: command, topic: "mail", limit: limit, body: body}, &out)
 
 		return out.String(), err
 	}
@@ -209,12 +209,12 @@ func TestRunDLQ(t *testing.T) {
 		}
 
 		noKafka := writeFile(t, filepath.Join(t.TempDir(), "server.yaml"), "broker: {service: nats, host: nats, port: 4222}\nkafka: {topics_prefix: app_}\n")
-		if err := runDLQ(&flags.Flags{ServerName: "dlq", Environment: "test", Version: "final", ServerConfigurationFile: noKafka}, dlqArguments{command: DLQList, topic: "mail"}, &bytes.Buffer{}); err == nil {
+		if err := runDLQ(t.Context(), &flags.Flags{ServerName: "dlq", Environment: "test", Version: "final", ServerConfigurationFile: noKafka}, dlqArguments{command: DLQList, topic: "mail"}, &bytes.Buffer{}); err == nil {
 			t.Error("a configuration without kafka service must be refused")
 		}
 
 		badOptions := writeFile(t, filepath.Join(t.TempDir(), "server.yaml"), "broker: {service: kafka, host: kafka, port: 1}\nkafka: {version: three}\n")
-		if err := runDLQ(&flags.Flags{ServerName: "dlq", Environment: "test", Version: "final", ServerConfigurationFile: badOptions}, dlqArguments{command: DLQList, topic: "mail"}, &bytes.Buffer{}); err == nil {
+		if err := runDLQ(t.Context(), &flags.Flags{ServerName: "dlq", Environment: "test", Version: "final", ServerConfigurationFile: badOptions}, dlqArguments{command: DLQList, topic: "mail"}, &bytes.Buffer{}); err == nil {
 			t.Error("invalid options must be refused")
 		}
 	})
@@ -249,7 +249,7 @@ func TestPlugin_Command(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if handled, err := p.Command(f, &bytes.Buffer{}); handled || err != nil {
+		if handled, err := p.Command(t.Context(), f, &bytes.Buffer{}); handled || err != nil {
 			t.Errorf("Command() = %v, %v", handled, err)
 		}
 	})
@@ -269,7 +269,7 @@ func TestPlugin_Command(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		handled, err := p.Command(f, &bytes.Buffer{})
+		handled, err := p.Command(t.Context(), f, &bytes.Buffer{})
 		if !handled || err == nil {
 			t.Errorf("Command() = %v, %v, want the command handled and its failure", handled, err)
 		}
@@ -293,7 +293,7 @@ func TestPlugin_Command(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			handled, err := p.Command(f, &bytes.Buffer{})
+			handled, err := p.Command(t.Context(), f, &bytes.Buffer{})
 			if !handled || err == nil || !strings.Contains(err.Error(), tt.want) {
 				t.Errorf("Command() = %v, %v, want the command handled with an error about %q", handled, err, tt.want)
 			}

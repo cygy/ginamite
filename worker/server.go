@@ -5,9 +5,6 @@ package worker
 import (
 	"context"
 	"fmt"
-	"os"
-	"os/signal"
-	"syscall"
 
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/localization"
@@ -48,28 +45,26 @@ func NewServer() *Server {
 }
 
 // Run runs the worker: it loads the templates and the routes, initializes the emails, runs the start up tasks
-// and starts the recurring tasks. It returns when the worker is interrupted or terminated, so that the caller can stop
-// the consumption of the messages and close the connections, or at once with an error if the set up fails.
-func (s *Server) Run() error {
-	if err := s.setup(); err != nil {
+// and starts the recurring tasks. It returns once ctx is done and the running recurring tasks returned, so that the
+// caller can stop the consumption of the messages and close the connections, or at once with an error if the set up
+// fails.
+func (s *Server) Run(ctx context.Context) error {
+	if err := s.setup(ctx); err != nil {
 		return err
 	}
 
 	log.Info("started")
-
-	signals := make(chan os.Signal, 1)
-	signal.Notify(signals, os.Interrupt)
-	signal.Notify(signals, syscall.SIGTERM)
-	<-signals
-
+	<-ctx.Done()
 	log.Info("shutdown")
+
+	s.scheduler.Wait()
 
 	return nil
 }
 
 // setup prepares and starts the worker, except the consumption of the messages. It returns an error if the routes or
 // the templates can not be loaded.
-func (s *Server) setup() error {
+func (s *Server) setup(ctx context.Context) error {
 	s.warnUndefinedStorages()
 
 	routes, err := weburl.Load(s.RoutesFile, s.Config.Hosts.Web)
@@ -108,12 +103,12 @@ func (s *Server) setup() error {
 
 	if s.Hooks.StartUpTasks != nil && s.Config.RunStartUpTasks {
 		log.Info("check up started")
-		s.Hooks.StartUpTasks(context.Background(), s.Config.Environment, s.Config.Version)
+		s.Hooks.StartUpTasks(ctx, s.Config.Environment, s.Config.Version)
 		log.Info("check up done")
 	}
 
 	s.loadRecurringTasks()
-	s.scheduler.Start()
+	s.scheduler.Start(ctx)
 
 	return nil
 }
@@ -155,46 +150,44 @@ func (s *Server) loadRecurringTasks() {
 }
 
 // recurringFuncs returns the functions of the built-in recurring tasks which can run, by name of task.
-func (s *Server) recurringFuncs() map[string]func(taskName string) {
+func (s *Server) recurringFuncs() map[string]recurring.Func {
 	st := s.Storage
-	funcs := map[string]func(taskName string){}
+	funcs := map[string]recurring.Func{}
 
 	// Delete the expired auth tokens.
 	if st.Tokens != nil {
-		funcs[recurring.DeleteExpiredTokens] = func(taskName string) {
-			authtokens.DeleteExpired(context.Background(), taskName, st.Tokens.DeleteExpired)
+		funcs[recurring.DeleteExpiredTokens] = func(ctx context.Context, taskName string) {
+			authtokens.DeleteExpired(ctx, taskName, st.Tokens.DeleteExpired)
 		}
 	}
 
 	// Delete, or update, the data associated to the deleted accounts.
 	if st.Accounts != nil {
-		funcs[recurring.SanitizeAccounts] = func(taskName string) {
-			account.Sanitize(context.Background(), taskName, st.Accounts.Sanitize)
+		funcs[recurring.SanitizeAccounts] = func(ctx context.Context, taskName string) {
+			account.Sanitize(ctx, taskName, st.Accounts.Sanitize)
 		}
 	}
 
 	// Delete the never used accounts.
 	if s.Config.Account.EmailAddressMustBeConfirmed && st.Accounts != nil && st.Users != nil {
-		funcs[recurring.DeleteNeverUsedAccounts] = func(taskName string) {
-			account.DeleteNeverUsed(context.Background(), s.Queue, taskName, s.Config.Account.DeleteNeverUsedAfter, st.Accounts.NeverUsed, st.Accounts.IsEmpty, st.Users.Delete)
+		funcs[recurring.DeleteNeverUsedAccounts] = func(ctx context.Context, taskName string) {
+			account.DeleteNeverUsed(ctx, s.Queue, taskName, s.Config.Account.DeleteNeverUsedAfter, st.Accounts.NeverUsed, st.Accounts.IsEmpty, st.Users.Delete)
 		}
 	}
 
 	// Delete the inactive accounts.
 	if st.Accounts != nil && st.Users != nil {
-		funcs[recurring.DeleteInactiveAccounts] = func(taskName string) {
-			account.DeleteInactive(context.Background(), s.Queue, taskName, s.Config.Account.DeleteInactiveAfter, st.Accounts.Inactive, st.Users.Delete)
+		funcs[recurring.DeleteInactiveAccounts] = func(ctx context.Context, taskName string) {
+			account.DeleteInactive(ctx, s.Queue, taskName, s.Config.Account.DeleteInactiveAfter, st.Accounts.Inactive, st.Users.Delete)
 		}
 	}
 
 	// Generate the XML sitemap files.
 	if st.Sitemap != nil {
-		funcs[recurring.GenerateSitemaps] = func(taskName string) {
-			sitemap.Generate(context.Background(), taskName, s.Config, s.routes, st.Sitemap.LocalizedRouteVariables)
+		funcs[recurring.GenerateSitemaps] = func(ctx context.Context, taskName string) {
+			sitemap.Generate(ctx, taskName, s.Config, s.routes, st.Sitemap.LocalizedRouteVariables)
 		}
 	}
-
-	// The task SendRegistrationMails, sending again the registration emails, is not implemented.
 
 	return funcs
 }

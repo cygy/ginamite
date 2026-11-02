@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/weburl"
@@ -154,7 +155,7 @@ func TestServer_recurringFuncs_run(t *testing.T) {
 	for name, f := range s.recurringFuncs() {
 		t.Run(name, func(t *testing.T) {
 			workertest.Hook.Reset()
-			f(name)
+			f(t.Context(), name)
 
 			var done map[string]any
 			for _, entry := range workertest.Hook.AllEntries() {
@@ -178,14 +179,13 @@ func TestServer_loadRecurringTasks(t *testing.T) {
 	c.RecurringTasks = []config.RecurringTask{
 		{Name: recurring.DeleteExpiredTokens},
 		{Name: recurring.SanitizeAccounts},
-		{Name: recurring.SendRegistrationMails},
 		{Name: "custom"},
 	}
 
 	h := Hooks{}
 	var custom bool
-	h.SetFuncOfRecurringTasks = func(register func(taskName string, task func(string))) {
-		register("custom", func(string) {})
+	h.SetFuncOfRecurringTasks = func(register func(taskName string, task recurring.Func)) {
+		register("custom", func(context.Context, string) {})
 		custom = true
 	}
 
@@ -196,11 +196,10 @@ func TestServer_loadRecurringTasks(t *testing.T) {
 		t.Error("the functions of the custom tasks are not set")
 	}
 	for name, want := range map[string]bool{
-		recurring.DeleteExpiredTokens:   true,  // The storage is defined.
-		recurring.SanitizeAccounts:      false, // The storage is not defined.
-		recurring.SendRegistrationMails: false, // The task has no function.
-		"custom":                        true,  // The function is set by SetFuncOfRecurringTasks.
-		"unknown":                       false,
+		recurring.DeleteExpiredTokens: true,  // The storage is defined.
+		recurring.SanitizeAccounts:    false, // The storage is not defined.
+		"custom":                      true,  // The function is set by SetFuncOfRecurringTasks.
+		"unknown":                     false,
 	} {
 		if got := server.scheduler.HasFunc(name); got != want {
 			t.Errorf("HasFunc(%s) = %v, want %v", name, got, want)
@@ -240,10 +239,10 @@ func TestServer_setup(t *testing.T) {
 		env, version = environment, v
 		calls = append(calls, "start up")
 	}
-	s.Hooks.SetFuncOfRecurringTasks = func(func(string, func(string))) { calls = append(calls, "recurring") }
+	s.Hooks.SetFuncOfRecurringTasks = func(func(string, recurring.Func)) { calls = append(calls, "recurring") }
 	s.Storage.Tokens = allStorages().Tokens
 
-	if err := s.setup(); err != nil {
+	if err := s.setup(t.Context()); err != nil {
 		t.Fatal(err)
 	}
 
@@ -263,7 +262,7 @@ func TestServer_setup(t *testing.T) {
 	// The start up tasks only run if the configuration asks for it.
 	c.RunStartUpTasks = false
 	calls = nil
-	if err := s.setup(); err != nil {
+	if err := s.setup(t.Context()); err != nil {
 		t.Fatal(err)
 	}
 	if slices.Contains(calls, "start up") {
@@ -292,9 +291,47 @@ func TestServer_Run_SetUpErrors(t *testing.T) {
 			c := &config.Configuration{TemplatesPath: filepath.Join(dir, "templates")}
 			s := &Server{Config: c, scheduler: recurring.NewScheduler(), RoutesFile: tt.routesFile}
 
-			if err := s.Run(); err == nil || !strings.Contains(err.Error(), tt.want) {
+			if err := s.Run(t.Context()); err == nil || !strings.Contains(err.Error(), tt.want) {
 				t.Errorf("Run() = %v, want an error about %q", err, tt.want)
 			}
 		})
+	}
+}
+
+func TestServer_Run_StopsWithTheContext(t *testing.T) {
+	dir := t.TempDir()
+	for path, content := range map[string]string{
+		"templates/html/mails/hello.html": "<p>[[.Name]]</p>",
+		"templates/text/mails/hello.txt":  "Hello {{.Name}}",
+		"routes.yml":                      "routes: {}\n",
+	} {
+		path = filepath.Join(dir, path)
+		if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	c := &config.Configuration{TemplatesPath: filepath.Join(dir, "templates")}
+	c.RecurringTasks = []config.RecurringTask{{Name: "custom", Interval: 1, StartAt: "bad", Enabled: true}}
+	s := &Server{Config: c, scheduler: recurring.NewScheduler(), RoutesFile: filepath.Join(dir, "routes.yml")}
+	s.Hooks.SetFuncOfRecurringTasks = func(register func(string, recurring.Func)) {
+		register("custom", func(context.Context, string) {})
+	}
+
+	ctx, cancel := context.WithCancel(t.Context())
+	done := make(chan error, 1)
+	go func() { done <- s.Run(ctx) }()
+	cancel()
+
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Errorf("Run() = %v, want nil once the context is done", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("Run() did not return once the context is done")
 	}
 }

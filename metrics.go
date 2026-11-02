@@ -8,8 +8,9 @@ import (
 )
 
 // startMetrics serves the Prometheus metrics on the address of the configuration, if any: the requests of the API and
-// the broker, if it is a metrics.Collector, such as Kafka. It returns the function which stops the server.
-func (s *Server) startMetrics() (stop func()) {
+// the broker, if it is a metrics.Collector, such as Kafka. It returns the function which stops the server: the metrics
+// are served until it is called, even after ctx is done, so that the shutdown of the server is measured too.
+func (s *Server) startMetrics(ctx context.Context) (stop func()) {
 	address := s.Config.Metrics.Address
 	if address == "" {
 		return func() {}
@@ -24,7 +25,7 @@ func (s *Server) startMetrics() (stop func()) {
 		registry.Register(collector)
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.WithoutCancel(ctx))
 	done := make(chan struct{})
 
 	go func() {

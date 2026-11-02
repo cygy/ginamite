@@ -3,6 +3,7 @@
 package web
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/cygy/ginamite/common/broker"
@@ -70,9 +71,9 @@ func (s *Server) CreateConsumers() []broker.MessageConsumer {
 	return []broker.MessageConsumer{}
 }
 
-// Run sets up the web server, then serves it until SIGINT or SIGTERM. It returns an error if the set up fails or if
-// the server stops for another reason.
-func (s *Server) Run() error {
+// Run sets up the web server, then serves it until ctx is done. It returns an error if the set up fails or if the
+// server stops for another reason.
+func (s *Server) Run(ctx context.Context) error {
 	engine, err := s.newEngine()
 	if err != nil {
 		return err
@@ -84,9 +85,9 @@ func (s *Server) Run() error {
 	address := fmt.Sprintf(":%d", s.Config.Server.Port)
 
 	if s.Config.Server.SSL.Enabled {
-		err = listenAndServeTLS(address, s.Config.Server.SSL.CertPath, s.Config.Server.SSL.KeyPath, engine)
+		err = listenAndServeTLS(ctx, address, s.Config.Server.SSL.CertPath, s.Config.Server.SSL.KeyPath, engine)
 	} else {
-		err = listenAndServe(address, engine)
+		err = listenAndServe(ctx, address, engine)
 	}
 
 	if err != nil {

@@ -2,6 +2,8 @@ package recurring
 
 import (
 	"context"
+	"fmt"
+	"sync"
 	"time"
 
 	"github.com/cygy/ginamite/common/config"
@@ -9,11 +11,16 @@ import (
 	"github.com/cygy/ginamite/worker/tasks"
 )
 
-// Scheduler runs the scheduled tasks, each one in the background, forever.
+// Func is the function of a scheduled task. It receives the context of the scheduler, done when the worker stops: a
+// long task must return early once it is done.
+type Func func(ctx context.Context, name string)
+
+// Scheduler runs the scheduled tasks, each one in its own goroutine, until its context is done.
 // The tasks are loaded before they are started: the scheduler is not safe for concurrent use. Create it with
 // NewScheduler.
 type Scheduler struct {
-	tasks map[string]ScheduledTask // The scheduled tasks, by name.
+	tasks   map[string]ScheduledTask // The scheduled tasks, by name.
+	running sync.WaitGroup           // The goroutines of the started tasks.
 }
 
 // NewScheduler returns a scheduler without task.
@@ -38,21 +45,17 @@ func (s *Scheduler) Load(tasks []config.RecurringTask) {
 }
 
 // SetFunc sets the function called by the scheduled task with that name. It does nothing if there is no such task.
-func (s *Scheduler) SetFunc(name string, f func(string)) {
+func (s *Scheduler) SetFunc(name string, f Func) {
 	if task, ok := s.tasks[name]; ok {
 		task.f = f
 		s.tasks[name] = task
 	}
 }
 
-// Start starts the scheduled tasks which are enabled and have a function and an interval.
-// Each task runs in the background, forever.
-func (s *Scheduler) Start() {
-	s.start(context.Background())
-}
-
-// start starts the scheduled tasks until the context is done.
-func (s *Scheduler) start(ctx context.Context) {
+// Start starts the scheduled tasks which are enabled and have a function and an interval, until ctx is done. Each
+// task runs in its own goroutine, one run at a time: a run longer than the interval delays the next one. Wait waits
+// for the tasks once ctx is done.
+func (s *Scheduler) Start(ctx context.Context) {
 	for name, task := range s.tasks {
 		reason := ""
 		switch {
@@ -75,7 +78,7 @@ func (s *Scheduler) start(ctx context.Context) {
 		startIn := task.StartIn()
 		interval := time.Duration(task.Interval) * time.Second //nolint:gosec // an interval in seconds is far below the overflow
 
-		go run(ctx, name, startIn, interval, task.f)
+		s.running.Go(func() { run(ctx, name, startIn, interval, task.f) })
 
 		log.Info("task scheduled",
 			"name", name,
@@ -85,8 +88,15 @@ func (s *Scheduler) start(ctx context.Context) {
 	}
 }
 
-// run calls f, in the background, after startIn then every interval, until the context is done.
-func run(ctx context.Context, name string, startIn, interval time.Duration, f func(name string)) {
+// Wait waits for the goroutines of the tasks, which return once the context given to Start is done and their running
+// run, if any, returned.
+func (s *Scheduler) Wait() {
+	s.running.Wait()
+}
+
+// run calls f after startIn then every interval, from the start of a run to the start of the next one, until the
+// context is done. A run longer than the interval is followed by the next one at once.
+func run(ctx context.Context, name string, startIn, interval time.Duration, f Func) {
 	delay := startIn
 
 	for {
@@ -96,11 +106,23 @@ func run(ctx context.Context, name string, startIn, interval time.Duration, f fu
 		case <-wait(delay):
 		}
 
-		tasks.LogStarted(name, nil)
-		go f(name)
+		started := time.Now()
+		execute(ctx, name, f)
 
-		delay = interval
+		delay = max(interval-time.Since(started), 0)
 	}
+}
+
+// execute runs f, and logs its panic instead of stopping the worker.
+func execute(ctx context.Context, name string, f Func) {
+	defer func() {
+		if r := recover(); r != nil {
+			tasks.LogError(name, fmt.Errorf("the task panicked: %v", r))
+		}
+	}()
+
+	tasks.LogStarted(name)
+	f(ctx, name)
 }
 
 // HasFunc reports whether the scheduled task with that name has a function.

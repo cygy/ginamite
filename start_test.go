@@ -2,6 +2,7 @@ package ginamite
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"flag"
 	"io"
@@ -159,7 +160,7 @@ func (c fakeCommander) RegisterFlags(set *flag.FlagSet) {
 	set.Bool("fake-run", false, "Run the fake command.")
 }
 
-func (c fakeCommander) Command(f *flags.Flags, out io.Writer) (bool, error) {
+func (c fakeCommander) Command(_ context.Context, f *flags.Flags, out io.Writer) (bool, error) {
 	if f.ServerName != "run" {
 		return false, nil
 	}
@@ -176,11 +177,11 @@ func TestServer_runCommand(t *testing.T) {
 	s.AddPlugin(fakeCommander{err: boom})
 
 	var out bytes.Buffer
-	if handled, err := s.runCommand(&flags.Flags{ServerName: "run"}, &out); !handled || !errors.Is(err, boom) || out.String() != "ran" {
+	if handled, err := s.runCommand(t.Context(), &flags.Flags{ServerName: "run"}, &out); !handled || !errors.Is(err, boom) || out.String() != "ran" {
 		t.Errorf("runCommand() = %v, %v, output %q", handled, err, out.String())
 	}
 
-	if handled, err := s.runCommand(&flags.Flags{}, &out); handled || err != nil {
+	if handled, err := s.runCommand(t.Context(), &flags.Flags{}, &out); handled || err != nil {
 		t.Errorf("runCommand() = %v, %v, want a command nobody handles to be left to the caller", handled, err)
 	}
 }
@@ -246,7 +247,7 @@ func TestServer_run_Errors(t *testing.T) {
 			}
 
 			tt.flags.ServerName, tt.flags.Environment = "test", "test"
-			err := s.run(&tt.flags)
+			err := s.run(t.Context(), &tt.flags)
 
 			switch {
 			case err == nil:
@@ -297,7 +298,7 @@ func TestServer_Run_Arguments(t *testing.T) {
 				s.AddPlugin(p)
 			}
 
-			err := s.Run()
+			err := s.Run(t.Context())
 
 			switch {
 			case tt.want != nil && !errors.Is(err, tt.want):

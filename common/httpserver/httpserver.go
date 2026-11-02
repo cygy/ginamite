@@ -1,13 +1,11 @@
-// Package httpserver runs an HTTP server which stops gracefully on SIGINT and SIGTERM, with timeouts against the slow
-// clients.
+// Package httpserver runs an HTTP server which stops gracefully once its context is done, with timeouts against the
+// slow clients.
 package httpserver
 
 import (
 	"context"
 	"errors"
 	"net/http"
-	"os/signal"
-	"syscall"
 	"time"
 )
 
@@ -21,20 +19,14 @@ const (
 	idleTimeout       = 120 * time.Second
 )
 
-// ListenAndServe serves the handler at the address until SIGINT or SIGTERM, then waits for the running requests. It
-// returns nil if the server stopped that way.
-func ListenAndServe(address string, handler http.Handler) error {
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
-
+// ListenAndServe serves the handler at the address until ctx is done, then waits for the running requests. It returns
+// nil if the server stopped that way.
+func ListenAndServe(ctx context.Context, address string, handler http.Handler) error {
 	return serve(ctx, newServer(address, handler), func(s *http.Server) error { return s.ListenAndServe() })
 }
 
 // ListenAndServeTLS is like ListenAndServe with TLS, using the certificate and the key files.
-func ListenAndServeTLS(address, certPath, keyPath string, handler http.Handler) error {
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
-
+func ListenAndServeTLS(ctx context.Context, address, certPath, keyPath string, handler http.Handler) error {
 	return serve(ctx, newServer(address, handler), func(s *http.Server) error { return s.ListenAndServeTLS(certPath, keyPath) })
 }
 

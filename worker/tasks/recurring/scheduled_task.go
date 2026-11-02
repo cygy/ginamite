@@ -19,7 +19,7 @@ type ScheduledTask struct {
 	config.RecurringTask
 
 	// f is called every Interval seconds, with the name of the task.
-	f func(taskName string)
+	f Func
 }
 
 // StartIn returns the duration to wait before the first run of the task: the time until the next StartAt, today or
