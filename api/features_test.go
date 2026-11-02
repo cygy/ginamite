@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -10,7 +11,6 @@ import (
 
 	"github.com/cygy/ginamite/api/route"
 	"github.com/cygy/ginamite/api/route/account"
-	"github.com/cygy/ginamite/api/route/contact"
 	"github.com/cygy/ginamite/api/route/terms"
 	"github.com/cygy/ginamite/api/route/user"
 
@@ -42,7 +42,8 @@ func fill(groups ...any) {
 
 // defineAllFunctions makes the server define every function of the features.
 func defineAllFunctions(s *Server) {
-	fill(&s.Account, &s.Users, &s.Contacts, &s.Terms)
+	fill(&s.Account, &s.Users, &s.Terms)
+	s.Contacts = noopContacts{}
 }
 
 func TestServer_selectRoutes(t *testing.T) {
@@ -92,16 +93,13 @@ func TestServer_selectRoutes(t *testing.T) {
 		}
 	})
 
-	t.Run("undefined functions are named", func(t *testing.T) {
+	t.Run("undefined storages are named", func(t *testing.T) {
 		s := NewServer()
-		var defined contact.Functions
-		fill(&defined)
-		s.Contacts.CreateContact = defined.CreateContact
 		routes := newDefaultRoutes()
 
 		_, err := s.selectRoutes(&routes, []string{FeatureContact})
-		if err == nil || !strings.Contains(err.Error(), "GetContact, GetContacts, UpdateContact") || strings.Contains(err.Error(), "CreateContact") {
-			t.Errorf("error = %v, want the undefined functions only", err)
+		if err == nil || !strings.Contains(err.Error(), "Contacts") {
+			t.Errorf("error = %v, want the undefined storage", err)
 		}
 	})
 
@@ -127,8 +125,19 @@ func TestFeatures(t *testing.T) {
 
 // TestServer_features_areConsistent fails when a default route is added without being in a feature, when a route is in
 // two features, or when a requirement names a function which is not in a group of functions.
+// storages are the names of the storages of the server which the features need.
+var storages = []string{"Contacts"}
+
+// noopContacts is a contact.Storage doing nothing.
+type noopContacts struct{}
+
+func (noopContacts) CreateContact(context.Context, string, string, string) error { return nil }
+func (noopContacts) UpdateContact(context.Context, string, bool) error           { return nil }
+func (noopContacts) GetContacts(context.Context, int64, int64) (any, error)      { return nil, nil }
+func (noopContacts) GetContact(context.Context, string) (any, error)             { return nil, nil }
+
 // functionGroups are the types of the groups of functions of the server.
-var functionGroups = []reflect.Type{reflect.TypeFor[account.Functions](), reflect.TypeFor[user.Functions](), reflect.TypeFor[contact.Functions](), reflect.TypeFor[terms.Functions]()}
+var functionGroups = []reflect.Type{reflect.TypeFor[account.Functions](), reflect.TypeFor[user.Functions](), reflect.TypeFor[terms.Functions]()}
 
 func TestServer_features_areConsistent(t *testing.T) {
 	routes := newDefaultRoutes()
@@ -142,6 +151,9 @@ func TestServer_features_areConsistent(t *testing.T) {
 			listed[r.route] = f.name
 
 			for _, function := range r.functions {
+				if slices.Contains(storages, function) {
+					continue
+				}
 				if !slices.ContainsFunc(functionGroups, func(group reflect.Type) bool { _, ok := group.FieldByName(function); return ok }) {
 					t.Errorf("the route %q needs %q, which is not a function of the server", r.route.Path, function)
 				}

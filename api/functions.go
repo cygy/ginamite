@@ -125,7 +125,7 @@ func (s *Server) Run() error {
 	server.Use(
 		account.Inject(&s.Account),
 		user.Inject(&s.Users),
-		contact.Inject(&s.Contacts),
+		contact.Inject(s.Contacts),
 		terms.Inject(&s.Terms),
 	)
 	server.Use(ctxLocale.Inject(s.Config.DefaultLocale, s.Config.SupportedLocales))

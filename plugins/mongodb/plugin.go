@@ -322,10 +322,7 @@ func (p *Plugin) configureAPI(a *api.Server) {
 	a.Account.DisableUserByID = apiFunctions.DisableUserByID
 	a.Account.EnableUserByID = apiFunctions.EnableUserByID
 
-	a.Contacts.CreateContact = apiFunctions.CreateContact
-	a.Contacts.UpdateContact = apiFunctions.UpdateContact
-	a.Contacts.GetContacts = apiFunctions.GetContactsForAdmin
-	a.Contacts.GetContact = apiFunctions.GetContactForAdmin
+	a.Contacts = apiFunctions.NewContacts(p.database)
 
 	a.AddCustomRoutes(addRoutes)
 }

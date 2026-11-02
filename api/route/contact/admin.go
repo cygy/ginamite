@@ -11,10 +11,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// errNoStorage is logged when a route of the administration is called without storage of the contacts.
+var errNoStorage = errors.New("undefined storage of the contacts")
+
 // GetAdminContacts returns the contact documents.
 func GetAdminContacts(c *gin.Context) {
-	if FunctionsOf(c).GetContacts == nil {
-		c.Error(errors.New("undefined function 'GetContacts'"))
+	storage := StorageOf(c)
+	if storage == nil {
+		c.Error(errNoStorage)
 		response.InternalServerError(c)
 		return
 	}
@@ -22,7 +26,7 @@ func GetAdminContacts(c *gin.Context) {
 	offset := request.GetOffset(c)
 	limit := request.GetLimit(c)
 
-	contacts, err := FunctionsOf(c).GetContacts(c, offset, limit)
+	contacts, err := storage.GetContacts(c, offset, limit)
 	if err != nil {
 		response.InternalServerError(c)
 		return
@@ -35,15 +39,16 @@ func GetAdminContacts(c *gin.Context) {
 
 // GetAdminContact returns a contact document.
 func GetAdminContact(c *gin.Context) {
-	if FunctionsOf(c).GetContact == nil {
-		c.Error(errors.New("undefined function 'GetContact'"))
+	storage := StorageOf(c)
+	if storage == nil {
+		c.Error(errNoStorage)
 		response.InternalServerError(c)
 		return
 	}
 
 	contactID := getContactID(c)
 
-	contact, err := FunctionsOf(c).GetContact(c, contactID)
+	contact, err := storage.GetContact(c, contactID)
 	if err != nil {
 		response.InternalServerError(c)
 		return
@@ -56,8 +61,9 @@ func GetAdminContact(c *gin.Context) {
 
 // Update updates a contact document.
 func Update(c *gin.Context) {
-	if FunctionsOf(c).UpdateContact == nil {
-		c.Error(errors.New("undefined function 'UpdateContact'"))
+	storage := StorageOf(c)
+	if storage == nil {
+		c.Error(errNoStorage)
 		response.InternalServerError(c)
 		return
 	}
@@ -69,7 +75,7 @@ func Update(c *gin.Context) {
 
 	contactID := getContactID(c)
 
-	err := FunctionsOf(c).UpdateContact(c, contactID, jsonBody.Done)
+	err := storage.UpdateContact(c, contactID, jsonBody.Done)
 	if err != nil {
 		response.InternalServerError(c)
 		return

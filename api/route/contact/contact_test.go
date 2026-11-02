@@ -1,14 +1,13 @@
 package contact
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strings"
 	"testing"
 
 	"github.com/cygy/ginamite/common"
-
-	"github.com/gin-gonic/gin"
 )
 
 func TestPost(t *testing.T) {
@@ -22,7 +21,7 @@ func TestPost(t *testing.T) {
 	tests := []struct {
 		name       string
 		body       string
-		create     CreateContactFunc
+		create     func(context.Context, string, string, string) error
 		wantStatus int
 	}{
 		{"missing email address", body("", "s", "t"), nil, http.StatusBadRequest},
@@ -32,11 +31,11 @@ func TestPost(t *testing.T) {
 		{"text too long", body("a@b.c", "s", long(common.ContactTextMaxLength+1)), nil, http.StatusBadRequest},
 		{"invalid email address", body("abc", "s", "t"), nil, http.StatusBadRequest},
 		{"created without storage", body("a@b.c", "s", "t"), nil, http.StatusCreated},
-		{"storage fails", body("a@b.c", "s", "t"), func(*gin.Context, string, string, string) error { return errors.New("boom") }, http.StatusInternalServerError},
+		{"storage fails", body("a@b.c", "s", "t"), func(context.Context, string, string, string) error { return errors.New("boom") }, http.StatusInternalServerError},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			testFunctions.CreateContact = tt.create
+			testStorage.create = tt.create
 			if got := serve(Post, http.MethodPost, "/", tt.body); got != tt.wantStatus {
 				t.Errorf("status = %d, want %d", got, tt.wantStatus)
 			}
@@ -45,7 +44,7 @@ func TestPost(t *testing.T) {
 
 	t.Run("created and stored", func(t *testing.T) {
 		var email, subject, text string
-		testFunctions.CreateContact = func(_ *gin.Context, e, s, x string) error {
+		testStorage.create = func(_ context.Context, e, s, x string) error {
 			email, subject, text = e, s, x
 			return nil
 		}

@@ -229,13 +229,15 @@ func TestPlugin_Configure_Functions(t *testing.T) {
 		"MiddlewareIsValidAuthToken": {api.Hooks.MiddlewareIsValidAuthToken, apiFunctions.IsValidAuthToken},
 		"GetUserDetailsByID":         {api.Account.GetUserDetailsByID, apiFunctions.GetUserDetailsByID},
 		"RegisterByEmailAddress":     {api.Account.RegisterByEmailAddress, apiFunctions.RegisterByEmailAddress},
-		"CreateContact":              {api.Contacts.CreateContact, apiFunctions.CreateContact},
-		"GetContacts":                {api.Contacts.GetContacts, apiFunctions.GetContactsForAdmin},
 		"GetOwnedAccountDetails":     {api.Account.GetOwnedAccountDetails, apiFunctions.GetOwnedAccountDetails},
 	} {
 		if pair[0] == nil || !sameFunction(pair[0], pair[1]) {
 			t.Errorf("%s is not the function of the plugin", name)
 		}
+	}
+
+	if _, ok := api.Contacts.(*apiFunctions.Contacts); !ok {
+		t.Errorf("Contacts = %T, want the storage of the plugin", api.Contacts)
 	}
 
 	// The functions working on the database, and the ones built from the hooks of the plugin, are defined too.

@@ -1,24 +1,23 @@
 package contact
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"testing"
 
 	"github.com/cygy/ginamite/api/request"
-
-	"github.com/gin-gonic/gin"
 )
 
 func TestGetAdminContacts(t *testing.T) {
 	setup(t)
 
-	if got := serve(GetAdminContacts, http.MethodGet, "/", ""); got != http.StatusInternalServerError {
-		t.Errorf("undefined function: status = %d, want %d", got, http.StatusInternalServerError)
+	if got := serve(GetAdminContacts, http.MethodGet, "/", "", withoutStorage); got != http.StatusInternalServerError {
+		t.Errorf("no storage: status = %d, want %d", got, http.StatusInternalServerError)
 	}
 
 	var gotOffset, gotLimit int64
-	testFunctions.GetContacts = func(_ *gin.Context, offset, limit int64) (any, error) {
+	testStorage.list = func(_ context.Context, offset, limit int64) (any, error) {
 		gotOffset, gotLimit = offset, limit
 		return []string{"c"}, nil
 	}
@@ -29,8 +28,8 @@ func TestGetAdminContacts(t *testing.T) {
 		t.Errorf("offset, limit = %d, %d, want 2, 5", gotOffset, gotLimit)
 	}
 
-	testFunctions.GetContacts = func(*gin.Context, int64, int64) (any, error) { return nil, errors.New("boom") }
-	if got := serve(GetAdminContacts, http.MethodGet, "/", ""); got != http.StatusInternalServerError {
+	testStorage.list = func(context.Context, int64, int64) (any, error) { return nil, errors.New("boom") }
+	if got := serve(GetAdminContacts, http.MethodGet, "/", "", withoutStorage); got != http.StatusInternalServerError {
 		t.Errorf("failing function: status = %d, want %d", got, http.StatusInternalServerError)
 	}
 }
@@ -38,12 +37,12 @@ func TestGetAdminContacts(t *testing.T) {
 func TestGetAdminContact(t *testing.T) {
 	setup(t)
 
-	if got := serve(GetAdminContact, http.MethodGet, "/1", ""); got != http.StatusInternalServerError {
-		t.Errorf("undefined function: status = %d, want %d", got, http.StatusInternalServerError)
+	if got := serve(GetAdminContact, http.MethodGet, "/1", "", withoutStorage); got != http.StatusInternalServerError {
+		t.Errorf("no storage: status = %d, want %d", got, http.StatusInternalServerError)
 	}
 
 	var gotID string
-	testFunctions.GetContact = func(_ *gin.Context, id string) (any, error) {
+	testStorage.get = func(_ context.Context, id string) (any, error) {
 		gotID = id
 		return "c", nil
 	}
@@ -51,7 +50,7 @@ func TestGetAdminContact(t *testing.T) {
 		t.Errorf("status = %d, id = %q, want 200 and abc", got, gotID)
 	}
 
-	testFunctions.GetContact = func(*gin.Context, string) (any, error) { return nil, errors.New("boom") }
+	testStorage.get = func(context.Context, string) (any, error) { return nil, errors.New("boom") }
 	if got := serve(GetAdminContact, http.MethodGet, "/abc", ""); got != http.StatusInternalServerError {
 		t.Errorf("failing function: status = %d, want %d", got, http.StatusInternalServerError)
 	}
@@ -60,13 +59,13 @@ func TestGetAdminContact(t *testing.T) {
 func TestUpdate(t *testing.T) {
 	setup(t)
 
-	if got := serve(Update, http.MethodPut, "/1", `{"done":true}`); got != http.StatusInternalServerError {
-		t.Errorf("undefined function: status = %d, want %d", got, http.StatusInternalServerError)
+	if got := serve(Update, http.MethodPut, "/1", `{"done":true}`, withoutStorage); got != http.StatusInternalServerError {
+		t.Errorf("no storage: status = %d, want %d", got, http.StatusInternalServerError)
 	}
 
 	var gotID string
 	var gotDone bool
-	testFunctions.UpdateContact = func(_ *gin.Context, id string, done bool) error {
+	testStorage.update = func(_ context.Context, id string, done bool) error {
 		gotID, gotDone = id, done
 		return nil
 	}
@@ -74,7 +73,7 @@ func TestUpdate(t *testing.T) {
 		t.Errorf("status = %d, id = %q, done = %v, want 200, abc, true", got, gotID, gotDone)
 	}
 
-	testFunctions.UpdateContact = func(*gin.Context, string, bool) error { return errors.New("boom") }
+	testStorage.update = func(context.Context, string, bool) error { return errors.New("boom") }
 	if got := serve(Update, http.MethodPut, "/abc", `{"done":true}`); got != http.StatusInternalServerError {
 		t.Errorf("failing function: status = %d, want %d", got, http.StatusInternalServerError)
 	}

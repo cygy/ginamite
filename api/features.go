@@ -156,10 +156,10 @@ func (s *Server) features(routes *route.DefaultRoutes) []feature {
 			{&admin.EnableUser, []string{"EnableUserByID"}},
 		}, true},
 		{FeatureContact, []requirement{
-			{&routes.Contact.Paths.Post, []string{"CreateContact"}},
-			{&admin.GetContacts, []string{"GetContacts"}},
-			{&admin.GetContact, []string{"GetContact"}},
-			{&admin.UpdateContact, []string{"UpdateContact"}},
+			{&routes.Contact.Paths.Post, []string{"Contacts"}},
+			{&admin.GetContacts, []string{"Contacts"}},
+			{&admin.GetContact, []string{"Contacts"}},
+			{&admin.UpdateContact, []string{"Contacts"}},
 		}, true},
 	}
 }
@@ -185,7 +185,7 @@ func (s *Server) selectRoutes(routes *route.DefaultRoutes, enabled []string) (ne
 		return false, fmt.Errorf("unknown features %v in the setting api_features, the features are: %s", unknown, strings.Join(names, ", "))
 	}
 
-	groups := []reflect.Value{reflect.ValueOf(s.Account), reflect.ValueOf(s.Users), reflect.ValueOf(s.Contacts), reflect.ValueOf(s.Terms)}
+	groups := []reflect.Value{reflect.ValueOf(s.Account), reflect.ValueOf(s.Users), reflect.ValueOf(s.Terms)}
 	missing := map[string]bool{}
 	for _, f := range features {
 		isEnabled := slices.Contains(enabled, f.name)
@@ -198,7 +198,7 @@ func (s *Server) selectRoutes(routes *route.DefaultRoutes, enabled []string) (ne
 			}
 
 			for _, function := range r.functions {
-				if isUndefined(groups, function) {
+				if s.isUndefined(groups, function) {
 					missing[function] = true
 				}
 			}
@@ -212,14 +212,19 @@ func (s *Server) selectRoutes(routes *route.DefaultRoutes, enabled []string) (ne
 		}
 		sort.Strings(names)
 
-		return needsJWT, fmt.Errorf("the features of the setting api_features need functions which are undefined: %s", strings.Join(names, ", "))
+		return needsJWT, fmt.Errorf("the features of the setting api_features need functions or storages which are undefined: %s", strings.Join(names, ", "))
 	}
 
 	return needsJWT, nil
 }
 
-// isUndefined reports whether the function with the name, a field of one of the groups of functions, is nil.
-func isUndefined(groups []reflect.Value, name string) bool {
+// isUndefined reports whether the storage, or the function, with the name is undefined. The names of the storages are
+// the fields of the server, the names of the functions are the fields of the groups of functions.
+func (s *Server) isUndefined(groups []reflect.Value, name string) bool {
+	if name == "Contacts" {
+		return s.Contacts == nil
+	}
+
 	for _, group := range groups {
 		if field := group.FieldByName(name); field.IsValid() {
 			return field.IsNil()

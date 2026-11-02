@@ -36,11 +36,11 @@ type Server struct {
 	// Requests counts the requests handled by the API for the metrics. Nothing is counted if nil.
 	Requests *metrics.Requests
 
-	// The functions of the application, such as the ones of the storage plugin, by feature. A feature whose functions
-	// are undefined can not be enabled, see api_features.
+	// The functions and the storages of the application, such as the ones of the storage plugin, by feature. A feature
+	// whose functions are undefined can not be enabled, see api_features.
 	Account  account.Functions
 	Users    user.Functions
-	Contacts contact.Functions
+	Contacts contact.Storage
 	Terms    terms.Functions
 	Hooks    Hooks
 
