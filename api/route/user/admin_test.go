@@ -208,15 +208,15 @@ func TestAdminDelete(t *testing.T) {
 	user := authentication.User{ID: "42", EmailAddress: "john@example.com", Username: "john", Locale: "en"}
 	runHandlerCases(t, AdminDelete, []handlerCase{
 		{"details error", "", func() {
-			testAccountFunctions.GetUserDetailsByID = func(*gin.Context, string) (authentication.User, error) { return user, errBoom }
+			testAccounts.detailsFn = func(context.Context, string) (authentication.User, error) { return user, errBoom }
 		}, http.StatusInternalServerError},
 		{"delete error", "", func() {
-			testAccountFunctions.GetUserDetailsByID = func(*gin.Context, string) (authentication.User, error) { return user, nil }
-			testAccountFunctions.DeleteUserByID = func(*gin.Context, string) error { return errBoom }
+			testAccounts.detailsFn = func(context.Context, string) (authentication.User, error) { return user, nil }
+			testAccounts.deleteFn = func(context.Context, string) error { return errBoom }
 		}, http.StatusInternalServerError},
 		{"success", "", func() {
-			testAccountFunctions.GetUserDetailsByID = func(*gin.Context, string) (authentication.User, error) { return user, nil }
-			testAccountFunctions.DeleteUserByID = func(*gin.Context, string) error { return nil }
+			testAccounts.detailsFn = func(context.Context, string) (authentication.User, error) { return user, nil }
+			testAccounts.deleteFn = func(context.Context, string) error { return nil }
 		}, http.StatusOK},
 	})
 }
@@ -225,10 +225,10 @@ func TestAdminDisable(t *testing.T) {
 	user := authentication.User{ID: "42", EmailAddress: "john@example.com", Username: "john", Locale: "en"}
 	runHandlerCases(t, AdminDisable, []handlerCase{
 		{"error", "", func() {
-			testAccountFunctions.DisableUserByID = func(*gin.Context, string) (authentication.User, error) { return user, errBoom }
+			testAccounts.disableFn = func(context.Context, string) (authentication.User, error) { return user, errBoom }
 		}, http.StatusInternalServerError},
 		{"success", "", func() {
-			testAccountFunctions.DisableUserByID = func(*gin.Context, string) (authentication.User, error) { return user, nil }
+			testAccounts.disableFn = func(context.Context, string) (authentication.User, error) { return user, nil }
 		}, http.StatusOK},
 	})
 }
@@ -237,10 +237,10 @@ func TestAdminEnable(t *testing.T) {
 	user := authentication.User{ID: "42", EmailAddress: "john@example.com", Username: "john", Locale: "en"}
 	runHandlerCases(t, AdminEnable, []handlerCase{
 		{"error", "", func() {
-			testAccountFunctions.EnableUserByID = func(*gin.Context, string) (authentication.User, error) { return user, errBoom }
+			testAccounts.enableFn = func(context.Context, string) (authentication.User, error) { return user, errBoom }
 		}, http.StatusInternalServerError},
 		{"success", "", func() {
-			testAccountFunctions.EnableUserByID = func(*gin.Context, string) (authentication.User, error) { return user, nil }
+			testAccounts.enableFn = func(context.Context, string) (authentication.User, error) { return user, nil }
 		}, http.StatusOK},
 	})
 }

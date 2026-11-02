@@ -1,11 +1,11 @@
 package functions
 
 import (
+	"context"
 	"testing"
 
 	"github.com/cygy/ginamite/api/validator"
 	"github.com/cygy/ginamite/common/authentication"
-	"github.com/cygy/ginamite/plugins/mongodb/internal/plugintest"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
 	"github.com/cygy/ginamite/plugins/mongodb/mongo/bson"
 	"github.com/cygy/ginamite/plugins/mongodb/mongo/store/mock"
@@ -13,9 +13,9 @@ import (
 
 func TestRegisterByEmailAddress(t *testing.T) {
 	db := mock.NewDatabase("app")
-	c, _ := plugintest.NewContext(db, "GET", "/", nil)
+	c, a := context.Background(), accountsOn(db)
 
-	err := RegisterByEmailAddress(c, "john", "hash", "j@example.com", "fr", "v2", "code", "key", "web", "1.2.3.4", authentication.Device{Name: "phone"})
+	err := a.RegisterByEmailAddress(c, "john", "hash", "j@example.com", "fr", "v2", "code", "key", "web", "1.2.3.4", authentication.Device{Name: "phone"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -26,17 +26,17 @@ func TestRegisterByEmailAddress(t *testing.T) {
 	}
 
 	db.Coll(model.UserCollection).Err = errBoom
-	if err := RegisterByEmailAddress(c, "a", "b", "c", "fr", "v", "c", "k", "s", "ip", authentication.Device{}); err == nil {
+	if err := a.RegisterByEmailAddress(c, "a", "b", "c", "fr", "v", "c", "k", "s", "ip", authentication.Device{}); err == nil {
 		t.Error("a failure to save the user must be reported")
 	}
 }
 
 func TestRegisterByThirdPartyToken(t *testing.T) {
 	db := mock.NewDatabase("app")
-	c, _ := plugintest.NewContext(db, "GET", "/", nil)
+	c, a := context.Background(), accountsOn(db)
 
 	infos := validator.TokenInfos{Token: "t", UserID: "123", Email: "j@example.com", FirstName: "John"}
-	err := RegisterByThirdPartyToken(c, "john", infos, authentication.MethodGoogle, "fr", "v2", "code", "key", "web", "1.2.3.4", authentication.Device{})
+	err := a.RegisterByThirdPartyToken(c, "john", infos, authentication.MethodGoogle, "fr", "v2", "code", "key", "web", "1.2.3.4", authentication.Device{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -56,9 +56,9 @@ func TestValidateUserRegistration(t *testing.T) {
 			doc[k] = v
 		}
 		db.Coll(model.UserCollection).One = mock.Result{Value: doc}
-		c, _ := plugintest.NewContext(db, "GET", "/", nil)
+		c, a := context.Background(), accountsOn(db)
 
-		return db, func(key string) error { return ValidateUserRegistration(c, id.Hex(), key) }
+		return db, func(key string) error { return a.ValidateUserRegistration(c, id.Hex(), key) }
 	}
 
 	t.Run("right key", func(t *testing.T) {
@@ -89,11 +89,11 @@ func TestValidateUserRegistration(t *testing.T) {
 	})
 
 	t.Run("unknown user and invalid ID", func(t *testing.T) {
-		c, _ := plugintest.NewContext(mock.NewDatabase("app"), "GET", "/", nil)
-		if err := ValidateUserRegistration(c, id.Hex(), "right"); err == nil {
+		c, a := context.Background(), accountsOn(mock.NewDatabase("app"))
+		if err := a.ValidateUserRegistration(c, id.Hex(), "right"); err == nil {
 			t.Error("an unknown user must be reported")
 		}
-		if err := ValidateUserRegistration(c, "nope", "right"); err == nil {
+		if err := a.ValidateUserRegistration(c, "nope", "right"); err == nil {
 			t.Error("an invalid ID must be rejected")
 		}
 	})
@@ -101,6 +101,7 @@ func TestValidateUserRegistration(t *testing.T) {
 
 func TestCancelUserRegistration(t *testing.T) {
 	id := bson.NewObjectID()
+	var deleted []string
 
 	newContext := func(infos bson.M) (*mock.Database, func(key string) error) {
 		db := mock.NewDatabase("app")
@@ -109,13 +110,13 @@ func TestCancelUserRegistration(t *testing.T) {
 			doc[k] = v
 		}
 		db.Coll(model.UserCollection).One = mock.Result{Value: doc}
-		c, _ := plugintest.NewContext(db, "GET", "/", nil)
+		c, a := context.Background(), accountsOn(db)
+		a.deleteUser = func(userID string) { deleted = append(deleted, userID) }
 
-		return db, func(key string) error { return CancelUserRegistration(c, id.Hex(), key) }
+		return db, func(key string) error { return a.CancelUserRegistration(c, id.Hex(), key) }
 	}
 
 	t.Run("right key", func(t *testing.T) {
-		queue := plugintest.CaptureQueue(t)
 		db, cancel := newContext(nil)
 
 		if err := cancel("right"); err != nil {
@@ -124,8 +125,8 @@ func TestCancelUserRegistration(t *testing.T) {
 		checkCall(t, db, model.UserCollection, "DeleteOne")
 
 		// The workers delete the data of the user.
-		if message, ok := queue.Next(); !ok || message.Type != "delete_user" {
-			t.Errorf("message = %+v, %v", message, ok)
+		if len(deleted) != 1 || deleted[0] != id.Hex() {
+			t.Errorf("deleted users = %v, want [%s]", deleted, id.Hex())
 		}
 	})
 
@@ -147,8 +148,8 @@ func TestCancelUserRegistration(t *testing.T) {
 	})
 
 	t.Run("invalid ID", func(t *testing.T) {
-		c, _ := plugintest.NewContext(mock.NewDatabase("app"), "GET", "/", nil)
-		if err := CancelUserRegistration(c, "nope", "right"); err == nil {
+		c, a := context.Background(), accountsOn(mock.NewDatabase("app"))
+		if err := a.CancelUserRegistration(c, "nope", "right"); err == nil {
 			t.Error("an invalid ID must be rejected")
 		}
 	})
@@ -158,19 +159,19 @@ func TestGetRegistrationDetails(t *testing.T) {
 	id := bson.NewObjectID()
 	db := mock.NewDatabase("app")
 	db.Coll(model.UserCollection).One = mock.Result{Value: bson.M{"_id": id, "registrationInfos": bson.M{"source": "web", "method": "password", "device": bson.M{"name": "phone"}}}}
-	c, _ := plugintest.NewContext(db, "GET", "/", nil)
+	c, a := context.Background(), accountsOn(db)
 
-	details, err := GetRegistrationDetails(c, id.Hex())
+	details, err := a.GetRegistrationDetails(c, id.Hex())
 	if err != nil || details.Source != "web" || details.Method != "password" || details.Device.Name != "phone" {
 		t.Errorf("got %+v, %v", details, err)
 	}
 
-	if _, err := GetRegistrationDetails(c, "nope"); err == nil {
+	if _, err := a.GetRegistrationDetails(c, "nope"); err == nil {
 		t.Error("an invalid ID must be rejected")
 	}
 
-	c, _ = plugintest.NewContext(mock.NewDatabase("app"), "GET", "/", nil)
-	if _, err := GetRegistrationDetails(c, id.Hex()); err == nil {
+	a = accountsOn(mock.NewDatabase("app"))
+	if _, err := a.GetRegistrationDetails(c, id.Hex()); err == nil {
 		t.Error("an unknown user must be reported")
 	}
 }

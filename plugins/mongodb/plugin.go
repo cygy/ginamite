@@ -11,6 +11,7 @@ import (
 	"github.com/cygy/ginamite/api"
 	"github.com/cygy/ginamite/api/route"
 	"github.com/cygy/ginamite/common/config"
+	"github.com/cygy/ginamite/common/queue"
 	"github.com/cygy/ginamite/plugins/mongodb/api/ctxsettings"
 	apiFunctions "github.com/cygy/ginamite/plugins/mongodb/api/functions"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
@@ -239,48 +240,24 @@ func (p *Plugin) configureAPI(a *api.Server) {
 	a.Hooks.ExtendTokenExpirationDateFromID = tokens.ExtendTokenExpirationDateFromID
 	a.Account.Tokens = tokens
 	a.Account.Processes = apiFunctions.NewProcesses(p.database)
+	a.Account.Accounts = apiFunctions.NewAccounts(p.database, p.Settings,
+		func(locale string) model.RegistrationDefaults {
+			return model.RegistrationDefaults{
+				Timezone:      model.RegistrationTimezone(locale, a.Timezones, a.Config.DefaultTimezone),
+				Notifications: a.Notifications.Defaults(),
+				Abilities:     p.Settings().DefaultUserAbilities,
+			}
+		},
+		func(userID string) { a.Queue.DeleteUser(queue.TaskDeleteUser{UserID: userID}) },
+	)
 
 	a.Hooks.MiddlewareIsValidAuthToken = apiFunctions.IsValidAuthToken
 	a.Hooks.MiddlewareGetUserAndLocaleFromAuthToken = apiFunctions.GetUserAndLocaleFromAuthToken
 	a.Hooks.MiddlewareGetUserAbilities = apiFunctions.GetUserAbilities
 
-	a.Account.GetUserDetailsByIdentifier = apiFunctions.GetUserDetailsByIdentifier
-	a.Account.GetUserDetailsByID = apiFunctions.GetUserDetailsByID
-	a.Account.GetUserDetailsByFacebookUserID = apiFunctions.GetUserDetailsByFacebookUserID
-	a.Account.GetUserDetailsByGoogleUserID = apiFunctions.GetUserDetailsByGoogleUserID
-	a.Account.GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser = apiFunctions.GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser
-
-	a.Account.UpdateEncryptedPasswordByUserID = apiFunctions.UpdateEncryptedPasswordByUserID
-
-	a.Account.UpdateUserPassword = apiFunctions.UpdateUserPassword
-	a.Account.UpdateUserEmailAddress = apiFunctions.UpdateUserEmailAddress
-	a.Account.UserEmailAddressIsVerified = apiFunctions.UserEmailAddressIsVerified
-	a.Account.UpdateUserSocialNetworks = apiFunctions.UpdateUserSocialNetworks
 	a.Terms = apiFunctions.NewTerms(p.database)
 	a.Account.Notifications = apiFunctions.NewNotifications(p.database, func() string { return a.Config.DefaultLocale })
 	a.Users = apiFunctions.NewUsers(p.database, p.Settings)
-
-	a.Account.ValidateUserRegistration = apiFunctions.ValidateUserRegistration
-	a.Account.CancelUserRegistration = apiFunctions.CancelUserRegistration
-	a.Account.GetRegistrationDetails = apiFunctions.GetRegistrationDetails
-	a.Account.RegisterByEmailAddress = apiFunctions.RegisterByEmailAddress
-	a.Account.RegisterByThirdPartyToken = apiFunctions.RegisterByThirdPartyToken
-
-	a.Account.DoesAccountWithUsernameExist = apiFunctions.DoesAccountWithUsernameExist
-	a.Account.DoesAccountWithEmailAddressExist = apiFunctions.DoesAccountWithEmailAddressExist
-	a.Account.DoesUserWithFacebookUserIDExist = apiFunctions.DoesUserWithFacebookUserIDExist
-	a.Account.DoesUserWithGoogleUserIDExist = apiFunctions.DoesUserWithGoogleUserIDExist
-
-	a.Account.SaveFacebookUserTokenDetailsToUser = apiFunctions.SaveFacebookUserTokenDetailsToUser
-	a.Account.SaveGoogleUserTokenDetailsToUser = apiFunctions.SaveGoogleUserTokenDetailsToUser
-
-	a.Account.GetOwnedAccountDetails = apiFunctions.GetOwnedAccountDetails
-	a.Account.UpdatedAccountInfos = apiFunctions.UpdatedAccountInfos
-	a.Account.UpdatedAccountSettings = apiFunctions.UpdatedAccountSettings
-
-	a.Account.DeleteUserByID = apiFunctions.DeleteUserByID
-	a.Account.DisableUserByID = apiFunctions.DisableUserByID
-	a.Account.EnableUserByID = apiFunctions.EnableUserByID
 
 	a.Contacts = apiFunctions.NewContacts(p.database)
 

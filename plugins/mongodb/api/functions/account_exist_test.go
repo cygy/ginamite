@@ -1,10 +1,10 @@
 package functions
 
 import (
+	"context"
 	"errors"
 	"testing"
 
-	"github.com/cygy/ginamite/plugins/mongodb/internal/plugintest"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
 	"github.com/cygy/ginamite/plugins/mongodb/mongo/store/mock"
 )
@@ -15,20 +15,20 @@ func TestDoesAccountExist(t *testing.T) {
 		call func(db *mock.Database) (bool, error)
 	}{
 		{"username", func(db *mock.Database) (bool, error) {
-			c, _ := plugintest.NewContext(db, "GET", "/", nil)
-			return DoesAccountWithUsernameExist(c, "john")
+			c, a := context.Background(), accountsOn(db)
+			return a.DoesAccountWithUsernameExist(c, "john")
 		}},
 		{"email address", func(db *mock.Database) (bool, error) {
-			c, _ := plugintest.NewContext(db, "GET", "/", nil)
-			return DoesAccountWithEmailAddressExist(c, "j@example.com")
+			c, a := context.Background(), accountsOn(db)
+			return a.DoesAccountWithEmailAddressExist(c, "j@example.com")
 		}},
 		{"facebook ID", func(db *mock.Database) (bool, error) {
-			c, _ := plugintest.NewContext(db, "GET", "/", nil)
-			return DoesUserWithFacebookUserIDExist(c, "10157123")
+			c, a := context.Background(), accountsOn(db)
+			return a.DoesUserWithFacebookUserIDExist(c, "10157123")
 		}},
 		{"google ID", func(db *mock.Database) (bool, error) {
-			c, _ := plugintest.NewContext(db, "GET", "/", nil)
-			return DoesUserWithGoogleUserIDExist(c, "11800")
+			c, a := context.Background(), accountsOn(db)
+			return a.DoesUserWithGoogleUserIDExist(c, "11800")
 		}},
 	}
 

@@ -1,7 +1,6 @@
 package account
 
 import (
-	"errors"
 	"strings"
 
 	"github.com/cygy/ginamite/common/ctxkey"
@@ -19,8 +18,8 @@ import (
 
 // UpdateSocialNetworks updates the social network profiles of the user.
 func UpdateSocialNetworks(c *gin.Context) {
-	if FunctionsOf(c).UpdateUserSocialNetworks == nil {
-		c.Error(errors.New("undefined function 'UpdateUserSocialNetworks'"))
+	if FunctionsOf(c).Accounts == nil {
+		c.Error(errNoAccounts)
 		response.InternalServerError(c)
 		return
 	}
@@ -71,7 +70,7 @@ func UpdateSocialNetworks(c *gin.Context) {
 	}
 
 	userID := ctxUser.GetID(c)
-	if err := FunctionsOf(c).UpdateUserSocialNetworks(c, userID, facebook, twitter, instagram); err != nil {
+	if err := FunctionsOf(c).Accounts.UpdateUserSocialNetworks(c, userID, facebook, twitter, instagram); err != nil {
 		response.InternalServerError(c)
 		return
 	}

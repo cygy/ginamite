@@ -109,25 +109,8 @@ func validateOrCancelUpdateProperty(c *gin.Context, property string, validate bo
 		return
 	}
 
-	// Some functions must be verified.
-	undefined := FunctionsOf(c).GetUserDetailsByID == nil || FunctionsOf(c).Processes == nil
-
-	if validate {
-		if isEmailAddressProcess {
-			undefined = undefined || FunctionsOf(c).UpdateUserEmailAddress == nil
-		} else if isPasswordProcess {
-			undefined = undefined || FunctionsOf(c).UpdateUserPassword == nil
-		} else if isValidateEmailAddressProcess {
-			undefined = undefined || FunctionsOf(c).UserEmailAddressIsVerified == nil
-		} else if isDeleteAccountProcess {
-			undefined = undefined || FunctionsOf(c).DeleteUserByID == nil
-		} else if isDisableAccountProcess {
-			undefined = undefined || FunctionsOf(c).DisableUserByID == nil
-		}
-	}
-
-	if undefined {
-		sendError(errors.New("a function in the package 'ginamite/api/route/account' must be defined"))
+	if FunctionsOf(c).Accounts == nil || FunctionsOf(c).Processes == nil {
+		sendError(errors.New("the storages of the accounts and of the processes must be defined"))
 		return
 	}
 
@@ -138,7 +121,7 @@ func validateOrCancelUpdateProperty(c *gin.Context, property string, validate bo
 		return
 	}
 
-	user, err := FunctionsOf(c).GetUserDetailsByID(c, userID)
+	user, err := FunctionsOf(c).Accounts.GetUserDetailsByID(c, userID)
 	if err != nil {
 		sendError(err)
 		return
@@ -147,22 +130,22 @@ func validateOrCancelUpdateProperty(c *gin.Context, property string, validate bo
 	// Now update the password/email address.
 	if validate {
 		if isEmailAddressProcess {
-			if err := FunctionsOf(c).UpdateUserEmailAddress(c, userID, value); err != nil {
+			if err := FunctionsOf(c).Accounts.UpdateUserEmailAddress(c, userID, value); err != nil {
 				sendError(err)
 				return
 			}
 		} else if isPasswordProcess {
-			if err := FunctionsOf(c).UpdateUserPassword(c, userID, value, true); err != nil {
+			if err := FunctionsOf(c).Accounts.UpdateUserPassword(c, userID, value, true); err != nil {
 				sendError(err)
 				return
 			}
 		} else if isValidateEmailAddressProcess {
-			if err := FunctionsOf(c).UserEmailAddressIsVerified(c, userID); err != nil {
+			if err := FunctionsOf(c).Accounts.UserEmailAddressIsVerified(c, userID); err != nil {
 				sendError(err)
 				return
 			}
 		} else if isDeleteAccountProcess {
-			if err := FunctionsOf(c).DeleteUserByID(c, userID); err != nil {
+			if err := FunctionsOf(c).Accounts.DeleteUserByID(c, userID); err != nil {
 				sendError(err)
 				return
 			}
@@ -171,7 +154,7 @@ func validateOrCancelUpdateProperty(c *gin.Context, property string, validate bo
 				UserID: userID,
 			})
 		} else if isDisableAccountProcess {
-			if _, err := FunctionsOf(c).DisableUserByID(c, userID); err != nil {
+			if _, err := FunctionsOf(c).Accounts.DisableUserByID(c, userID); err != nil {
 				sendError(err)
 				return
 			}

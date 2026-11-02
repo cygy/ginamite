@@ -16,7 +16,7 @@ func TestDeleteAccount(t *testing.T) {
 	}
 
 	runCases(t, DeleteAccount, []testCase{
-		{name: "GetUserDetailsByID not defined", userID: testUserID, setup: create(nil), want: http.StatusInternalServerError},
+		{name: "storage of the accounts not defined", userID: testUserID, setup: all(create(nil), withoutAccounts), want: http.StatusInternalServerError},
 		{name: "storage of the processes not defined", userID: testUserID, setup: all(withUser(testUser, nil), withoutProcesses), want: http.StatusInternalServerError},
 		{name: "user error", userID: testUserID, setup: all(withUser(testUser, errBoom), create(nil)), want: http.StatusInternalServerError},
 		{name: "process error", userID: testUserID, setup: all(withUser(testUser, nil), create(errBoom)), want: http.StatusInternalServerError},

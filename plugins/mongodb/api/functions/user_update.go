@@ -1,52 +1,51 @@
 package functions
 
 import (
-	"github.com/cygy/ginamite/plugins/mongodb/model"
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/session"
+	"context"
 
-	"github.com/gin-gonic/gin"
+	"github.com/cygy/ginamite/plugins/mongodb/model"
 )
 
 // UpdateUserPassword updates the password of a user.
-func UpdateUserPassword(c *gin.Context, userID, password string, isPasswordEncrypted bool) error {
-	mongoSession := session.Get(c)
+func (a *Accounts) UpdateUserPassword(ctx context.Context, userID, password string, isPasswordEncrypted bool) error {
+	mongoSession := a.database()
 	user, err := model.UserWithID(userID)
 	if err != nil {
 		return err
 	}
 
-	return user.UpdatePassword(c, password, isPasswordEncrypted, mongoSession)
+	return user.UpdatePassword(ctx, password, isPasswordEncrypted, mongoSession)
 }
 
 // UpdateUserEmailAddress updates the email address of a user.
-func UpdateUserEmailAddress(c *gin.Context, userID, emailAddress string) error {
-	mongoSession := session.Get(c)
+func (a *Accounts) UpdateUserEmailAddress(ctx context.Context, userID, emailAddress string) error {
+	mongoSession := a.database()
 	user, err := model.UserWithID(userID)
 	if err != nil {
 		return err
 	}
 
-	return user.UpdateEmailAddress(c, emailAddress, mongoSession)
+	return user.UpdateEmailAddress(ctx, emailAddress, mongoSession)
 }
 
 // UserEmailAddressIsVerified marks the email address of the user as verified.
-func UserEmailAddressIsVerified(c *gin.Context, userID string) error {
-	mongoSession := session.Get(c)
+func (a *Accounts) UserEmailAddressIsVerified(ctx context.Context, userID string) error {
+	mongoSession := a.database()
 	user, err := model.UserWithID(userID)
 	if err != nil {
 		return err
 	}
 
-	return user.SetEmailAddressValid(c, mongoSession)
+	return user.SetEmailAddressValid(ctx, mongoSession)
 }
 
 // UpdateUserSocialNetworks updates the social network links of a user.
-func UpdateUserSocialNetworks(c *gin.Context, userID, facebook, twitter, instagram string) error {
-	mongoSession := session.Get(c)
+func (a *Accounts) UpdateUserSocialNetworks(ctx context.Context, userID, facebook, twitter, instagram string) error {
+	mongoSession := a.database()
 	user, err := model.UserWithID(userID)
 	if err != nil {
 		return err
 	}
 
-	return user.UpdateSocialNetworks(c, facebook, twitter, instagram, mongoSession)
+	return user.UpdateSocialNetworks(ctx, facebook, twitter, instagram, mongoSession)
 }

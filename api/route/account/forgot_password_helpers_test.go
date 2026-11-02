@@ -20,10 +20,8 @@ func TestValidateOrCancelForgotPassword_Validate(t *testing.T) {
 	calls := 0
 
 	runCases(t, ValidateForgotPassword, []testCase{
-		{name: "GetUserDetailsByID not defined", id: "p", key: "k", body: body, setup: forgotPasswordStubs{key: "k", missing: "GetUserDetailsByID"}.install, want: http.StatusBadRequest},
-		{name: "details function not defined", id: "p", key: "k", body: body, setup: forgotPasswordStubs{key: "k", missing: "GetForgotPasswordProcessDetailsByID"}.install, want: http.StatusBadRequest},
-		{name: "UpdateUserPassword not defined", id: "p", key: "k", body: body, setup: forgotPasswordStubs{key: "k", missing: "UpdateUserPassword"}.install, want: http.StatusBadRequest},
-		{name: "DeleteForgotPasswordProcess not defined", id: "p", key: "k", body: body, setup: forgotPasswordStubs{key: "k", missing: "DeleteForgotPasswordProcess"}.install, want: http.StatusBadRequest},
+		{name: "storage of the accounts not defined", id: "p", key: "k", body: body, setup: forgotPasswordStubs{key: "k", missing: "Accounts"}.install, want: http.StatusBadRequest},
+		{name: "storage of the processes not defined", id: "p", key: "k", body: body, setup: forgotPasswordStubs{key: "k", missing: "Processes"}.install, want: http.StatusBadRequest},
 		{name: "missing process", body: body, setup: forgotPasswordStubs{key: "k"}.install, want: http.StatusBadRequest},
 		{name: "invalid password", id: "p", key: "k", body: `{"password":"weak"}`, setup: forgotPasswordStubs{key: "k"}.install, want: http.StatusBadRequest},
 		{name: "details error", id: "p", key: "k", body: body, setup: forgotPasswordStubs{key: "k", detailsErr: errBoom}.install, want: http.StatusBadRequest},

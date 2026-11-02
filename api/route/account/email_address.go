@@ -1,7 +1,6 @@
 package account
 
 import (
-	"errors"
 	"strings"
 
 	"github.com/cygy/ginamite/common/ctxkey"
@@ -20,8 +19,8 @@ import (
 
 // UpdateEmailAddress updates the email address and sends a mail to confirm.
 func UpdateEmailAddress(c *gin.Context) {
-	if FunctionsOf(c).GetUserDetailsByID == nil {
-		c.Error(errors.New("undefined function 'GetUserDetailsByID'"))
+	if FunctionsOf(c).Accounts == nil {
+		c.Error(errNoAccounts)
 		response.InternalServerError(c)
 		return
 	}
@@ -48,7 +47,7 @@ func UpdateEmailAddress(c *gin.Context) {
 	}
 
 	userID := ctxUser.GetID(c)
-	user, err := FunctionsOf(c).GetUserDetailsByID(c, userID)
+	user, err := FunctionsOf(c).Accounts.GetUserDetailsByID(c, userID)
 	if err != nil {
 		response.InternalServerError(c)
 		return
@@ -108,8 +107,8 @@ func ValidateNewEmailAddress(c *gin.Context) {
 
 // ConfirmEmailAddress validates the new email address.
 func ConfirmEmailAddress(c *gin.Context) {
-	if FunctionsOf(c).GetUserDetailsByID == nil {
-		c.Error(errors.New("undefined function 'GetUserDetailsByID'"))
+	if FunctionsOf(c).Accounts == nil {
+		c.Error(errNoAccounts)
 		response.InternalServerError(c)
 		return
 	}
@@ -118,7 +117,7 @@ func ConfirmEmailAddress(c *gin.Context) {
 	t := ctxkey.Localization.Get(c).Translate(locale)
 
 	userID := ctxUser.GetID(c)
-	user, err := FunctionsOf(c).GetUserDetailsByID(c, userID)
+	user, err := FunctionsOf(c).Accounts.GetUserDetailsByID(c, userID)
 	if err != nil {
 		response.InternalServerError(c)
 		return

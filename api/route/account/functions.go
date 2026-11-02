@@ -25,87 +25,8 @@ type Functions struct {
 	// Processes is the storage of the processes bound to a user.
 	Processes ProcessesStorage
 
-	// GetUserDetailsByIdentifier is a function to get the user details from its identifier (username, email addresse, what you want.)
-	GetUserDetailsByIdentifier GetUserDetailsByIdentifierFunc
-
-	// GetUserDetailsByID is a function to get the user details from its unique identifier.
-	GetUserDetailsByID GetUserDetailsByIDFunc
-
-	// GetUserDetailsByFacebookUserID is a function to get the user details from its unique facebook identifier.
-	GetUserDetailsByFacebookUserID GetUserDetailsBySocialNetworkIDFunc
-
-	// GetUserDetailsByGoogleUserID is a function to get the user details from its unique facebook identifier.
-	GetUserDetailsByGoogleUserID GetUserDetailsBySocialNetworkIDFunc
-
-	// GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser is a function to get the user details from its identifier (username, email addresse, what you want.)
-	GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUserFunc
-
-	// UpdateEncryptedPasswordByUserID is an optional function to replace the encrypted password of a user. If it is
-	// defined, the password of a user signing in is encrypted again when its hash is weaker than the current one.
-	UpdateEncryptedPasswordByUserID UpdateEncryptedPasswordByUserIDFunc
-
-	// UpdateUserPassword is a function to update the password of an user.
-	UpdateUserPassword UpdateUserPasswordFunc
-
-	// UpdateUserEmailAddress is a function to update the email address of an user.
-	UpdateUserEmailAddress UpdateUserEmailAddressFunc
-
-	// UserEmailAddressIsVerified is a function to flag the email address of a user as valid.
-	UserEmailAddressIsVerified UserEmailAddressIsVerifiedFunc
-
-	// UpdateUserSocialNetworks updates the social network accounts of the user.
-	UpdateUserSocialNetworks UpdateUserSocialNetworksFunc
-
-	// ValidateUserRegistration is a function to validate the registration of a user by its ID.
-	ValidateUserRegistration ValidateUserRegistrationFunc
-
-	// CancelUserRegistration is a function to cancel the registration of a user by its ID.
-	CancelUserRegistration CancelUserRegistrationFunc
-
-	// GetRegistrationDetails is a function to get the details of the registration of a user.
-	GetRegistrationDetails GetRegistrationDetailsFunc
-
-	// DoesAccountWithUsernameExist returns true if an account with this username does exist already.
-	DoesAccountWithUsernameExist DoesAccountWithUsernameExistFunc
-
-	// DoesAccountWithEmailAddressExist returns true if an account with this email address does exist already.
-	DoesAccountWithEmailAddressExist DoesAccountWithEmailAddressExistFunc
-
-	// RegisterByEmailAddress saves a newly registered user.
-	RegisterByEmailAddress RegisterByEmailAddressFunc
-
-	// RegisterByThirdPartyToken saves a newly registered user.
-	RegisterByThirdPartyToken RegisterByThirdPartyTokenFunc
-
-	// DoesUserWithFacebookUserIDExist returns true if a user with a facebook user id is registered already.
-	DoesUserWithFacebookUserIDExist DoesUserWithSocialNetworkUserIDExistFunc
-
-	// DoesUserWithGoogleUserIDExist returns true if a user with a google user id is registered already.
-	DoesUserWithGoogleUserIDExist DoesUserWithSocialNetworkUserIDExistFunc
-
-	// SaveFacebookUserTokenDetailsToUser is a function to save the auth token details from facebook to an account.
-	SaveFacebookUserTokenDetailsToUser SaveSocialNetworkUserTokenDetailsToUserFunc
-
-	// SaveGoogleUserTokenDetailsToUser is a function to save the auth token details from google to an account.
-	SaveGoogleUserTokenDetailsToUser SaveSocialNetworkUserTokenDetailsToUserFunc
-
-	// GetOwnedAccountDetails is a function to get the user details from its unique identifier.
-	GetOwnedAccountDetails GetOwnedAccountDetailsFunc
-
-	// UpdatedAccountInfos is a function to update the user infos.
-	UpdatedAccountInfos UpdatedAccountInfosFunc
-
-	// UpdatedAccountSettings is a function to update the user settings.
-	UpdatedAccountSettings UpdatedAccountSettingsFunc
-
-	// DeleteUserByID deletes a user by its ID.
-	DeleteUserByID DeleteUserByIDFunc
-
-	// DisableUserByID disables a user by its ID.
-	DisableUserByID DisableUserByIDFunc
-
-	// EnableUserByID enables a user by its ID.
-	EnableUserByID EnableUserByIDFunc
+	// Accounts is the storage of the accounts of the users.
+	Accounts AccountsStorage
 }
 
 // Inject returns a middleware saving the functions in the Gin context, see FunctionsOf.

@@ -7,54 +7,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// GetUserDetailsByIdentifierFunc is a function to get the user details from its identifier (username, email addresse, what you want.)
-type GetUserDetailsByIdentifierFunc func(c *gin.Context, identifier string) (authentication.User, error)
-
-// GetUserDetailsByIDFunc is a function to get the user details from its unique identifier.
-type GetUserDetailsByIDFunc func(c *gin.Context, userID string) (authentication.User, error)
-
 // GetUserDetailsBySocialNetworkIDFunc is a function to get the user details from its unique social network identifier.
 type GetUserDetailsBySocialNetworkIDFunc func(c *gin.Context, userID string) (authentication.User, error)
-
-// UpdateEncryptedPasswordByUserIDFunc is a function to replace the encrypted password of a user by another one, such as
-// the same password encrypted with stronger parameters.
-type UpdateEncryptedPasswordByUserIDFunc func(c *gin.Context, userID, encryptedPassword string) error
-
-// GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUserFunc is a function to get the user details and its encrypted password from its identifier (username, email addresse, what you want.)
-type GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUserFunc func(c *gin.Context, identifier string) (authentication.User, string, error)
-
-// UpdateUserPasswordFunc is a function to update the password of an user.
-type UpdateUserPasswordFunc func(c *gin.Context, userID, password string, isPasswordEncrypted bool) error
-
-// UpdateUserEmailAddressFunc is a function to update the email address of an user.
-type UpdateUserEmailAddressFunc func(c *gin.Context, userID, emailAddress string) error
-
-// UserEmailAddressIsVerifiedFunc is a function to flag the email address of a user as valid.
-type UserEmailAddressIsVerifiedFunc func(c *gin.Context, userID string) error
-
-// UpdateUserSocialNetworksFunc updates the social network accounts of the user.
-type UpdateUserSocialNetworksFunc func(c *gin.Context, userID, facebook, twitter, instagram string) error
-
-// ValidateUserRegistrationFunc is a function to validate the registration of a user by its ID.
-type ValidateUserRegistrationFunc func(c *gin.Context, userID, registrationKey string) error
-
-// CancelUserRegistrationFunc is a function to cancel the registration of a user by its ID.
-type CancelUserRegistrationFunc func(c *gin.Context, userID, registrationKey string) error
-
-// GetRegistrationDetailsFunc is a function to get the details of the registration of a user.
-type GetRegistrationDetailsFunc func(c *gin.Context, userID string) (*authentication.Details, error)
-
-// DoesAccountWithUsernameExistFunc returns true if an account with this username does exist already.
-type DoesAccountWithUsernameExistFunc func(c *gin.Context, username string) (bool, error)
-
-// DoesAccountWithEmailAddressExistFunc returns true if an account with this email address does exist already.
-type DoesAccountWithEmailAddressExistFunc func(c *gin.Context, emailAddress string) (bool, error)
-
-// RegisterByEmailAddressFunc saves a newly registered user.
-type RegisterByEmailAddressFunc func(c *gin.Context, username, encryptedPassword, emailAddress, locale, termsVersion, registrationCode, privateKey, source, ip string, device authentication.Device) error
-
-// RegisterByThirdPartyTokenFunc saves a newly registered user.
-type RegisterByThirdPartyTokenFunc func(c *gin.Context, username string, tokenInfos validator.TokenInfos, tokenSource, locale, termsVersion, registrationCode, privateKey, source, ip string, device authentication.Device) error
 
 // DoesUserWithSocialNetworkUserIDExistFunc is a function to know if a user with a social network user id is registered already.
 type DoesUserWithSocialNetworkUserIDExistFunc func(c *gin.Context, userID string) (bool, error)
@@ -62,26 +16,8 @@ type DoesUserWithSocialNetworkUserIDExistFunc func(c *gin.Context, userID string
 // SaveSocialNetworkUserTokenDetailsToUserFunc is a function to save the auth token details from a social network to an account.
 type SaveSocialNetworkUserTokenDetailsToUserFunc func(c *gin.Context, userID string, tokenInfos validator.TokenInfos) error
 
-// GetOwnedAccountDetailsFunc is a function to get the user details from its unique identifier.
-type GetOwnedAccountDetailsFunc func(c *gin.Context, userID string) any
-
-// UpdatedAccountInfosFunc is a function to update the user infos.
-type UpdatedAccountInfosFunc func(c *gin.Context, userID, firstName, lastName string) error
-
-// UpdatedAccountSettingsFunc is a function to update the user settings.
-type UpdatedAccountSettingsFunc func(c *gin.Context, userID, locale, timezone string) error
-
 // CreateNewProcessFunc is a function to start a new process bound to a user.
 type CreateNewProcessFunc func(c *gin.Context, userID string) (processID, processKey string, err error)
 
 // CreateNewProcessWithValueFunc is a function to start a new process bound to a user.
 type CreateNewProcessWithValueFunc func(c *gin.Context, userID, value string) (processID, processKey string, err error)
-
-// DeleteUserByIDFunc deletes a user by its ID.
-type DeleteUserByIDFunc func(c *gin.Context, userID string) error
-
-// DisableUserByIDFunc disables a user by its ID.
-type DisableUserByIDFunc func(c *gin.Context, userID string) (authentication.User, error)
-
-// EnableUserByIDFunc enables a user by its ID.
-type EnableUserByIDFunc func(c *gin.Context, userID string) (authentication.User, error)

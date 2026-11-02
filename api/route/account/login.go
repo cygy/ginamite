@@ -1,8 +1,6 @@
 package account
 
 import (
-	"errors"
-
 	"github.com/cygy/ginamite/common/ctxkey"
 
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
@@ -79,19 +77,19 @@ func loginWithThirdParty(c *gin.Context, v validator.TokenValidator) {
 	var user authentication.User
 	var err error
 	if isFacebookMethod {
-		if FunctionsOf(c).GetUserDetailsByFacebookUserID == nil {
-			err := errors.New("undefined function 'GetUserDetailsByFacebookUserID'")
+		if FunctionsOf(c).Accounts == nil {
+			err := errNoAccounts
 			canNotLoginError(c, err)
 			return
 		}
-		user, err = FunctionsOf(c).GetUserDetailsByFacebookUserID(c, tokenInfos.UserID)
+		user, err = FunctionsOf(c).Accounts.GetUserDetailsByFacebookUserID(c, tokenInfos.UserID)
 	} else if isGoogleMethod {
-		if FunctionsOf(c).GetUserDetailsByGoogleUserID == nil {
-			err := errors.New("undefined function 'GetUserDetailsByGoogleUserID'")
+		if FunctionsOf(c).Accounts == nil {
+			err := errNoAccounts
 			canNotLoginError(c, err)
 			return
 		}
-		user, err = FunctionsOf(c).GetUserDetailsByGoogleUserID(c, tokenInfos.UserID)
+		user, err = FunctionsOf(c).Accounts.GetUserDetailsByGoogleUserID(c, tokenInfos.UserID)
 	}
 	if err != nil && !commonErrors.IsNotFound(err) {
 		canNotLoginError(c, err)
@@ -99,13 +97,13 @@ func loginWithThirdParty(c *gin.Context, v validator.TokenValidator) {
 	}
 
 	if !user.IsSaved() {
-		if FunctionsOf(c).GetUserDetailsByIdentifier == nil {
-			err := errors.New("undefined function 'GetUserDetailsByIdentifier'")
+		if FunctionsOf(c).Accounts == nil {
+			err := errNoAccounts
 			canNotLoginError(c, err)
 			return
 		}
 
-		if user, err = FunctionsOf(c).GetUserDetailsByIdentifier(c, tokenInfos.Email); err != nil && !commonErrors.IsNotFound(err) {
+		if user, err = FunctionsOf(c).Accounts.GetUserDetailsByIdentifier(c, tokenInfos.Email); err != nil && !commonErrors.IsNotFound(err) {
 			canNotLoginError(c, err)
 			return
 		}
@@ -119,19 +117,19 @@ func loginWithThirdParty(c *gin.Context, v validator.TokenValidator) {
 
 	// Save the token.
 	if isFacebookMethod {
-		if FunctionsOf(c).SaveFacebookUserTokenDetailsToUser == nil {
-			err := errors.New("undefined function 'SaveFacebookUserTokenDetailsToUser'")
+		if FunctionsOf(c).Accounts == nil {
+			err := errNoAccounts
 			canNotLoginError(c, err)
 			return
 		}
-		err = FunctionsOf(c).SaveFacebookUserTokenDetailsToUser(c, user.ID, tokenInfos)
+		err = FunctionsOf(c).Accounts.SaveFacebookUserTokenDetailsToUser(c, user.ID, tokenInfos)
 	} else if isGoogleMethod {
-		if FunctionsOf(c).SaveGoogleUserTokenDetailsToUser == nil {
-			err := errors.New("undefined function 'SaveGoogleUserTokenDetailsToUser'")
+		if FunctionsOf(c).Accounts == nil {
+			err := errNoAccounts
 			canNotLoginError(c, err)
 			return
 		}
-		err = FunctionsOf(c).SaveGoogleUserTokenDetailsToUser(c, user.ID, tokenInfos)
+		err = FunctionsOf(c).Accounts.SaveGoogleUserTokenDetailsToUser(c, user.ID, tokenInfos)
 	}
 	if err != nil {
 		canNotLoginError(c, err)

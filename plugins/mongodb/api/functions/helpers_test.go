@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/cygy/ginamite/plugins/mongodb/model"
 	"github.com/cygy/ginamite/plugins/mongodb/mongo/bson"
 	"github.com/cygy/ginamite/plugins/mongodb/mongo/store"
 	"github.com/cygy/ginamite/plugins/mongodb/mongo/store/mock"
@@ -20,6 +21,13 @@ func tokensOn(db store.Database) *Tokens {
 // processesOn returns the functions of the processes working on the database.
 func processesOn(db store.Database) *Processes {
 	return NewProcesses(func() store.Database { return db })
+}
+
+// accountsOn returns the functions of the accounts working on the database.
+func accountsOn(db store.Database) *Accounts {
+	return NewAccounts(func() store.Database { return db }, model.DefaultSettings,
+		func(string) model.RegistrationDefaults { return model.RegistrationDefaults{Timezone: "UTC"} },
+		func(string) {})
 }
 
 // checkCall checks the method and the first arguments of the last call received by the collection.

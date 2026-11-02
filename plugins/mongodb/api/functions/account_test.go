@@ -1,6 +1,7 @@
 package functions
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -17,33 +18,36 @@ func TestGetOwnedAccountDetails(t *testing.T) {
 	id := bson.NewObjectID()
 	db := mock.NewDatabase("app")
 	db.Coll(model.UserCollection).One = mock.Result{Value: bson.M{"_id": id, "username": "john", "privateKey": "secret"}}
-	c, _ := plugintest.SignedInContext(t, db, model.User{ID: id})
 
-	got := GetOwnedAccountDetails(c, id.Hex())
-	if user, ok := got.(*model.OwnUser); !ok || user.ID != id || user.Username != "john" {
-		t.Errorf("got %+v", got)
+	got, err := accountsOn(db).GetOwnedAccountDetails(context.Background(), id.Hex())
+	if user, ok := got.(*model.OwnUser); !ok || err != nil || user.ID != id || user.Username != "john" {
+		t.Errorf("got %+v, %v", got, err)
 	}
 
-	c, _ = plugintest.SignedInContext(t, mock.NewDatabase("app"), model.User{ID: id})
-	if got := GetOwnedAccountDetails(c, id.Hex()); got != nil {
-		t.Errorf("got %+v, want nil when the user can not be loaded", got)
+	if got, err := accountsOn(mock.NewDatabase("app")).GetOwnedAccountDetails(context.Background(), id.Hex()); err == nil || got != nil {
+		t.Errorf("got %+v, %v, want an error when the user can not be loaded", got, err)
 	}
 }
 
 func TestUpdatedAccountInfosAndSettings(t *testing.T) {
 	id := bson.NewObjectID()
 	db := mock.NewDatabase("app")
-	c, _ := plugintest.SignedInContext(t, db, model.User{ID: id})
+	db.Coll(model.UserCollection).One = mock.Result{Value: bson.M{"_id": id, "username": "john"}}
+	a := accountsOn(db)
 
-	if err := UpdatedAccountInfos(c, id.Hex(), "John", "Doe"); err != nil {
+	if err := a.UpdatedAccountInfos(context.Background(), id.Hex(), "John", "Doe"); err != nil {
 		t.Fatal(err)
 	}
 	checkUpdate(t, db, model.UserCollection, id, bson.M{"$set": bson.M{"privateInfos.firstName": "John", "privateInfos.lastName": "Doe"}})
 
-	if err := UpdatedAccountSettings(c, id.Hex(), "FR", "Europe/Paris"); err != nil {
+	if err := a.UpdatedAccountSettings(context.Background(), id.Hex(), "FR", "Europe/Paris"); err != nil {
 		t.Fatal(err)
 	}
 	checkUpdate(t, db, model.UserCollection, id, bson.M{"$set": bson.M{"settings.locale": "fr", "settings.timezone": "Europe/Paris"}})
+
+	if err := accountsOn(mock.NewDatabase("app")).UpdatedAccountInfos(context.Background(), id.Hex(), "John", "Doe"); err == nil {
+		t.Error("an unknown user must be reported")
+	}
 }
 
 // publicProfileRequest sends the request to update the public profile of the user.

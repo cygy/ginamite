@@ -10,7 +10,6 @@ import (
 	"github.com/cygy/ginamite/common/authentication"
 	commonErrors "github.com/cygy/ginamite/common/errors"
 
-	"github.com/gin-gonic/gin"
 	"github.com/tredoe/osutil/user/crypt/sha512_crypt"
 )
 
@@ -29,7 +28,7 @@ func TestLoginWithPassword(t *testing.T) {
 	}
 	lookup := func(password string, err error) func() {
 		return func() {
-			testFunctions.GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser = func(*gin.Context, string) (authentication.User, string, error) {
+			testAccounts.GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUserFn = func(context.Context, string) (authentication.User, string, error) {
 				return testUser, password, err
 			}
 		}
@@ -37,7 +36,7 @@ func TestLoginWithPassword(t *testing.T) {
 	body := `{"identifier":"john","password":"Abcdefghij1",` + loginDevice + `}`
 
 	runCases(t, LoginWithPassword, []testCase{
-		{name: "function not defined", body: body, want: http.StatusInternalServerError},
+		{name: "storage of the accounts not defined", body: body, setup: withoutAccounts, want: http.StatusInternalServerError},
 		{name: "missing identifier", body: `{"password":"x",` + loginDevice + `}`, setup: lookup(encrypted, nil), want: http.StatusBadRequest},
 		{name: "missing password", body: `{"identifier":"john",` + loginDevice + `}`, setup: lookup(encrypted, nil), want: http.StatusBadRequest},
 		{name: "missing source", body: `{"identifier":"john","password":"x","device":{"type":"mobile","name":"iPhone"}}`, setup: lookup(encrypted, nil), want: http.StatusBadRequest},
@@ -162,10 +161,10 @@ func TestLoginWithPassword_UpgradesTheLegacyHash(t *testing.T) {
 
 	run := func(stored string, updateErr error) (updated string, calls int) {
 		lookup := func() {
-			testFunctions.GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser = func(*gin.Context, string) (authentication.User, string, error) {
+			testAccounts.GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUserFn = func(context.Context, string) (authentication.User, string, error) {
 				return testUser, stored, nil
 			}
-			testFunctions.UpdateEncryptedPasswordByUserID = func(_ *gin.Context, userID, encrypted string) error {
+			testAccounts.UpdateEncryptedPasswordByUserIDFn = func(_ context.Context, userID, encrypted string) error {
 				if userID != testUser.ID {
 					t.Errorf("user = %q, want %q", userID, testUser.ID)
 				}

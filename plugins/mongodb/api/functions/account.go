@@ -3,12 +3,14 @@
 package functions
 
 import (
+	"context"
+
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
 	"github.com/cygy/ginamite/common/ctxkey"
 	"github.com/cygy/ginamite/common/localization"
-	"github.com/cygy/ginamite/plugins/mongodb/api/context"
+	pluginContext "github.com/cygy/ginamite/plugins/mongodb/api/context"
 	"github.com/cygy/ginamite/plugins/mongodb/api/ctxsettings"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
 	"github.com/cygy/ginamite/plugins/mongodb/mongo/session"
@@ -18,27 +20,33 @@ import (
 )
 
 // GetOwnedAccountDetails returns the details of the user's account.
-func GetOwnedAccountDetails(c *gin.Context, userID string) any {
-	user := context.GetFullUser(c)
-	if user == nil {
-		return nil
+func (a *Accounts) GetOwnedAccountDetails(ctx context.Context, userID string) (any, error) {
+	user := &model.User{}
+	if err := user.GetByID(ctx, userID, a.database()); err != nil {
+		return nil, err
 	}
 
-	return model.NewOwnUser(user)
+	return model.NewOwnUser(user), nil
 }
 
 // UpdatedAccountInfos updates the details of a user's account.
-func UpdatedAccountInfos(c *gin.Context, userID, firstName, lastName string) error {
-	mongoSession := session.Get(c)
-	user := context.GetUser(c)
-	return user.UpdateInfos(c, firstName, lastName, mongoSession)
+func (a *Accounts) UpdatedAccountInfos(ctx context.Context, userID, firstName, lastName string) error {
+	user := &model.User{}
+	if err := user.GetByID(ctx, userID, a.database()); err != nil {
+		return err
+	}
+
+	return user.UpdateInfos(ctx, firstName, lastName, a.database())
 }
 
 // UpdatedAccountSettings updates the settings of a user's account.
-func UpdatedAccountSettings(c *gin.Context, userID, locale, timezone string) error {
-	mongoSession := session.Get(c)
-	user := context.GetUser(c)
-	return user.UpdateSettings(c, locale, timezone, mongoSession)
+func (a *Accounts) UpdatedAccountSettings(ctx context.Context, userID, locale, timezone string) error {
+	user := &model.User{}
+	if err := user.GetByID(ctx, userID, a.database()); err != nil {
+		return err
+	}
+
+	return user.UpdateSettings(ctx, locale, timezone, a.database())
 }
 
 // UpdateAccountPublicProfile updates the public profile of an account.
@@ -73,7 +81,7 @@ func UpdateAccountPublicProfile(c *gin.Context) {
 		return
 	}
 
-	user := context.GetUser(c)
+	user := pluginContext.GetUser(c)
 	mongoSession := session.Get(c)
 
 	if err := user.UpdatePublicProfile(c, usedLocale, description, mongoSession); err != nil {

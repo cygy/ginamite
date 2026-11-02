@@ -1,16 +1,15 @@
 package account
 
 import (
+	"context"
 	"net/http"
 	"testing"
-
-	"github.com/gin-gonic/gin"
 )
 
 func TestGetAvailability(t *testing.T) {
 	exists := func(exists bool, err error) func() {
 		return func() {
-			testFunctions.DoesAccountWithUsernameExist = func(*gin.Context, string) (bool, error) { return exists, err }
+			testAccounts.DoesAccountWithUsernameExistFn = func(context.Context, string) (bool, error) { return exists, err }
 		}
 	}
 

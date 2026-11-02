@@ -1,8 +1,6 @@
 package account
 
 import (
-	"errors"
-
 	"github.com/cygy/ginamite/common/ctxkey"
 
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
@@ -34,8 +32,8 @@ func validateOrCancelForgotPassword(c *gin.Context, validate bool) {
 		)
 	}
 
-	if FunctionsOf(c).GetUserDetailsByID == nil {
-		c.Error(errors.New("undefined function 'GetUserDetailsByID'"))
+	if FunctionsOf(c).Accounts == nil {
+		c.Error(errNoAccounts)
 		sendError()
 		return
 	}
@@ -46,8 +44,8 @@ func validateOrCancelForgotPassword(c *gin.Context, validate bool) {
 		return
 	}
 
-	if FunctionsOf(c).UpdateUserPassword == nil {
-		c.Error(errors.New("undefined function 'UpdateUserPassword'"))
+	if FunctionsOf(c).Accounts == nil {
+		c.Error(errNoAccounts)
 		sendError()
 		return
 	}
@@ -86,7 +84,7 @@ func validateOrCancelForgotPassword(c *gin.Context, validate bool) {
 		return
 	}
 
-	user, err := FunctionsOf(c).GetUserDetailsByID(c, userID)
+	user, err := FunctionsOf(c).Accounts.GetUserDetailsByID(c, userID)
 	if err != nil {
 		sendError()
 		return
@@ -98,7 +96,7 @@ func validateOrCancelForgotPassword(c *gin.Context, validate bool) {
 			sendError()
 			return
 		}
-		if err := FunctionsOf(c).UpdateUserPassword(c, userID, encryptedPassword, true); err != nil {
+		if err := FunctionsOf(c).Accounts.UpdateUserPassword(c, userID, encryptedPassword, true); err != nil {
 			sendError()
 			return
 		}

@@ -39,6 +39,7 @@ var (
 	testAccountFunctions account.Functions
 	storageRemoved       bool
 	testTokens           = &fakeAccountTokens{}
+	testAccounts         = &fakeAccountAccounts{}
 )
 
 // withoutStorage makes the handlers run as an application which provides no storage of the users.
@@ -170,7 +171,7 @@ func setup(t *testing.T) {
 	t.Helper()
 
 	apitest.InitLocalization(t, map[string]string{"placeholder": "placeholder"})
-	testAccountFunctions = account.Functions{Tokens: testTokens}
+	testAccountFunctions = account.Functions{Tokens: testTokens, Accounts: testAccounts}
 
 	testConfig = config.NewConfiguration()
 	testConfig.SupportedLocales = []string{"en"}
@@ -178,8 +179,9 @@ func setup(t *testing.T) {
 	t.Cleanup(func() {
 		*testStorage = fakeStorage{}
 		*testTokens = fakeAccountTokens{}
+		*testAccounts = fakeAccountAccounts{}
 		storageRemoved = false
-		testAccountFunctions = account.Functions{Tokens: testTokens}
+		testAccountFunctions = account.Functions{Tokens: testTokens, Accounts: testAccounts}
 	})
 }
 
@@ -229,4 +231,46 @@ func (f *fakeAccountTokens) GetTokenDetailsByID(ctx context.Context, tokenID str
 	}
 
 	return f.detailsFn(ctx, tokenID)
+}
+
+// fakeAccountAccounts is an account.AccountsStorage whose methods used by the handlers call the function set by the
+// test, if any.
+type fakeAccountAccounts struct {
+	account.AccountsStorage
+	detailsFn func(ctx context.Context, userID string) (authentication.User, error)
+	deleteFn  func(ctx context.Context, userID string) error
+	disableFn func(ctx context.Context, userID string) (authentication.User, error)
+	enableFn  func(ctx context.Context, userID string) (authentication.User, error)
+}
+
+func (f *fakeAccountAccounts) GetUserDetailsByID(ctx context.Context, userID string) (authentication.User, error) {
+	if f.detailsFn == nil {
+		return authentication.User{}, nil
+	}
+
+	return f.detailsFn(ctx, userID)
+}
+
+func (f *fakeAccountAccounts) DeleteUserByID(ctx context.Context, userID string) error {
+	if f.deleteFn == nil {
+		return nil
+	}
+
+	return f.deleteFn(ctx, userID)
+}
+
+func (f *fakeAccountAccounts) DisableUserByID(ctx context.Context, userID string) (authentication.User, error) {
+	if f.disableFn == nil {
+		return authentication.User{}, nil
+	}
+
+	return f.disableFn(ctx, userID)
+}
+
+func (f *fakeAccountAccounts) EnableUserByID(ctx context.Context, userID string) (authentication.User, error) {
+	if f.enableFn == nil {
+		return authentication.User{}, nil
+	}
+
+	return f.enableFn(ctx, userID)
 }

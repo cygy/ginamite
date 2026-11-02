@@ -46,18 +46,6 @@ func TestGetUserAndLocaleFromAuthToken(t *testing.T) {
 	}
 }
 
-func TestUserFromTheAuthTokenIsReadByTheContext(t *testing.T) {
-	// The user built from the auth token must be readable by the other functions, with the real middleware.
-	id := bson.NewObjectID()
-	db := mock.NewDatabase("app")
-	db.Coll(model.UserCollection).One = mock.Result{Value: bson.M{"_id": id}}
-
-	c, _ := plugintest.SignedInContext(t, db, model.User{ID: id, Username: "john"})
-	if err := UpdatedAccountInfos(c, id.Hex(), "John", "Doe"); err != nil {
-		t.Fatal(err)
-	}
-}
-
 func TestGetUserAbilities(t *testing.T) {
 	id := bson.NewObjectID()
 	db := mock.NewDatabase("app")

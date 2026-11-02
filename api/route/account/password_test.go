@@ -17,7 +17,7 @@ func TestUpdatePassword(t *testing.T) {
 	}
 
 	runCases(t, UpdatePassword, []testCase{
-		{name: "GetUserDetailsByID not defined", userID: testUserID, body: body, setup: create(nil), want: http.StatusInternalServerError},
+		{name: "storage of the accounts not defined", userID: testUserID, body: body, setup: all(create(nil), withoutAccounts), want: http.StatusInternalServerError},
 		{name: "storage of the processes not defined", userID: testUserID, body: body, setup: all(withUser(testUser, nil), withoutProcesses), want: http.StatusInternalServerError},
 		{name: "invalid password", userID: testUserID, body: `{"password":"weak"}`, setup: all(withUser(testUser, nil), create(nil)), want: http.StatusBadRequest},
 		{name: "user error", userID: testUserID, body: body, setup: all(withUser(testUser, errBoom), create(nil)), want: http.StatusInternalServerError},

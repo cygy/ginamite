@@ -101,11 +101,12 @@ var (
 	testHooks authentication.Hooks
 )
 
-// testNotifications, testTokens and testProcesses are the storages of the handlers, reset at the end of each test.
+// testNotifications, testTokens, testProcesses and testAccounts are the storages of the handlers, reset at the end of each test.
 var (
 	testNotifications = &fakeNotifications{}
 	testTokens        = &fakeTokens{}
 	testProcesses     = &fakeProcesses{}
+	testAccounts      = &fakeAccounts{}
 )
 
 // resetFunctions removes every function of the handlers and resets the storages.
@@ -113,13 +114,15 @@ func resetFunctions() {
 	*testNotifications = fakeNotifications{}
 	*testTokens = fakeTokens{}
 	*testProcesses = fakeProcesses{}
-	testFunctions = Functions{Notifications: testNotifications, Tokens: testTokens, Processes: testProcesses}
+	*testAccounts = fakeAccounts{}
+	testFunctions = Functions{Notifications: testNotifications, Tokens: testTokens, Processes: testProcesses, Accounts: testAccounts}
 }
 
-// withoutNotifications, withoutTokens and withoutProcesses remove the storages.
+// withoutNotifications, withoutTokens, withoutProcesses and withoutAccounts remove the storages.
 func withoutNotifications() { testFunctions.Notifications = nil }
 func withoutTokens()        { testFunctions.Tokens = nil }
 func withoutProcesses()     { testFunctions.Processes = nil }
+func withoutAccounts()      { testFunctions.Accounts = nil }
 
 // fakeTokens is a TokensStorage whose methods call the function set by the test, if any.
 type fakeTokens struct {
@@ -289,6 +292,253 @@ func (f *fakeProcesses) DeleteProcessByID(ctx context.Context, processID string)
 	return f.DeleteProcessByIDFn(ctx, processID)
 }
 
+// fakeAccounts is an AccountsStorage whose methods call the function set by the test, if any.
+type fakeAccounts struct {
+	GetUserDetailsByIdentifierFn                                    func(ctx context.Context, identifier string) (authentication.User, error)
+	GetUserDetailsByIDFn                                            func(ctx context.Context, userID string) (authentication.User, error)
+	GetUserDetailsByFacebookUserIDFn                                func(ctx context.Context, facebookUserID string) (authentication.User, error)
+	GetUserDetailsByGoogleUserIDFn                                  func(ctx context.Context, googleUserID string) (authentication.User, error)
+	GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUserFn func(ctx context.Context, identifier string) (authentication.User, string, error)
+	UpdateEncryptedPasswordByUserIDFn                               func(ctx context.Context, userID, encryptedPassword string) error
+	UpdateUserPasswordFn                                            func(ctx context.Context, userID, password string, isPasswordEncrypted bool) error
+	UpdateUserEmailAddressFn                                        func(ctx context.Context, userID, emailAddress string) error
+	UserEmailAddressIsVerifiedFn                                    func(ctx context.Context, userID string) error
+	UpdateUserSocialNetworksFn                                      func(ctx context.Context, userID, facebook, twitter, instagram string) error
+	DoesAccountWithUsernameExistFn                                  func(ctx context.Context, username string) (bool, error)
+	DoesAccountWithEmailAddressExistFn                              func(ctx context.Context, emailAddress string) (bool, error)
+	DoesUserWithFacebookUserIDExistFn                               func(ctx context.Context, facebookUserID string) (bool, error)
+	DoesUserWithGoogleUserIDExistFn                                 func(ctx context.Context, googleUserID string) (bool, error)
+	RegisterByEmailAddressFn                                        func(ctx context.Context, username, encryptedPassword, emailAddress, locale, termsVersion, registrationCode, privateKey, source, ip string, device authentication.Device) error
+	RegisterByThirdPartyTokenFn                                     func(ctx context.Context, username string, tokenInfos validator.TokenInfos, tokenSource, locale, termsVersion, registrationCode, privateKey, source, ip string, device authentication.Device) error
+	ValidateUserRegistrationFn                                      func(ctx context.Context, userID, registrationKey string) error
+	CancelUserRegistrationFn                                        func(ctx context.Context, userID, registrationKey string) error
+	GetRegistrationDetailsFn                                        func(ctx context.Context, userID string) (*authentication.Details, error)
+	SaveFacebookUserTokenDetailsToUserFn                            func(ctx context.Context, userID string, tokenInfos validator.TokenInfos) error
+	SaveGoogleUserTokenDetailsToUserFn                              func(ctx context.Context, userID string, tokenInfos validator.TokenInfos) error
+	GetOwnedAccountDetailsFn                                        func(ctx context.Context, userID string) (any, error)
+	UpdatedAccountInfosFn                                           func(ctx context.Context, userID, firstName, lastName string) error
+	UpdatedAccountSettingsFn                                        func(ctx context.Context, userID, locale, timezone string) error
+	DeleteUserByIDFn                                                func(ctx context.Context, userID string) error
+	DisableUserByIDFn                                               func(ctx context.Context, userID string) (authentication.User, error)
+	EnableUserByIDFn                                                func(ctx context.Context, userID string) (authentication.User, error)
+}
+
+func (f *fakeAccounts) GetUserDetailsByIdentifier(ctx context.Context, identifier string) (authentication.User, error) {
+	if f.GetUserDetailsByIdentifierFn == nil {
+		return authentication.User{}, nil
+	}
+
+	return f.GetUserDetailsByIdentifierFn(ctx, identifier)
+}
+
+func (f *fakeAccounts) GetUserDetailsByID(ctx context.Context, userID string) (authentication.User, error) {
+	if f.GetUserDetailsByIDFn == nil {
+		return authentication.User{}, nil
+	}
+
+	return f.GetUserDetailsByIDFn(ctx, userID)
+}
+
+func (f *fakeAccounts) GetUserDetailsByFacebookUserID(ctx context.Context, facebookUserID string) (authentication.User, error) {
+	if f.GetUserDetailsByFacebookUserIDFn == nil {
+		return authentication.User{}, nil
+	}
+
+	return f.GetUserDetailsByFacebookUserIDFn(ctx, facebookUserID)
+}
+
+func (f *fakeAccounts) GetUserDetailsByGoogleUserID(ctx context.Context, googleUserID string) (authentication.User, error) {
+	if f.GetUserDetailsByGoogleUserIDFn == nil {
+		return authentication.User{}, nil
+	}
+
+	return f.GetUserDetailsByGoogleUserIDFn(ctx, googleUserID)
+}
+
+func (f *fakeAccounts) GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser(ctx context.Context, identifier string) (authentication.User, string, error) {
+	if f.GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUserFn == nil {
+		return authentication.User{}, "", nil
+	}
+
+	return f.GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUserFn(ctx, identifier)
+}
+
+func (f *fakeAccounts) UpdateEncryptedPasswordByUserID(ctx context.Context, userID, encryptedPassword string) error {
+	if f.UpdateEncryptedPasswordByUserIDFn == nil {
+		return nil
+	}
+
+	return f.UpdateEncryptedPasswordByUserIDFn(ctx, userID, encryptedPassword)
+}
+
+func (f *fakeAccounts) UpdateUserPassword(ctx context.Context, userID, password string, isPasswordEncrypted bool) error {
+	if f.UpdateUserPasswordFn == nil {
+		return nil
+	}
+
+	return f.UpdateUserPasswordFn(ctx, userID, password, isPasswordEncrypted)
+}
+
+func (f *fakeAccounts) UpdateUserEmailAddress(ctx context.Context, userID, emailAddress string) error {
+	if f.UpdateUserEmailAddressFn == nil {
+		return nil
+	}
+
+	return f.UpdateUserEmailAddressFn(ctx, userID, emailAddress)
+}
+
+func (f *fakeAccounts) UserEmailAddressIsVerified(ctx context.Context, userID string) error {
+	if f.UserEmailAddressIsVerifiedFn == nil {
+		return nil
+	}
+
+	return f.UserEmailAddressIsVerifiedFn(ctx, userID)
+}
+
+func (f *fakeAccounts) UpdateUserSocialNetworks(ctx context.Context, userID, facebook, twitter, instagram string) error {
+	if f.UpdateUserSocialNetworksFn == nil {
+		return nil
+	}
+
+	return f.UpdateUserSocialNetworksFn(ctx, userID, facebook, twitter, instagram)
+}
+
+func (f *fakeAccounts) DoesAccountWithUsernameExist(ctx context.Context, username string) (bool, error) {
+	if f.DoesAccountWithUsernameExistFn == nil {
+		return false, nil
+	}
+
+	return f.DoesAccountWithUsernameExistFn(ctx, username)
+}
+
+func (f *fakeAccounts) DoesAccountWithEmailAddressExist(ctx context.Context, emailAddress string) (bool, error) {
+	if f.DoesAccountWithEmailAddressExistFn == nil {
+		return false, nil
+	}
+
+	return f.DoesAccountWithEmailAddressExistFn(ctx, emailAddress)
+}
+
+func (f *fakeAccounts) DoesUserWithFacebookUserIDExist(ctx context.Context, facebookUserID string) (bool, error) {
+	if f.DoesUserWithFacebookUserIDExistFn == nil {
+		return false, nil
+	}
+
+	return f.DoesUserWithFacebookUserIDExistFn(ctx, facebookUserID)
+}
+
+func (f *fakeAccounts) DoesUserWithGoogleUserIDExist(ctx context.Context, googleUserID string) (bool, error) {
+	if f.DoesUserWithGoogleUserIDExistFn == nil {
+		return false, nil
+	}
+
+	return f.DoesUserWithGoogleUserIDExistFn(ctx, googleUserID)
+}
+
+func (f *fakeAccounts) RegisterByEmailAddress(ctx context.Context, username, encryptedPassword, emailAddress, locale, termsVersion, registrationCode, privateKey, source, ip string, device authentication.Device) error {
+	if f.RegisterByEmailAddressFn == nil {
+		return nil
+	}
+
+	return f.RegisterByEmailAddressFn(ctx, username, encryptedPassword, emailAddress, locale, termsVersion, registrationCode, privateKey, source, ip, device)
+}
+
+func (f *fakeAccounts) RegisterByThirdPartyToken(ctx context.Context, username string, tokenInfos validator.TokenInfos, tokenSource, locale, termsVersion, registrationCode, privateKey, source, ip string, device authentication.Device) error {
+	if f.RegisterByThirdPartyTokenFn == nil {
+		return nil
+	}
+
+	return f.RegisterByThirdPartyTokenFn(ctx, username, tokenInfos, tokenSource, locale, termsVersion, registrationCode, privateKey, source, ip, device)
+}
+
+func (f *fakeAccounts) ValidateUserRegistration(ctx context.Context, userID, registrationKey string) error {
+	if f.ValidateUserRegistrationFn == nil {
+		return nil
+	}
+
+	return f.ValidateUserRegistrationFn(ctx, userID, registrationKey)
+}
+
+func (f *fakeAccounts) CancelUserRegistration(ctx context.Context, userID, registrationKey string) error {
+	if f.CancelUserRegistrationFn == nil {
+		return nil
+	}
+
+	return f.CancelUserRegistrationFn(ctx, userID, registrationKey)
+}
+
+func (f *fakeAccounts) GetRegistrationDetails(ctx context.Context, userID string) (*authentication.Details, error) {
+	if f.GetRegistrationDetailsFn == nil {
+		return nil, nil
+	}
+
+	return f.GetRegistrationDetailsFn(ctx, userID)
+}
+
+func (f *fakeAccounts) SaveFacebookUserTokenDetailsToUser(ctx context.Context, userID string, tokenInfos validator.TokenInfos) error {
+	if f.SaveFacebookUserTokenDetailsToUserFn == nil {
+		return nil
+	}
+
+	return f.SaveFacebookUserTokenDetailsToUserFn(ctx, userID, tokenInfos)
+}
+
+func (f *fakeAccounts) SaveGoogleUserTokenDetailsToUser(ctx context.Context, userID string, tokenInfos validator.TokenInfos) error {
+	if f.SaveGoogleUserTokenDetailsToUserFn == nil {
+		return nil
+	}
+
+	return f.SaveGoogleUserTokenDetailsToUserFn(ctx, userID, tokenInfos)
+}
+
+func (f *fakeAccounts) GetOwnedAccountDetails(ctx context.Context, userID string) (any, error) {
+	if f.GetOwnedAccountDetailsFn == nil {
+		return nil, nil
+	}
+
+	return f.GetOwnedAccountDetailsFn(ctx, userID)
+}
+
+func (f *fakeAccounts) UpdatedAccountInfos(ctx context.Context, userID, firstName, lastName string) error {
+	if f.UpdatedAccountInfosFn == nil {
+		return nil
+	}
+
+	return f.UpdatedAccountInfosFn(ctx, userID, firstName, lastName)
+}
+
+func (f *fakeAccounts) UpdatedAccountSettings(ctx context.Context, userID, locale, timezone string) error {
+	if f.UpdatedAccountSettingsFn == nil {
+		return nil
+	}
+
+	return f.UpdatedAccountSettingsFn(ctx, userID, locale, timezone)
+}
+
+func (f *fakeAccounts) DeleteUserByID(ctx context.Context, userID string) error {
+	if f.DeleteUserByIDFn == nil {
+		return nil
+	}
+
+	return f.DeleteUserByIDFn(ctx, userID)
+}
+
+func (f *fakeAccounts) DisableUserByID(ctx context.Context, userID string) (authentication.User, error) {
+	if f.DisableUserByIDFn == nil {
+		return authentication.User{}, nil
+	}
+
+	return f.DisableUserByIDFn(ctx, userID)
+}
+
+func (f *fakeAccounts) EnableUserByID(ctx context.Context, userID string) (authentication.User, error) {
+	if f.EnableUserByIDFn == nil {
+		return authentication.User{}, nil
+	}
+
+	return f.EnableUserByIDFn(ctx, userID)
+}
+
 // fakeNotifications is a NotificationsStorage whose methods call the function set by the test, if any.
 type fakeNotifications struct {
 	receivedFn    func(ctx context.Context, userID, locale string) (any, error)
@@ -451,7 +701,7 @@ func inTestEnvironment() { testConfig.Environment = environment.Test }
 // withUser defines GetUserDetailsByID.
 func withUser(user authentication.User, err error) func() {
 	return func() {
-		testFunctions.GetUserDetailsByID = func(*gin.Context, string) (authentication.User, error) { return user, err }
+		testAccounts.GetUserDetailsByIDFn = func(context.Context, string) (authentication.User, error) { return user, err }
 	}
 }
 

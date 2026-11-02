@@ -18,22 +18,20 @@ type processStubs struct {
 
 func (p processStubs) install() {
 	testProcesses.VerifyProcessFn = func(context.Context, string, string) (string, string, error) { return testUserID, "value", p.verifyErr }
-	testFunctions.GetUserDetailsByID = func(*gin.Context, string) (authentication.User, error) { return testUser, p.userErr }
+	testAccounts.GetUserDetailsByIDFn = func(context.Context, string) (authentication.User, error) { return testUser, p.userErr }
 	testProcesses.DeleteProcessByIDFn = func(context.Context, string) error { return p.deleteProcessErr }
-	testFunctions.UpdateUserEmailAddress = func(*gin.Context, string, string) error { return p.updateErr }
-	testFunctions.UpdateUserPassword = func(*gin.Context, string, string, bool) error { return p.updateErr }
-	testFunctions.UserEmailAddressIsVerified = func(*gin.Context, string) error { return p.updateErr }
-	testFunctions.DeleteUserByID = func(*gin.Context, string) error { return p.updateErr }
-	testFunctions.DisableUserByID = func(*gin.Context, string) (authentication.User, error) { return testUser, p.updateErr }
+	testAccounts.UpdateUserEmailAddressFn = func(context.Context, string, string) error { return p.updateErr }
+	testAccounts.UpdateUserPasswordFn = func(context.Context, string, string, bool) error { return p.updateErr }
+	testAccounts.UserEmailAddressIsVerifiedFn = func(context.Context, string) error { return p.updateErr }
+	testAccounts.DeleteUserByIDFn = func(context.Context, string) error { return p.updateErr }
+	testAccounts.DisableUserByIDFn = func(context.Context, string) (authentication.User, error) { return testUser, p.updateErr }
 	testProcesses.CreateNewVerifyEmailAddressProcessFn = func(context.Context, string) (string, string, error) { return "id", "key", nil }
 
 	switch p.missing {
-	case "GetUserDetailsByID":
-		testFunctions.GetUserDetailsByID = nil
+	case "Accounts":
+		withoutAccounts()
 	case "Processes":
 		withoutProcesses()
-	case "update":
-		testFunctions.UpdateUserEmailAddress, testFunctions.UpdateUserPassword, testFunctions.UserEmailAddressIsVerified, testFunctions.DeleteUserByID, testFunctions.DisableUserByID = nil, nil, nil, nil, nil
 	}
 }
 
@@ -57,15 +55,14 @@ func TestValidateOrCancelUpdateProperty(t *testing.T) {
 		{"validate success", true, processStubs{}, params, http.StatusOK},
 		{"validate missing key", true, processStubs{}, params[:1], http.StatusBadRequest},
 		{"validate missing process", true, processStubs{}, nil, http.StatusBadRequest},
-		{"validate without GetUserDetailsByID", true, processStubs{missing: "GetUserDetailsByID"}, params, http.StatusBadRequest},
+		{"validate without the accounts", true, processStubs{missing: "Accounts"}, params, http.StatusBadRequest},
 		{"validate without the processes", true, processStubs{missing: "Processes"}, params, http.StatusBadRequest},
-		{"validate without update function", true, processStubs{missing: "update"}, params, http.StatusBadRequest},
 		{"validate verify error", true, processStubs{verifyErr: errBoom}, params, http.StatusBadRequest},
 		{"validate user error", true, processStubs{userErr: errBoom}, params, http.StatusBadRequest},
 		{"validate update error", true, processStubs{updateErr: errBoom}, params, http.StatusBadRequest},
 		{"validate ignores process deletion error", true, processStubs{deleteProcessErr: errBoom}, params, http.StatusOK},
 		{"cancel success", false, processStubs{}, params, http.StatusOK},
-		{"cancel without update function", false, processStubs{missing: "update"}, params, http.StatusOK},
+		{"cancel without the accounts", false, processStubs{missing: "Accounts"}, params, http.StatusBadRequest},
 		{"cancel verify error", false, processStubs{verifyErr: errBoom}, params, http.StatusBadRequest},
 		{"cancel process deletion error", false, processStubs{deleteProcessErr: errBoom}, params, http.StatusBadRequest},
 	}

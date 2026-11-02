@@ -26,8 +26,8 @@ import (
 
 // LoginWithPassword creates a token to log in an account.
 func LoginWithPassword(c *gin.Context) {
-	if FunctionsOf(c).GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser == nil {
-		c.Error(errors.New("undefined function 'GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser'"))
+	if FunctionsOf(c).Accounts == nil {
+		c.Error(errNoAccounts)
 		response.InternalServerError(c)
 		return
 	}
@@ -87,7 +87,7 @@ func LoginWithPassword(c *gin.Context) {
 		return
 	}
 
-	user, encryptedPassword, err := FunctionsOf(c).GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser(c, identifier)
+	user, encryptedPassword, err := FunctionsOf(c).Accounts.GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser(c, identifier)
 	if err != nil {
 		// Spend the time of a comparison: a login must not be faster when the account does not exist.
 		authentication.DummyCompare(password)
@@ -295,17 +295,16 @@ func RefreshAuthToken(c *gin.Context) {
 	})
 }
 
-// upgradePassword encrypts the password of the user again if its hash is weaker than the current one, and the function
-// to update it is defined. The failure is logged: the user can sign in anyway.
+// upgradePassword encrypts the password of the user again if its hash is weaker than the current one. The failure is
+// logged: the user can sign in anyway.
 func upgradePassword(c *gin.Context, userID, password, encryptedPassword string) {
-	update := FunctionsOf(c).UpdateEncryptedPasswordByUserID
-	if update == nil || !authentication.NeedsRehash(encryptedPassword) {
+	if !authentication.NeedsRehash(encryptedPassword) {
 		return
 	}
 
 	upgraded, err := authentication.EncryptPassword(password)
 	if err == nil {
-		err = update(c, userID, upgraded)
+		err = FunctionsOf(c).Accounts.UpdateEncryptedPasswordByUserID(c, userID, upgraded)
 	}
 	if err != nil {
 		log.WithFields(logrus.Fields{"user": userID, "error": err.Error()}).Error("unable to upgrade the encrypted password")

@@ -1,8 +1,6 @@
 package account
 
 import (
-	"errors"
-
 	"github.com/cygy/ginamite/common/ctxkey"
 
 	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
@@ -16,15 +14,18 @@ import (
 
 // GetInfos returns the details of an account.
 func GetInfos(c *gin.Context) {
-	if FunctionsOf(c).GetOwnedAccountDetails == nil {
-		c.Error(errors.New("undefined function 'GetOwnedAccountDetails'"))
+	if FunctionsOf(c).Accounts == nil {
+		c.Error(errNoAccounts)
 		response.InternalServerError(c)
 		return
 	}
 
 	userID := ctxUser.GetID(c)
-	user := FunctionsOf(c).GetOwnedAccountDetails(c, userID)
-	if user == nil {
+	user, err := FunctionsOf(c).Accounts.GetOwnedAccountDetails(c, userID)
+	if err != nil || user == nil {
+		if err != nil {
+			c.Error(err)
+		}
 		response.InternalServerError(c)
 		return
 	}
@@ -36,8 +37,8 @@ func GetInfos(c *gin.Context) {
 
 // UpdateInfos updated the details of an account.
 func UpdateInfos(c *gin.Context) {
-	if FunctionsOf(c).UpdatedAccountInfos == nil {
-		c.Error(errors.New("undefined function 'UpdatedAccountInfos'"))
+	if FunctionsOf(c).Accounts == nil {
+		c.Error(errNoAccounts)
 		response.InternalServerError(c)
 		return
 	}
@@ -77,7 +78,7 @@ func UpdateInfos(c *gin.Context) {
 
 	// Update the infos of the user.
 	userID := ctxUser.GetID(c)
-	if err := FunctionsOf(c).UpdatedAccountInfos(c, userID, firstName, lastName); err != nil {
+	if err := FunctionsOf(c).Accounts.UpdatedAccountInfos(c, userID, firstName, lastName); err != nil {
 		response.InternalServerError(c)
 		return
 	}
@@ -90,8 +91,8 @@ func UpdateInfos(c *gin.Context) {
 
 // UpdateSettings updated the settings of an account.
 func UpdateSettings(c *gin.Context) {
-	if FunctionsOf(c).UpdatedAccountSettings == nil {
-		c.Error(errors.New("undefined function 'UpdatedAccountSettings'"))
+	if FunctionsOf(c).Accounts == nil {
+		c.Error(errNoAccounts)
 		response.InternalServerError(c)
 		return
 	}
@@ -147,7 +148,7 @@ func UpdateSettings(c *gin.Context) {
 
 	// Update the settings of the user.
 	userID := ctxUser.GetID(c)
-	if err := FunctionsOf(c).UpdatedAccountSettings(c, userID, accountLocale, accountTimezone); err != nil {
+	if err := FunctionsOf(c).Accounts.UpdatedAccountSettings(c, userID, accountLocale, accountTimezone); err != nil {
 		response.InternalServerError(c)
 		return
 	}

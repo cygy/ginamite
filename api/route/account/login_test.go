@@ -1,6 +1,7 @@
 package account
 
 import (
+	"context"
 	"net/http"
 	"testing"
 
@@ -19,26 +20,26 @@ func TestLoginWithThirdParty(t *testing.T) {
 		valid := withValidator(fakeValidator{source: method, infos: infos, ok: true})
 		bySocialID := func(user authentication.User, err error) func() {
 			return func() {
-				fn := func(*gin.Context, string) (authentication.User, error) { return user, err }
+				fn := func(context.Context, string) (authentication.User, error) { return user, err }
 				if method == authentication.MethodFacebook {
-					testFunctions.GetUserDetailsByFacebookUserID = fn
+					testAccounts.GetUserDetailsByFacebookUserIDFn = fn
 				} else {
-					testFunctions.GetUserDetailsByGoogleUserID = fn
+					testAccounts.GetUserDetailsByGoogleUserIDFn = fn
 				}
 			}
 		}
 		byIdentifier := func(user authentication.User, err error) func() {
 			return func() {
-				testFunctions.GetUserDetailsByIdentifier = func(*gin.Context, string) (authentication.User, error) { return user, err }
+				testAccounts.GetUserDetailsByIdentifierFn = func(context.Context, string) (authentication.User, error) { return user, err }
 			}
 		}
 		save := func(err error) func() {
 			return func() {
-				fn := func(*gin.Context, string, validator.TokenInfos) error { return err }
+				fn := func(context.Context, string, validator.TokenInfos) error { return err }
 				if method == authentication.MethodFacebook {
-					testFunctions.SaveFacebookUserTokenDetailsToUser = fn
+					testAccounts.SaveFacebookUserTokenDetailsToUserFn = fn
 				} else {
-					testFunctions.SaveGoogleUserTokenDetailsToUser = fn
+					testAccounts.SaveGoogleUserTokenDetailsToUserFn = fn
 				}
 			}
 		}
@@ -51,12 +52,10 @@ func TestLoginWithThirdParty(t *testing.T) {
 				{name: "missing source", body: `{"token":"x","device":{"type":"mobile","name":"iPhone"}}`, setup: valid, want: http.StatusBadRequest},
 				{name: "missing device", body: `{"token":"x","source":"web"}`, setup: valid, want: http.StatusBadRequest},
 				{name: "invalid third-party token", body: body, setup: withValidator(fakeValidator{source: method}), want: http.StatusBadRequest},
-				{name: "lookup function not defined", body: body, setup: valid, want: http.StatusBadRequest},
+				{name: "storage of the accounts not defined", body: body, setup: all(valid, withoutAccounts), want: http.StatusBadRequest},
 				{name: "lookup error", body: body, setup: all(valid, bySocialID(authentication.User{}, errBoom)), want: http.StatusBadRequest},
-				{name: "identifier function not defined", body: body, setup: all(valid, bySocialID(authentication.User{}, notFound)), want: http.StatusBadRequest},
 				{name: "identifier error", body: body, setup: all(valid, bySocialID(authentication.User{}, notFound), byIdentifier(authentication.User{}, errBoom)), want: http.StatusBadRequest},
 				{name: "unknown user", body: body, setup: all(valid, bySocialID(authentication.User{}, notFound), byIdentifier(authentication.User{}, notFound)), want: http.StatusNotFound},
-				{name: "save function not defined", body: body, setup: all(valid, bySocialID(testUser, nil)), want: http.StatusBadRequest},
 				{name: "save error", body: body, setup: all(valid, bySocialID(testUser, nil), save(errBoom)), want: http.StatusBadRequest},
 				{name: "token creation failure", body: body, setup: all(valid, bySocialID(testUser, nil), save(nil), withoutTokens), want: http.StatusBadRequest},
 				{name: "success with the social network ID", body: body, setup: all(valid, bySocialID(testUser, nil), save(nil), loginStubs), want: http.StatusCreated, check: contains("auth_token")},

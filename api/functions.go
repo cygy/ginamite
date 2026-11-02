@@ -148,9 +148,6 @@ func (s *Server) Run() error {
 	if err != nil {
 		return fmt.Errorf("unable to load the routes of the API: %w", err)
 	}
-	if router.DefaultRoutes.Authentication.Paths.LoginWithPassword.Enabled && s.Account.UpdateEncryptedPasswordByUserID == nil {
-		log.Warn("The function 'UpdateEncryptedPasswordByUserID' is undefined: the weak password hashes are not upgraded.")
-	}
 	if s.Config.JWT.Secret == "" {
 		if needsJWT {
 			return errors.New("the setting 'jwt.secret' is required by the features of the setting api_features")

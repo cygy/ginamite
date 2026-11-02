@@ -227,15 +227,15 @@ func TestPlugin_Configure_Functions(t *testing.T) {
 	// The functions which do not need the database are set as they are.
 	for name, pair := range map[string][2]any{
 		"MiddlewareIsValidAuthToken": {api.Hooks.MiddlewareIsValidAuthToken, apiFunctions.IsValidAuthToken},
-		"GetUserDetailsByID":         {api.Account.GetUserDetailsByID, apiFunctions.GetUserDetailsByID},
-		"RegisterByEmailAddress":     {api.Account.RegisterByEmailAddress, apiFunctions.RegisterByEmailAddress},
-		"GetOwnedAccountDetails":     {api.Account.GetOwnedAccountDetails, apiFunctions.GetOwnedAccountDetails},
 	} {
 		if pair[0] == nil || !sameFunction(pair[0], pair[1]) {
 			t.Errorf("%s is not the function of the plugin", name)
 		}
 	}
 
+	if _, ok := api.Account.Accounts.(*apiFunctions.Accounts); !ok {
+		t.Errorf("Accounts = %T, want the storage of the plugin", api.Account.Accounts)
+	}
 	if _, ok := api.Contacts.(*apiFunctions.Contacts); !ok {
 		t.Errorf("Contacts = %T, want the storage of the plugin", api.Contacts)
 	}

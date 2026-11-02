@@ -17,13 +17,16 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// errNoAccounts is logged when a route needing the accounts is called without storage of the accounts.
+var errNoAccounts = errors.New("undefined storage of the accounts")
+
 // errNoProcesses is logged when a route needing the processes is called without storage of the processes.
 var errNoProcesses = errors.New("undefined storage of the processes")
 
 // ForgotPassword sends a mail to reset the password.
 func ForgotPassword(c *gin.Context) {
-	if FunctionsOf(c).GetUserDetailsByIdentifier == nil {
-		c.Error(errors.New("undefined function 'GetUserDetailsByIdentifier'"))
+	if FunctionsOf(c).Accounts == nil {
+		c.Error(errNoAccounts)
 		response.InternalServerError(c)
 		return
 	}
@@ -53,7 +56,7 @@ func ForgotPassword(c *gin.Context) {
 		return
 	}
 
-	user, err := FunctionsOf(c).GetUserDetailsByIdentifier(c, identifier)
+	user, err := FunctionsOf(c).Accounts.GetUserDetailsByIdentifier(c, identifier)
 	if err != nil {
 		if commonErrors.IsNotFound(err) {
 			message := t("error.forgot_password.account.not_found.message")

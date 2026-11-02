@@ -1,99 +1,81 @@
 package functions
 
 import (
+	"context"
 	"errors"
-
-	"github.com/cygy/ginamite/plugins/mongodb/api/ctxsettings"
-
-	"github.com/cygy/ginamite/common/ctxkey"
-
-	"github.com/cygy/ginamite/common/queue"
 
 	"github.com/cygy/ginamite/api/validator"
 	"github.com/cygy/ginamite/common/authentication"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
 	"github.com/cygy/ginamite/plugins/mongodb/mongo/bson"
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/session"
-	"github.com/gin-gonic/gin"
 )
 
-// registrationDefaults returns the values given to the user who registers with the locale.
-func registrationDefaults(c *gin.Context, locale string) model.RegistrationDefaults {
-	return model.RegistrationDefaults{
-		Timezone:      model.RegistrationTimezone(locale, ctxkey.Timezones.Get(c), ctxkey.Config.Get(c).DefaultTimezone),
-		Notifications: ctxkey.Notifications.Get(c).Defaults(),
-		Abilities:     ctxsettings.GetSettings(c).DefaultUserAbilities,
-	}
-}
-
 // RegisterByEmailAddress saves the registration details of a user.
-func RegisterByEmailAddress(c *gin.Context, username, encryptedPassword, emailAddress, locale, termsVersion, registrationCode, privateKey, source, ip string, device authentication.Device) error {
-	mongoSession := session.Get(c)
+func (a *Accounts) RegisterByEmailAddress(ctx context.Context, username, encryptedPassword, emailAddress, locale, termsVersion, registrationCode, privateKey, source, ip string, device authentication.Device) error {
+	mongoSession := a.database()
 	user := model.NewUser()
-	return user.RegisterByEmailAddress(c, username, encryptedPassword, emailAddress, locale, termsVersion, registrationCode, privateKey, source, ip, device, registrationDefaults(c, locale), mongoSession)
+	return user.RegisterByEmailAddress(ctx, username, encryptedPassword, emailAddress, locale, termsVersion, registrationCode, privateKey, source, ip, device, a.registrationDefaults(locale), mongoSession)
 }
 
 // RegisterByThirdPartyToken saves the registration details of a user.
-func RegisterByThirdPartyToken(c *gin.Context, username string, tokenInfos validator.TokenInfos, tokenSource, locale, termsVersion, registrationCode, privateKey, source, ip string, device authentication.Device) error {
-	mongoSession := session.Get(c)
+func (a *Accounts) RegisterByThirdPartyToken(ctx context.Context, username string, tokenInfos validator.TokenInfos, tokenSource, locale, termsVersion, registrationCode, privateKey, source, ip string, device authentication.Device) error {
+	mongoSession := a.database()
 	user := model.NewUser()
-	return user.RegisterByThirdPartyToken(c, username, tokenInfos, tokenSource, locale, termsVersion, registrationCode, privateKey, source, ip, device, registrationDefaults(c, locale), mongoSession)
+	return user.RegisterByThirdPartyToken(ctx, username, tokenInfos, tokenSource, locale, termsVersion, registrationCode, privateKey, source, ip, device, a.registrationDefaults(locale), mongoSession)
 }
 
 // ValidateUserRegistration validates the registration of a user.
-func ValidateUserRegistration(c *gin.Context, userID, registrationKey string) error {
+func (a *Accounts) ValidateUserRegistration(ctx context.Context, userID, registrationKey string) error {
 	// Check the userID.
 	if _, err := bson.ObjectIDFromHex(userID); err != nil {
 		return err
 	}
 
-	mongoSession := session.Get(c)
+	mongoSession := a.database()
 
-	user, err := unverifiedUser(c, userID)
+	user, err := a.unverifiedUser(ctx, userID)
 	if err != nil {
 		return err
 	}
 
-	return user.ValidateRegistrationByEmailAddress(c, registrationKey, ctxsettings.GetSettings(c).UserMaxValidateRegistrationAttemps, mongoSession)
+	return user.ValidateRegistrationByEmailAddress(ctx, registrationKey, a.settings().UserMaxValidateRegistrationAttemps, mongoSession)
 }
 
 // CancelUserRegistration cancels the registration of a user.
-func CancelUserRegistration(c *gin.Context, userID, registrationKey string) error {
+func (a *Accounts) CancelUserRegistration(ctx context.Context, userID, registrationKey string) error {
 	// Check the userID.
 	if _, err := bson.ObjectIDFromHex(userID); err != nil {
 		return err
 	}
 
-	mongoSession := session.Get(c)
+	mongoSession := a.database()
 
-	user, err := unverifiedUser(c, userID)
+	user, err := a.unverifiedUser(ctx, userID)
 	if err != nil {
 		return err
 	}
 
-	if err := user.CancelRegistrationByEmailAddress(c, registrationKey, mongoSession); err != nil {
+	if err := user.CancelRegistrationByEmailAddress(ctx, registrationKey, mongoSession); err != nil {
 		return err
 	}
 
-	ctxkey.Queue.Get(c).DeleteUser(queue.TaskDeleteUser{
-		UserID: userID,
-	})
+	a.deleteUser(userID)
 
 	return nil
 }
 
 // GetRegistrationDetails returns the details of the registration of a user.
-func GetRegistrationDetails(c *gin.Context, userID string) (*authentication.Details, error) {
+func (a *Accounts) GetRegistrationDetails(ctx context.Context, userID string) (*authentication.Details, error) {
 	// Check the userID.
 	if _, err := bson.ObjectIDFromHex(userID); err != nil {
 		return nil, err
 	}
 
-	mongoSession := session.Get(c)
+	mongoSession := a.database()
 
 	// Do not validate or cancel if the account is enabled already.
 	user := &model.User{}
-	if err := user.GetByID(c, userID, mongoSession); err != nil {
+	if err := user.GetByID(ctx, userID, mongoSession); err != nil {
 		return nil, err
 	}
 
@@ -105,9 +87,9 @@ func GetRegistrationDetails(c *gin.Context, userID string) (*authentication.Deta
 }
 
 // unverifiedUser loads the user, and returns an error if its registration is already validated.
-func unverifiedUser(c *gin.Context, userID string) (*model.User, error) {
+func (a *Accounts) unverifiedUser(ctx context.Context, userID string) (*model.User, error) {
 	user := &model.User{}
-	if err := user.GetByID(c, userID, session.Get(c)); err != nil {
+	if err := user.GetByID(ctx, userID, a.database()); err != nil {
 		return nil, err
 	}
 

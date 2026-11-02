@@ -1,28 +1,46 @@
 package functions
 
 import (
+	"context"
 	"strings"
 
 	"github.com/cygy/ginamite/common/authentication"
 	"github.com/cygy/ginamite/common/errors"
-	"github.com/cygy/ginamite/plugins/mongodb/api/context"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
 	"github.com/cygy/ginamite/plugins/mongodb/mongo/bson"
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/session"
-	"github.com/gin-gonic/gin"
+	"github.com/cygy/ginamite/plugins/mongodb/mongo/store"
 )
 
+// Accounts are the functions of the accounts of the users working on a MongoDB database.
+type Accounts struct {
+	database func() store.Database
+	settings func() model.Settings
+
+	// registrationDefaults returns the values given to a user who registers with the locale.
+	registrationDefaults func(locale string) model.RegistrationDefaults
+
+	// deleteUser asks the workers to delete the data of a user.
+	deleteUser func(userID string)
+}
+
+// NewAccounts returns the functions of the accounts working on the database returned by the function, which is called
+// each time a function needs the database. The function registrationDefaults returns the values given to a user who
+// registers with the locale, and deleteUser asks the workers to delete the data of a user.
+func NewAccounts(database func() store.Database, settings func() model.Settings, registrationDefaults func(locale string) model.RegistrationDefaults, deleteUser func(userID string)) *Accounts {
+	return &Accounts{database: database, settings: settings, registrationDefaults: registrationDefaults, deleteUser: deleteUser}
+}
+
 // GetUserDetailsByIdentifier returns the details of a user by its identifier (email address or username).
-func GetUserDetailsByIdentifier(c *gin.Context, identifier string) (authentication.User, error) {
-	mongoSession := session.Get(c)
+func (a *Accounts) GetUserDetailsByIdentifier(ctx context.Context, identifier string) (authentication.User, error) {
+	mongoSession := a.database()
 
 	// Get the user by the identifier of the email address.
 	var err error
 	user := &model.User{}
 	if strings.Contains(identifier, "@") {
-		err = user.GetByEmailAddress(c, identifier, mongoSession)
+		err = user.GetByEmailAddress(ctx, identifier, mongoSession)
 	} else {
-		err = user.GetByUsername(c, identifier, mongoSession)
+		err = user.GetByUsername(ctx, identifier, mongoSession)
 	}
 
 	if err != nil {
@@ -33,21 +51,16 @@ func GetUserDetailsByIdentifier(c *gin.Context, identifier string) (authenticati
 }
 
 // GetUserDetailsByID returns the details of a user by its ID.
-func GetUserDetailsByID(c *gin.Context, userID string) (authentication.User, error) {
+func (a *Accounts) GetUserDetailsByID(ctx context.Context, userID string) (authentication.User, error) {
 	// Check the userID.
 	if _, err := bson.ObjectIDFromHex(userID); err != nil {
 		return authentication.User{}, err
 	}
 
-	cachedUser := context.GetFullUser(c)
-	if cachedUser != nil && cachedUser.ID.Hex() == userID {
-		return cachedUser.ToUser(), nil
-	}
-
-	mongoSession := session.Get(c)
+	mongoSession := a.database()
 
 	user := &model.User{}
-	if err := user.GetByID(c, userID, mongoSession); err != nil {
+	if err := user.GetByID(ctx, userID, mongoSession); err != nil {
 		return authentication.User{}, err
 	}
 
@@ -55,29 +68,29 @@ func GetUserDetailsByID(c *gin.Context, userID string) (authentication.User, err
 }
 
 // GetUserDetailsByFacebookUserID returns the details of a user by its unique facebook ID.
-func GetUserDetailsByFacebookUserID(c *gin.Context, userID string) (authentication.User, error) {
-	mongoSession := session.Get(c)
+func (a *Accounts) GetUserDetailsByFacebookUserID(ctx context.Context, userID string) (authentication.User, error) {
+	mongoSession := a.database()
 	user := &model.User{}
-	err := user.GetByFacebookUserID(c, userID, mongoSession)
+	err := user.GetByFacebookUserID(ctx, userID, mongoSession)
 
 	return user.ToUser(), err
 }
 
 // GetUserDetailsByGoogleUserID returns the details of a user by its unique google ID.
-func GetUserDetailsByGoogleUserID(c *gin.Context, userID string) (authentication.User, error) {
-	mongoSession := session.Get(c)
+func (a *Accounts) GetUserDetailsByGoogleUserID(ctx context.Context, userID string) (authentication.User, error) {
+	mongoSession := a.database()
 	user := &model.User{}
-	err := user.GetByGoogleUserID(c, userID, mongoSession)
+	err := user.GetByGoogleUserID(ctx, userID, mongoSession)
 
 	return user.ToUser(), err
 }
 
 // GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser returns the details and the encrypted password of an
 // enabled user, by its identifier: the username or the email address.
-func GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser(c *gin.Context, identifier string) (authentication.User, string, error) {
-	mongoSession := session.Get(c)
+func (a *Accounts) GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser(ctx context.Context, identifier string) (authentication.User, string, error) {
+	mongoSession := a.database()
 	user := &model.User{}
-	if err := user.GetByIdentifier(c, identifier, mongoSession); err != nil {
+	if err := user.GetByIdentifier(ctx, identifier, mongoSession); err != nil {
 		return authentication.User{}, "", err
 	}
 
@@ -89,24 +102,24 @@ func GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser(c *gin.Contex
 }
 
 // UpdateEncryptedPasswordByUserID replaces the encrypted password of a user.
-func UpdateEncryptedPasswordByUserID(c *gin.Context, userID, encryptedPassword string) error {
+func (a *Accounts) UpdateEncryptedPasswordByUserID(ctx context.Context, userID, encryptedPassword string) error {
 	user, err := model.UserWithID(userID)
 	if err != nil {
 		return err
 	}
 
-	return user.UpdatePassword(c, encryptedPassword, true, session.Get(c))
+	return user.UpdatePassword(ctx, encryptedPassword, true, a.database())
 }
 
 // DeleteUserByID deletes a user by its ID.
-func DeleteUserByID(c *gin.Context, userID string) error {
-	mongoSession := session.Get(c)
+func (a *Accounts) DeleteUserByID(ctx context.Context, userID string) error {
+	mongoSession := a.database()
 
 	deletedUser, err := model.NewDeletedUser(userID)
 	if err != nil {
 		return err
 	}
-	if _, err = deletedUser.Save(c, mongoSession); err != nil {
+	if _, err = deletedUser.Save(ctx, mongoSession); err != nil {
 		return err
 	}
 
@@ -115,39 +128,39 @@ func DeleteUserByID(c *gin.Context, userID string) error {
 		return err
 	}
 
-	return user.Delete(c, mongoSession)
+	return user.Delete(ctx, mongoSession)
 }
 
 // DisableUserByID moves the user to the disabled users and returns its details.
-func DisableUserByID(c *gin.Context, userID string) (authentication.User, error) {
-	mongoSession := session.Get(c)
+func (a *Accounts) DisableUserByID(ctx context.Context, userID string) (authentication.User, error) {
+	mongoSession := a.database()
 
 	user := &model.User{}
-	if err := user.GetByID(c, userID, mongoSession); err != nil {
+	if err := user.GetByID(ctx, userID, mongoSession); err != nil {
 		return authentication.User{}, err
 	}
 
 	disabledUser := model.NewDisabledUser(user)
-	if _, err := disabledUser.Save(c, mongoSession); err != nil {
+	if _, err := disabledUser.Save(ctx, mongoSession); err != nil {
 		return authentication.User{}, err
 	}
 
-	return user.ToUser(), user.Delete(c, mongoSession)
+	return user.ToUser(), user.Delete(ctx, mongoSession)
 }
 
 // EnableUserByID restores the disabled user as an enabled user and returns its details.
-func EnableUserByID(c *gin.Context, userID string) (authentication.User, error) {
-	mongoSession := session.Get(c)
+func (a *Accounts) EnableUserByID(ctx context.Context, userID string) (authentication.User, error) {
+	mongoSession := a.database()
 
 	disabledUser := &model.DisabledUser{}
-	if err := disabledUser.GetByID(c, userID, mongoSession); err != nil {
+	if err := disabledUser.GetByID(ctx, userID, mongoSession); err != nil {
 		return authentication.User{}, err
 	}
 
 	user := model.NewUserFromDisabledUser(disabledUser)
-	if _, err := user.Save(c, mongoSession); err != nil {
+	if _, err := user.Save(ctx, mongoSession); err != nil {
 		return authentication.User{}, err
 	}
 
-	return user.ToUser(), disabledUser.Delete(c, mongoSession)
+	return user.ToUser(), disabledUser.Delete(ctx, mongoSession)
 }

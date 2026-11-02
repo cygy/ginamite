@@ -1,6 +1,7 @@
 package account
 
 import (
+	"context"
 	"net/http"
 	"strings"
 	"testing"
@@ -31,29 +32,21 @@ type registerStubs struct {
 }
 
 func (r registerStubs) install() {
-	testFunctions.DoesAccountWithUsernameExist = func(*gin.Context, string) (bool, error) { return r.usernameExists, r.usernameErr }
-	testFunctions.DoesAccountWithEmailAddressExist = func(*gin.Context, string) (bool, error) { return r.emailExists, r.emailErr }
-	testFunctions.DoesUserWithFacebookUserIDExist = func(*gin.Context, string) (bool, error) { return r.socialExists, r.socialErr }
-	testFunctions.DoesUserWithGoogleUserIDExist = func(*gin.Context, string) (bool, error) { return r.socialExists, r.socialErr }
-	testFunctions.GetUserDetailsByIdentifier = func(*gin.Context, string) (authentication.User, error) { return testUser, r.identifierErr }
-	testFunctions.RegisterByEmailAddress = func(*gin.Context, string, string, string, string, string, string, string, string, string, authentication.Device) error {
+	testAccounts.DoesAccountWithUsernameExistFn = func(context.Context, string) (bool, error) { return r.usernameExists, r.usernameErr }
+	testAccounts.DoesAccountWithEmailAddressExistFn = func(context.Context, string) (bool, error) { return r.emailExists, r.emailErr }
+	testAccounts.DoesUserWithFacebookUserIDExistFn = func(context.Context, string) (bool, error) { return r.socialExists, r.socialErr }
+	testAccounts.DoesUserWithGoogleUserIDExistFn = func(context.Context, string) (bool, error) { return r.socialExists, r.socialErr }
+	testAccounts.GetUserDetailsByIdentifierFn = func(context.Context, string) (authentication.User, error) { return testUser, r.identifierErr }
+	testAccounts.RegisterByEmailAddressFn = func(context.Context, string, string, string, string, string, string, string, string, string, authentication.Device) error {
 		return r.registerErr
 	}
-	testFunctions.RegisterByThirdPartyToken = func(*gin.Context, string, validator.TokenInfos, string, string, string, string, string, string, string, authentication.Device) error {
+	testAccounts.RegisterByThirdPartyTokenFn = func(context.Context, string, validator.TokenInfos, string, string, string, string, string, string, string, authentication.Device) error {
 		return r.registerErr
 	}
 
 	switch r.missing {
-	case "GetUserDetailsByIdentifier":
-		testFunctions.GetUserDetailsByIdentifier = nil
-	case "RegisterByEmailAddress":
-		testFunctions.RegisterByEmailAddress = nil
-	case "RegisterByThirdPartyToken":
-		testFunctions.RegisterByThirdPartyToken = nil
-	case "DoesAccountWithUsernameExist":
-		testFunctions.DoesAccountWithUsernameExist = nil
-	case "DoesAccountWithEmailAddressExist":
-		testFunctions.DoesAccountWithEmailAddressExist = nil
+	case "Accounts":
+		withoutAccounts()
 	}
 }
 
@@ -67,11 +60,7 @@ func TestRegister_Password(t *testing.T) {
 	}
 
 	runCases(t, handler, []testCase{
-		missing("GetUserDetailsByIdentifier"),
-		missing("RegisterByEmailAddress"),
-		missing("RegisterByThirdPartyToken"),
-		missing("DoesAccountWithUsernameExist"),
-		missing("DoesAccountWithEmailAddressExist"),
+		missing("Accounts"),
 		{name: "invalid username", body: registrationBody("Cyril", "ab"), setup: registerStubs{}.install, want: http.StatusBadRequest},
 		{name: "invalid email address", body: registrationBody("john@example.com", "john"), setup: registerStubs{}.install, want: http.StatusBadRequest},
 		{name: "invalid password", body: registrationBody("Abcdefghij1", "weak"), setup: registerStubs{}.install, want: http.StatusBadRequest},
@@ -126,9 +115,6 @@ func TestRegister_ThirdParty(t *testing.T) {
 					name: "social account lookup error", body: body, setup: all(registerStubs{socialErr: errBoom}.install, valid),
 					want: http.StatusOK,
 				},
-				{name: "social lookup function not defined", body: body, setup: all(registerStubs{}.install, valid, func() {
-					testFunctions.DoesUserWithFacebookUserIDExist, testFunctions.DoesUserWithGoogleUserIDExist = nil, nil
-				}), want: http.StatusCreated},
 			})
 		})
 	}
@@ -154,31 +140,22 @@ type registrationValidationStubs struct {
 }
 
 func (r registrationValidationStubs) install() {
-	testFunctions.GetUserDetailsByID = func(*gin.Context, string) (authentication.User, error) { return testUser, r.userErr }
-	testFunctions.GetRegistrationDetails = func(*gin.Context, string) (*authentication.Details, error) {
+	testAccounts.GetUserDetailsByIDFn = func(context.Context, string) (authentication.User, error) { return testUser, r.userErr }
+	testAccounts.GetRegistrationDetailsFn = func(context.Context, string) (*authentication.Details, error) {
 		return &authentication.Details{Source: "web", Method: authentication.MethodPassword, Device: authentication.Device{Type: "mobile", Name: "iPhone"}}, r.detailsErr
 	}
-	testFunctions.ValidateUserRegistration = func(*gin.Context, string, string) error { return r.validateErr }
-	testFunctions.CancelUserRegistration = func(*gin.Context, string, string) error { return r.cancelErr }
+	testAccounts.ValidateUserRegistrationFn = func(context.Context, string, string) error { return r.validateErr }
+	testAccounts.CancelUserRegistrationFn = func(context.Context, string, string) error { return r.cancelErr }
 
 	switch r.missing {
-	case "GetUserDetailsByID":
-		testFunctions.GetUserDetailsByID = nil
-	case "GetRegistrationDetails":
-		testFunctions.GetRegistrationDetails = nil
-	case "ValidateUserRegistration":
-		testFunctions.ValidateUserRegistration = nil
-	case "CancelUserRegistration":
-		testFunctions.CancelUserRegistration = nil
+	case "Accounts":
+		withoutAccounts()
 	}
 }
 
 func TestValidateOrCancelRegistration_Validate(t *testing.T) {
 	runCases(t, ValidateRegistration, []testCase{
-		{name: "GetUserDetailsByID not defined", id: "u", key: "k", setup: registrationValidationStubs{missing: "GetUserDetailsByID"}.install, want: http.StatusBadRequest},
-		{name: "GetRegistrationDetails not defined", id: "u", key: "k", setup: registrationValidationStubs{missing: "GetRegistrationDetails"}.install, want: http.StatusBadRequest},
-		{name: "ValidateUserRegistration not defined", id: "u", key: "k", setup: registrationValidationStubs{missing: "ValidateUserRegistration"}.install, want: http.StatusBadRequest},
-		{name: "CancelUserRegistration not defined", id: "u", key: "k", setup: registrationValidationStubs{missing: "CancelUserRegistration"}.install, want: http.StatusBadRequest},
+		{name: "storage of the accounts not defined", id: "u", key: "k", setup: registrationValidationStubs{missing: "Accounts"}.install, want: http.StatusBadRequest},
 		{name: "missing key", id: "u", setup: registrationValidationStubs{}.install, want: http.StatusBadRequest},
 		{name: "user error", id: "u", key: "k", setup: registrationValidationStubs{userErr: errBoom}.install, want: http.StatusBadRequest},
 		{name: "details error", id: "u", key: "k", setup: registrationValidationStubs{detailsErr: errBoom}.install, want: http.StatusBadRequest},

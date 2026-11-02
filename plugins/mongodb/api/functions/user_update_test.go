@@ -1,12 +1,10 @@
 package functions
 
 import (
+	"context"
 	"testing"
 
-	"github.com/gin-gonic/gin"
-
 	"github.com/cygy/ginamite/common/authentication"
-	"github.com/cygy/ginamite/plugins/mongodb/internal/plugintest"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
 	"github.com/cygy/ginamite/plugins/mongodb/mongo/bson"
 	"github.com/cygy/ginamite/plugins/mongodb/mongo/store/mock"
@@ -17,23 +15,27 @@ func TestUserUpdates(t *testing.T) {
 
 	tests := []struct {
 		name string
-		call func(c *gin.Context) error
+		call func(a *Accounts, c context.Context) error
 		want bson.M
 	}{
 		{
-			"UpdateUserEmailAddress", func(c *gin.Context) error { return UpdateUserEmailAddress(c, id.Hex(), "new@example.com") },
+			"UpdateUserEmailAddress", func(a *Accounts, c context.Context) error {
+				return a.UpdateUserEmailAddress(c, id.Hex(), "new@example.com")
+			},
 			bson.M{"$set": bson.M{"privateInfos.email": "new@example.com", "privateInfos.isEmailValid": false}},
 		},
 		{
-			"UserEmailAddressIsVerified", func(c *gin.Context) error { return UserEmailAddressIsVerified(c, id.Hex()) },
+			"UserEmailAddressIsVerified", func(a *Accounts, c context.Context) error { return a.UserEmailAddressIsVerified(c, id.Hex()) },
 			bson.M{"$set": bson.M{"privateInfos.isEmailValid": true}},
 		},
 		{
-			"UpdateUserSocialNetworks", func(c *gin.Context) error { return UpdateUserSocialNetworks(c, id.Hex(), "fb", "tw", "ig") },
+			"UpdateUserSocialNetworks", func(a *Accounts, c context.Context) error {
+				return a.UpdateUserSocialNetworks(c, id.Hex(), "fb", "tw", "ig")
+			},
 			bson.M{"$set": bson.M{"publicInfos.facebook": "fb", "publicInfos.twitter": "tw", "publicInfos.instagram": "ig"}},
 		},
 		{
-			"UpdateUserPassword already encrypted", func(c *gin.Context) error { return UpdateUserPassword(c, id.Hex(), "hash", true) },
+			"UpdateUserPassword already encrypted", func(a *Accounts, c context.Context) error { return a.UpdateUserPassword(c, id.Hex(), "hash", true) },
 			bson.M{"$set": bson.M{"identificationMethods.password": "hash"}},
 		},
 	}
@@ -41,9 +43,9 @@ func TestUserUpdates(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			db := mock.NewDatabase("app")
-			c, _ := plugintest.SignedInContext(t, db, model.User{ID: id})
+			c, a := context.Background(), accountsOn(db)
 
-			if err := tt.call(c); err != nil {
+			if err := tt.call(a, c); err != nil {
 				t.Fatal(err)
 			}
 			checkUpdate(t, db, model.UserCollection, id, tt.want)
@@ -51,13 +53,13 @@ func TestUserUpdates(t *testing.T) {
 	}
 
 	t.Run("invalid user ID", func(t *testing.T) {
-		c, _ := plugintest.NewContext(mock.NewDatabase("app"), "GET", "/", nil)
+		c, a := context.Background(), accountsOn(mock.NewDatabase("app"))
 
 		for name, err := range map[string]error{
-			"UpdateUserEmailAddress":     UpdateUserEmailAddress(c, "nope", "a"),
-			"UserEmailAddressIsVerified": UserEmailAddressIsVerified(c, "nope"),
-			"UpdateUserSocialNetworks":   UpdateUserSocialNetworks(c, "nope", "a", "b", "c"),
-			"UpdateUserPassword":         UpdateUserPassword(c, "nope", "a", true),
+			"UpdateUserEmailAddress":     a.UpdateUserEmailAddress(c, "nope", "a"),
+			"UserEmailAddressIsVerified": a.UserEmailAddressIsVerified(c, "nope"),
+			"UpdateUserSocialNetworks":   a.UpdateUserSocialNetworks(c, "nope", "a", "b", "c"),
+			"UpdateUserPassword":         a.UpdateUserPassword(c, "nope", "a", true),
 		} {
 			if err == nil {
 				t.Errorf("%s: an invalid user ID must be rejected", name)
@@ -69,9 +71,9 @@ func TestUserUpdates(t *testing.T) {
 func TestUpdateUserPassword_Encrypts(t *testing.T) {
 	id := bson.NewObjectID()
 	db := mock.NewDatabase("app")
-	c, _ := plugintest.NewContext(db, "GET", "/", nil)
+	c, a := context.Background(), accountsOn(db)
 
-	if err := UpdateUserPassword(c, id.Hex(), "Password1", false); err != nil {
+	if err := a.UpdateUserPassword(c, id.Hex(), "Password1", false); err != nil {
 		t.Fatal(err)
 	}
 

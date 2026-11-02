@@ -1,8 +1,6 @@
 package account
 
 import (
-	"errors"
-
 	"github.com/cygy/ginamite/common/ctxkey"
 
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
@@ -17,8 +15,8 @@ import (
 
 // UpdatePassword updates the password and sends a mail to confirm.
 func UpdatePassword(c *gin.Context) {
-	if FunctionsOf(c).GetUserDetailsByID == nil {
-		c.Error(errors.New("undefined function 'GetUserDetailsByID'"))
+	if FunctionsOf(c).Accounts == nil {
+		c.Error(errNoAccounts)
 		response.InternalServerError(c)
 		return
 	}
@@ -50,7 +48,7 @@ func UpdatePassword(c *gin.Context) {
 	}
 
 	userID := ctxUser.GetID(c)
-	user, err := FunctionsOf(c).GetUserDetailsByID(c, userID)
+	user, err := FunctionsOf(c).Accounts.GetUserDetailsByID(c, userID)
 	if err != nil {
 		response.InternalServerError(c)
 		return

@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/cygy/ginamite/api/validator"
 	"github.com/cygy/ginamite/common/authentication"
 )
 
@@ -79,4 +80,69 @@ type ProcessesStorage interface {
 	VerifyProcess(ctx context.Context, processID, key string) (userID, newValue string, err error)
 	// DeleteProcessByID deletes a process.
 	DeleteProcessByID(ctx context.Context, processID string) error
+}
+
+// AccountsStorage is the storage of the accounts of the users, provided by the application, such as the one of the
+// storage plugin. The context is the one of the request.
+type AccountsStorage interface {
+	// GetUserDetailsByIdentifier returns the details of a user by its identifier: the username or the email address.
+	GetUserDetailsByIdentifier(ctx context.Context, identifier string) (authentication.User, error)
+	// GetUserDetailsByID returns the details of a user by its ID.
+	GetUserDetailsByID(ctx context.Context, userID string) (authentication.User, error)
+	// GetUserDetailsByFacebookUserID returns the details of a user by its Facebook ID.
+	GetUserDetailsByFacebookUserID(ctx context.Context, facebookUserID string) (authentication.User, error)
+	// GetUserDetailsByGoogleUserID returns the details of a user by its Google ID.
+	GetUserDetailsByGoogleUserID(ctx context.Context, googleUserID string) (authentication.User, error)
+	// GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser returns the details and the encrypted password of
+	// an enabled user, by its identifier: the username or the email address.
+	GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser(ctx context.Context, identifier string) (authentication.User, string, error)
+	// UpdateEncryptedPasswordByUserID replaces the encrypted password of a user, such as by the same password encrypted
+	// with stronger parameters.
+	UpdateEncryptedPasswordByUserID(ctx context.Context, userID, encryptedPassword string) error
+
+	// UpdateUserPassword updates the password of a user.
+	UpdateUserPassword(ctx context.Context, userID, password string, isPasswordEncrypted bool) error
+	// UpdateUserEmailAddress updates the email address of a user.
+	UpdateUserEmailAddress(ctx context.Context, userID, emailAddress string) error
+	// UserEmailAddressIsVerified flags the email address of a user as valid.
+	UserEmailAddressIsVerified(ctx context.Context, userID string) error
+	// UpdateUserSocialNetworks updates the social network accounts of a user.
+	UpdateUserSocialNetworks(ctx context.Context, userID, facebook, twitter, instagram string) error
+
+	// DoesAccountWithUsernameExist returns true if an account with this username does exist already.
+	DoesAccountWithUsernameExist(ctx context.Context, username string) (bool, error)
+	// DoesAccountWithEmailAddressExist returns true if an account with this email address does exist already.
+	DoesAccountWithEmailAddressExist(ctx context.Context, emailAddress string) (bool, error)
+	// DoesUserWithFacebookUserIDExist returns true if a user with this Facebook ID is registered already.
+	DoesUserWithFacebookUserIDExist(ctx context.Context, facebookUserID string) (bool, error)
+	// DoesUserWithGoogleUserIDExist returns true if a user with this Google ID is registered already.
+	DoesUserWithGoogleUserIDExist(ctx context.Context, googleUserID string) (bool, error)
+
+	// RegisterByEmailAddress saves a newly registered user.
+	RegisterByEmailAddress(ctx context.Context, username, encryptedPassword, emailAddress, locale, termsVersion, registrationCode, privateKey, source, ip string, device authentication.Device) error
+	// RegisterByThirdPartyToken saves a newly registered user.
+	RegisterByThirdPartyToken(ctx context.Context, username string, tokenInfos validator.TokenInfos, tokenSource, locale, termsVersion, registrationCode, privateKey, source, ip string, device authentication.Device) error
+	// ValidateUserRegistration validates the registration of a user.
+	ValidateUserRegistration(ctx context.Context, userID, registrationKey string) error
+	// CancelUserRegistration cancels the registration of a user.
+	CancelUserRegistration(ctx context.Context, userID, registrationKey string) error
+	// GetRegistrationDetails returns the details of the registration of a user.
+	GetRegistrationDetails(ctx context.Context, userID string) (*authentication.Details, error)
+	// SaveFacebookUserTokenDetailsToUser saves the details of the token of Facebook to the account of a user.
+	SaveFacebookUserTokenDetailsToUser(ctx context.Context, userID string, tokenInfos validator.TokenInfos) error
+	// SaveGoogleUserTokenDetailsToUser saves the details of the token of Google to the account of a user.
+	SaveGoogleUserTokenDetailsToUser(ctx context.Context, userID string, tokenInfos validator.TokenInfos) error
+
+	// GetOwnedAccountDetails returns the details of the account of a user, to display them to its owner.
+	GetOwnedAccountDetails(ctx context.Context, userID string) (any, error)
+	// UpdatedAccountInfos updates the first name and the last name of a user.
+	UpdatedAccountInfos(ctx context.Context, userID, firstName, lastName string) error
+	// UpdatedAccountSettings updates the locale and the timezone of a user.
+	UpdatedAccountSettings(ctx context.Context, userID, locale, timezone string) error
+	// DeleteUserByID deletes a user.
+	DeleteUserByID(ctx context.Context, userID string) error
+	// DisableUserByID disables a user and returns its details.
+	DisableUserByID(ctx context.Context, userID string) (authentication.User, error)
+	// EnableUserByID enables a disabled user and returns its details.
+	EnableUserByID(ctx context.Context, userID string) (authentication.User, error)
 }

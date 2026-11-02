@@ -17,7 +17,7 @@ func TestUpdateEmailAddress(t *testing.T) {
 	}
 
 	runCases(t, UpdateEmailAddress, []testCase{
-		{name: "GetUserDetailsByID not defined", userID: testUserID, body: body, setup: create(nil), want: http.StatusInternalServerError},
+		{name: "storage of the accounts not defined", userID: testUserID, body: body, setup: all(create(nil), withoutAccounts), want: http.StatusInternalServerError},
 		{name: "storage of the processes not defined", userID: testUserID, body: body, setup: all(withUser(testUser, nil), withoutProcesses), want: http.StatusInternalServerError},
 		{name: "missing email address", userID: testUserID, body: `{}`, setup: all(withUser(testUser, nil), create(nil)), want: http.StatusBadRequest},
 		{name: "invalid email address", userID: testUserID, body: `{"email_address":"new"}`, setup: all(withUser(testUser, nil), create(nil)), want: http.StatusBadRequest},
@@ -67,7 +67,7 @@ func TestConfirmEmailAddress(t *testing.T) {
 	}
 
 	runCases(t, ConfirmEmailAddress, []testCase{
-		{name: "GetUserDetailsByID not defined", userID: testUserID, want: http.StatusInternalServerError},
+		{name: "storage of the accounts not defined", userID: testUserID, setup: withoutAccounts, want: http.StatusInternalServerError},
 		{name: "user error", userID: testUserID, setup: withUser(testUser, errBoom), want: http.StatusInternalServerError},
 		{name: "already confirmed", userID: testUserID, setup: withUser(verified, nil), want: http.StatusPreconditionFailed},
 		{name: "storage of the processes not defined", userID: testUserID, setup: all(withUser(testUser, nil), withoutProcesses), want: http.StatusInternalServerError},

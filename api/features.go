@@ -92,18 +92,18 @@ func (s *Server) features(routes *route.DefaultRoutes) []feature {
 			{&admin.UpdateUserNotifications, []string{"Users"}},
 		}, true},
 		{FeatureRegistration, []requirement{
-			{&routes.Username.Paths.Availability, []string{"DoesAccountWithUsernameExist"}},
-			{&registration.RegisterWithPassword, []string{"RegisterByEmailAddress", "DoesAccountWithEmailAddressExist", "DoesAccountWithUsernameExist"}},
-			{&registration.Validate, []string{"ValidateUserRegistration", "GetRegistrationDetails"}},
-			{&registration.Cancel, []string{"CancelUserRegistration", "GetRegistrationDetails"}},
+			{&routes.Username.Paths.Availability, []string{"Accounts"}},
+			{&registration.RegisterWithPassword, []string{"Accounts"}},
+			{&registration.Validate, []string{"Accounts"}},
+			{&registration.Cancel, []string{"Accounts"}},
 		}, true},
 		{FeatureForgotPassword, []requirement{
-			{&forgotPassword.ForgotPassword, []string{"GetUserDetailsByIdentifier", "Processes"}},
-			{&forgotPassword.Validate, []string{"Processes", "UpdateUserPassword"}},
+			{&forgotPassword.ForgotPassword, []string{"Accounts", "Processes"}},
+			{&forgotPassword.Validate, []string{"Processes", "Accounts"}},
 			{&forgotPassword.Cancel, []string{"Processes"}},
 		}, true},
 		{FeatureAuth, []requirement{
-			{&authentication.LoginWithPassword, []string{"GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser", "Tokens"}},
+			{&authentication.LoginWithPassword, []string{"Accounts", "Tokens"}},
 			{&authentication.Logout, []string{"Tokens"}},
 			{&authentication.GetTokens, []string{"Tokens"}},
 			{&authentication.GetToken, []string{"Tokens"}},
@@ -115,31 +115,31 @@ func (s *Server) features(routes *route.DefaultRoutes) []feature {
 			{&admin.DeleteUserToken, []string{"Users", "Tokens"}},
 		}, true},
 		{FeatureFacebook, []requirement{
-			{&registration.RegisterWithFacebook, []string{"RegisterByThirdPartyToken", "DoesUserWithFacebookUserIDExist"}},
-			{&authentication.LoginWithFacebook, []string{"GetUserDetailsByFacebookUserID", "Tokens"}},
+			{&registration.RegisterWithFacebook, []string{"Accounts"}},
+			{&authentication.LoginWithFacebook, []string{"Accounts", "Tokens"}},
 		}, true},
 		{FeatureGoogle, []requirement{
-			{&registration.RegisterWithGoogle, []string{"RegisterByThirdPartyToken", "DoesUserWithGoogleUserIDExist"}},
-			{&authentication.LoginWithGoogle, []string{"GetUserDetailsByGoogleUserID", "Tokens"}},
+			{&registration.RegisterWithGoogle, []string{"Accounts"}},
+			{&authentication.LoginWithGoogle, []string{"Accounts", "Tokens"}},
 		}, true},
 		{FeatureAccount, []requirement{
-			{&account.GetDetails, []string{"GetOwnedAccountDetails"}},
-			{&account.UpdateDetails, []string{"UpdatedAccountInfos"}},
-			{&account.UpdateSettings, []string{"UpdatedAccountSettings"}},
-			{&account.UpdateSocialNetworks, []string{"UpdateUserSocialNetworks"}},
-			{&account.UpdateEmailAddress, []string{"Processes", "GetUserDetailsByID"}},
-			{&account.ValidateUpdateEmailAddress, []string{"Processes", "UpdateUserEmailAddress"}},
+			{&account.GetDetails, []string{"Accounts"}},
+			{&account.UpdateDetails, []string{"Accounts"}},
+			{&account.UpdateSettings, []string{"Accounts"}},
+			{&account.UpdateSocialNetworks, []string{"Accounts"}},
+			{&account.UpdateEmailAddress, []string{"Processes", "Accounts"}},
+			{&account.ValidateUpdateEmailAddress, []string{"Processes", "Accounts"}},
 			{&account.CancelUpdateEmailAddress, []string{"Processes"}},
-			{&account.ValidateNewEmailAddress, []string{"Processes", "UserEmailAddressIsVerified"}},
-			{&account.ConfirmEmailAddress, []string{"Processes", "GetUserDetailsByID"}},
-			{&account.UpdatePassword, []string{"Processes", "GetUserDetailsByID"}},
-			{&account.ValidateUpdatePassword, []string{"Processes", "UpdateUserPassword"}},
+			{&account.ValidateNewEmailAddress, []string{"Processes", "Accounts"}},
+			{&account.ConfirmEmailAddress, []string{"Processes", "Accounts"}},
+			{&account.UpdatePassword, []string{"Processes", "Accounts"}},
+			{&account.ValidateUpdatePassword, []string{"Processes", "Accounts"}},
 			{&account.CancelUpdatePassword, []string{"Processes"}},
-			{&account.Delete, []string{"Processes", "GetUserDetailsByID"}},
-			{&account.ValidateDelete, []string{"Processes", "DeleteUserByID"}},
+			{&account.Delete, []string{"Processes", "Accounts"}},
+			{&account.ValidateDelete, []string{"Processes", "Accounts"}},
 			{&account.CancelDelete, []string{"Processes"}},
-			{&account.Disable, []string{"Processes", "GetUserDetailsByID"}},
-			{&account.ValidateDisable, []string{"Processes", "DisableUserByID"}},
+			{&account.Disable, []string{"Processes", "Accounts"}},
+			{&account.ValidateDisable, []string{"Processes", "Accounts"}},
 			{&account.CancelDisable, []string{"Processes"}},
 			{&admin.GetEnabledUsers, []string{"Users"}},
 			{&admin.GetDisabledUsers, []string{"Users"}},
@@ -151,9 +151,9 @@ func (s *Server) features(routes *route.DefaultRoutes) []feature {
 			{&admin.SetAbilitiesToUser, []string{"Users"}},
 			{&admin.AddAbilitiesToUser, []string{"Users"}},
 			{&admin.RemoveAbilitiesFromUser, []string{"Users"}},
-			{&admin.DeleteUser, []string{"DeleteUserByID", "GetUserDetailsByID"}},
-			{&admin.DisableUser, []string{"DisableUserByID"}},
-			{&admin.EnableUser, []string{"EnableUserByID"}},
+			{&admin.DeleteUser, []string{"Accounts"}},
+			{&admin.DisableUser, []string{"Accounts"}},
+			{&admin.EnableUser, []string{"Accounts"}},
 		}, true},
 		{FeatureContact, []requirement{
 			{&routes.Contact.Paths.Post, []string{"Contacts"}},
@@ -234,6 +234,8 @@ func (s *Server) isUndefined(groups []reflect.Value, name string) bool {
 		return s.Account.Tokens == nil
 	case "Processes":
 		return s.Account.Processes == nil
+	case "Accounts":
+		return s.Account.Accounts == nil
 	}
 
 	for _, group := range groups {
