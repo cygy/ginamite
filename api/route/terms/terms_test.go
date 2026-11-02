@@ -1,6 +1,7 @@
 package terms
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"os"
@@ -21,8 +22,8 @@ var (
 	// testConfig is the configuration of the handlers, replaced by setup.
 	testConfig *config.Configuration
 
-	// testFunctions are the functions of the handlers, reset at the end of each test.
-	testFunctions Functions
+	// testStorage is the storage of the handlers, reset at the end of each test.
+	testStorage = &fakeStorage{}
 )
 
 func setup(t *testing.T) string {
@@ -34,14 +35,36 @@ func setup(t *testing.T) string {
 	testConfig = &config.Configuration{}
 	testConfig.Terms.Version = "2"
 	testConfig.Terms.Path = dir
-	t.Cleanup(func() { testFunctions = Functions{} })
+	t.Cleanup(func() { *testStorage = fakeStorage{} })
 
 	return dir
 }
 
+// fakeStorage is a Storage whose methods call the function set by the test, if any.
+type fakeStorage struct {
+	update func(ctx context.Context, userID, version string) error
+	latest func(ctx context.Context, userID string) (string, error)
+}
+
+func (f *fakeStorage) UpdateVersionOfTermsAcceptedByUser(ctx context.Context, userID, version string) error {
+	if f.update == nil {
+		return nil
+	}
+
+	return f.update(ctx, userID, version)
+}
+
+func (f *fakeStorage) GetLatestVersionOfTermsAcceptedByUser(ctx context.Context, userID string) (string, error) {
+	if f.latest == nil {
+		return "", nil
+	}
+
+	return f.latest(ctx, userID)
+}
+
 func newRouter(handler gin.HandlerFunc) *gin.Engine {
 	router := gin.New()
-	router.Use(ctxkey.Config.Inject(testConfig), Inject(&testFunctions), ctxkey.Localization.Inject(apitest.Localization), ctxLocale.Inject("en", []string{"en"}))
+	router.Use(ctxkey.Config.Inject(testConfig), Inject(testStorage), ctxkey.Localization.Inject(apitest.Localization), ctxLocale.Inject("en", []string{"en"}))
 	router.Any("/", handler)
 
 	return router
@@ -80,7 +103,7 @@ func TestGetTermsVersion(t *testing.T) {
 
 	c, recorder := apitest.NewContext("GET", "/", nil)
 	ctxkey.Config.Set(c, testConfig)
-	SetFunctions(c, &testFunctions)
+	SetStorage(c, testStorage)
 	GetTermsVersion(c)
 
 	if recorder.Code != http.StatusOK || !strings.Contains(recorder.Body.String(), `"version":"2"`) {
@@ -94,17 +117,16 @@ func TestAcceptTerms(t *testing.T) {
 	tests := []struct {
 		name       string
 		body       string
-		update     UpdateVersionOfTermsAcceptedByUserFunc
+		update     func(context.Context, string, string) error
 		wantStatus int
 	}{
 		{"missing version", `{}`, nil, http.StatusBadRequest},
 		{"outdated version", `{"version":"1"}`, nil, http.StatusBadRequest},
-		{"accepted without storage", `{"version":"2"}`, nil, http.StatusOK},
-		{"update fails", `{"version":"2"}`, func(*gin.Context, string, string) error { return errors.New("boom") }, http.StatusInternalServerError},
+		{"update fails", `{"version":"2"}`, func(context.Context, string, string) error { return errors.New("boom") }, http.StatusInternalServerError},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			testFunctions.UpdateVersionOfTermsAcceptedByUser = tt.update
+			testStorage.update = tt.update
 
 			req, _ := http.NewRequest(http.MethodPost, "/", strings.NewReader(tt.body))
 			if code := apitest.Serve(newRouter(AcceptTerms), req).Code; code != tt.wantStatus {
@@ -113,9 +135,20 @@ func TestAcceptTerms(t *testing.T) {
 		})
 	}
 
+	t.Run("accepted without storage", func(t *testing.T) {
+		router := gin.New()
+		router.Use(ctxkey.Config.Inject(testConfig), ctxkey.Localization.Inject(apitest.Localization), ctxLocale.Inject("en", []string{"en"}))
+		router.Any("/", AcceptTerms)
+
+		req, _ := http.NewRequest(http.MethodPost, "/", strings.NewReader(`{"version":"2"}`))
+		if code := apitest.Serve(router, req).Code; code != http.StatusOK {
+			t.Errorf("status = %d, want %d", code, http.StatusOK)
+		}
+	})
+
 	t.Run("accepted and saved", func(t *testing.T) {
 		var savedVersion string
-		testFunctions.UpdateVersionOfTermsAcceptedByUser = func(_ *gin.Context, _, version string) error {
+		testStorage.update = func(_ context.Context, _, version string) error {
 			savedVersion = version
 			return nil
 		}

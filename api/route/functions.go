@@ -23,7 +23,7 @@ import (
 )
 
 // NewRouter returns a new Router struct.
-func NewRouter(e *gin.Engine, version string, productionEnvironment bool, jwtTokenSecret, latestTermsVersion string, IsAuthTokenValid ctxAuthToken.IsValidFunc, getUserAndLocaleFromAuthToken ctxAuthToken.GetUserAndLocaleFunc, getUserAbilities rights.GetUserAbilitiesFunc, getLatestVersionOfTermsAcceptedByUser terms.GetLatestVersionOfTermsAcceptedByUserFunc) *Router {
+func NewRouter(e *gin.Engine, version string, productionEnvironment bool, jwtTokenSecret, latestTermsVersion string, IsAuthTokenValid ctxAuthToken.IsValidFunc, getUserAndLocaleFromAuthToken ctxAuthToken.GetUserAndLocaleFunc, getUserAbilities rights.GetUserAbilitiesFunc) *Router {
 	r := &Router{Notifications: notificationsSettings.NewRegistry()}
 
 	r.getUserAbilities = getUserAbilities
@@ -37,7 +37,7 @@ func NewRouter(e *gin.Engine, version string, productionEnvironment bool, jwtTok
 	r.Handlers.MustBeAdmin = r.Rights(true, []string{})
 	r.Handlers.AbleToManageUsers = r.Rights(false, []string{rights.AbilityToManageUsers})
 	r.Handlers.AbleToManageContacts = r.Rights(false, []string{rights.AbilityToManageContacts})
-	r.Handlers.MustHaveAcceptedTheLatestVersionOfTerms = ctxTerms.VerifyLatestVersionOfTermsAcceptedByUser(latestTermsVersion, getLatestVersionOfTermsAcceptedByUser)
+	r.Handlers.MustHaveAcceptedTheLatestVersionOfTerms = ctxTerms.VerifyLatestVersionOfTermsAcceptedByUser(latestTermsVersion)
 
 	r.DefaultRoutes.Status.Enabled = true
 	r.DefaultRoutes.Status.Paths.Get.Enabled = true

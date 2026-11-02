@@ -227,12 +227,12 @@ func (user *User) GetByIDAndNotification(ctx context.Context, userID, notificati
 // GetByIdentifier loads the user document with the username or, if there is none, the
 // email address. It returns a "not found" error, see errors.IsNotFound, if neither matches.
 func (user *User) GetByIdentifier(ctx context.Context, identifier string, db store.Database) error {
-	if err := document.GetDocumentBySelector(ctx, user, UserCollection, bson.D{{Key: "username", Value: identifier}}, db); err != nil && !isNotFound(err) {
+	if err := document.GetDocumentBySelector(ctx, user, UserCollection, bson.D{{Key: "username", Value: identifier}}, db); err != nil && !IsNotFound(err) {
 		return err
 	}
 
 	if !user.IsSaved() {
-		if err := document.GetDocumentBySelector(ctx, user, UserCollection, bson.D{{Key: "privateInfos.email", Value: identifier}}, db); err != nil && !isNotFound(err) {
+		if err := document.GetDocumentBySelector(ctx, user, UserCollection, bson.D{{Key: "privateInfos.email", Value: identifier}}, db); err != nil && !IsNotFound(err) {
 			return err
 		}
 	}
@@ -346,8 +346,8 @@ func GetInactiveUserIDs(ctx context.Context, interval time.Duration, db store.Da
 	return userIDs, err
 }
 
-// isNotFound reports whether the error means that no document was found, whether it comes from the driver or from
+// IsNotFound reports whether the error means that no document was found, whether it comes from the driver or from
 // document.GetDocumentByID.
-func isNotFound(err error) bool {
+func IsNotFound(err error) bool {
 	return stderrors.Is(err, mongo.ErrNoDocuments) || errors.IsNotFound(err)
 }

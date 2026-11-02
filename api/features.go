@@ -77,7 +77,7 @@ func (s *Server) features(routes *route.DefaultRoutes) []feature {
 		{FeatureTerms, []requirement{
 			{&terms.GetTerms, nil},
 			{&terms.GetVersion, nil},
-			{&terms.Accept, []string{"UpdateVersionOfTermsAcceptedByUser"}},
+			{&terms.Accept, []string{"Terms"}},
 		}, true},
 		{FeatureNotifications, []requirement{
 			{&routes.Notifications.Paths.Get, nil},
@@ -185,7 +185,7 @@ func (s *Server) selectRoutes(routes *route.DefaultRoutes, enabled []string) (ne
 		return false, fmt.Errorf("unknown features %v in the setting api_features, the features are: %s", unknown, strings.Join(names, ", "))
 	}
 
-	groups := []reflect.Value{reflect.ValueOf(s.Account), reflect.ValueOf(s.Users), reflect.ValueOf(s.Terms)}
+	groups := []reflect.Value{reflect.ValueOf(s.Account), reflect.ValueOf(s.Users)}
 	missing := map[string]bool{}
 	for _, f := range features {
 		isEnabled := slices.Contains(enabled, f.name)
@@ -221,8 +221,11 @@ func (s *Server) selectRoutes(routes *route.DefaultRoutes, enabled []string) (ne
 // isUndefined reports whether the storage, or the function, with the name is undefined. The names of the storages are
 // the fields of the server, the names of the functions are the fields of the groups of functions.
 func (s *Server) isUndefined(groups []reflect.Value, name string) bool {
-	if name == "Contacts" {
+	switch name {
+	case "Contacts":
 		return s.Contacts == nil
+	case "Terms":
+		return s.Terms == nil
 	}
 
 	for _, group := range groups {

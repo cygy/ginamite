@@ -41,7 +41,7 @@ type Server struct {
 	Account  account.Functions
 	Users    user.Functions
 	Contacts contact.Storage
-	Terms    terms.Functions
+	Terms    terms.Storage
 	Hooks    Hooks
 
 	// RevokedTokens are the auth tokens revoked, which are rejected until they expire. The cache messages of the queue
@@ -58,15 +58,14 @@ type Server struct {
 // Hooks are the functions of the application which are not tied to a feature: the validation of the identifiers and of
 // the auth tokens, the tokens signed by the API, and the extensions of the server. A database plugin sets most of them.
 type Hooks struct {
-	RecurringTasks                                  func()
-	IsValidID                                       func(id string) bool
-	NewMessageFromQueueCache                        func(message string) bool
-	MiddlewareIsValidAuthToken                      ctxAuthToken.IsValidFunc
-	MiddlewareGetUserAndLocaleFromAuthToken         ctxAuthToken.GetUserAndLocaleFunc
-	MiddlewareGetUserAbilities                      rights.GetUserAbilitiesFunc
-	MiddlewareGetLatestVersionOfTermsAcceptedByUser terms.GetLatestVersionOfTermsAcceptedByUserFunc
-	BuildTokenFromID                                authentication.BuildTokenFunc
-	ExtraPropertiesForTokenWithID                   authentication.ExtraPropertiesForTokenWithIDFunc
-	ExtendTokenExpirationDateFromID                 authentication.ExtendTokenExpirationDateFunc
-	RouterConfigureDefaultRoutes                    route.ConfigureDefaultRoutes
+	RecurringTasks                          func()
+	IsValidID                               func(id string) bool
+	NewMessageFromQueueCache                func(message string) bool
+	MiddlewareIsValidAuthToken              ctxAuthToken.IsValidFunc
+	MiddlewareGetUserAndLocaleFromAuthToken ctxAuthToken.GetUserAndLocaleFunc
+	MiddlewareGetUserAbilities              rights.GetUserAbilitiesFunc
+	BuildTokenFromID                        authentication.BuildTokenFunc
+	ExtraPropertiesForTokenWithID           authentication.ExtraPropertiesForTokenWithIDFunc
+	ExtendTokenExpirationDateFromID         authentication.ExtendTokenExpirationDateFunc
+	RouterConfigureDefaultRoutes            route.ConfigureDefaultRoutes
 }

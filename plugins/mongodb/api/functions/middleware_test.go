@@ -68,16 +68,10 @@ func TestGetUserAbilities(t *testing.T) {
 	if !isAdmin || len(abilities) != 1 || abilities[0] != "a" {
 		t.Errorf("got %v, %v", isAdmin, abilities)
 	}
-	if got := GetLatestVersionOfTermsAcceptedByUser(c, id.Hex()); got != "v2" {
-		t.Errorf("terms = %q", got)
-	}
 
 	// The user can not be loaded.
 	c, _ = plugintest.SignedInContext(t, mock.NewDatabase("app"), model.User{ID: id})
 	if isAdmin, abilities := GetUserAbilities(c, id.Hex()); isAdmin || abilities != nil {
 		t.Errorf("got %v, %v", isAdmin, abilities)
-	}
-	if got := GetLatestVersionOfTermsAcceptedByUser(c, id.Hex()); got != "" {
-		t.Errorf("terms = %q", got)
 	}
 }

@@ -13,7 +13,7 @@ import (
 
 func newTestRouter() (*gin.Engine, *Router) {
 	engine := gin.New()
-	router := NewRouter(engine, "v1", false, "secret", "terms-1", nil, nil, nil, nil)
+	router := NewRouter(engine, "v1", false, "secret", "terms-1", nil, nil, nil)
 
 	return engine, router
 }
@@ -119,7 +119,7 @@ func TestRouter_LoadDefaultRoutes_Disabled(t *testing.T) {
 
 func TestRouter_LoadDefaultRoutes_Production(t *testing.T) {
 	engine := gin.New()
-	router := NewRouter(engine, "v1", true, "secret", "terms-1", nil, nil, nil, nil)
+	router := NewRouter(engine, "v1", true, "secret", "terms-1", nil, nil, nil)
 	router.LoadDefaultRoutes()
 
 	if routeSet(engine)["GET /v1/debug/expiredToken"] {

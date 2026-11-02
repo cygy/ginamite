@@ -36,14 +36,3 @@ func GetUserAbilities(c *gin.Context, userID string) (bool, []string) {
 
 	return user.IsAdmin, user.Abilities
 }
-
-// GetLatestVersionOfTermsAcceptedByUser returns the latest version of the terms accepted by the authenticated user,
-// or an empty string if the user can not be loaded.
-func GetLatestVersionOfTermsAcceptedByUser(c *gin.Context, userID string) string {
-	user := context.GetFullUser(c)
-	if user == nil {
-		return ""
-	}
-
-	return user.VersionOfTermsAccepted
-}

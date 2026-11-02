@@ -41,7 +41,7 @@ func (f *Functions) RemoveCollections(ctx context.Context, collections []string)
 			log.WithField("error", err).Error("unable to drop all")
 		}
 		err := db.Collection(collection).Drop(ctx)
-		if err != nil && !isNotFound(err, errorCodeNamespaceNotFound, fmt.Sprintf("collection not found with name [%s]", collection)) {
+		if err != nil && !IsNotFound(err, errorCodeNamespaceNotFound, fmt.Sprintf("collection not found with name [%s]", collection)) {
 			log.WithFields(logrus.Fields{
 				"error":      err.Error(),
 				"collection": collection,
@@ -106,9 +106,9 @@ const (
 	errorCodeIndexNotFound = 27
 )
 
-// isNotFound reports whether the error of the driver means that the collection or the index does not exist: it has
+// IsNotFound reports whether the error of the driver means that the collection or the index does not exist: it has
 // the code of the server, or the message of the driver.
-func isNotFound(err error, code int, message string) bool {
+func IsNotFound(err error, code int, message string) bool {
 	var commandError mongo.CommandError
 	if errors.As(err, &commandError) && commandError.HasErrorCode(code) {
 		return true

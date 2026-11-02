@@ -221,7 +221,7 @@ func TestServer_Run_SetUpErrors(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := NewServer()
-			s.Terms.UpdateVersionOfTermsAcceptedByUser = func(*gin.Context, string, string) error { return nil }
+			s.Terms = noopTerms{}
 			tt.setup(s)
 
 			if err := s.Run(); err == nil || !strings.Contains(err.Error(), tt.want) {

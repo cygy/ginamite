@@ -36,10 +36,6 @@ func TestUserUpdates(t *testing.T) {
 			"UpdateUserPassword already encrypted", func(c *gin.Context) error { return UpdateUserPassword(c, id.Hex(), "hash", true) },
 			bson.M{"$set": bson.M{"identificationMethods.password": "hash"}},
 		},
-		{
-			"UpdateVersionOfTermsAcceptedByUser", func(c *gin.Context) error { return UpdateVersionOfTermsAcceptedByUser(c, id.Hex(), "v3") },
-			bson.M{"$set": bson.M{"versionOfTermsAccepted": "v3"}},
-		},
 	}
 
 	for _, tt := range tests {

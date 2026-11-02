@@ -241,7 +241,6 @@ func (p *Plugin) configureAPI(a *api.Server) {
 	a.Hooks.MiddlewareIsValidAuthToken = apiFunctions.IsValidAuthToken
 	a.Hooks.MiddlewareGetUserAndLocaleFromAuthToken = apiFunctions.GetUserAndLocaleFromAuthToken
 	a.Hooks.MiddlewareGetUserAbilities = apiFunctions.GetUserAbilities
-	a.Hooks.MiddlewareGetLatestVersionOfTermsAcceptedByUser = apiFunctions.GetLatestVersionOfTermsAcceptedByUser
 
 	a.Users.GetEnabledUsersForAdmin = apiFunctions.GetEnabledUsersForAdmin
 	a.Users.GetDisabledUsersForAdmin = apiFunctions.GetDisabledUsersForAdmin
@@ -282,7 +281,7 @@ func (p *Plugin) configureAPI(a *api.Server) {
 	a.Account.UpdateUserEmailAddress = apiFunctions.UpdateUserEmailAddress
 	a.Account.UserEmailAddressIsVerified = apiFunctions.UserEmailAddressIsVerified
 	a.Account.UpdateUserSocialNetworks = apiFunctions.UpdateUserSocialNetworks
-	a.Terms.UpdateVersionOfTermsAcceptedByUser = apiFunctions.UpdateVersionOfTermsAcceptedByUser
+	a.Terms = apiFunctions.NewTerms(p.database)
 
 	a.Account.ValidateUserRegistration = apiFunctions.ValidateUserRegistration
 	a.Account.CancelUserRegistration = apiFunctions.CancelUserRegistration

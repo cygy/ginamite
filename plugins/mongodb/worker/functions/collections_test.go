@@ -129,8 +129,8 @@ func TestIsNotFound(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := isNotFound(tt.err, tt.code, "collection not found with name [a]"); got != tt.want {
-				t.Errorf("isNotFound() = %v", got)
+			if got := IsNotFound(tt.err, tt.code, "collection not found with name [a]"); got != tt.want {
+				t.Errorf("IsNotFound() = %v", got)
 			}
 		})
 	}

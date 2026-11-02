@@ -11,7 +11,6 @@ import (
 
 	"github.com/cygy/ginamite/api/route"
 	"github.com/cygy/ginamite/api/route/account"
-	"github.com/cygy/ginamite/api/route/terms"
 	"github.com/cygy/ginamite/api/route/user"
 
 	"github.com/gin-gonic/gin"
@@ -19,7 +18,7 @@ import (
 
 // newDefaultRoutes returns the default routes of a router, all enabled.
 func newDefaultRoutes() route.DefaultRoutes {
-	return route.NewRouter(gin.New(), "v1", false, "secret", "", nil, nil, nil, nil).DefaultRoutes
+	return route.NewRouter(gin.New(), "v1", false, "secret", "", nil, nil, nil).DefaultRoutes
 }
 
 // fill sets every function of the struct pointed by groups to a function doing nothing.
@@ -42,8 +41,9 @@ func fill(groups ...any) {
 
 // defineAllFunctions makes the server define every function of the features.
 func defineAllFunctions(s *Server) {
-	fill(&s.Account, &s.Users, &s.Terms)
+	fill(&s.Account, &s.Users)
 	s.Contacts = noopContacts{}
+	s.Terms = noopTerms{}
 }
 
 func TestServer_selectRoutes(t *testing.T) {
@@ -126,7 +126,7 @@ func TestFeatures(t *testing.T) {
 // TestServer_features_areConsistent fails when a default route is added without being in a feature, when a route is in
 // two features, or when a requirement names a function which is not in a group of functions.
 // storages are the names of the storages of the server which the features need.
-var storages = []string{"Contacts"}
+var storages = []string{"Contacts", "Terms"}
 
 // noopContacts is a contact.Storage doing nothing.
 type noopContacts struct{}
@@ -136,8 +136,19 @@ func (noopContacts) UpdateContact(context.Context, string, bool) error          
 func (noopContacts) GetContacts(context.Context, int64, int64) (any, error)      { return nil, nil }
 func (noopContacts) GetContact(context.Context, string) (any, error)             { return nil, nil }
 
+// noopTerms is a terms.Storage doing nothing.
+type noopTerms struct{}
+
+func (noopTerms) UpdateVersionOfTermsAcceptedByUser(context.Context, string, string) error {
+	return nil
+}
+
+func (noopTerms) GetLatestVersionOfTermsAcceptedByUser(context.Context, string) (string, error) {
+	return "", nil
+}
+
 // functionGroups are the types of the groups of functions of the server.
-var functionGroups = []reflect.Type{reflect.TypeFor[account.Functions](), reflect.TypeFor[user.Functions](), reflect.TypeFor[terms.Functions]()}
+var functionGroups = []reflect.Type{reflect.TypeFor[account.Functions](), reflect.TypeFor[user.Functions]()}
 
 func TestServer_features_areConsistent(t *testing.T) {
 	routes := newDefaultRoutes()
@@ -185,7 +196,7 @@ func TestRouter_DisableAuthentication(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	engine := gin.New()
-	router := route.NewRouter(engine, "v1", false, "", "", nil, nil, nil, nil)
+	router := route.NewRouter(engine, "v1", false, "", "", nil, nil, nil)
 	router.DisableAuthentication()
 	engine.GET("/protected", router.Handlers.MustBeAuthenticated, func(c *gin.Context) { c.Status(http.StatusOK) })
 	engine.GET("/admin", router.Rights(true, nil), func(c *gin.Context) { c.Status(http.StatusOK) })

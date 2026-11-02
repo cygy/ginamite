@@ -17,10 +17,11 @@ import (
 )
 
 // VerifyLatestVersionOfTermsAcceptedByUser checks and saves the authenticated user to the context.
-func VerifyLatestVersionOfTermsAcceptedByUser(currentTermsVersion string, getLatestVersionOfTermsAcceptedByUser terms.GetLatestVersionOfTermsAcceptedByUserFunc) gin.HandlerFunc {
+func VerifyLatestVersionOfTermsAcceptedByUser(currentTermsVersion string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if getLatestVersionOfTermsAcceptedByUser == nil {
-			c.Error(errors.New("undefined function 'GetLatestVersionOfTermsAcceptedByUser'"))
+		storage := terms.StorageOf(c)
+		if storage == nil {
+			c.Error(errors.New("undefined storage 'Terms'"))
 			return
 		}
 
@@ -29,7 +30,11 @@ func VerifyLatestVersionOfTermsAcceptedByUser(currentTermsVersion string, getLat
 			return
 		}
 
-		latestVersionOfTermsAcceptedByUser := getLatestVersionOfTermsAcceptedByUser(c, userID)
+		latestVersionOfTermsAcceptedByUser, err := storage.GetLatestVersionOfTermsAcceptedByUser(c, userID)
+		if err != nil {
+			response.InternalServerError(c)
+			return
+		}
 		if currentTermsVersion == latestVersionOfTermsAcceptedByUser {
 			return
 		}

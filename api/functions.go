@@ -126,7 +126,7 @@ func (s *Server) Run() error {
 		account.Inject(&s.Account),
 		user.Inject(&s.Users),
 		contact.Inject(s.Contacts),
-		terms.Inject(&s.Terms),
+		terms.Inject(s.Terms),
 	)
 	server.Use(ctxLocale.Inject(s.Config.DefaultLocale, s.Config.SupportedLocales))
 
@@ -143,7 +143,6 @@ func (s *Server) Run() error {
 		s.Hooks.MiddlewareIsValidAuthToken,
 		s.Hooks.MiddlewareGetUserAndLocaleFromAuthToken,
 		s.Hooks.MiddlewareGetUserAbilities,
-		s.Hooks.MiddlewareGetLatestVersionOfTermsAcceptedByUser,
 	)
 	needsJWT, err := s.selectRoutes(&router.DefaultRoutes, s.Config.APIFeatures)
 	if err != nil {

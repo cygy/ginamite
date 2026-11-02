@@ -102,9 +102,9 @@ func AcceptTerms(c *gin.Context) {
 		return
 	}
 
-	if FunctionsOf(c).UpdateVersionOfTermsAcceptedByUser != nil {
+	if storage := StorageOf(c); storage != nil {
 		userID := ctxUser.GetID(c)
-		if err := FunctionsOf(c).UpdateVersionOfTermsAcceptedByUser(c, userID, termsVersion); err != nil {
+		if err := storage.UpdateVersionOfTermsAcceptedByUser(c, userID, termsVersion); err != nil {
 			response.InternalServerError(c)
 			return
 		}

@@ -33,7 +33,7 @@ func (f *Functions) RemoveIndexes(ctx context.Context, indexes []IndexToDelete) 
 
 	for _, index := range indexes {
 		err := db.Collection(index.Collection).Indexes().DropOne(ctx, index.IndexName)
-		if err != nil && !isNotFound(err, errorCodeIndexNotFound, fmt.Sprintf("index not found with name [%s]", index.IndexName)) {
+		if err != nil && !IsNotFound(err, errorCodeIndexNotFound, fmt.Sprintf("index not found with name [%s]", index.IndexName)) {
 			log.WithFields(logrus.Fields{
 				"error":      err.Error(),
 				"collection": index.Collection,
