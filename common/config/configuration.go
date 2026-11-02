@@ -5,9 +5,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/cygy/ginamite/common/config/database"
 	"github.com/cygy/ginamite/common/config/environment"
 	"github.com/cygy/ginamite/common/config/version"
+
+	"gopkg.in/yaml.v3"
 )
 
 // Configuration is the root configuration object.
@@ -48,10 +49,12 @@ type Configuration struct {
 	Metrics             MetricsConfiguration    `yaml:"metrics"`          // Prometheus metrics, disabled by default
 	RateLimits          RateLimitsConfiguration `yaml:"rate_limits"`      // limits of the requests by client, 0 to disable
 	Broker              BrokerConfiguration     `yaml:"broker"`           // address of the message broker, and the plugin which connects to it
-	Kafka               KafkaConfiguration      `yaml:"kafka"`            // connection to Kafka, its topics and its retries
 	WorkerConsumers     []ConsumerConfiguration `yaml:"worker_consumers"` // topics consumed by the worker, all if empty
 	RecurringTasks      []RecurringTask         `yaml:"recurring_tasks"`  // tasks executed by the workers
 	RunStartUpTasks     bool                    `yaml:"run_start_up_tasks"`
+
+	// sections are the sections of the file which are not known by the core: they belong to the plugins, see Section.
+	sections map[string]yaml.Node
 }
 
 // NewConfiguration returns a Configuration filled with the default values.
@@ -77,12 +80,6 @@ func NewConfiguration() (config *Configuration) {
 	config.RateLimits.Authentication = RateLimitConfiguration{Requests: 10, Seconds: 60}
 	config.RateLimits.Registration = RateLimitConfiguration{Requests: 5, Seconds: 60}
 	config.RateLimits.ForgotPassword = RateLimitConfiguration{Requests: 5, Seconds: 60}
-	config.Kafka.MaxAttempts = 3
-	config.Kafka.RetryDelay = 1000
-	config.Kafka.Topics.Partitions = 1
-	config.Kafka.Topics.ReplicationFactor = 1
-	config.Kafka.Topics.RetentionHours = 168
-	config.Kafka.Topics.DeadLetterRetentionHours = 720
 	config.Facebook.Enabled = false
 	config.Google.Enabled = false
 	config.ExpiredAuthTokens.FlushCacheInterval = 60
@@ -111,7 +108,7 @@ func (config *Configuration) Initialize(file, env, ver string) error {
 		return fmt.Errorf("unable to read the configuration file: %w", err)
 	}
 
-	if err := unmarshal(source, config); err != nil {
+	if err := unmarshal(source, config, &config.sections); err != nil {
 		return fmt.Errorf("unable to load the configuration file %s: %w", file, err)
 	}
 
@@ -132,6 +129,22 @@ func (config *Configuration) Initialize(file, env, ver string) error {
 				config.FallbackLocales[language] = locale
 			}
 		}
+	}
+
+	return nil
+}
+
+// Section decodes the section of the file with the name, such as "kafka", into out, which holds the default values.
+// It is meant for the plugins, whose settings are unknown to the core, and it leaves out unchanged if the section is
+// absent. The values tagged !file or !env are already resolved.
+func (config *Configuration) Section(name string, out any) error {
+	node, ok := config.sections[name]
+	if !ok {
+		return nil
+	}
+
+	if err := node.Decode(out); err != nil {
+		return fmt.Errorf("invalid section %q of the configuration: %w", name, err)
 	}
 
 	return nil
@@ -185,9 +198,4 @@ func (config *Configuration) IsBetaVersion() bool {
 // IsFinalVersion reports whether the version is Final.
 func (config *Configuration) IsFinalVersion() bool {
 	return config.Version == version.Final
-}
-
-// IsMongoDBDatabase reports whether the database is MongoDB.
-func (config *Configuration) IsMongoDBDatabase() bool {
-	return config.Database.Service == database.MongoDB
 }

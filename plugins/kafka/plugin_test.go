@@ -22,7 +22,7 @@ import (
 
 func TestOptionsFrom(t *testing.T) {
 	t.Run("defaults", func(t *testing.T) {
-		options, err := optionsFrom(config.NewConfiguration())
+		options, err := optionsFrom(DefaultSettings())
 
 		if err != nil || options.TLS != nil || options.SASL != (SASL{}) || options.StatsInterval != 0 || options.Version != (sarama.KafkaVersion{}) {
 			t.Errorf("options = %+v, error = %v", options, err)
@@ -30,13 +30,13 @@ func TestOptionsFrom(t *testing.T) {
 	})
 
 	t.Run("all the settings", func(t *testing.T) {
-		c := config.NewConfiguration()
-		c.Kafka.Version = "3.6.0"
-		c.Kafka.TLS.Enabled = true
-		c.Kafka.SASL = config.KafkaSASLConfiguration{Mechanism: "scram-sha-512", Username: "user", Password: "secret"}
-		c.Kafka.StatsInterval = 30
+		k := DefaultSettings()
+		k.Version = "3.6.0"
+		k.TLS.Enabled = true
+		k.SASL = SASLSettings{Mechanism: "scram-sha-512", Username: "user", Password: "secret"}
+		k.StatsInterval = 30
 
-		options, err := optionsFrom(c)
+		options, err := optionsFrom(k)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -49,21 +49,21 @@ func TestOptionsFrom(t *testing.T) {
 	})
 
 	t.Run("invalid settings", func(t *testing.T) {
-		tests := map[string]func(c *config.Configuration){
-			"version": func(c *config.Configuration) { c.Kafka.Version = "three" },
-			"TLS": func(c *config.Configuration) {
-				c.Kafka.TLS = config.KafkaTLSConfiguration{Enabled: true, CAFile: "missing.pem"}
+		tests := map[string]func(k *Settings){
+			"version": func(k *Settings) { k.Version = "three" },
+			"TLS": func(k *Settings) {
+				k.TLS = TLSSettings{Enabled: true, CAFile: "missing.pem"}
 			},
-			"SASL mechanism": func(c *config.Configuration) {
-				c.Kafka.SASL = config.KafkaSASLConfiguration{Mechanism: "KERBEROS", Username: "u"}
+			"SASL mechanism": func(k *Settings) {
+				k.SASL = SASLSettings{Mechanism: "KERBEROS", Username: "u"}
 			},
-			"SASL without. user": func(c *config.Configuration) { c.Kafka.SASL = config.KafkaSASLConfiguration{Mechanism: "PLAIN"} },
+			"SASL without. user": func(k *Settings) { k.SASL = SASLSettings{Mechanism: "PLAIN"} },
 		}
 		for name, change := range tests {
-			c := config.NewConfiguration()
-			change(c)
+			k := DefaultSettings()
+			change(&k)
 
-			if _, err := optionsFrom(c); err == nil {
+			if _, err := optionsFrom(k); err == nil {
 				t.Errorf("%s: error = nil", name)
 			}
 		}
@@ -72,12 +72,12 @@ func TestOptionsFrom(t *testing.T) {
 
 func TestCreateTopics(t *testing.T) {
 	// Without Create, nothing is done: there is no broker to connect to.
-	createTopics(config.NewConfiguration(), "127.0.0.1", 1, Options{})
+	createTopics(DefaultSettings(), "127.0.0.1", 1, Options{})
 
 	// A failure is logged, not fatal.
-	c := config.NewConfiguration()
-	c.Kafka.Topics.Create = true
-	createTopics(c, "127.0.0.1", 1, Options{})
+	k := DefaultSettings()
+	k.Topics.Create = true
+	createTopics(k, "127.0.0.1", 1, Options{})
 }
 
 // fakeDLQ is a backend with two dead letters in a partition.
@@ -153,13 +153,13 @@ func TestRunDLQ(t *testing.T) {
 
 	run := func(command string, limit int, body bool) (string, error) {
 		var out bytes.Buffer
-		err := runDLQ(&flags.Flags{ServerName: "dlq", Environment: "test", Version: "final", ServerConfigurationFile: conf, DLQ: command, DLQTopic: "mail", DLQLimit: limit, DLQBody: body}, &out)
+		err := runDLQ(&flags.Flags{ServerName: "dlq", Environment: "test", Version: "final", ServerConfigurationFile: conf}, dlqArguments{command: command, topic: "mail", limit: limit, body: body}, &out)
 
 		return out.String(), err
 	}
 
 	t.Run("list", func(t *testing.T) {
-		out, err := run(flags.DLQList, 0, false)
+		out, err := run(DLQList, 0, false)
 
 		if err != nil || !backend.closed || gotHost != "kafka" || gotPort != 9093 || gotGroup != "app_mail_dlq_tool" {
 			t.Fatalf("error = %v, backend = %+v, address = %s:%d, group = %q", err, backend, gotHost, gotPort, gotGroup)
@@ -178,13 +178,13 @@ func TestRunDLQ(t *testing.T) {
 	})
 
 	t.Run("list with the body", func(t *testing.T) {
-		if out, err := run(flags.DLQList, 1, true); err != nil || !strings.Contains(out, "    secret body") || !strings.Contains(out, "1 dead letters in") {
+		if out, err := run(DLQList, 1, true); err != nil || !strings.Contains(out, "    secret body") || !strings.Contains(out, "1 dead letters in") {
 			t.Errorf("error = %v, output:\n%s", err, out)
 		}
 	})
 
 	t.Run("replay", func(t *testing.T) {
-		out, err := run(flags.DLQReplay, 0, false)
+		out, err := run(DLQReplay, 0, false)
 
 		if err != nil || len(backend.published) != 2 || backend.published[0] != "app_mail" || backend.next != 2 {
 			t.Errorf("error = %v, published = %v, position = %d", err, backend.published, backend.next)
@@ -195,7 +195,7 @@ func TestRunDLQ(t *testing.T) {
 	})
 
 	t.Run("purge", func(t *testing.T) {
-		out, err := run(flags.DLQPurge, 0, false)
+		out, err := run(DLQPurge, 0, false)
 
 		if err != nil || backend.next != 2 || len(backend.published) != 0 || !strings.Contains(out, "2 dead letters purged from app_mail_dlq") {
 			t.Errorf("error = %v, position = %d, output:\n%s", err, backend.next, out)
@@ -204,17 +204,17 @@ func TestRunDLQ(t *testing.T) {
 
 	t.Run("failures", func(t *testing.T) {
 		openDLQ = func(string, int, *sarama.Config, string) (dlq.Backend, error) { return nil, errors.New("no broker") }
-		if _, err := run(flags.DLQList, 0, false); err == nil {
+		if _, err := run(DLQList, 0, false); err == nil {
 			t.Error("a connection failure must be returned")
 		}
 
 		noKafka := writeFile(t, filepath.Join(t.TempDir(), "server.yaml"), "broker: {service: nats, host: nats, port: 4222}\nkafka: {topics_prefix: app_}\n")
-		if err := runDLQ(&flags.Flags{ServerName: "dlq", Environment: "test", Version: "final", ServerConfigurationFile: noKafka, DLQ: flags.DLQList, DLQTopic: "mail"}, &bytes.Buffer{}); err == nil {
+		if err := runDLQ(&flags.Flags{ServerName: "dlq", Environment: "test", Version: "final", ServerConfigurationFile: noKafka}, dlqArguments{command: DLQList, topic: "mail"}, &bytes.Buffer{}); err == nil {
 			t.Error("a configuration without kafka service must be refused")
 		}
 
 		badOptions := writeFile(t, filepath.Join(t.TempDir(), "server.yaml"), "broker: {service: kafka, host: kafka, port: 1}\nkafka: {version: three}\n")
-		if err := runDLQ(&flags.Flags{ServerName: "dlq", Environment: "test", Version: "final", ServerConfigurationFile: badOptions, DLQ: flags.DLQList, DLQTopic: "mail"}, &bytes.Buffer{}); err == nil {
+		if err := runDLQ(&flags.Flags{ServerName: "dlq", Environment: "test", Version: "final", ServerConfigurationFile: badOptions}, dlqArguments{command: DLQList, topic: "mail"}, &bytes.Buffer{}); err == nil {
 			t.Error("invalid options must be refused")
 		}
 	})
@@ -234,16 +234,70 @@ func writeFile(t *testing.T, path, content string) string {
 }
 
 func TestPlugin_Command(t *testing.T) {
-	p := NewPlugin()
+	parse := func(t *testing.T, args ...string) (*Plugin, *flags.Flags, error) {
+		t.Helper()
 
-	if handled, err := p.Command(&flags.Flags{}, &bytes.Buffer{}); handled || err != nil {
-		t.Errorf("Command() = %v, %v, want nothing to do without a command", handled, err)
+		p := NewPlugin()
+		f := flags.NewFlags()
+
+		return p, f, f.Parse(args, &bytes.Buffer{}, p.RegisterFlags)
 	}
 
-	noKafka := writeFile(t, filepath.Join(t.TempDir(), "server.yaml"), "kafka: {topics_prefix: app_}\n")
-	handled, err := p.Command(&flags.Flags{ServerName: "dlq", Environment: "test", Version: "final", ServerConfigurationFile: noKafka, DLQ: flags.DLQList, DLQTopic: "mail"}, &bytes.Buffer{})
-	if !handled || err == nil {
-		t.Errorf("Command() = %v, %v, want the command handled and its failure", handled, err)
+	t.Run("nothing to do without a command", func(t *testing.T) {
+		p, f, err := parse(t, "-api", "-name", "n")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if handled, err := p.Command(f, &bytes.Buffer{}); handled || err != nil {
+			t.Errorf("Command() = %v, %v", handled, err)
+		}
+	})
+
+	t.Run("the flags", func(t *testing.T) {
+		p, _, err := parse(t, "-dlq", "replay", "-dlq-topic", "mail", "-dlq-limit", "5", "-dlq-body")
+
+		if want := (dlqArguments{command: DLQReplay, topic: "mail", limit: 5, body: true}); err != nil || p.dlq != want {
+			t.Errorf("Parse() = %v, arguments = %+v, want %+v", err, p.dlq, want)
+		}
+	})
+
+	t.Run("failure of the command", func(t *testing.T) {
+		noKafka := writeFile(t, filepath.Join(t.TempDir(), "server.yaml"), "kafka: {topics_prefix: app_}\n")
+		p, f, err := parse(t, "-dlq", "list", "-dlq-topic", "mail", "-name", "dlq", "-conf-server", noKafka)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		handled, err := p.Command(f, &bytes.Buffer{})
+		if !handled || err == nil {
+			t.Errorf("Command() = %v, %v, want the command handled and its failure", handled, err)
+		}
+	})
+
+	invalid := map[string]struct {
+		args []string
+		want string
+	}{
+		"unknown command":       {[]string{"-dlq", "delete", "-dlq-topic", "mail", "-name", "n", "-conf-server", "s"}, "must be 'list', 'replay' or 'purge'"},
+		"with a server":         {[]string{"-dlq", "list", "-api", "-dlq-topic", "mail", "-name", "n", "-conf-server", "s"}, "starts no server"},
+		"without topic":         {[]string{"-dlq", "list", "-name", "n", "-conf-server", "s"}, "-dlq-topic"},
+		"with a negative limit": {[]string{"-dlq", "list", "-dlq-topic", "mail", "-dlq-limit", "-1", "-name", "n", "-conf-server", "s"}, "must not be negative"},
+		"without name":          {[]string{"-dlq", "list", "-dlq-topic", "mail", "-conf-server", "s"}, "server name"},
+		"without configuration": {[]string{"-dlq", "list", "-dlq-topic", "mail", "-name", "n"}, "server configuration file"},
+	}
+	for name, tt := range invalid {
+		t.Run(name, func(t *testing.T) {
+			p, f, err := parse(t, tt.args...)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			handled, err := p.Command(f, &bytes.Buffer{})
+			if !handled || err == nil || !strings.Contains(err.Error(), tt.want) {
+				t.Errorf("Command() = %v, %v, want the command handled with an error about %q", handled, err, tt.want)
+			}
+		})
 	}
 }
 
@@ -286,10 +340,9 @@ func TestPlugin_Configure(t *testing.T) {
 
 	t.Run("with service", func(t *testing.T) {
 		s := ginamite.NewServer()
-		s.Config.Broker = config.BrokerConfiguration{Service: "kafka", Host: "kafka", Port: 9093}
-		s.Config.Kafka.TopicsPrefix = "app_"
-		s.Config.Kafka.MaxAttempts = 4
-		s.Config.Kafka.RetryDelay = 250
+		if err := s.Config.Initialize(writeFile(t, filepath.Join(t.TempDir(), "server.yaml"), "broker: {service: kafka, host: kafka, port: 9093}\nkafka: {topics_prefix: app_, max_attempts: 4, retry_delay: 250}\n"), "test", "final"); err != nil {
+			t.Fatal(err)
+		}
 		if err := NewPlugin().Configure(s); err != nil {
 			t.Fatal(err)
 		}
@@ -310,8 +363,9 @@ func TestPlugin_Configure(t *testing.T) {
 
 	t.Run("invalid settings", func(t *testing.T) {
 		s := ginamite.NewServer()
-		s.Config.Broker = config.BrokerConfiguration{Service: "kafka", Host: "kafka", Port: 9093}
-		s.Config.Kafka.Version = "not a version"
+		if err := s.Config.Initialize(writeFile(t, filepath.Join(t.TempDir(), "server.yaml"), "broker: {service: kafka, host: kafka, port: 9093}\nkafka: {version: not a version}\n"), "test", "final"); err != nil {
+			t.Fatal(err)
+		}
 
 		if err := NewPlugin().Configure(s); err == nil || s.Broker != nil {
 			t.Errorf("Configure() = %v, broker = %v, want an error and no broker", err, s.Broker)

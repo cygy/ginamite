@@ -2,6 +2,7 @@ package ginamite
 
 import (
 	"errors"
+	"flag"
 	"io"
 	"os"
 	"slices"
@@ -18,35 +19,47 @@ import (
 // dedupSize is the number of messages the consumers remember to ignore the ones delivered twice.
 const dedupSize = 10000
 
-// Run parses the command line arguments, sets up the configuration, the translations and the services needed by the
-// chosen server, configures the plugins, then runs the API, worker or web server, or the command of a plugin. It
-// returns nil at once if the help is requested, and an error if the arguments or the set up are invalid. Otherwise it
-// returns once the server stopped, after the consumers of the broker are stopped, the producer is flushed and the
-// plugins are closed.
+// Run parses the command line arguments, then runs the command of a plugin if they ask for it. Otherwise it sets up
+// the configuration, the translations and the services needed by the chosen server, configures the plugins, and runs
+// the API, worker or web server. It returns nil at once if the help is requested, and an error if the arguments or the
+// set up are invalid. Otherwise it returns once the server stopped, after the consumers of the broker are stopped,
+// the producer is flushed and the plugins are closed.
 //
 //	if err := server.Run(); err != nil {
 //		log.Fatal(err)
 //	}
 func (s *Server) Run() error {
 	f := flags.NewFlags()
-	ok, err := f.Parse(s.ApplicationConfiguration.FileRequired)
-	if err != nil || !ok {
+	if err := f.Parse(os.Args[1:], os.Stderr, s.registerFlags); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return nil
+		}
+
 		return err
 	}
 
-	return s.run(f, os.Stdout)
+	if handled, err := s.runCommand(f, os.Stdout); handled {
+		return err
+	}
+
+	if err := f.Validate(s.ApplicationConfiguration.FileRequired); err != nil {
+		return err
+	}
+
+	return s.run(f)
 }
 
-// run runs the command or the server chosen by the arguments. The output of a command is written to out.
-func (s *Server) run(f *flags.Flags, out io.Writer) error {
-	if handled, err := s.runCommand(f, out); handled {
-		return err
+// registerFlags lets the plugins which are Commanders add their flags.
+func (s *Server) registerFlags(set *flag.FlagSet) {
+	for _, plugin := range s.plugins {
+		if commander, ok := plugin.(Commander); ok {
+			commander.RegisterFlags(set)
+		}
 	}
+}
 
-	if f.DLQ != "" {
-		return errors.New("no plugin handles the command on the dead letters: add the plugin of the message broker")
-	}
-
+// run runs the server chosen by the arguments, which are valid.
+func (s *Server) run(f *flags.Flags) error {
 	server := s.specializedServer(f)
 	if server == nil {
 		return errors.New("no server selected: use one of the arguments -api, -worker or -web")

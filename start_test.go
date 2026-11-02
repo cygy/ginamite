@@ -3,6 +3,7 @@ package ginamite
 import (
 	"bytes"
 	"errors"
+	"flag"
 	"io"
 	"os"
 	"path/filepath"
@@ -154,8 +155,12 @@ type fakeCommander struct{ err error }
 
 func (fakeCommander) Configure(*Server) error { return nil }
 
+func (c fakeCommander) RegisterFlags(set *flag.FlagSet) {
+	set.Bool("fake-run", false, "Run the fake command.")
+}
+
 func (c fakeCommander) Command(f *flags.Flags, out io.Writer) (bool, error) {
-	if f.DLQ != "run" {
+	if f.ServerName != "run" {
 		return false, nil
 	}
 	_, _ = io.WriteString(out, "ran")
@@ -171,7 +176,7 @@ func TestServer_runCommand(t *testing.T) {
 	s.AddPlugin(fakeCommander{err: boom})
 
 	var out bytes.Buffer
-	if handled, err := s.runCommand(&flags.Flags{DLQ: "run"}, &out); !handled || !errors.Is(err, boom) || out.String() != "ran" {
+	if handled, err := s.runCommand(&flags.Flags{ServerName: "run"}, &out); !handled || !errors.Is(err, boom) || out.String() != "ran" {
 		t.Errorf("runCommand() = %v, %v, output %q", handled, err, out.String())
 	}
 
@@ -220,8 +225,6 @@ func TestServer_run_Errors(t *testing.T) {
 		want    error
 		message string
 	}{
-		{"command", []Plugin{fakeCommander{err: boom}}, flags.Flags{DLQ: "run"}, boom, ""},
-		{"command without plugin", nil, flags.Flags{DLQ: "list"}, nil, "no plugin handles the command"},
 		{"no server", nil, flags.Flags{}, nil, "no server selected"},
 		{"invalid configuration", nil, flags.Flags{IsAPIServer: true, ServerConfigurationFile: filepath.Join(dir, "missing.yaml")}, nil, "configuration"},
 		{
@@ -243,7 +246,7 @@ func TestServer_run_Errors(t *testing.T) {
 			}
 
 			tt.flags.ServerName, tt.flags.Environment = "test", "test"
-			err := s.run(&tt.flags, io.Discard)
+			err := s.run(&tt.flags)
 
 			switch {
 			case err == nil:
@@ -252,6 +255,57 @@ func TestServer_run_Errors(t *testing.T) {
 				t.Errorf("run() = %v, want %v", err, tt.want)
 			case tt.message != "" && !strings.Contains(err.Error(), tt.message):
 				t.Errorf("run() = %v, want an error about %q", err, tt.message)
+			}
+		})
+	}
+}
+
+// withArgs replaces the arguments of the process for the duration of the test.
+func withArgs(t *testing.T, args ...string) {
+	t.Helper()
+
+	old := os.Args
+	os.Args = append([]string{"cmd"}, args...)
+	t.Cleanup(func() { os.Args = old })
+}
+
+func TestServer_Run_Arguments(t *testing.T) {
+	boom := errors.New("boom")
+
+	tests := []struct {
+		name    string
+		args    []string
+		plugins []Plugin
+		want    error
+		message string
+	}{
+		{"help", []string{"-help"}, nil, nil, ""},
+		{"unknown flag", []string{"-unknown"}, nil, nil, "flag provided but not defined"},
+		{"flag of a plugin", []string{"-fake-run", "-name", "run"}, []Plugin{fakeCommander{err: boom}}, boom, ""},
+		{"flag of a missing plugin", []string{"-fake-run"}, nil, nil, "flag provided but not defined"},
+		{"no server", []string{"-name", "n", "-conf-server", "s"}, nil, nil, "'api', 'worker' or 'web'"},
+		{"application configuration", []string{"-api", "-name", "n", "-conf-server", "s"}, nil, nil, "application configuration file"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			withArgs(t, tt.args...)
+
+			s := NewServer()
+			s.ApplicationConfiguration.FileRequired = tt.name == "application configuration"
+			for _, p := range tt.plugins {
+				s.AddPlugin(p)
+			}
+
+			err := s.Run()
+
+			switch {
+			case tt.want != nil && !errors.Is(err, tt.want):
+				t.Errorf("Run() = %v, want %v", err, tt.want)
+			case tt.message != "" && (err == nil || !strings.Contains(err.Error(), tt.message)):
+				t.Errorf("Run() = %v, want an error about %q", err, tt.message)
+			case tt.want == nil && tt.message == "" && err != nil:
+				t.Errorf("Run() = %v", err)
 			}
 		})
 	}

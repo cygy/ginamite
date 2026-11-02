@@ -4,9 +4,9 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
-	"github.com/cygy/ginamite/common/config/database"
 	"github.com/cygy/ginamite/common/config/environment"
 	"github.com/cygy/ginamite/common/config/version"
 )
@@ -19,12 +19,6 @@ func TestNewConfiguration(t *testing.T) {
 	}
 	if c.Server.Host != "localhost" || c.Server.Port != 80 || c.DefaultLocale != "en-us" || c.JWT.SigningMethod != "HS256" {
 		t.Errorf("unexpected defaults %+v", c)
-	}
-	if topics := c.Kafka.Topics; topics.Create || topics.Partitions != 1 || topics.ReplicationFactor != 1 || topics.RetentionHours != 168 || topics.DeadLetterRetentionHours != 720 {
-		t.Errorf("kafka topics = %+v, want the defaults", topics)
-	}
-	if c.Kafka.MaxAttempts != 3 || c.Kafka.RetryDelay != 1000 {
-		t.Errorf("kafka attempts = %d, delay = %d, want the defaults", c.Kafka.MaxAttempts, c.Kafka.RetryDelay)
 	}
 	if c.Locales == nil || c.SupportedLocales == nil || c.FallbackLocales == nil {
 		t.Error("the collections must be initialized")
@@ -49,14 +43,6 @@ broker:
   service: kafka
   host: kafka
   port: 9092
-kafka:
-  max_attempts: 5
-  retry_delay: 250
-  version: 3.6.0
-  tls: {enabled: true, ca_file: ca.pem}
-  sasl: {mechanism: SCRAM-SHA-256, username: user, password: secret}
-  topics: {create: true, partitions: 6, replication_factor: 3, retention_hours: 24}
-  stats_interval: 30
 worker_consumers:
   - topic: mail
     group: mails
@@ -86,23 +72,8 @@ worker_consumers:
 	if _, ok := c.FallbackLocales["de"]; ok {
 		t.Error("a locale without region must not be a fallback")
 	}
-	if c.Kafka.MaxAttempts != 5 || c.Kafka.RetryDelay != 250 {
-		t.Errorf("kafka attempts = %d, delay = %d", c.Kafka.MaxAttempts, c.Kafka.RetryDelay)
-	}
-	wantKafka := KafkaConfiguration{
-		Version:       "3.6.0",
-		TLS:           KafkaTLSConfiguration{Enabled: true, CAFile: "ca.pem"},
-		SASL:          KafkaSASLConfiguration{Mechanism: "SCRAM-SHA-256", Username: "user", Password: "secret"},
-		Topics:        KafkaTopicsConfiguration{Create: true, Partitions: 6, ReplicationFactor: 3, RetentionHours: 24, DeadLetterRetentionHours: 720},
-		MaxAttempts:   5,
-		RetryDelay:    250,
-		StatsInterval: 30,
-	}
 	if want := (BrokerConfiguration{Service: "kafka", Host: "kafka", Port: 9092}); c.Broker != want {
 		t.Errorf("broker = %+v, want %+v", c.Broker, want)
-	}
-	if c.Kafka != wantKafka {
-		t.Errorf("kafka = %+v, want %+v", c.Kafka, wantKafka)
 	}
 	if want := []ConsumerConfiguration{{Topic: "mail", Group: "mails"}, {Topic: "task"}}; !slices.Equal(c.WorkerConsumers, want) {
 		t.Errorf("worker consumers = %+v, want %+v", c.WorkerConsumers, want)
@@ -171,8 +142,6 @@ func TestConfiguration_Predicates(t *testing.T) {
 		{"not beta", Configuration{Version: version.Final}, (*Configuration).IsBetaVersion, false},
 		{"final", Configuration{Version: version.Final}, (*Configuration).IsFinalVersion, true},
 		{"not final", Configuration{Version: version.Alpha}, (*Configuration).IsFinalVersion, false},
-		{"mongodb", Configuration{Database: DatabaseConfiguration{Service: database.MongoDB}}, (*Configuration).IsMongoDBDatabase, true},
-		{"not mongodb", Configuration{Database: DatabaseConfiguration{Service: "mysql"}}, (*Configuration).IsMongoDBDatabase, false},
 	}
 
 	for _, tt := range tests {
@@ -208,4 +177,55 @@ func TestNewConfiguration_RateLimits(t *testing.T) {
 	if c.Server.TrustedProxies == nil || len(c.Server.TrustedProxies) != 0 {
 		t.Errorf("trusted proxies = %v, want none", c.Server.TrustedProxies)
 	}
+}
+
+func TestConfiguration_Section(t *testing.T) {
+	file := writeFile(t, `
+myplugin:
+  retries: 5
+  name: !env MYPLUGIN_NAME
+`)
+	t.Setenv("MYPLUGIN_NAME", "from env")
+
+	c := NewConfiguration()
+	if err := c.Initialize(file, environment.Test, version.Final); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("present", func(t *testing.T) {
+		settings := struct {
+			Retries int
+			Name    string
+			Other   string
+		}{Retries: 1, Other: "default"}
+
+		if err := c.Section("myplugin", &settings); err != nil {
+			t.Fatal(err)
+		}
+		if settings.Retries != 5 || settings.Name != "from env" || settings.Other != "default" {
+			t.Errorf("settings = %+v, want the file merged over the defaults", settings)
+		}
+	})
+
+	t.Run("absent", func(t *testing.T) {
+		settings := struct{ Retries int }{Retries: 1}
+
+		if err := c.Section("missing", &settings); err != nil || settings.Retries != 1 {
+			t.Errorf("Section() = %v, settings = %+v, want the defaults", err, settings)
+		}
+	})
+
+	t.Run("invalid", func(t *testing.T) {
+		settings := struct{ Retries []string }{}
+
+		if err := c.Section("myplugin", &settings); err == nil || !strings.Contains(err.Error(), `"myplugin"`) {
+			t.Errorf("Section() error = %v", err)
+		}
+	})
+
+	t.Run("no file", func(t *testing.T) {
+		if err := NewConfiguration().Section("myplugin", &struct{}{}); err != nil {
+			t.Errorf("Section() error = %v", err)
+		}
+	})
 }

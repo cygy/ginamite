@@ -111,9 +111,9 @@ go run . -web    -name web    -env production -conf-server conf/server.yaml -rou
 | `-conf-server` | Path to the server configuration file (YAML). |
 | `-conf-app` | Path to the application configuration file, see `ApplicationConfiguration`. |
 | `-routes` | Path to the routes file, required by the web server only. |
-| `-help` | Print the help. |
+| `-help` | Print the help, with the arguments added by the plugins. |
 
-The arguments `-dlq*` run a command on the dead letters of Kafka instead of a server, see
+The arguments `-dlq*`, added by `plugins/kafka`, run a command on the dead letters of Kafka instead of a server, see
 [Message broker and Kafka](documentation/kafka.md#dead-letters-command).
 
 ## Custom routes
@@ -210,11 +210,16 @@ default values. The main sections are:
 | `recurring_tasks`, `run_start_up_tasks` | Tasks executed by the workers. |
 | `metrics`, `rate_limits` | Prometheus endpoint and limits of the requests (see Security and Metrics). |
 | `broker` | The message broker: `service` (for instance `kafka`, the plugin which connects), `host` and `port`. |
-| `kafka` | Connection to Kafka (version, TLS, SASL), prefix of the topics, retries, creation of the topics, statistics. |
+| `kafka` | Read by `plugins/kafka`: connection to Kafka (version, TLS, SASL), prefix of the topics, retries, creation of the topics, statistics. |
 | `worker_consumers` | Kafka topics consumed by a worker, with their consumer group. |
 
 The sections `broker`, `kafka` and `worker_consumers`, and the way the workers consume the messages, are described in
 [Message broker and Kafka](documentation/kafka.md).
+
+The sections the core does not know belong to the plugins: a plugin reads its own with
+`Configuration.Section("name", &settings)`, which keeps the defaults of `settings` for the missing values and resolves
+`!file` and `!env` like the other sections. A plugin which is a `ginamite.Commander` also adds its own arguments to the
+command line with `RegisterFlags`.
 
 ### Security
 
@@ -264,14 +269,15 @@ the message broker (`Broker`, set by a plugin) and the queue built on it (`Queue
 configuration).
 
 - The API and web servers save them in the Gin context of the requests, and the handlers read them with
-  `ctxconfig.Get(c)`, `ctxlocalization.Get(c)` and `ctxqueue.Get(c)`. The functions of the application, such as the ones
+  `ctxkey.Config.Get(c)`, `ctxkey.Localization.Get(c)` and `ctxkey.Queue.Get(c)`. The functions of the application, such as the ones
   of the storage plugin, are saved the same way: `account.FunctionsOf(c)`, `ctxAuthToken.HooksOf(c)`, etc.
 - The web server also saves its pages, `html.Of(c)`, and the worker builds a `mail.Mailer` from its services.
 - The code without a request receives what it needs as arguments: for instance the worker builds a `recurring.Scheduler`
   and a `mail.Mailer` from its services.
 - The only process-wide state left is the logger `log.Main`, like the default logger of the standard library, and a few
   constants and caches of immutable values.
-- In the tests, use the `Set` function of the package, for instance `ctxconfig.Set(c, configuration)`.
+- In the tests, use `Set` on the key, for instance `ctxkey.Config.Set(c, configuration)`. `ctxkey.New[T](name)` creates
+  the key of a service of your own.
 
 ### API features
 

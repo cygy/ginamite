@@ -186,3 +186,12 @@ type MetricsConfiguration struct {
 	// reachable from the Internet. The metrics are disabled if empty.
 	Address string `yaml:"address"`
 }
+
+// BrokerConfiguration holds the address of the message broker and the plugin which connects to it.
+type BrokerConfiguration struct {
+	// Service is the name of the broker, such as "kafka": the plugin of this broker is the one which connects. No
+	// message is sent if it is empty.
+	Service string
+	Host    string
+	Port    int
+}

@@ -23,6 +23,9 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// Service is the name of MongoDB as the database.service of the configuration.
+const Service = "mongodb"
+
 // Plugin is the MongoDB plugin. Create it with NewPlugin, set the properties that differ from the defaults, then
 // register it on the server, which calls Configure.
 //
@@ -85,7 +88,7 @@ var _ ginamite.Connector = (*Plugin)(nil)
 // the database service of the configuration is not MongoDB. The server calls it before Configure, if it is the API
 // or the worker. It returns an error if the server is not reachable.
 func (p *Plugin) Connect(configuration *config.Configuration) error {
-	if !configuration.IsMongoDBDatabase() {
+	if configuration.Database.Service != Service {
 		return nil
 	}
 

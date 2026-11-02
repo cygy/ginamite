@@ -12,7 +12,6 @@ import (
 	"github.com/cygy/ginamite/api/rights"
 	"github.com/cygy/ginamite/api/route"
 	"github.com/cygy/ginamite/common/config"
-	"github.com/cygy/ginamite/common/config/database"
 	"github.com/cygy/ginamite/plugins/mongodb/api/ctxsettings"
 	apiFunctions "github.com/cygy/ginamite/plugins/mongodb/api/functions"
 	_ "github.com/cygy/ginamite/plugins/mongodb/internal/plugintest" // Initializes the logger and gin.
@@ -58,7 +57,7 @@ func TestPlugin_Connect_OtherService(t *testing.T) {
 
 func TestPlugin_Connect_Unreachable(t *testing.T) {
 	p := NewPlugin()
-	configuration := newConfiguration(database.MongoDB)
+	configuration := newConfiguration(Service)
 	configuration.Database.Host = "127.0.0.1"
 	configuration.Database.Port = 1
 	configuration.Database.TimeOut = 1

@@ -8,6 +8,7 @@ package ginamite
 
 import (
 	"context"
+	"flag"
 	"io"
 	"time"
 
@@ -70,10 +71,13 @@ type Plugin interface {
 
 // Commander is a Plugin which runs a command given by the command line arguments, instead of a server.
 //
-// Run calls Command with the arguments, before it sets up a server. A command handled by a plugin is the last thing
-// Run does. The plugins are asked in the order they were added, until one handles the command.
+// Run calls RegisterFlags before it parses the command line arguments, so the plugin adds the flags of its command,
+// then Command with the arguments, before it checks that they describe a server and sets it up. A command handled by a
+// plugin is the last thing Run does. The plugins are asked in the order they were added, until one handles the
+// command.
 type Commander interface {
 	Plugin
+	RegisterFlags(set *flag.FlagSet)
 	Command(f *flags.Flags, out io.Writer) (handled bool, err error)
 }
 

@@ -1,29 +1,22 @@
-package config
+package kafka
 
 import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
 	"os"
+
+	"github.com/cygy/ginamite/common/config"
 )
 
-// BrokerConfiguration holds the address of the message broker and the plugin which connects to it.
-type BrokerConfiguration struct {
-	// Service is the name of the broker, such as "kafka": the plugin of this broker is the one which connects. No
-	// message is sent if it is empty.
-	Service string
-	Host    string
-	Port    int
-}
-
-// KafkaConfiguration holds the settings of the connection to Kafka and of its topics. The address of the broker is
-// in BrokerConfiguration.
-type KafkaConfiguration struct {
+// Settings holds the settings of the connection to Kafka and of its topics, in the section "kafka" of the
+// configuration. The address of the broker is in config.BrokerConfiguration.
+type Settings struct {
 	// Version is the version of the brokers, such as "2.8.0". It is the one of the client library if empty.
 	Version string
-	TLS     KafkaTLSConfiguration  `yaml:"tls"`
-	SASL    KafkaSASLConfiguration `yaml:"sasl"`
-	Topics  KafkaTopicsConfiguration
+	TLS     TLSSettings  `yaml:"tls"`
+	SASL    SASLSettings `yaml:"sasl"`
+	Topics  TopicsSettings
 
 	// TopicsPrefix is prepended to the names of the topics and of the consumer groups.
 	TopicsPrefix string `yaml:"topics_prefix"`
@@ -40,8 +33,8 @@ type KafkaConfiguration struct {
 	StatsInterval int `yaml:"stats_interval"`
 }
 
-// KafkaTLSConfiguration holds the settings of the encrypted connection to Kafka.
-type KafkaTLSConfiguration struct {
+// TLSSettings holds the settings of the encrypted connection to Kafka.
+type TLSSettings struct {
 	Enabled bool
 	// CAFile is the certificate authority of the brokers. The system ones are used if empty.
 	CAFile string `yaml:"ca_file"`
@@ -51,18 +44,18 @@ type KafkaTLSConfiguration struct {
 	InsecureSkipVerify bool   `yaml:"insecure_skip_verify"`
 }
 
-// KafkaSASLConfiguration holds the settings of the authentication to Kafka. There is no authentication if the
+// SASLSettings holds the settings of the authentication to Kafka. There is no authentication if the
 // mechanism is empty.
-type KafkaSASLConfiguration struct {
+type SASLSettings struct {
 	// Mechanism is PLAIN, SCRAM-SHA-256 or SCRAM-SHA-512. Enable TLS to protect the password.
 	Mechanism string
 	Username  string
 	Password  string
 }
 
-// KafkaTopicsConfiguration holds the settings of the creation of the topics, which is done when the servers start
+// TopicsSettings holds the settings of the creation of the topics, which is done when the servers start
 // if Create is true. The topics which exist are not changed.
-type KafkaTopicsConfiguration struct {
+type TopicsSettings struct {
 	Create bool
 	// Partitions is the number of partitions of a topic: the workers of a group share the partitions, so there is no
 	// use for more workers than partitions. The messages of a topic are only ordered within a partition.
@@ -74,12 +67,12 @@ type KafkaTopicsConfiguration struct {
 }
 
 // TLSConfig returns the TLS configuration of the connection to Kafka, or nil if TLS is not enabled.
-func (c KafkaTLSConfiguration) TLSConfig() (*tls.Config, error) {
+func (c TLSSettings) TLSConfig() (*tls.Config, error) {
 	if !c.Enabled {
 		return nil, nil
 	}
 
-	config := &tls.Config{MinVersion: tls.VersionTLS12, InsecureSkipVerify: c.InsecureSkipVerify} //nolint:gosec // opt-in, for tests
+	cfg := &tls.Config{MinVersion: tls.VersionTLS12, InsecureSkipVerify: c.InsecureSkipVerify} //nolint:gosec // opt-in, for tests
 
 	if c.CAFile != "" {
 		pem, err := os.ReadFile(c.CAFile)
@@ -87,8 +80,8 @@ func (c KafkaTLSConfiguration) TLSConfig() (*tls.Config, error) {
 			return nil, fmt.Errorf("unable to read the certificate authority: %w", err)
 		}
 
-		config.RootCAs = x509.NewCertPool()
-		if !config.RootCAs.AppendCertsFromPEM(pem) {
+		cfg.RootCAs = x509.NewCertPool()
+		if !cfg.RootCAs.AppendCertsFromPEM(pem) {
 			return nil, fmt.Errorf("no certificate in %s", c.CAFile)
 		}
 	}
@@ -99,8 +92,30 @@ func (c KafkaTLSConfiguration) TLSConfig() (*tls.Config, error) {
 			return nil, fmt.Errorf("unable to load the certificate of the client: %w", err)
 		}
 
-		config.Certificates = []tls.Certificate{certificate}
+		cfg.Certificates = []tls.Certificate{certificate}
 	}
 
-	return config, nil
+	return cfg, nil
+}
+
+// DefaultSettings returns the settings of Kafka filled with the default values.
+func DefaultSettings() Settings {
+	var settings Settings
+	settings.MaxAttempts = 3
+	settings.RetryDelay = 1000
+	settings.Topics.Partitions = 1
+	settings.Topics.ReplicationFactor = 1
+	settings.Topics.RetentionHours = 168
+	settings.Topics.DeadLetterRetentionHours = 720
+
+	return settings
+}
+
+// settingsFrom returns the settings of the section "kafka" of the configuration, with the default values for the
+// missing ones.
+func settingsFrom(c *config.Configuration) (Settings, error) {
+	settings := DefaultSettings()
+	err := c.Section(Section, &settings)
+
+	return settings, err
 }

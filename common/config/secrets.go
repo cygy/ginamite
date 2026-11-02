@@ -93,8 +93,8 @@ func externalValue(node *yaml.Node) (string, error) {
 	return strings.TrimRight(string(content), "\r\n"), nil
 }
 
-// unmarshal decodes the YAML source into out, after resolving the values tagged !file and !env.
-func unmarshal(source []byte, out any) error {
+// unmarshal decodes the YAML source into each of the outs, after resolving the values tagged !file and !env.
+func unmarshal(source []byte, outs ...any) error {
 	var document yaml.Node
 	if err := yaml.Unmarshal(source, &document); err != nil {
 		return err
@@ -108,7 +108,13 @@ func unmarshal(source []byte, out any) error {
 		return err
 	}
 
-	return document.Decode(out)
+	for _, out := range outs {
+		if err := document.Decode(out); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // errPlaceholderSecret is returned when the secret of the tokens is the one of the examples.

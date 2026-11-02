@@ -11,13 +11,18 @@ import (
 // Service is the name of Kafka as a broker.Service of the configuration.
 const Service = "kafka"
 
+// Section is the name of the section of the configuration holding the settings, see Settings.
+const Section = "kafka"
+
 // Plugin makes Kafka the message broker of the servers: it creates the topics if the configuration asks for it, and
 // sets a Client as the broker, see ginamite.Server.UseBroker, which the server starts with the consumers of the chosen
 // server. The configuration chooses it with `broker.service: kafka` and gives the address of the broker, otherwise the plugin
 // does nothing.
 //
 // It also runs the command on the dead letters, see Command.
-type Plugin struct{}
+type Plugin struct {
+	dlq dlqArguments
+}
 
 // NewPlugin returns a Plugin.
 func NewPlugin() *Plugin {
@@ -31,19 +36,24 @@ func (p *Plugin) Configure(s *ginamite.Server) error {
 		return nil
 	}
 
-	options, err := optionsFrom(s.Config)
+	settings, err := settingsFrom(s.Config)
 	if err != nil {
 		return fmt.Errorf("invalid kafka configuration: %w", err)
 	}
 
-	createTopics(s.Config, s.Config.Broker.Host, s.Config.Broker.Port, options)
+	options, err := optionsFrom(settings)
+	if err != nil {
+		return fmt.Errorf("invalid kafka configuration: %w", err)
+	}
+
+	createTopics(settings, s.Config.Broker.Host, s.Config.Broker.Port, options)
 
 	client := NewClient()
 	client.Host, client.Port = s.Config.Broker.Host, s.Config.Broker.Port
-	client.TopicsPrefix = s.Config.Kafka.TopicsPrefix
+	client.TopicsPrefix = settings.TopicsPrefix
 	client.Options = options
-	client.MaxAttempts = max(s.Config.Kafka.MaxAttempts, 1)
-	client.RetryDelay = time.Duration(s.Config.Kafka.RetryDelay) * time.Millisecond
+	client.MaxAttempts = max(settings.MaxAttempts, 1)
+	client.RetryDelay = time.Duration(settings.RetryDelay) * time.Millisecond
 	s.UseBroker(client)
 
 	return nil
