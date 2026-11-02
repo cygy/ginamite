@@ -3,11 +3,11 @@ package html
 import (
 	"fmt"
 	"strings"
+
+	"github.com/cygy/ginamite/common/weburl"
 )
 
 var (
-	// LocaleKeyword is the name of the variable replaced by the locale in the routes file: "{{.Locale}}".
-	LocaleKeyword = "Locale"
 	// WebHostKeyword is the name of the variable replaced by the host of the web server.
 	WebHostKeyword = "WebHost"
 	// StaticHostKeyword is the name of the variable replaced by the host of the static assets.
@@ -26,7 +26,7 @@ type Page struct {
 	ScriptFiles   []Script    `yaml:"scripts"`
 	Meta          Meta
 	Title         string
-	Sitemap       Sitemap
+	Sitemap       weburl.Sitemap
 	Configuration PageConfiguration `yaml:"-"`       // Defined by the constructor
 	Content       PageContent       `yaml:"-"`       // Defined by the each script
 	Partial       bool              `yaml:"partial"` // true if this page is a partial page (loaded by an ajax call), false if it is a full page.
@@ -165,7 +165,7 @@ func (page *Page) UpdateMetaRobots() {
 func (page *Page) PreparePaths(webHost string, applicationLocales []string, fallbackLocales map[string]string) {
 	// Remove the unsupported locales from the paths map.
 	paths := map[string]string{}
-	localeKey := fmt.Sprintf("{{.%s}}", LocaleKeyword)
+	localeKey := fmt.Sprintf("{{.%s}}", weburl.LocaleKeyword)
 	for _, applicationLocale := range applicationLocales {
 		if path, ok := page.Paths[applicationLocale]; ok {
 			paths[applicationLocale] = strings.Replace(path, localeKey, applicationLocale, 1)
@@ -201,10 +201,10 @@ func (page *Page) PrepareWithLocale(currentLocale, currentTimezone, webHost, sta
 
 	// Replace the variables to the URLs.
 	variables := map[string]string{
-		WebHostKeyword:    webHost,
-		StaticHostKeyword: staticHost,
-		APIHostKeyword:    apiHost,
-		LocaleKeyword:     currentLocale,
+		WebHostKeyword:       webHost,
+		StaticHostKeyword:    staticHost,
+		APIHostKeyword:       apiHost,
+		weburl.LocaleKeyword: currentLocale,
 	}
 	for name, value := range variables {
 		key := fmt.Sprintf("{{.%s}}", name)

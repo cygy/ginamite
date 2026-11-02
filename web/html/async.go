@@ -3,6 +3,8 @@ package html
 import (
 	"fmt"
 	"strings"
+
+	"github.com/cygy/ginamite/common/weburl"
 )
 
 // Async is a passthrough asynchronous call: the web server forwards the request of the browser to the API.
@@ -15,7 +17,7 @@ type Async struct {
 // Prepare keeps the paths of the supported locales, prefixes them with webHost and replaces the locale keyword.
 func (async *Async) Prepare(webHost string, applicationLocales []string) {
 	paths := map[string]string{}
-	localeKey := fmt.Sprintf("{{.%s}}", LocaleKeyword)
+	localeKey := fmt.Sprintf("{{.%s}}", weburl.LocaleKeyword)
 	for _, applicationLocale := range applicationLocales {
 		if path, ok := async.Paths[applicationLocale]; ok {
 			paths[applicationLocale] = strings.Replace(webHost+path, localeKey, applicationLocale, 1)

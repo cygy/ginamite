@@ -3,6 +3,8 @@ package html
 import (
 	"reflect"
 	"testing"
+
+	"github.com/cygy/ginamite/common/weburl"
 )
 
 func TestPageCopy(t *testing.T) {
@@ -148,10 +150,10 @@ func TestPageMerge(t *testing.T) {
 			Site:     "twitter_site_2",
 		},
 	}
-	pageToMerge.Sitemap = Sitemap{
+	pageToMerge.Sitemap = weburl.Sitemap{
 		Included:        false,
 		Priority:        0.5,
-		UpdateFrequency: SitemapUpdateFrequencyDaily,
+		UpdateFrequency: weburl.SitemapUpdateFrequencyDaily,
 	}
 	pageToMerge.Key = "key_2"
 
@@ -346,10 +348,10 @@ func generatePage() *Page {
 			Site:     "twitter_site",
 		},
 	}
-	page.Sitemap = Sitemap{
+	page.Sitemap = weburl.Sitemap{
 		Included:        true,
 		Priority:        1.0,
-		UpdateFrequency: SitemapUpdateFrequencyHourly,
+		UpdateFrequency: weburl.SitemapUpdateFrequencyHourly,
 	}
 	page.Partial = true
 	page.Key = "key"
@@ -385,7 +387,7 @@ func TestPageUpdateMetaRobots(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			page := &Page{Meta: Meta{Robots: tt.robots}, Sitemap: Sitemap{Included: tt.included}}
+			page := &Page{Meta: Meta{Robots: tt.robots}, Sitemap: weburl.Sitemap{Included: tt.included}}
 
 			page.UpdateMetaRobots()
 

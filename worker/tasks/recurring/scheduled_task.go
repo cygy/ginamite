@@ -4,6 +4,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/cygy/ginamite/common/config"
 )
 
 // defaultStartIn is the delay before the first run of a task without a valid start time.
@@ -12,12 +14,9 @@ const defaultStartIn = 60 * time.Second
 // now returns the current time. It is replaced by the tests.
 var now = time.Now
 
-// ScheduledTask is a task running the first time at StartAt, then every Interval seconds.
+// ScheduledTask is a task of the configuration, running the first time at StartAt, then every Interval seconds.
 type ScheduledTask struct {
-	Name     string `yaml:"name"`
-	Interval uint   `yaml:"interval"`
-	StartAt  string `yaml:"start_at"` // An hour in UTC, i.e. "14:30" or "4:15am".
-	Enabled  bool   `yaml:"enabled"`
+	config.RecurringTask
 
 	// f is called every Interval seconds, with the name of the task.
 	f func(taskName string)

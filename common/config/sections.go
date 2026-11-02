@@ -150,6 +150,14 @@ type AccountConfiguration struct {
 	InvalidStringsForUsername   []string `yaml:"invalid_strings_for_username"`
 }
 
+// RecurringTask is a task run by the workers the first time at StartAt, then every Interval seconds.
+type RecurringTask struct {
+	Name     string `yaml:"name"`
+	Interval uint   `yaml:"interval"`
+	StartAt  string `yaml:"start_at"` // An hour in UTC, i.e. "14:30" or "4:15am".
+	Enabled  bool   `yaml:"enabled"`
+}
+
 // SitemapConfiguration holds the settings of the generation of the sitemap files.
 type SitemapConfiguration struct {
 	Path               string `yaml:"path"`

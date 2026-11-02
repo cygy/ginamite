@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/cygy/ginamite/common/log"
-	"github.com/cygy/ginamite/web/html"
 
 	"github.com/sirupsen/logrus"
 	yaml "gopkg.in/yaml.v3"
@@ -22,7 +21,7 @@ type Configuration struct {
 type Route struct {
 	RelativePaths map[string]string `yaml:"paths"`
 	AbsolutePaths map[string]string `yaml:"-"` // The index is the locale of the route (i.e. "fr-fr"), the value is the localized route (i.e. "http://.../account/registration").
-	Sitemap       html.Sitemap      `yaml:"sitemap"`
+	Sitemap       Sitemap           `yaml:"sitemap"`
 }
 
 // NewConfiguration returns an empty Configuration.
@@ -72,7 +71,7 @@ func (conf *Configuration) Initialize(file, webHost string) bool {
 	}
 
 	// Normalize the routes.
-	localeKey := fmt.Sprintf("{{.%s}}", html.LocaleKeyword)
+	localeKey := fmt.Sprintf("{{.%s}}", LocaleKeyword)
 	for k, r := range conf.Routes {
 		absolutePaths := map[string]string{}
 

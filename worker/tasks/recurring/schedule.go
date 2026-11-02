@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/worker/tasks"
 )
@@ -23,14 +24,14 @@ func NewScheduler() *Scheduler {
 // wait returns a channel receiving the time after the duration. It is replaced by the tests.
 var wait = time.After
 
-// Load registers the scheduled tasks. The tasks without name are ignored.
-func (s *Scheduler) Load(tasks []ScheduledTask) {
+// Load registers the tasks of the configuration. The tasks without name are ignored.
+func (s *Scheduler) Load(tasks []config.RecurringTask) {
 	for _, task := range tasks {
 		if len(task.Name) == 0 {
 			continue
 		}
 
-		s.tasks[task.Name] = task
+		s.tasks[task.Name] = ScheduledTask{RecurringTask: task}
 
 		log.WithField("name", task.Name).Info("scheduled task loaded")
 	}

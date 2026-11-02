@@ -6,13 +6,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/worker/internal/workertest"
 )
 
 func TestScheduler_Load(t *testing.T) {
 	s := NewScheduler()
 
-	s.Load([]ScheduledTask{{Name: "a", Interval: 10}, {Name: ""}, {Name: "b", Enabled: true}})
+	s.Load([]config.RecurringTask{{Name: "a", Interval: 10}, {Name: ""}, {Name: "b", Enabled: true}})
 
 	if len(s.tasks) != 2 || s.tasks["a"].Interval != 10 || !s.tasks["b"].Enabled {
 		t.Errorf("s.tasks = %+v", s.tasks)
@@ -21,7 +22,7 @@ func TestScheduler_Load(t *testing.T) {
 
 func TestScheduler_SetFunc(t *testing.T) {
 	s := NewScheduler()
-	s.Load([]ScheduledTask{{Name: "a"}})
+	s.Load([]config.RecurringTask{{Name: "a"}})
 
 	s.SetFunc("a", func(string) {})
 	s.SetFunc("unknown", func(string) {})
@@ -52,7 +53,7 @@ func TestScheduler_Start(t *testing.T) {
 	}
 
 	runs := make(chan string, 10)
-	s.Load([]ScheduledTask{
+	s.Load([]config.RecurringTask{
 		{Name: "ok", Interval: 5, StartAt: "bad", Enabled: true},
 		{Name: "disabled", Interval: 5},
 		{Name: "no func", Interval: 5, Enabled: true},
@@ -115,7 +116,7 @@ func TestScheduler_Start_Default(t *testing.T) {
 
 func TestScheduler_HasFunc(t *testing.T) {
 	s := NewScheduler()
-	s.Load([]ScheduledTask{{Name: "a"}, {Name: "b"}})
+	s.Load([]config.RecurringTask{{Name: "a"}, {Name: "b"}})
 	s.SetFunc("a", func(string) {})
 
 	if !s.HasFunc("a") || s.HasFunc("b") || s.HasFunc("unknown") {

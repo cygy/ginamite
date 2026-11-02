@@ -3,6 +3,8 @@ package recurring
 import (
 	"testing"
 	"time"
+
+	"github.com/cygy/ginamite/common/config"
 )
 
 func TestScheduledTask_StartIn(t *testing.T) {
@@ -36,7 +38,7 @@ func TestScheduledTask_StartIn(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.startAt, func(t *testing.T) {
-			task := ScheduledTask{StartAt: tt.startAt}
+			task := ScheduledTask{RecurringTask: config.RecurringTask{StartAt: tt.startAt}}
 
 			if got := task.StartIn(); got != tt.want {
 				t.Errorf("StartIn() = %v, want %v", got, tt.want)

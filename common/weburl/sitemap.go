@@ -1,4 +1,7 @@
-package html
+package weburl
+
+// LocaleKeyword is the name of the variable replaced by the locale in the paths of the routes file: "{{.Locale}}".
+const LocaleKeyword = "Locale"
 
 // SitemapUpdateFrequency is the frequency of the updates of a page, as in the sitemaps.
 type SitemapUpdateFrequency string

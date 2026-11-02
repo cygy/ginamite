@@ -8,7 +8,6 @@ import (
 	"github.com/cygy/ginamite/common/config/environment"
 	"github.com/cygy/ginamite/common/config/version"
 	"github.com/cygy/ginamite/common/log"
-	"github.com/cygy/ginamite/worker/tasks/recurring"
 
 	"github.com/sirupsen/logrus"
 )
@@ -48,13 +47,13 @@ type Configuration struct {
 	Terms               TermsConfiguration
 	UserNotifications   UserNotificationsConfiguration `yaml:"user_notifications"`
 	Account             AccountConfiguration
-	Metrics             MetricsConfiguration      `yaml:"metrics"`          // Prometheus metrics, disabled by default
-	RateLimits          RateLimitsConfiguration   `yaml:"rate_limits"`      // limits of the requests by client, 0 to disable
-	Broker              BrokerConfiguration       `yaml:"broker"`           // address of the message broker, and the plugin which connects to it
-	Kafka               KafkaConfiguration        `yaml:"kafka"`            // connection to Kafka, its topics and its retries
-	WorkerConsumers     []ConsumerConfiguration   `yaml:"worker_consumers"` // topics consumed by the worker, all if empty
-	RecurringTasks      []recurring.ScheduledTask `yaml:"recurring_tasks"`  // tasks executed by the workers
-	RunStartUpTasks     bool                      `yaml:"run_start_up_tasks"`
+	Metrics             MetricsConfiguration    `yaml:"metrics"`          // Prometheus metrics, disabled by default
+	RateLimits          RateLimitsConfiguration `yaml:"rate_limits"`      // limits of the requests by client, 0 to disable
+	Broker              BrokerConfiguration     `yaml:"broker"`           // address of the message broker, and the plugin which connects to it
+	Kafka               KafkaConfiguration      `yaml:"kafka"`            // connection to Kafka, its topics and its retries
+	WorkerConsumers     []ConsumerConfiguration `yaml:"worker_consumers"` // topics consumed by the worker, all if empty
+	RecurringTasks      []RecurringTask         `yaml:"recurring_tasks"`  // tasks executed by the workers
+	RunStartUpTasks     bool                    `yaml:"run_start_up_tasks"`
 }
 
 // NewConfiguration returns a Configuration filled with the default values.
@@ -97,7 +96,7 @@ func NewConfiguration() (config *Configuration) {
 	config.Account.DeleteNeverUsedAfter = 10
 	config.Account.DeleteInactiveAfter = 48
 	config.Account.InvalidStringsForUsername = []string{}
-	config.RecurringTasks = []recurring.ScheduledTask{}
+	config.RecurringTasks = []RecurringTask{}
 	config.RunStartUpTasks = false
 
 	return

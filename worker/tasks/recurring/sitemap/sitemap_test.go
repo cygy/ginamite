@@ -8,7 +8,6 @@ import (
 
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/weburl"
-	"github.com/cygy/ginamite/web/html"
 	"github.com/cygy/ginamite/worker/internal/workertest"
 )
 
@@ -37,7 +36,7 @@ func route(path string) weburl.Route {
 	return weburl.Route{
 		RelativePaths: map[string]string{"en": path, "fr": path},
 		AbsolutePaths: map[string]string{"en": "https://web/en" + path, "fr": "https://web/fr" + path},
-		Sitemap:       html.Sitemap{Included: true, Priority: 0.5, UpdateFrequency: "weekly"},
+		Sitemap:       weburl.Sitemap{Included: true, Priority: 0.5, UpdateFrequency: "weekly"},
 	}
 }
 

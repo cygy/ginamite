@@ -211,7 +211,7 @@ func TestServer_recurringFuncs_run(t *testing.T) {
 
 func TestServer_loadRecurringTasks(t *testing.T) {
 	c := &config.Configuration{}
-	c.RecurringTasks = []recurring.ScheduledTask{
+	c.RecurringTasks = []config.RecurringTask{
 		{Name: recurring.DeleteExpiredTokens},
 		{Name: recurring.SanitizeAccounts},
 		{Name: recurring.SendRegistrationMails},
@@ -267,7 +267,7 @@ func TestServer_setup(t *testing.T) {
 	c := &config.Configuration{Environment: "test", Version: "1.0", TemplatesPath: filepath.Join(dir, "templates"), RunStartUpTasks: true}
 	c.Hosts.Web = "https://web"
 	c.SupportedLocales = []string{"en"}
-	c.RecurringTasks = []recurring.ScheduledTask{{Name: recurring.DeleteExpiredTokens}}
+	c.RecurringTasks = []config.RecurringTask{{Name: recurring.DeleteExpiredTokens}}
 
 	var env, version string
 	var calls []string
