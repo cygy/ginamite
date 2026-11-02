@@ -1,7 +1,26 @@
 version: "2"
 
 linters:
+  enable:
+    - contextcheck
+    - errorlint
+    - gosec
+    - noctx
+    - revive
+  exclusions:
+    rules:
+      # The tests build their requests, contexts, fakes and cookies freely: only the correctness linters apply.
+      - path: _test\.go
+        linters:
+          - contextcheck
+          - gosec
+          - noctx
+          - revive
   settings:
+    gosec:
+      excludes:
+        # The files read are the ones the operator configures (configuration, locales, templates), not user input.
+        - G304
     errcheck:
       exclude-functions:
         # gin.Context.Error returns its argument, it cannot fail.

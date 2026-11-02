@@ -117,7 +117,7 @@ func compareArgon2(password, hash string) bool {
 		return false
 	}
 
-	other := argon2.IDKey([]byte(password), salt, iterations, memory, parallelism, uint32(len(key)))
+	other := argon2.IDKey([]byte(password), salt, iterations, memory, parallelism, uint32(len(key))) //nolint:gosec // the length of a derived key fits in 32 bits
 
 	return subtle.ConstantTimeCompare(key, other) == 1
 }

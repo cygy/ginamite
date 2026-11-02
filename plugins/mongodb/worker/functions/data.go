@@ -6,17 +6,17 @@ import (
 
 // CreateAllDefaultDocuments populates the database with the initial documents of the plugin, for an environment and
 // a version of the application. The plugin has none.
-func CreateAllDefaultDocuments(environment, version string) {
+func CreateAllDefaultDocuments(_, _ string) {
 }
 
 // RemoveUnusedDefaultDocuments removes the documents of the plugin that are not used anymore, for an environment and a
 // version of the application. The plugin has none.
-func RemoveUnusedDefaultDocuments(environment, version string) {
+func RemoveUnusedDefaultDocuments(_, _ string) {
 }
 
 // UpdateAllDefaultDocuments updates the default documents of the plugin, for an environment and a version of the
 // application. The plugin has none.
-func UpdateAllDefaultDocuments(environment, version string) {
+func UpdateAllDefaultDocuments(_, _ string) {
 }
 
 // CreateDefaultDocuments calls hook, which populates the database with the initial documents, with the main database.

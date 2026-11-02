@@ -110,16 +110,16 @@ func NewServer() *Server {
 	server.API.Notifications = server.ApplicationConfiguration.Notifications
 	server.ApplicationConfiguration.FileRequired = false
 
-	server.API.Hooks.NewMessageFromQueueCache = func(message string) bool {
+	server.API.Hooks.NewMessageFromQueueCache = func(string) bool {
 		return true
 	}
-	server.API.Hooks.BuildTokenFromID = func(ctx context.Context, tokenID string) (*authentication.Token, error) {
+	server.API.Hooks.BuildTokenFromID = func(context.Context, string) (*authentication.Token, error) {
 		return &authentication.Token{}, nil
 	}
-	server.API.Hooks.ExtraPropertiesForTokenWithID = func(tokenID string) (map[string]string, error) {
+	server.API.Hooks.ExtraPropertiesForTokenWithID = func(string) (map[string]string, error) {
 		return map[string]string{}, nil
 	}
-	server.API.Hooks.ExtendTokenExpirationDateFromID = func(ctx context.Context, tokenID string, ttl time.Duration) error {
+	server.API.Hooks.ExtendTokenExpirationDateFromID = func(context.Context, string, time.Duration) error {
 		return nil
 	}
 	server.API.Hooks.MiddlewareIsValidAuthToken = func(context.Context, string) (bool, error) {

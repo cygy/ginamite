@@ -28,7 +28,7 @@ func save(src, directoryDest string, width, height int, saveSmallVersion, saveTh
 		// create the destination directory.
 		directory := filepath.Dir(property.AbsolutePath)
 		if _, err := os.Stat(directory); os.IsNotExist(err) {
-			if err := os.MkdirAll(directory, os.ModePerm); err != nil {
+			if err := os.MkdirAll(directory, 0o750); err != nil {
 				log.WithFields(logrus.Fields{
 					"path":  directory,
 					"error": err.Error(),

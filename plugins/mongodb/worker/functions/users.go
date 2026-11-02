@@ -147,7 +147,7 @@ func (f *Functions) IsValid(ctx context.Context, emailAddress string) (bool, err
 
 // NeverUsed returns the IDs of the accounts that never signed in, and registered more than intervalInDays days ago.
 func (f *Functions) NeverUsed(ctx context.Context, intervalInDays uint) ([]string, error) {
-	userIDs, err := model.GetNeverUsedUserIDs(ctx, 24*time.Hour*time.Duration(intervalInDays), f.database())
+	userIDs, err := model.GetNeverUsedUserIDs(ctx, 24*time.Hour*time.Duration(intervalInDays), f.database()) //nolint:gosec // an interval in days is far below the overflow
 	if err != nil {
 		return nil, fmt.Errorf("unable to get the accounts never used: %w", err)
 	}
@@ -157,7 +157,7 @@ func (f *Functions) NeverUsed(ctx context.Context, intervalInDays uint) ([]strin
 
 // Inactive returns the IDs of the accounts whose last sign-in is older than intervalInMonths months (of 30 days).
 func (f *Functions) Inactive(ctx context.Context, intervalInMonths uint) ([]string, error) {
-	userIDs, err := model.GetInactiveUserIDs(ctx, 30*24*time.Hour*time.Duration(intervalInMonths), f.database())
+	userIDs, err := model.GetInactiveUserIDs(ctx, 30*24*time.Hour*time.Duration(intervalInMonths), f.database()) //nolint:gosec // an interval in months is far below the overflow
 	if err != nil {
 		return nil, fmt.Errorf("unable to get the inactive accounts: %w", err)
 	}

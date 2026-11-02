@@ -3,6 +3,7 @@
 package plugintest
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -47,7 +48,7 @@ func init() {
 func NewContext(method, target string, body io.Reader) (*gin.Context, *httptest.ResponseRecorder) {
 	recorder := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(recorder)
-	c.Request = httptest.NewRequest(method, target, body)
+	c.Request = httptest.NewRequestWithContext(context.Background(), method, target, body)
 	ctxkey.Config.Set(c, config.NewConfiguration())
 	ctxAuthToken.SetHooks(c, authentication.Hooks{})
 	ctxkey.Queue.Set(c, senderInUse)

@@ -113,7 +113,7 @@ func (r *Registry) ServeHTTP(rw http.ResponseWriter, _ *http.Request) {
 // Serve serves the metrics, on /metrics, at the address (host:port) until ctx is done. It returns once the server is
 // stopped, or if it can not listen.
 func (r *Registry) Serve(ctx context.Context, address string) error {
-	listener, err := net.Listen("tcp", address)
+	listener, err := (&net.ListenConfig{}).Listen(ctx, "tcp", address)
 	if err != nil {
 		return fmt.Errorf("unable to listen to %s: %w", address, err)
 	}
@@ -125,7 +125,7 @@ func (r *Registry) Serve(ctx context.Context, address string) error {
 	go func() {
 		<-ctx.Done()
 
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+		shutdownCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), shutdownTimeout)
 		defer cancel()
 		_ = server.Shutdown(shutdownCtx)
 	}()

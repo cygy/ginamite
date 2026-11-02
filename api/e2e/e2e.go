@@ -12,6 +12,7 @@ package e2e
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -112,7 +113,7 @@ func (request *Request) Do() {
 		url += "?" + request.Query
 	}
 
-	httpRequest, err := http.NewRequest(request.Method, url, body)
+	httpRequest, err := http.NewRequestWithContext(context.Background(), request.Method, url, body)
 	if err != nil {
 		request.T.Error(err)
 		return

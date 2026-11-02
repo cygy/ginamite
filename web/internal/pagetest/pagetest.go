@@ -109,7 +109,7 @@ func Setup(t *testing.T) *gin.Engine {
 			"error.unauthorized.invalid_token.reason":   "Invalid token",
 			"error.unauthorized.invalid_token.recovery": "Sign in",
 		},
-		"fr-fr": {
+		"fr-fr": { //nolint:gosec // a translation key, not a credential
 			"page.title":                                "Titre",
 			"tpl.error.internal_server.id":              "Erreur {{.ErrorID}}",
 			"error.unauthorized.message":                "Interdit",

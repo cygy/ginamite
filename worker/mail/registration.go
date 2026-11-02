@@ -14,7 +14,7 @@ func (m *Mailer) RegistrationWelcome(ctx context.Context, payload []byte) error 
 }
 
 // RegistrationConfirmation sends an email asking to confirm, or to cancel, the registration.
-func (m *Mailer) RegistrationConfirmation(ctx context.Context, payload []byte) error {
+func (m *Mailer) RegistrationConfirmation(_ context.Context, payload []byte) error {
 	p := queue.MailRegistrationConfirmation{}
 	if err := queue.UnmarshalPayload(payload, &p); err != nil {
 		return broker.Permanent(err)

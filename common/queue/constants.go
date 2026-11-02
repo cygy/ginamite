@@ -55,7 +55,7 @@ const (
 // Types of the cache messages.
 const (
 	// MessageCacheInvalidAuthToken is the type of the cache message invalidating auth tokens.
-	MessageCacheInvalidAuthToken = "invalid_auth_token"
+	MessageCacheInvalidAuthToken = "invalid_auth_token" //nolint:gosec // a type of message, not a credential
 )
 
 // Types of the task messages.

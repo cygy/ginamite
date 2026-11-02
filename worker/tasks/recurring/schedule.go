@@ -70,7 +70,7 @@ func (s *Scheduler) start(ctx context.Context) {
 		}
 
 		startIn := task.StartIn()
-		interval := time.Duration(task.Interval) * time.Second
+		interval := time.Duration(task.Interval) * time.Second //nolint:gosec // an interval in seconds is far below the overflow
 
 		go run(ctx, name, startIn, interval, task.f)
 

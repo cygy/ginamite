@@ -2,6 +2,7 @@ package dlq
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -129,7 +130,7 @@ func TestBackend(t *testing.T) {
 			return context.DeadlineExceeded
 		})
 
-		if err != context.DeadlineExceeded || count != 1 {
+		if !errors.Is(err, context.DeadlineExceeded) || count != 1 {
 			t.Errorf("count = %d, error = %v", count, err)
 		}
 	})
@@ -141,7 +142,7 @@ func TestBackend(t *testing.T) {
 		cancel()
 
 		err := b.Read(canceled, testTopic, 0, 0, 3, func(*sarama.ConsumerMessage) error { return nil })
-		if err != nil && err != context.Canceled {
+		if err != nil && !errors.Is(err, context.Canceled) {
 			t.Errorf("error = %v", err)
 		}
 	})

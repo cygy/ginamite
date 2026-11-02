@@ -2,6 +2,7 @@ package sitemap
 
 import (
 	"compress/gzip"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -207,7 +208,7 @@ func TestFirstError(t *testing.T) {
 	}
 
 	first, second := os.ErrClosed, os.ErrExist
-	if err := firstError(nil, first, second); err != first {
+	if err := firstError(nil, first, second); !errors.Is(err, first) {
 		t.Errorf("err = %v, want %v", err, first)
 	}
 }

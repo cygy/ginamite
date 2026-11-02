@@ -1,7 +1,7 @@
 package response
 
 // RenewedAuthTokenHeader is the name of the header containing the renewed auth token.
-const RenewedAuthTokenHeader = "X-Renewed-Auth-Token"
+const RenewedAuthTokenHeader = "X-Renewed-Auth-Token" //nolint:gosec // the name of a header, not a credential
 
 // Response is the structured JSON object returned by the API.
 type Response struct {

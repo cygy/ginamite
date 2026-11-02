@@ -31,7 +31,7 @@ func GetUploadedFile(c *gin.Context, fieldName string, maxSize int64, checkIsIma
 		log.WithFields(logrus.Fields{
 			"context": logContext,
 		}).Error("max file size exceeded")
-		response.MaxFileSizeExceeded(c, locale, errorMessageKey, uint64(maxSize))
+		response.MaxFileSizeExceeded(c, locale, errorMessageKey, uint64(maxSize)) //nolint:gosec // maxSize is a positive limit set by the code
 		return nil
 	}
 

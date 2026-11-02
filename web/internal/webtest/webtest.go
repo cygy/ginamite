@@ -3,6 +3,7 @@
 package webtest
 
 import (
+	"context"
 	"encoding/json"
 	"html/template"
 	"io"
@@ -71,7 +72,7 @@ func init() {
 func Context(method, target string, body io.Reader) (*gin.Context, *httptest.ResponseRecorder) {
 	rec := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(rec)
-	c.Request = httptest.NewRequest(method, target, body)
+	c.Request = httptest.NewRequestWithContext(context.Background(), method, target, body)
 	if Config != nil {
 		ctxkey.Config.Set(c, Config)
 	}

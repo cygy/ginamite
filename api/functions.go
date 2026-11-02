@@ -218,7 +218,7 @@ func NewServer() *Server {
 // the identifiers. It does nothing if the function is undefined.
 func (s *Server) idValidator() gin.HandlerFunc {
 	if s.Hooks.IsValidID == nil {
-		return func(c *gin.Context) {}
+		return func(*gin.Context) {}
 	}
 
 	return request.InjectIDValidator(s.Hooks.IsValidID)

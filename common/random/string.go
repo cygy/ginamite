@@ -16,11 +16,11 @@ func String(n int) string {
 		return ""
 	}
 
-	max := big.NewInt(int64(len(randomChars)))
+	limit := big.NewInt(int64(len(randomChars)))
 	b := make([]rune, n)
 
 	for i := range b {
-		index, err := rand.Int(rand.Reader, max)
+		index, err := rand.Int(rand.Reader, limit)
 		if err != nil {
 			// The system random source is unavailable: no safe fallback exists.
 			panic("random: unable to read the system random source: " + err.Error())

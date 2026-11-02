@@ -1,7 +1,7 @@
 package functions
 
 import (
-	"crypto/md5"
+	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"os"
@@ -46,9 +46,8 @@ func (p *PublicAccount) UpdateImage(c *gin.Context) {
 
 	// Save the uploaded file to a temp file.
 	rawFilename := fmt.Sprintf("%s_%d", userID, time.Now().Unix())
-	hasher := md5.New()
-	hasher.Write([]byte(rawFilename))
-	rawFilename = hex.EncodeToString(hasher.Sum(nil))
+	sum := sha256.Sum256([]byte(rawFilename))
+	rawFilename = hex.EncodeToString(sum[:])
 
 	filename := fmt.Sprintf("%s%s", rawFilename, strings.ToLower(filepath.Ext(file.Filename)))
 

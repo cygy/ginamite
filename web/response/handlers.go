@@ -36,7 +36,7 @@ var authenticationErrorPages = map[int]func(c *gin.Context){
 // HandleInternalServerError returns a response handler rendering the page of the internal server errors,
 // when the API did not respond or answered with a HTTP code 500.
 func HandleInternalServerError() api.ResponseHandlerFunc {
-	return func(c *gin.Context, statusCode int, requestError error, apiError response.Error) bool {
+	return func(c *gin.Context, statusCode int, requestError error, _ response.Error) bool {
 		if requestError != nil || statusCode == http.StatusInternalServerError {
 			InternalServerError(c)
 			c.Abort()
@@ -50,7 +50,7 @@ func HandleInternalServerError() api.ResponseHandlerFunc {
 // HandleInvalidAuthenticationError returns a response handler rendering the page of the authentication errors
 // of the API: invalid, expired or revoked token, and insufficient rights.
 func HandleInvalidAuthenticationError() api.ResponseHandlerFunc {
-	return func(c *gin.Context, statusCode int, requestError error, apiError response.Error) bool {
+	return func(c *gin.Context, statusCode int, _ error, apiError response.Error) bool {
 		if statusCode != http.StatusUnauthorized || apiError.Domain != authErrors.Domain {
 			return false
 		}
@@ -70,7 +70,7 @@ func HandleInvalidAuthenticationError() api.ResponseHandlerFunc {
 // HandleLatestTermsVersionMustBeAcceptedError returns a response handler redirecting to the page of the terms
 // when the API requires the user to accept their latest version.
 func HandleLatestTermsVersionMustBeAcceptedError() api.ResponseHandlerFunc {
-	return func(c *gin.Context, statusCode int, requestError error, apiError response.Error) bool {
+	return func(c *gin.Context, statusCode int, _ error, apiError response.Error) bool {
 		if statusCode == http.StatusPreconditionFailed && apiError.Domain == termsErrors.Domain && apiError.Code == termsErrors.MustAcceptLatestTerms {
 			locale := context.GetLocale(c)
 			c.Redirect(http.StatusFound, html.Of(c).URL("account.settings.terms", locale))
@@ -84,7 +84,7 @@ func HandleLatestTermsVersionMustBeAcceptedError() api.ResponseHandlerFunc {
 
 // HandleAPIError returns a response handler rendering the page with the error of the API, if there is one.
 func HandleAPIError(page *html.Page) api.ResponseHandlerFunc {
-	return func(c *gin.Context, statusCode int, requestError error, apiError response.Error) bool {
+	return func(c *gin.Context, _ int, _ error, apiError response.Error) bool {
 		if !apiError.IsNil() {
 			APIError(c, page, apiError)
 			c.Abort()
