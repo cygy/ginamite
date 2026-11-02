@@ -17,7 +17,7 @@ func TestNewConfiguration(t *testing.T) {
 	if c.Environment != environment.Development || c.Version != version.Beta {
 		t.Errorf("environment/version = %s/%s", c.Environment, c.Version)
 	}
-	if c.Server.Host != "localhost" || c.Server.Port != 80 || c.DefaultLocale != "en-us" || c.JWT.SigningMethod != "HS256" {
+	if c.Server.Host != "localhost" || c.Server.Port != 80 || c.Server.MaxBodySize != DefaultMaxBodySize || c.DefaultLocale != "en-us" || c.JWT.SigningMethod != "HS256" {
 		t.Errorf("unexpected defaults %+v", c)
 	}
 	if c.Locales == nil || c.SupportedLocales == nil || c.FallbackLocales == nil {

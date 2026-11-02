@@ -11,6 +11,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// DefaultMaxBodySize is the default maximum size of the body of a request, in bytes, see
+// ServerConfiguration.MaxBodySize.
+const DefaultMaxBodySize = 10 << 20
+
 // Configuration is the root configuration object.
 type Configuration struct {
 	Environment       string
@@ -65,6 +69,7 @@ func NewConfiguration() (config *Configuration) {
 	config.Server.Host = "localhost"
 	config.Server.TrustedProxies = []string{}
 	config.Server.Port = 80
+	config.Server.MaxBodySize = DefaultMaxBodySize
 	config.Server.GZip.Enabled = false
 	config.Server.SSL.Enabled = false
 	config.DefaultLocale = "en-us"

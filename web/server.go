@@ -107,13 +107,13 @@ func (s *Server) newEngine() (*gin.Engine, error) {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	var engine *gin.Engine
+	// The body is limited before the logger reads it.
+	engine := gin.New()
+	engine.Use(gin.Recovery(), request.LimitBodySize(s.Config.Server.MaxBodySize))
 	if s.Config.IsProductionEnvironment() {
-		engine = gin.New()
-		engine.Use(gin.Recovery())
 		engine.Use(log.InjectRequestLogger(false))
 	} else {
-		engine = gin.Default()
+		engine.Use(gin.Logger())
 	}
 
 	if err := request.ConfigureClientIP(engine, s.Config.Server.TrustedProxies); err != nil {

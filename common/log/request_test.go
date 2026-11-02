@@ -3,6 +3,7 @@ package log
 import (
 	"bytes"
 	"compress/gzip"
+	"errors"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -236,5 +237,83 @@ func TestInjectRequestLogger_ResponseBody(t *testing.T) {
 				t.Error("the client must still receive the response")
 			}
 		})
+	}
+}
+
+func TestObfuscateBody(t *testing.T) {
+	tests := []struct {
+		name string
+		body string
+		want string
+	}{
+		{"password", `{"password":"secret"}`, `{"password":"***"}`},
+		{"spaces and other keys", `{"new_password" : "a\"b", "x":"y"}`, `{"new_password" : "***", "x":"y"}`},
+		{"tokens", `{"auth_token":"a.b.c","token":"t","Client_Secret":"s"}`, `{"auth_token":"***","token":"***","Client_Secret":"***"}`},
+		{"not a string", `{"token":12}`, `{"token":12}`},
+		{"email", `{"email":"john@x.io"}`, `{"email":"***@x.io"}`},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := string(obfuscateBody([]byte(tt.body))); got != tt.want {
+				t.Errorf("obfuscateBody() = %s, want %s", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestObfuscateQuery(t *testing.T) {
+	tests := []struct {
+		query string
+		want  string
+	}{
+		{"x=1", "x=1"},
+		{"token=abc&x=1", "token=%2A%2A%2A&x=1"},
+		{"reset_password_code=1&Secret=2", "Secret=%2A%2A%2A&reset_password_code=%2A%2A%2A"},
+		{"a=%zz", obfuscatorReplacingString},
+	}
+
+	for _, tt := range tests {
+		if got := obfuscateQuery(tt.query); got != tt.want {
+			t.Errorf("obfuscateQuery(%q) = %q, want %q", tt.query, got, tt.want)
+		}
+	}
+}
+
+func TestInjectRequestLogger_ResponseSecrets(t *testing.T) {
+	fields, rec, _ := do(t, true, func(c *gin.Context) {
+		c.String(http.StatusOK, `{"auth_token":"a.b.c"}`)
+	}, httptest.NewRequest(http.MethodGet, "/?token=abc", nil))
+
+	if got := fields["response"].(map[string]any)["body"]; got != `{"auth_token":"***"}` {
+		t.Errorf("response body = %v, want the token masked", got)
+	}
+	if got := fields["request"].(map[string]any)["URI"]; got != "/?token=%2A%2A%2A" {
+		t.Errorf("URI = %v, want the token masked", got)
+	}
+	if !strings.Contains(rec.Body.String(), "a.b.c") {
+		t.Error("the client must still receive the token")
+	}
+}
+
+func TestInjectRequestLogger_BodyOverLimit(t *testing.T) {
+	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"a":"0123456789"}`))
+
+	var readErr error
+	var read string
+	router := gin.New()
+	router.Use(func(c *gin.Context) { c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 5) })
+	router.Use(InjectRequestLogger(false))
+	router.POST("/", func(c *gin.Context) {
+		b, err := io.ReadAll(c.Request.Body)
+		read, readErr = string(b), err
+	})
+
+	useHook(t)
+	router.ServeHTTP(httptest.NewRecorder(), req)
+
+	var maxErr *http.MaxBytesError
+	if !errors.As(readErr, &maxErr) || read != `{"a":` {
+		t.Errorf("handler read %q, %v; want the bytes allowed then the limit error", read, readErr)
 	}
 }

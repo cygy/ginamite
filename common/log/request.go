@@ -8,6 +8,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 	"time"
@@ -33,6 +34,45 @@ var sensitiveHeaders = map[string]bool{
 	"Cookie":              true,
 }
 
+var (
+	// sensitiveValueRegExp matches the JSON string values whose key contains password, token or secret, such as
+	// "password", "new_password", "auth_token" or "client_secret".
+	sensitiveValueRegExp = regexp.MustCompile(`(?i)("[^"]*(?:password|token|secret)[^"]*"\s*:\s*)"(?:[^"\\]|\\.)*"`)
+	// sensitiveKeyRegExp matches the names of the query parameters holding a secret.
+	sensitiveKeyRegExp = regexp.MustCompile(`(?i)password|token|secret`)
+	// emailRegExp matches the local part of the email addresses.
+	emailRegExp = regexp.MustCompile(`([^\/\"]*)@`)
+)
+
+// obfuscateBody masks the secrets and the local part of the email addresses of a body.
+func obfuscateBody(body []byte) []byte {
+	body = sensitiveValueRegExp.ReplaceAll(body, []byte(`${1}"`+obfuscatorReplacingString+`"`))
+	return emailRegExp.ReplaceAll(body, []byte(obfuscatorReplacingString+"@"))
+}
+
+// obfuscateQuery masks the values of the query parameters holding a secret. A query which can not be parsed is
+// masked entirely, since its secrets can not be found.
+func obfuscateQuery(rawQuery string) string {
+	values, err := url.ParseQuery(rawQuery)
+	if err != nil {
+		return obfuscatorReplacingString
+	}
+
+	for key := range values {
+		if sensitiveKeyRegExp.MatchString(key) {
+			values[key] = []string{obfuscatorReplacingString}
+		}
+	}
+
+	return values.Encode()
+}
+
+// readCloser reads from a reader and closes a closer.
+type readCloser struct {
+	io.Reader
+	io.Closer
+}
+
 // requestLogWriter copies the response body while writing it.
 type requestLogWriter struct {
 	gin.ResponseWriter
@@ -46,18 +86,12 @@ func (w requestLogWriter) Write(b []byte) (int, error) {
 }
 
 // InjectRequestLogger returns a middleware logging each request and its response.
-// It generates a request ID if the request has none. Passwords and the local part of
-// the email addresses are obfuscated, the Authorization, Proxy-Authorization and Cookie
-// headers are masked, and multipart bodies are not logged. The
-// response body is logged, gzip-decoded, only if logResponseBody is true.
+// It generates a request ID if the request has none. The values of the JSON keys and of the
+// query parameters containing password, token or secret, and the local part of the email
+// addresses, are obfuscated in the bodies and the query; the Authorization,
+// Proxy-Authorization and Cookie headers are masked, and multipart bodies are not logged.
+// The response body is logged, gzip-decoded, only if logResponseBody is true.
 func InjectRequestLogger(logResponseBody bool) gin.HandlerFunc {
-	// Here are the obfuscators.
-	sensitiveObfuscatorRegExp := regexp.MustCompile(`"(password)":"([^\"]*)"`)
-	sensitiveObfuscatorReplacingString := []byte(fmt.Sprintf(`"$1":"%s"`, obfuscatorReplacingString))
-	emailObfuscatorRegExp := regexp.MustCompile(`([^\/\"]*)@`)
-	emailObfuscatorReplacingString := []byte(fmt.Sprintf(`%s@`, obfuscatorReplacingString))
-
-	// Return the middleware.
 	return func(c *gin.Context) {
 		// Get the request details
 		if len(c.Request.Header.Get(RequestIDHeaderName)) == 0 {
@@ -70,21 +104,19 @@ func InjectRequestLogger(logResponseBody bool) gin.HandlerFunc {
 		requestPath := c.Request.URL.Path
 		requestQuery := c.Request.URL.RawQuery
 		if len(requestQuery) > 0 {
-			requestPath = requestPath + "?" + requestQuery
+			requestPath = requestPath + "?" + obfuscateQuery(requestQuery)
 		}
 
 		requestBody := ""
 		if strings.HasPrefix(c.Request.Header.Get("Content-Type"), "multipart/form-data") {
 			requestBody = "not logged"
 		} else if c.Request.Body != nil {
-			if body, _ := io.ReadAll(c.Request.Body); body != nil {
-				obfuscatedBody := sensitiveObfuscatorRegExp.ReplaceAll(body, sensitiveObfuscatorReplacingString)
-				obfuscatedBody = emailObfuscatorRegExp.ReplaceAll(obfuscatedBody, emailObfuscatorReplacingString)
-				requestBody = string(obfuscatedBody)
-
-				// Restore the io.ReadCloser to its original state
-				c.Request.Body = io.NopCloser(bytes.NewBuffer(body))
-			}
+			// A body read partially, such as one exceeding the limit of a http.MaxBytesReader, is logged as read, and
+			// the handler reads it in full: the bytes read, then the rest of the original body and its error.
+			original := c.Request.Body
+			body, _ := io.ReadAll(original)
+			requestBody = string(obfuscateBody(body))
+			c.Request.Body = readCloser{Reader: io.MultiReader(bytes.NewReader(body), original), Closer: original}
 		}
 
 		requestHeaders := map[string]string{}
@@ -160,7 +192,7 @@ func InjectRequestLogger(logResponseBody bool) gin.HandlerFunc {
 				}
 			}
 
-			obfuscatedResponseBody = emailObfuscatorRegExp.ReplaceAll(obfuscatedResponseBody, emailObfuscatorReplacingString)
+			obfuscatedResponseBody = obfuscateBody(obfuscatedResponseBody)
 
 			responseLog = append(responseLog, "body", string(obfuscatedResponseBody))
 		}

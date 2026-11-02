@@ -89,14 +89,13 @@ func (s *Server) Run() error {
 	}
 
 	// Create the server.
-	var server *gin.Engine
-
+	// The body is limited before the logger reads it.
+	server := gin.New()
+	server.Use(gin.Recovery(), commonRequest.LimitBodySize(s.Config.Server.MaxBodySize))
 	if s.Config.IsProductionEnvironment() {
-		server = gin.New()
-		server.Use(gin.Recovery())
 		server.Use(log.InjectRequestLogger(true))
 	} else {
-		server = gin.Default()
+		server.Use(gin.Logger())
 	}
 
 	if err := s.configureProxies(server); err != nil {

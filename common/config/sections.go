@@ -22,10 +22,13 @@ type ServerConfiguration struct {
 	// headers X-User-IP, X-Forwarded-For and X-Real-IP, such as ["10.0.0.0/8"]: the reverse proxies and, for the API,
 	// the web servers. No proxy is trusted by default: the client address, used to limit the requests and saved with
 	// the auth tokens, is the one of the connection.
-	TrustedProxies []string          `yaml:"trusted_proxies"`
-	GZip           GZipConfiguration `yaml:"gzip"`
-	SSL            SSLConfiguration  `yaml:"ssl"`
-	LogFormat      string            `yaml:"log_format"`
+	TrustedProxies []string `yaml:"trusted_proxies"`
+	// MaxBodySize is the maximum size of the body of a request, in bytes: 10 MiB by default, which must hold the
+	// largest uploaded file. Larger bodies are rejected with the status 413. Zero disables the limit.
+	MaxBodySize int64             `yaml:"max_body_size"`
+	GZip        GZipConfiguration `yaml:"gzip"`
+	SSL         SSLConfiguration  `yaml:"ssl"`
+	LogFormat   string            `yaml:"log_format"`
 }
 
 // APIConfiguration holds the settings of an API called by the server.
