@@ -33,41 +33,32 @@ func (h Hooks) GetSignedToken(ctx context.Context, signingMethod, secret, tokenI
 		return "", errors.New("undefined function 'ExtraPropertiesForTokenWithID'")
 	}
 
-	// Get the token details.
-	var token *Token
-	var extraProperties map[string]string
-	var err error
-
-	if tokenID == "fakeexpiredtoken" {
-		token = &Token{
-			Source:         "debug/test",
-			UserID:         "ac006c77fd78cff13e0fa9d1",
-			ExpirationDate: time.Now().Add(time.Second * -1000),
-			CreationDate:   time.Now().Add(time.Second * -10000),
-		}
-		extraProperties = map[string]string{}
-	} else {
-		token, err = h.BuildTokenFromID(ctx, tokenID)
-		if err != nil {
-			log.WithFields(logrus.Fields{
-				"token id":         tokenID,
-				"signature_method": signingMethod,
-				"error":            err,
-			}).Error("unable to build JWT token")
-			return "", err
-		}
-
-		extraProperties, err = h.ExtraPropertiesForTokenWithID(tokenID)
-		if err != nil {
-			log.WithFields(logrus.Fields{
-				"token id":         tokenID,
-				"signature_method": signingMethod,
-				"error":            err,
-			}).Error("unable to get extra properties for JWT token")
-			return "", err
-		}
+	token, err := h.BuildTokenFromID(ctx, tokenID)
+	if err != nil {
+		log.WithFields(logrus.Fields{
+			"token id":         tokenID,
+			"signature_method": signingMethod,
+			"error":            err,
+		}).Error("unable to build JWT token")
+		return "", err
 	}
 
+	extraProperties, err := h.ExtraPropertiesForTokenWithID(tokenID)
+	if err != nil {
+		log.WithFields(logrus.Fields{
+			"token id":         tokenID,
+			"signature_method": signingMethod,
+			"error":            err,
+		}).Error("unable to get extra properties for JWT token")
+		return "", err
+	}
+
+	return SignToken(signingMethod, secret, tokenID, token, extraProperties)
+}
+
+// SignToken returns a signed JWT with the details of the auth token tokenID and the extra properties. Unknown signing
+// methods fall back to HS256.
+func SignToken(signingMethod, secret, tokenID string, token *Token, extraProperties map[string]string) (string, error) {
 	// Create the JWT claims
 	jwtClaims := jwt.MapClaims{
 		"iss": token.Source,

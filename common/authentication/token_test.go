@@ -113,16 +113,16 @@ func TestGetSignedToken(t *testing.T) {
 	}
 }
 
-func TestGetSignedToken_FakeExpiredToken(t *testing.T) {
-	hooks := Hooks{okBuild, okExtra, nil}
+func TestSignToken_Expired(t *testing.T) {
+	token := &Token{UserID: "u", ExpirationDate: time.Now().Add(-time.Minute), CreationDate: time.Now().Add(-time.Hour)}
 
-	signed, err := hooks.GetSignedToken(context.Background(), "HS256", testSecret, "fakeexpiredtoken")
+	signed, err := SignToken("HS256", testSecret, "t", token, nil)
 	if err != nil {
-		t.Fatalf("GetSignedToken() error = %v", err)
+		t.Fatalf("SignToken() error = %v", err)
 	}
 
-	if _, err := ParseToken(signed, testSecret); err == nil {
-		t.Error("the fake expired token must not be valid")
+	if _, err := ParseToken(signed, testSecret); !errors.Is(err, jwt.ErrTokenExpired) {
+		t.Errorf("ParseToken() error = %v, want an expired token", err)
 	}
 }
 
