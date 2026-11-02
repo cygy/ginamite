@@ -183,7 +183,7 @@ func TestAdminDeleteUserToken(t *testing.T) {
 	token := authentication.Token{UserID: "user", ExpirationDate: time.Now().Add(time.Hour)}
 	getToken := func(tok authentication.Token, err error) func() {
 		return func() {
-			testAccountFunctions.GetTokenDetailsByID = func(*gin.Context, string) (authentication.Token, error) { return tok, err }
+			testTokens.detailsFn = func(context.Context, string) (authentication.Token, error) { return tok, err }
 		}
 	}
 	deleteToken := func(err error) func() {
@@ -195,7 +195,7 @@ func TestAdminDeleteUserToken(t *testing.T) {
 
 	runHandlerCases(t, AdminDeleteUserToken, []handlerCase{
 		{"storage not defined", "", both(withoutStorage, getToken(token, nil)), http.StatusInternalServerError},
-		{"details function not defined", "", deleteToken(nil), http.StatusInternalServerError},
+		{"tokens storage not defined", "", both(deleteToken(nil), func() { testAccountFunctions.Tokens = nil }), http.StatusInternalServerError},
 		{"details error", "", both(deleteToken(nil), getToken(token, errBoom)), http.StatusInternalServerError},
 		{"token not found", "", both(deleteToken(nil), getToken(authentication.Token{}, commonErrors.NotFound())), http.StatusOK},
 		{"delete error", "", both(deleteToken(errBoom), getToken(token, nil)), http.StatusInternalServerError},

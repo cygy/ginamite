@@ -46,6 +46,7 @@ func fill(groups ...any) {
 func defineAllFunctions(s *Server) {
 	fill(&s.Account)
 	s.Account.Notifications = noopNotifications{}
+	s.Account.Tokens = noopTokens{}
 	s.Contacts = noopContacts{}
 	s.Terms = noopTerms{}
 	s.Users = noopUsers{}
@@ -131,7 +132,7 @@ func TestFeatures(t *testing.T) {
 // TestServer_features_areConsistent fails when a default route is added without being in a feature, when a route is in
 // two features, or when a requirement names a function which is not in a group of functions.
 // storages are the names of the storages of the server which the features need.
-var storages = []string{"Contacts", "Terms", "Users", "Notifications"}
+var storages = []string{"Contacts", "Terms", "Users", "Notifications", "Tokens"}
 
 // noopContacts is a contact.Storage doing nothing.
 type noopContacts struct{}
@@ -158,6 +159,9 @@ type noopUsers struct{ user.Storage }
 // noopNotifications is an account.NotificationsStorage doing nothing: it embeds the interface, whose methods are never
 // called.
 type noopNotifications struct{ account.NotificationsStorage }
+
+// noopTokens is an account.TokensStorage doing nothing: it embeds the interface, whose methods are never called.
+type noopTokens struct{ account.TokensStorage }
 
 // functionGroups are the types of the groups of functions of the server.
 var functionGroups = []reflect.Type{reflect.TypeFor[account.Functions]()}

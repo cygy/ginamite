@@ -19,6 +19,9 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// errNoTokens is logged when the route to delete a token is called without storage of the auth tokens.
+var errNoTokens = errors.New("undefined storage of the auth tokens")
+
 // errNoStorage is logged when a route of the administration is called without storage of the users.
 var errNoStorage = errors.New("undefined storage of the users")
 
@@ -405,15 +408,15 @@ func AdminDeleteUserToken(c *gin.Context) {
 		return
 	}
 
-	if account.FunctionsOf(c).GetTokenDetailsByID == nil {
-		c.Error(errors.New("undefined function 'GetTokenDetailsByID'"))
+	if account.FunctionsOf(c).Tokens == nil {
+		c.Error(errNoTokens)
 		response.InternalServerError(c)
 		return
 	}
 
 	tokenID := getTokenID(c)
 
-	token, err := account.FunctionsOf(c).GetTokenDetailsByID(c, tokenID)
+	token, err := account.FunctionsOf(c).Tokens.GetTokenDetailsByID(c, tokenID)
 	if err != nil && !commonErrors.IsNotFound(err) {
 		response.InternalServerError(c)
 		return

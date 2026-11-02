@@ -10,12 +10,11 @@ import (
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
 	"github.com/cygy/ginamite/plugins/mongodb/mongo/bson"
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/session"
 	"github.com/cygy/ginamite/plugins/mongodb/mongo/store"
-	"github.com/gin-gonic/gin"
 )
 
-// Tokens builds and extends the auth tokens stored in a database. Create it with NewTokens.
+// Tokens builds, extends and manages the auth tokens stored in a database. It is an account.TokensStorage. Create it
+// with NewTokens.
 type Tokens struct {
 	database func() store.Database
 }
@@ -89,17 +88,17 @@ func (t *Tokens) ExtendTokenExpirationDateFromID(ctx context.Context, tokenID st
 }
 
 // SaveAuthenticationToken saves an auth token.
-func SaveAuthenticationToken(c *gin.Context, details authentication.Details) (tokenID string, knownIPAddress bool, err error) {
+func (t *Tokens) SaveAuthenticationToken(ctx context.Context, details authentication.Details) (tokenID string, knownIPAddress bool, err error) {
 	userID, err := bson.ObjectIDFromHex(details.UserID)
 	if err != nil {
 		return "", false, err
 	}
 
-	mongoSession := session.Get(c)
+	db := t.database()
 
 	// Get the IP location info.
 	location := &model.IPLocation{}
-	if err := location.GetByIPAddress(c, details.IPAddress, mongoSession); err != nil {
+	if err := location.GetByIPAddress(ctx, details.IPAddress, db); err != nil {
 		location = nil
 	} else {
 		location.ID = bson.NewObjectID() // Do not save the _id of the document.
@@ -119,7 +118,7 @@ func SaveAuthenticationToken(c *gin.Context, details authentication.Details) (to
 		ExpiresAt: details.ExpirationDate,
 	}
 
-	authTokenID, err := authToken.Save(c, mongoSession)
+	authTokenID, err := authToken.Save(ctx, db)
 	if err != nil {
 		return "", true, err
 	}
@@ -127,7 +126,7 @@ func SaveAuthenticationToken(c *gin.Context, details authentication.Details) (to
 	user := model.User{
 		ID: userID,
 	}
-	if err := user.UpdateLastLogin(c, mongoSession); err != nil {
+	if err := user.UpdateLastLogin(ctx, db); err != nil {
 		log.WithField("error", err).Error("unable to update last login")
 	}
 
@@ -135,32 +134,29 @@ func SaveAuthenticationToken(c *gin.Context, details authentication.Details) (to
 }
 
 // GetTokenExpirationDate returns the expiration date of an auth token.
-func GetTokenExpirationDate(c *gin.Context, tokenID string) (time.Time, error) {
-	mongoSession := session.Get(c)
+func (t *Tokens) GetTokenExpirationDate(ctx context.Context, tokenID string) (time.Time, error) {
 	token := &model.AuthToken{}
-	err := token.GetByID(c, tokenID, mongoSession)
+	err := token.GetByID(ctx, tokenID, t.database())
+
 	return token.ExpiresAt, err
 }
 
 // DeleteTokenByID deletes an auth token by its ID.
-func DeleteTokenByID(c *gin.Context, tokenID string) error {
-	mongoSession := session.Get(c)
-	return model.DeleteAuthTokenByID(c, tokenID, mongoSession)
+func (t *Tokens) DeleteTokenByID(ctx context.Context, tokenID string) error {
+	return model.DeleteAuthTokenByID(ctx, tokenID, t.database())
 }
 
 // GetTokenDetailsByID returns the details of an auth token.
-func GetTokenDetailsByID(c *gin.Context, tokenID string) (authentication.Token, error) {
-	mongoSession := session.Get(c)
+func (t *Tokens) GetTokenDetailsByID(ctx context.Context, tokenID string) (authentication.Token, error) {
 	token := &model.AuthToken{}
-	err := token.GetByID(c, tokenID, mongoSession)
+	err := token.GetByID(ctx, tokenID, t.database())
+
 	return token.ToToken(), err
 }
 
 // GetOwnedTokens returns the auth tokens of the user, as model.OwnAuthToken.
-func GetOwnedTokens(c *gin.Context, userID string) (any, error) {
-	mongoSession := session.Get(c)
-
-	tokens, err := model.GetAuthTokens(c, userID, mongoSession)
+func (t *Tokens) GetOwnedTokens(ctx context.Context, userID string) (any, error) {
+	tokens, err := model.GetAuthTokens(ctx, userID, t.database())
 	if err != nil && !errors.IsNotFound(err) {
 		return nil, err
 	}
@@ -174,11 +170,9 @@ func GetOwnedTokens(c *gin.Context, userID string) (any, error) {
 }
 
 // GetOwnedTokenByID returns an auth token, as a model.OwnAuthToken, and the ID of its user.
-func GetOwnedTokenByID(c *gin.Context, tokenID string) (any, string, error) {
-	mongoSession := session.Get(c)
-
+func (t *Tokens) GetOwnedTokenByID(ctx context.Context, tokenID string) (any, string, error) {
 	token := &model.AuthToken{}
-	if err := token.GetByID(c, tokenID, mongoSession); err != nil {
+	if err := token.GetByID(ctx, tokenID, t.database()); err != nil {
 		return nil, "", err
 	}
 
@@ -186,16 +180,15 @@ func GetOwnedTokenByID(c *gin.Context, tokenID string) (any, string, error) {
 }
 
 // UpdateTokenByID updates the details of a token.
-func UpdateTokenByID(c *gin.Context, tokenID, name string, enableNotifications bool, notifications []string) error {
+func (t *Tokens) UpdateTokenByID(ctx context.Context, tokenID, name string, enableNotifications bool, notifications []string) error {
 	objectID, err := bson.ObjectIDFromHex(tokenID)
 	if err != nil {
 		return err
 	}
-	mongoSession := session.Get(c)
 
 	token := &model.AuthToken{
 		ID: objectID,
 	}
 
-	return token.UpdateProperties(c, name, enableNotifications, notifications, mongoSession)
+	return token.UpdateProperties(ctx, name, enableNotifications, notifications, t.database())
 }

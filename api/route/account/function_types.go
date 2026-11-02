@@ -1,8 +1,6 @@
 package account
 
 import (
-	"time"
-
 	"github.com/cygy/ginamite/api/validator"
 	"github.com/cygy/ginamite/common/authentication"
 
@@ -58,9 +56,6 @@ type CancelUserRegistrationFunc func(c *gin.Context, userID, registrationKey str
 // GetRegistrationDetailsFunc is a function to get the details of the registration of a user.
 type GetRegistrationDetailsFunc func(c *gin.Context, userID string) (*authentication.Details, error)
 
-// SaveAuthenticationTokenFunc is a function to save the authentication details and return the unique ID.
-type SaveAuthenticationTokenFunc func(c *gin.Context, details authentication.Details) (tokenID string, knownIPAddress bool, err error)
-
 // DoesAccountWithUsernameExistFunc returns true if an account with this username does exist already.
 type DoesAccountWithUsernameExistFunc func(c *gin.Context, username string) (bool, error)
 
@@ -78,24 +73,6 @@ type DoesUserWithSocialNetworkUserIDExistFunc func(c *gin.Context, userID string
 
 // SaveSocialNetworkUserTokenDetailsToUserFunc is a function to save the auth token details from a social network to an account.
 type SaveSocialNetworkUserTokenDetailsToUserFunc func(c *gin.Context, userID string, tokenInfos validator.TokenInfos) error
-
-// GetTokenExpirationDateFunc is a function to get the expiration date of a token from its unique identifier.
-type GetTokenExpirationDateFunc func(c *gin.Context, tokenID string) (time.Time, error)
-
-// DeleteTokenByIDFunc delete an auth token by its ID.
-type DeleteTokenByIDFunc func(c *gin.Context, tokenID string) error
-
-// GetTokenDetailsByIDFunc is a function to get the token details from its unique identifier.
-type GetTokenDetailsByIDFunc func(c *gin.Context, tokenID string) (authentication.Token, error)
-
-// GetOwnedTokensFunc is a function to get the auth tokens of a user.
-type GetOwnedTokensFunc func(c *gin.Context, userID string) (any, error)
-
-// GetOwnedTokenByIDFunc is a function to get the auth token by its ID and the ID of the token's owner.
-type GetOwnedTokenByIDFunc func(c *gin.Context, tokenID string) (token any, ownerID string, err error)
-
-// UpdateTokenByIDFunc is a function to update the properties of a token.
-type UpdateTokenByIDFunc func(c *gin.Context, tokenID, name string, enableNotifications bool, notifications []string) error
 
 // GetOwnedAccountDetailsFunc is a function to get the user details from its unique identifier.
 type GetOwnedAccountDetailsFunc func(c *gin.Context, userID string) any

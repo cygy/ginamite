@@ -101,17 +101,89 @@ var (
 	testHooks authentication.Hooks
 )
 
-// testNotifications is the storage of the notifications of the handlers, reset at the end of each test.
-var testNotifications = &fakeNotifications{}
+// testNotifications and testTokens are the storages of the handlers, reset at the end of each test.
+var (
+	testNotifications = &fakeNotifications{}
+	testTokens        = &fakeTokens{}
+)
 
 // resetFunctions removes every function of the handlers and resets the storages.
 func resetFunctions() {
 	*testNotifications = fakeNotifications{}
-	testFunctions = Functions{Notifications: testNotifications}
+	*testTokens = fakeTokens{}
+	testFunctions = Functions{Notifications: testNotifications, Tokens: testTokens}
 }
 
-// withoutNotifications removes the storage of the notifications.
+// withoutNotifications and withoutTokens remove the storages.
 func withoutNotifications() { testFunctions.Notifications = nil }
+func withoutTokens()        { testFunctions.Tokens = nil }
+
+// fakeTokens is a TokensStorage whose methods call the function set by the test, if any.
+type fakeTokens struct {
+	saveFn       func(ctx context.Context, details authentication.Details) (string, bool, error)
+	expirationFn func(ctx context.Context, tokenID string) (time.Time, error)
+	deleteFn     func(ctx context.Context, tokenID string) error
+	detailsFn    func(ctx context.Context, tokenID string) (authentication.Token, error)
+	ownedFn      func(ctx context.Context, userID string) (any, error)
+	ownedOneFn   func(ctx context.Context, tokenID string) (any, string, error)
+	updateFn     func(ctx context.Context, tokenID, name string, enableNotifications bool, notifications []string) error
+}
+
+func (f *fakeTokens) SaveAuthenticationToken(ctx context.Context, details authentication.Details) (string, bool, error) {
+	if f.saveFn == nil {
+		return "", false, nil
+	}
+
+	return f.saveFn(ctx, details)
+}
+
+func (f *fakeTokens) GetTokenExpirationDate(ctx context.Context, tokenID string) (time.Time, error) {
+	if f.expirationFn == nil {
+		return time.Time{}, errors.New("no expiration date")
+	}
+
+	return f.expirationFn(ctx, tokenID)
+}
+
+func (f *fakeTokens) DeleteTokenByID(ctx context.Context, tokenID string) error {
+	if f.deleteFn == nil {
+		return nil
+	}
+
+	return f.deleteFn(ctx, tokenID)
+}
+
+func (f *fakeTokens) GetTokenDetailsByID(ctx context.Context, tokenID string) (authentication.Token, error) {
+	if f.detailsFn == nil {
+		return authentication.Token{}, nil
+	}
+
+	return f.detailsFn(ctx, tokenID)
+}
+
+func (f *fakeTokens) GetOwnedTokens(ctx context.Context, userID string) (any, error) {
+	if f.ownedFn == nil {
+		return nil, nil
+	}
+
+	return f.ownedFn(ctx, userID)
+}
+
+func (f *fakeTokens) GetOwnedTokenByID(ctx context.Context, tokenID string) (any, string, error) {
+	if f.ownedOneFn == nil {
+		return nil, "", nil
+	}
+
+	return f.ownedOneFn(ctx, tokenID)
+}
+
+func (f *fakeTokens) UpdateTokenByID(ctx context.Context, tokenID, name string, enableNotifications bool, notifications []string) error {
+	if f.updateFn == nil {
+		return nil
+	}
+
+	return f.updateFn(ctx, tokenID, name, enableNotifications, notifications)
+}
 
 // fakeNotifications is a NotificationsStorage whose methods call the function set by the test, if any.
 type fakeNotifications struct {

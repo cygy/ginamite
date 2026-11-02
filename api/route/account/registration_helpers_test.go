@@ -183,7 +183,7 @@ func TestValidateOrCancelRegistration_Validate(t *testing.T) {
 		{name: "user error", id: "u", key: "k", setup: registrationValidationStubs{userErr: errBoom}.install, want: http.StatusBadRequest},
 		{name: "details error", id: "u", key: "k", setup: registrationValidationStubs{detailsErr: errBoom}.install, want: http.StatusBadRequest},
 		{name: "validation error", id: "u", key: "k", setup: registrationValidationStubs{validateErr: errBoom}.install, want: http.StatusBadRequest},
-		{name: "token creation failure", id: "u", key: "k", setup: registrationValidationStubs{}.install, want: http.StatusBadRequest},
+		{name: "token creation failure", id: "u", key: "k", setup: all(registrationValidationStubs{}.install, withoutTokens), want: http.StatusBadRequest},
 		{name: "success", id: "u", key: "k", setup: all(registrationValidationStubs{}.install, loginStubs), want: http.StatusOK, check: contains("auth_token")},
 	})
 }

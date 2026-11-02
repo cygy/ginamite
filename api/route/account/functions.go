@@ -19,6 +19,9 @@ type Functions struct {
 	// Notifications is the storage of the notifications of the users.
 	Notifications NotificationsStorage
 
+	// Tokens is the storage of the auth tokens.
+	Tokens TokensStorage
+
 	// GetUserDetailsByIdentifier is a function to get the user details from its identifier (username, email addresse, what you want.)
 	GetUserDetailsByIdentifier GetUserDetailsByIdentifierFunc
 
@@ -71,9 +74,6 @@ type Functions struct {
 	// GetRegistrationDetails is a function to get the details of the registration of a user.
 	GetRegistrationDetails GetRegistrationDetailsFunc
 
-	// SaveAuthenticationToken is a function to save the authentication details and return the unique ID.
-	SaveAuthenticationToken SaveAuthenticationTokenFunc
-
 	// DoesAccountWithUsernameExist returns true if an account with this username does exist already.
 	DoesAccountWithUsernameExist DoesAccountWithUsernameExistFunc
 
@@ -97,24 +97,6 @@ type Functions struct {
 
 	// SaveGoogleUserTokenDetailsToUser is a function to save the auth token details from google to an account.
 	SaveGoogleUserTokenDetailsToUser SaveSocialNetworkUserTokenDetailsToUserFunc
-
-	// GetTokenExpirationDate is a function to get the expiration date of a token from its unique identifier.
-	GetTokenExpirationDate GetTokenExpirationDateFunc
-
-	// DeleteTokenByID delete an auth token by its ID.
-	DeleteTokenByID DeleteTokenByIDFunc
-
-	// GetTokenDetailsByID is a function to get the token details from its unique identifier.
-	GetTokenDetailsByID GetTokenDetailsByIDFunc
-
-	// GetOwnedTokens is a function to get the auth tokens of a user.
-	GetOwnedTokens GetOwnedTokensFunc
-
-	// GetOwnedTokenByID is a function to get the auth token by its ID and the ID of the token's owner.
-	GetOwnedTokenByID GetOwnedTokenByIDFunc
-
-	// UpdateTokenByID is a function to update the properties of a token.
-	UpdateTokenByID UpdateTokenByIDFunc
 
 	// GetOwnedAccountDetails is a function to get the user details from its unique identifier.
 	GetOwnedAccountDetails GetOwnedAccountDetailsFunc

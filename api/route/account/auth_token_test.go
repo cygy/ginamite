@@ -18,8 +18,8 @@ const loginDevice = `"source":"web","device":{"type":"mobile","name":"iPhone"}`
 
 // loginStubs defines the functions needed to create an authentication token.
 func loginStubs() {
-	testFunctions.SaveAuthenticationToken = func(*gin.Context, authentication.Details) (string, bool, error) { return testTokenID, false, nil }
-	testFunctions.DeleteTokenByID = func(*gin.Context, string) error { return nil }
+	testTokens.saveFn = func(context.Context, authentication.Details) (string, bool, error) { return testTokenID, false, nil }
+	testTokens.deleteFn = func(context.Context, string) error { return nil }
 }
 
 func TestLoginWithPassword(t *testing.T) {
@@ -44,23 +44,23 @@ func TestLoginWithPassword(t *testing.T) {
 		{name: "missing device", body: `{"identifier":"john","password":"x","source":"web"}`, setup: lookup(encrypted, nil), want: http.StatusBadRequest},
 		{name: "lookup error", body: body, setup: lookup("", errBoom), want: http.StatusBadRequest},
 		{name: "wrong password", body: `{"identifier":"john","password":"Wrongpass1",` + loginDevice + `}`, setup: lookup(encrypted, nil), want: http.StatusBadRequest},
-		{name: "token creation failure", body: body, setup: lookup(encrypted, nil), want: http.StatusBadRequest},
+		{name: "token creation failure", body: body, setup: all(lookup(encrypted, nil), withoutTokens), want: http.StatusBadRequest},
 		{name: "success", body: body, setup: all(lookup(encrypted, nil), loginStubs), want: http.StatusCreated, check: contains("auth_token")},
 	})
 }
 
 func TestLogout(t *testing.T) {
 	remove := func(err error) func() {
-		return func() { testFunctions.DeleteTokenByID = func(*gin.Context, string) error { return err } }
+		return func() { testTokens.deleteFn = func(context.Context, string) error { return err } }
 	}
 	expiration := func(err error) func() {
 		return func() {
-			testFunctions.GetTokenExpirationDate = func(*gin.Context, string) (time.Time, error) { return time.Now().Add(time.Hour), err }
+			testTokens.expirationFn = func(context.Context, string) (time.Time, error) { return time.Now().Add(time.Hour), err }
 		}
 	}
 
 	runCases(t, Logout, []testCase{
-		{name: "function not defined", userID: testUserID, want: http.StatusInternalServerError},
+		{name: "storage not defined", setup: withoutTokens, userID: testUserID, want: http.StatusInternalServerError},
 		{name: "unknown token", userID: testUserID, setup: remove(commonErrors.NotFound()), want: http.StatusNoContent},
 		{name: "deletion error", userID: testUserID, setup: remove(errBoom), want: http.StatusInternalServerError},
 		{name: "success", userID: testUserID, setup: remove(nil), want: http.StatusNoContent},
@@ -72,12 +72,12 @@ func TestLogout(t *testing.T) {
 func TestGetAuthTokens(t *testing.T) {
 	list := func(err error) func() {
 		return func() {
-			testFunctions.GetOwnedTokens = func(*gin.Context, string) (any, error) { return []string{"t1"}, err }
+			testTokens.ownedFn = func(context.Context, string) (any, error) { return []string{"t1"}, err }
 		}
 	}
 
 	runCases(t, GetAuthTokens, []testCase{
-		{name: "function not defined", userID: testUserID, want: http.StatusInternalServerError},
+		{name: "storage not defined", setup: withoutTokens, userID: testUserID, want: http.StatusInternalServerError},
 		{name: "not found", userID: testUserID, setup: list(commonErrors.NotFound()), want: http.StatusNotFound},
 		{name: "error", userID: testUserID, setup: list(errBoom), want: http.StatusInternalServerError},
 		{name: "success", userID: testUserID, setup: list(nil), want: http.StatusOK, check: contains("t1")},
@@ -87,12 +87,12 @@ func TestGetAuthTokens(t *testing.T) {
 func TestGetAuthToken(t *testing.T) {
 	get := func(owner string, err error) func() {
 		return func() {
-			testFunctions.GetOwnedTokenByID = func(*gin.Context, string) (any, string, error) { return "t1", owner, err }
+			testTokens.ownedOneFn = func(context.Context, string) (any, string, error) { return "t1", owner, err }
 		}
 	}
 
 	runCases(t, GetAuthToken, []testCase{
-		{name: "function not defined", userID: testUserID, id: "t1", want: http.StatusInternalServerError},
+		{name: "storage not defined", setup: withoutTokens, userID: testUserID, id: "t1", want: http.StatusInternalServerError},
 		{name: "not found", userID: testUserID, id: "t1", setup: get("", commonErrors.NotFound()), want: http.StatusNotFound},
 		{name: "error", userID: testUserID, id: "t1", setup: get("", errBoom), want: http.StatusInternalServerError},
 		{name: "token of another user", userID: testUserID, id: "t1", setup: get("someone-else", nil), want: http.StatusNotFound},
@@ -124,18 +124,13 @@ func TestUpdateAuthToken(t *testing.T) {
 	token := authentication.Token{UserID: testUserID}
 	stubs := func(owner authentication.Token, getErr, updateErr error) func() {
 		return func() {
-			testFunctions.GetTokenDetailsByID = func(*gin.Context, string) (authentication.Token, error) { return owner, getErr }
-			testFunctions.UpdateTokenByID = func(*gin.Context, string, string, bool, []string) error { return updateErr }
+			testTokens.detailsFn = func(context.Context, string) (authentication.Token, error) { return owner, getErr }
+			testTokens.updateFn = func(context.Context, string, string, bool, []string) error { return updateErr }
 		}
 	}
 
 	runCases(t, UpdateAuthToken, []testCase{
-		{name: "GetTokenDetailsByID not defined", userID: testUserID, id: "t1", body: body, setup: func() {
-			testFunctions.UpdateTokenByID = func(*gin.Context, string, string, bool, []string) error { return nil }
-		}, want: http.StatusInternalServerError},
-		{name: "UpdateTokenByID not defined", userID: testUserID, id: "t1", body: body, setup: func() {
-			testFunctions.GetTokenDetailsByID = func(*gin.Context, string) (authentication.Token, error) { return token, nil }
-		}, want: http.StatusInternalServerError},
+		{name: "storage not defined", userID: testUserID, id: "t1", body: body, setup: withoutTokens, want: http.StatusInternalServerError},
 		{name: "missing name", userID: testUserID, id: "t1", body: `{}`, setup: stubs(token, nil, nil), want: http.StatusBadRequest},
 		{name: "unsupported notification", userID: testUserID, id: "t1", body: `{"name":"x","notifications":["unknown"]}`, setup: stubs(token, nil, nil), want: http.StatusBadRequest},
 		{name: "token not found", userID: testUserID, id: "t1", body: body, setup: stubs(token, commonErrors.NotFound(), nil), want: http.StatusNotFound},

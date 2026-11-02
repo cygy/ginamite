@@ -58,7 +58,7 @@ func TestLoginWithThirdParty(t *testing.T) {
 				{name: "unknown user", body: body, setup: all(valid, bySocialID(authentication.User{}, notFound), byIdentifier(authentication.User{}, notFound)), want: http.StatusNotFound},
 				{name: "save function not defined", body: body, setup: all(valid, bySocialID(testUser, nil)), want: http.StatusBadRequest},
 				{name: "save error", body: body, setup: all(valid, bySocialID(testUser, nil), save(errBoom)), want: http.StatusBadRequest},
-				{name: "token creation failure", body: body, setup: all(valid, bySocialID(testUser, nil), save(nil)), want: http.StatusBadRequest},
+				{name: "token creation failure", body: body, setup: all(valid, bySocialID(testUser, nil), save(nil), withoutTokens), want: http.StatusBadRequest},
 				{name: "success with the social network ID", body: body, setup: all(valid, bySocialID(testUser, nil), save(nil), loginStubs), want: http.StatusCreated, check: contains("auth_token")},
 				{name: "success with the email address", body: body, setup: all(valid, bySocialID(authentication.User{}, notFound), byIdentifier(testUser, nil), save(nil), loginStubs), want: http.StatusCreated},
 			})

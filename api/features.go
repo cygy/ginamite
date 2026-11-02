@@ -103,24 +103,24 @@ func (s *Server) features(routes *route.DefaultRoutes) []feature {
 			{&forgotPassword.Cancel, []string{"GetForgotPasswordProcessDetailsByID", "DeleteForgotPasswordProcess"}},
 		}, true},
 		{FeatureAuth, []requirement{
-			{&authentication.LoginWithPassword, []string{"GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser", "SaveAuthenticationToken"}},
-			{&authentication.Logout, []string{"DeleteTokenByID"}},
-			{&authentication.GetTokens, []string{"GetOwnedTokens"}},
-			{&authentication.GetToken, []string{"GetOwnedTokenByID"}},
-			{&authentication.UpdateToken, []string{"GetTokenDetailsByID", "UpdateTokenByID"}},
-			{&authentication.RefreshToken, []string{"SaveAuthenticationToken"}},
-			{&authentication.DeleteToken, []string{"GetTokenDetailsByID", "DeleteTokenByID"}},
-			{&authentication.DeleteTokenWithKey, []string{"GetTokenDetailsByID", "DeleteTokenByID"}},
+			{&authentication.LoginWithPassword, []string{"GetUserDetailsAndEncryptedPasswordByIdentifierFromEnabledUser", "Tokens"}},
+			{&authentication.Logout, []string{"Tokens"}},
+			{&authentication.GetTokens, []string{"Tokens"}},
+			{&authentication.GetToken, []string{"Tokens"}},
+			{&authentication.UpdateToken, []string{"Tokens", "Tokens"}},
+			{&authentication.RefreshToken, []string{"Tokens"}},
+			{&authentication.DeleteToken, []string{"Tokens", "Tokens"}},
+			{&authentication.DeleteTokenWithKey, []string{"Tokens", "Tokens"}},
 			{&admin.GetUserTokens, []string{"Users"}},
-			{&admin.DeleteUserToken, []string{"Users", "GetTokenDetailsByID"}},
+			{&admin.DeleteUserToken, []string{"Users", "Tokens"}},
 		}, true},
 		{FeatureFacebook, []requirement{
 			{&registration.RegisterWithFacebook, []string{"RegisterByThirdPartyToken", "DoesUserWithFacebookUserIDExist"}},
-			{&authentication.LoginWithFacebook, []string{"GetUserDetailsByFacebookUserID", "SaveAuthenticationToken"}},
+			{&authentication.LoginWithFacebook, []string{"GetUserDetailsByFacebookUserID", "Tokens"}},
 		}, true},
 		{FeatureGoogle, []requirement{
 			{&registration.RegisterWithGoogle, []string{"RegisterByThirdPartyToken", "DoesUserWithGoogleUserIDExist"}},
-			{&authentication.LoginWithGoogle, []string{"GetUserDetailsByGoogleUserID", "SaveAuthenticationToken"}},
+			{&authentication.LoginWithGoogle, []string{"GetUserDetailsByGoogleUserID", "Tokens"}},
 		}, true},
 		{FeatureAccount, []requirement{
 			{&account.GetDetails, []string{"GetOwnedAccountDetails"}},
@@ -230,6 +230,8 @@ func (s *Server) isUndefined(groups []reflect.Value, name string) bool {
 		return s.Users == nil
 	case "Notifications":
 		return s.Account.Notifications == nil
+	case "Tokens":
+		return s.Account.Tokens == nil
 	}
 
 	for _, group := range groups {

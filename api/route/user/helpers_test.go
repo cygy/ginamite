@@ -15,6 +15,7 @@ import (
 	ctxLocale "github.com/cygy/ginamite/api/context/locale"
 	"github.com/cygy/ginamite/api/internal/apitest"
 	"github.com/cygy/ginamite/api/route/account"
+	"github.com/cygy/ginamite/common/authentication"
 	"github.com/cygy/ginamite/common/broker"
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/timezone"
@@ -37,6 +38,7 @@ var (
 	testStorage          = &fakeStorage{}
 	testAccountFunctions account.Functions
 	storageRemoved       bool
+	testTokens           = &fakeAccountTokens{}
 )
 
 // withoutStorage makes the handlers run as an application which provides no storage of the users.
@@ -168,14 +170,16 @@ func setup(t *testing.T) {
 	t.Helper()
 
 	apitest.InitLocalization(t, map[string]string{"placeholder": "placeholder"})
+	testAccountFunctions = account.Functions{Tokens: testTokens}
 
 	testConfig = config.NewConfiguration()
 	testConfig.SupportedLocales = []string{"en"}
 
 	t.Cleanup(func() {
 		*testStorage = fakeStorage{}
+		*testTokens = fakeAccountTokens{}
 		storageRemoved = false
-		testAccountFunctions = account.Functions{}
+		testAccountFunctions = account.Functions{Tokens: testTokens}
 	})
 }
 
@@ -211,4 +215,18 @@ func withoutStorageIf() gin.HandlerFunc {
 			SetStorage(c, nil)
 		}
 	}
+}
+
+// fakeAccountTokens is an account.TokensStorage whose GetTokenDetailsByID calls the function set by the test, if any.
+type fakeAccountTokens struct {
+	account.TokensStorage
+	detailsFn func(ctx context.Context, tokenID string) (authentication.Token, error)
+}
+
+func (f *fakeAccountTokens) GetTokenDetailsByID(ctx context.Context, tokenID string) (authentication.Token, error) {
+	if f.detailsFn == nil {
+		return authentication.Token{}, nil
+	}
+
+	return f.detailsFn(ctx, tokenID)
 }

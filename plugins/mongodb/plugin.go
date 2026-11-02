@@ -237,6 +237,7 @@ func (p *Plugin) configureAPI(a *api.Server) {
 	tokens := apiFunctions.NewTokens(p.database)
 	a.Hooks.BuildTokenFromID = tokens.BuildTokenFromID
 	a.Hooks.ExtendTokenExpirationDateFromID = tokens.ExtendTokenExpirationDateFromID
+	a.Account.Tokens = tokens
 
 	a.Hooks.MiddlewareIsValidAuthToken = apiFunctions.IsValidAuthToken
 	a.Hooks.MiddlewareGetUserAndLocaleFromAuthToken = apiFunctions.GetUserAndLocaleFromAuthToken
@@ -275,14 +276,6 @@ func (p *Plugin) configureAPI(a *api.Server) {
 
 	a.Account.SaveFacebookUserTokenDetailsToUser = apiFunctions.SaveFacebookUserTokenDetailsToUser
 	a.Account.SaveGoogleUserTokenDetailsToUser = apiFunctions.SaveGoogleUserTokenDetailsToUser
-
-	a.Account.SaveAuthenticationToken = apiFunctions.SaveAuthenticationToken
-	a.Account.GetTokenExpirationDate = apiFunctions.GetTokenExpirationDate
-	a.Account.DeleteTokenByID = apiFunctions.DeleteTokenByID
-	a.Account.GetTokenDetailsByID = apiFunctions.GetTokenDetailsByID
-	a.Account.GetOwnedTokens = apiFunctions.GetOwnedTokens
-	a.Account.GetOwnedTokenByID = apiFunctions.GetOwnedTokenByID
-	a.Account.UpdateTokenByID = apiFunctions.UpdateTokenByID
 
 	a.Account.GetOwnedAccountDetails = apiFunctions.GetOwnedAccountDetails
 	a.Account.UpdatedAccountInfos = apiFunctions.UpdatedAccountInfos

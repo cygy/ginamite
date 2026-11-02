@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/cygy/ginamite/common/authentication"
-	"github.com/cygy/ginamite/plugins/mongodb/internal/plugintest"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
 	"github.com/cygy/ginamite/plugins/mongodb/mongo/bson"
 	"github.com/cygy/ginamite/plugins/mongodb/mongo/store/mock"
@@ -126,7 +125,7 @@ func TestExtendTokenExpirationDateFromID(t *testing.T) {
 	})
 }
 
-func TestSaveAuthenticationToken(t *testing.T) {
+func TestTokens_SaveAuthenticationToken(t *testing.T) {
 	userID := bson.NewObjectID()
 	now := time.Now()
 	details := authentication.Details{
@@ -138,9 +137,9 @@ func TestSaveAuthenticationToken(t *testing.T) {
 		db := mock.NewDatabase("app")
 		locationID := bson.NewObjectID()
 		db.Coll(model.IPLocationCollection).One = mock.Result{Value: bson.M{"_id": locationID, "IP": "1.2.3.4", "city": "Paris"}}
-		c, _ := plugintest.NewContext(db, "POST", "/", nil)
+		tokens := tokensOn(db)
 
-		tokenID, known, err := SaveAuthenticationToken(c, details)
+		tokenID, known, err := tokens.SaveAuthenticationToken(ctx, details)
 		if err != nil || tokenID == "" || !known {
 			t.Fatalf("got %q, %v, %v", tokenID, known, err)
 		}
@@ -161,9 +160,9 @@ func TestSaveAuthenticationToken(t *testing.T) {
 
 	t.Run("unknown IP address", func(t *testing.T) {
 		db := mock.NewDatabase("app")
-		c, _ := plugintest.NewContext(db, "POST", "/", nil)
+		tokens := tokensOn(db)
 
-		_, known, err := SaveAuthenticationToken(c, details)
+		_, known, err := tokens.SaveAuthenticationToken(ctx, details)
 		if err != nil || known {
 			t.Fatalf("got %v, %v", known, err)
 		}
@@ -173,96 +172,96 @@ func TestSaveAuthenticationToken(t *testing.T) {
 	})
 
 	t.Run("errors", func(t *testing.T) {
-		c, _ := plugintest.NewContext(mock.NewDatabase("app"), "POST", "/", nil)
-		if _, _, err := SaveAuthenticationToken(c, authentication.Details{UserID: "nope"}); err == nil {
+		tokens := tokensOn(mock.NewDatabase("app"))
+		if _, _, err := tokens.SaveAuthenticationToken(ctx, authentication.Details{UserID: "nope"}); err == nil {
 			t.Error("an invalid user ID must be rejected")
 		}
 
 		db := mock.NewDatabase("app")
 		db.Coll(model.AuthTokenCollection).Err = errBoom
-		c, _ = plugintest.NewContext(db, "POST", "/", nil)
-		if _, _, err := SaveAuthenticationToken(c, details); err == nil {
+		tokens = tokensOn(db)
+		if _, _, err := tokens.SaveAuthenticationToken(ctx, details); err == nil {
 			t.Error("a failure to save the token must be reported")
 		}
 
 		// The last login is only logged.
 		db = mock.NewDatabase("app")
 		db.Coll(model.UserCollection).Err = errBoom
-		c, _ = plugintest.NewContext(db, "POST", "/", nil)
-		if _, _, err := SaveAuthenticationToken(c, details); err != nil {
+		tokens = tokensOn(db)
+		if _, _, err := tokens.SaveAuthenticationToken(ctx, details); err != nil {
 			t.Errorf("err = %v", err)
 		}
 	})
 }
 
-func TestTokenAccessors(t *testing.T) {
+func TestTokens_Accessors(t *testing.T) {
 	id, userID := bson.NewObjectID(), bson.NewObjectID()
 	expires := time.Now().Add(time.Hour).Truncate(time.Millisecond)
 
 	db := mock.NewDatabase("app")
 	db.Coll(model.AuthTokenCollection).One = mock.Result{Value: tokenDocument(id, userID, expires)}
-	c, _ := plugintest.NewContext(db, "GET", "/", nil)
+	tokens := tokensOn(db)
 
-	if got, err := GetTokenExpirationDate(c, id.Hex()); err != nil || !got.Equal(expires) {
+	if got, err := tokens.GetTokenExpirationDate(ctx, id.Hex()); err != nil || !got.Equal(expires) {
 		t.Errorf("expiration date = %v, %v", got, err)
 	}
 
-	token, err := GetTokenDetailsByID(c, id.Hex())
+	token, err := tokens.GetTokenDetailsByID(ctx, id.Hex())
 	if err != nil || token.UserID != userID.Hex() || token.Source != "web (password)" {
 		t.Errorf("details = %+v, %v", token, err)
 	}
 
-	own, ownerID, err := GetOwnedTokenByID(c, id.Hex())
+	own, ownerID, err := tokens.GetOwnedTokenByID(ctx, id.Hex())
 	if ownToken, ok := own.(*model.OwnAuthToken); err != nil || !ok || ownToken.ID != id || ownerID != userID.Hex() {
 		t.Errorf("got %+v, %q, %v", own, ownerID, err)
 	}
 
-	if err := DeleteTokenByID(c, id.Hex()); err != nil {
+	if err := tokens.DeleteTokenByID(ctx, id.Hex()); err != nil {
 		t.Fatal(err)
 	}
 	checkCall(t, db, model.AuthTokenCollection, "DeleteOne", bson.D{{Key: "_id", Value: id}})
 
 	// Unknown token.
-	c, _ = plugintest.NewContext(mock.NewDatabase("app"), "GET", "/", nil)
-	if _, err := GetTokenExpirationDate(c, id.Hex()); err == nil {
+	tokens = tokensOn(mock.NewDatabase("app"))
+	if _, err := tokens.GetTokenExpirationDate(ctx, id.Hex()); err == nil {
 		t.Error("an unknown token must be reported")
 	}
-	if _, err := GetTokenDetailsByID(c, id.Hex()); err == nil {
+	if _, err := tokens.GetTokenDetailsByID(ctx, id.Hex()); err == nil {
 		t.Error("an unknown token must be reported")
 	}
-	if _, _, err := GetOwnedTokenByID(c, id.Hex()); err == nil {
+	if _, _, err := tokens.GetOwnedTokenByID(ctx, id.Hex()); err == nil {
 		t.Error("an unknown token must be reported")
 	}
 }
 
-func TestGetOwnedTokens(t *testing.T) {
+func TestTokens_GetOwnedTokens(t *testing.T) {
 	userID := bson.NewObjectID()
 	db := mock.NewDatabase("app")
 	db.Coll(model.AuthTokenCollection).Docs = []any{model.AuthToken{Source: "web"}, model.AuthToken{Source: "mobile"}}
-	c, _ := plugintest.NewContext(db, "GET", "/", nil)
+	tokens := tokensOn(db)
 
-	got, err := GetOwnedTokens(c, userID.Hex())
-	tokens, ok := got.([]*model.OwnAuthToken)
-	if err != nil || !ok || len(tokens) != 2 || tokens[0].Source != "web" || tokens[1].Source != "mobile" {
+	got, err := tokens.GetOwnedTokens(ctx, userID.Hex())
+	owned, ok := got.([]*model.OwnAuthToken)
+	if err != nil || !ok || len(owned) != 2 || owned[0].Source != "web" || owned[1].Source != "mobile" {
 		t.Errorf("got %+v, %v", got, err)
 	}
 
-	if _, err := GetOwnedTokens(c, "nope"); err == nil {
+	if _, err := tokens.GetOwnedTokens(ctx, "nope"); err == nil {
 		t.Error("an invalid user ID must be rejected")
 	}
 
 	db.Coll(model.AuthTokenCollection).Err = errBoom
-	if _, err := GetOwnedTokens(c, userID.Hex()); err == nil {
+	if _, err := tokens.GetOwnedTokens(ctx, userID.Hex()); err == nil {
 		t.Error("a failing query must be reported")
 	}
 }
 
-func TestUpdateTokenByID(t *testing.T) {
+func TestTokens_UpdateTokenByID(t *testing.T) {
 	id := bson.NewObjectID()
 	db := mock.NewDatabase("app")
-	c, _ := plugintest.NewContext(db, "PUT", "/", nil)
+	tokens := tokensOn(db)
 
-	if err := UpdateTokenByID(c, id.Hex(), "phone", true, []string{"news"}); err != nil {
+	if err := tokens.UpdateTokenByID(ctx, id.Hex(), "phone", true, []string{"news"}); err != nil {
 		t.Fatal(err)
 	}
 	checkUpdate(t, db, model.AuthTokenCollection, id, bson.M{"$set": bson.M{
@@ -271,7 +270,7 @@ func TestUpdateTokenByID(t *testing.T) {
 		"device.notificationSettings.notifications": []string{"news"},
 	}})
 
-	if err := UpdateTokenByID(c, "nope", "phone", true, nil); err == nil {
+	if err := tokens.UpdateTokenByID(ctx, "nope", "phone", true, nil); err == nil {
 		t.Error("an invalid token ID must be rejected")
 	}
 }
