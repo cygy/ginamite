@@ -19,7 +19,6 @@ import (
 	"github.com/cygy/ginamite/common/random"
 
 	"github.com/IBM/sarama"
-	"github.com/sirupsen/logrus"
 )
 
 // Client is a Kafka client, which may be a message producer. It is a broker.Broker.
@@ -154,21 +153,21 @@ func (client *Client) connectProducer(ctx context.Context, addresses []string, c
 	for {
 		producer, err := newAsyncProducer(addresses, config)
 		if err == nil {
-			log.WithFields(logrus.Fields{
-				"addresses": addresses,
-				"type":      "producer",
-				"prefix":    client.TopicsPrefix,
-			}).Info("connected to kafka")
+			log.Info("connected to kafka",
+				"addresses", addresses,
+				"type", "producer",
+				"prefix", client.TopicsPrefix,
+			)
 			client.attachProducer(producer)
 
 			return
 		}
 
-		log.WithFields(logrus.Fields{
-			"addresses": addresses,
-			"type":      "producer",
-			"error":     err.Error(),
-		}).Error("unable to connect to kafka")
+		log.Error("unable to connect to kafka",
+			"addresses", addresses,
+			"type", "producer",
+			"error", err.Error(),
+		)
 
 		if !sleep(ctx, retryDelay) {
 			return
@@ -200,23 +199,23 @@ func (client *Client) attachProducer(producer sarama.AsyncProducer) {
 	go func() {
 		for message := range producer.Successes() {
 			client.stats.sent.Add(1)
-			log.WithFields(logrus.Fields{
-				"type":      "producer",
-				"topic":     message.Topic,
-				"partition": message.Partition,
-				"offset":    message.Offset,
-			}).Info("kafka message sent")
+			log.Info("kafka message sent",
+				"type", "producer",
+				"topic", message.Topic,
+				"partition", message.Partition,
+				"offset", message.Offset,
+			)
 		}
 	}()
 
 	go func() {
 		for err := range producer.Errors() {
 			client.stats.sendErrors.Add(1)
-			log.WithFields(logrus.Fields{
-				"type":  "producer",
-				"topic": err.Msg.Topic,
-				"error": err.Err.Error(),
-			}).Error("kafka send message error")
+			log.Error("kafka send message error",
+				"type", "producer",
+				"topic", err.Msg.Topic,
+				"error", err.Err.Error(),
+			)
 		}
 	}()
 }
@@ -241,21 +240,21 @@ func (client *Client) logStats(ctx context.Context, interval time.Duration) {
 		select {
 		case <-ticker.C:
 			stats := client.Stats()
-			fields := logrus.Fields{
-				"received":      stats.Received,
-				"handled":       stats.Handled,
-				"retried":       stats.Retried,
-				"duplicates":    stats.Duplicates,
-				"dead_lettered": stats.DeadLettered,
-				"sent":          stats.Sent,
-				"send_errors":   stats.SendErrors,
-				"dropped":       stats.Dropped,
-				"waiting":       len(client.outbox),
+			fields := []any{
+				"received", stats.Received,
+				"handled", stats.Handled,
+				"retried", stats.Retried,
+				"duplicates", stats.Duplicates,
+				"dead_lettered", stats.DeadLettered,
+				"sent", stats.Sent,
+				"send_errors", stats.SendErrors,
+				"dropped", stats.Dropped,
+				"waiting", len(client.outbox),
 			}
 			for _, partition := range slices.Sorted(maps.Keys(stats.Lag)) {
-				fields["lag "+partition] = stats.Lag[partition]
+				fields = append(fields, "lag "+partition, stats.Lag[partition])
 			}
-			log.WithFields(fields).Info("kafka stats")
+			log.Info("kafka stats", fields...)
 
 		case <-ctx.Done():
 			return
@@ -279,7 +278,7 @@ func (client *Client) Close() {
 	if client.producer() == nil {
 		if waiting := len(client.outbox); waiting > 0 {
 			client.stats.dropped.Add(uint64(waiting))
-			log.WithField("count", waiting).Error("kafka messages dropped: the producer was never connected")
+			log.Error("kafka messages dropped: the producer was never connected", "count", waiting)
 		}
 
 		return
@@ -327,7 +326,7 @@ func (client *Client) closeProducer() {
 		}
 
 		if err := producer.Close(); err != nil {
-			log.WithField("error", err).Error("unable to close the kafka producer")
+			log.Error("unable to close the kafka producer", "error", err)
 		}
 	})
 }
@@ -348,9 +347,7 @@ func (client *Client) SendMessageToTopic(message, topic string) {
 // delivered twice, see broker.Deduplicator.
 func (client *Client) SendKeyedMessageToTopic(key, message, topic string) {
 	if !client.HasProducer {
-		log.WithFields(logrus.Fields{
-			"error": "not a producer",
-		}).Error("can not send message")
+		log.Error("can not send message", "error", "not a producer")
 		return
 	}
 
@@ -369,7 +366,7 @@ func (client *Client) SendKeyedMessageToTopic(key, message, topic string) {
 
 	if client.outboxClosed {
 		client.stats.dropped.Add(1)
-		log.WithField("topic", fullTopicName).Error("kafka message dropped: the client is closed")
+		log.Error("kafka message dropped: the client is closed", "topic", fullTopicName)
 
 		return
 	}
@@ -377,10 +374,16 @@ func (client *Client) SendKeyedMessageToTopic(key, message, topic string) {
 	select {
 	case client.outbox <- producerMessage:
 		// The body is not logged above the debug level: it holds secrets, such as the keys of the confirmation links.
-		log.WithFields(logrus.Fields{"topic": fullTopicName, "size": len(message)}).WithField("message", message).Debug("kafka message queued")
+		log.Debug("kafka message queued",
+			"topic", fullTopicName,
+			"size", len(message),
+			"message", message,
+		)
 	default:
 		client.stats.dropped.Add(1)
-		log.WithField("topic", fullTopicName).Error("kafka message dropped: too many messages wait for the producer")
+		log.Error("kafka message dropped: too many messages wait for the producer",
+			"topic", fullTopicName,
+		)
 	}
 }
 
@@ -410,12 +413,12 @@ func (client *Client) consume(ctx context.Context, addresses []string, config *s
 			break
 		}
 
-		log.WithFields(logrus.Fields{
-			"addresses": addresses,
-			"type":      "consumer",
-			"group":     groupName,
-			"error":     err.Error(),
-		}).Error("unable to connect to kafka")
+		log.Error("unable to connect to kafka",
+			"addresses", addresses,
+			"type", "consumer",
+			"group", groupName,
+			"error", err.Error(),
+		)
 
 		if !sleep(ctx, retryDelay) {
 			return
@@ -424,22 +427,22 @@ func (client *Client) consume(ctx context.Context, addresses []string, config *s
 
 	defer func() {
 		if err := group.Close(); err != nil {
-			log.WithField("error", err).Error("unable to close the kafka consumer")
+			log.Error("unable to close the kafka consumer", "error", err)
 		}
 	}()
 
-	log.WithFields(logrus.Fields{
-		"type":  "consumer",
-		"topic": topic,
-		"group": groupName,
-	}).Info("connected to kafka")
+	log.Info("connected to kafka",
+		"type", "consumer",
+		"topic", topic,
+		"group", groupName,
+	)
 
 	go func() {
 		for err := range group.Errors() {
-			log.WithFields(logrus.Fields{
-				"type":  "consumer",
-				"error": err.Error(),
-			}).Error("kafka consumer error")
+			log.Error("kafka consumer error",
+				"type", "consumer",
+				"error", err.Error(),
+			)
 		}
 	}()
 
@@ -469,11 +472,11 @@ func (client *Client) consume(ctx context.Context, addresses []string, config *s
 			return
 		}
 
-		log.WithFields(logrus.Fields{
-			"type":  "consumer",
-			"topic": topic,
-			"error": err.Error(),
-		}).Error("kafka consume error")
+		log.Error("kafka consume error",
+			"type", "consumer",
+			"topic", topic,
+			"error", err.Error(),
+		)
 
 		if !sleep(ctx, retryDelay) {
 			return
@@ -494,19 +497,19 @@ func sleep(ctx context.Context, d time.Duration) bool {
 // sendDeadLetter sends a message no attempt could handle to the topic of the dead letters, with the reason in its
 // headers. The message is lost, and logged, if the client has no connected producer.
 func (client *Client) sendDeadLetter(ctx context.Context, message *sarama.ConsumerMessage, group string, cause error, attempts int) {
-	fields := logrus.Fields{
-		"topic":     message.Topic,
-		"group":     group,
-		"partition": message.Partition,
-		"offset":    message.Offset,
-		"attempts":  attempts,
-		"error":     cause.Error(),
+	fields := []any{
+		"topic", message.Topic,
+		"group", group,
+		"partition", message.Partition,
+		"offset", message.Offset,
+		"attempts", attempts,
+		"error", cause.Error(),
 	}
 
 	producer := client.producer()
 	if producer == nil {
 		client.stats.dropped.Add(1)
-		log.WithFields(fields).Error("kafka message dropped: no producer for the dead letters")
+		log.Error("kafka message dropped: no producer for the dead letters", fields...)
 
 		return
 	}
@@ -535,7 +538,7 @@ func (client *Client) sendDeadLetter(ctx context.Context, message *sarama.Consum
 
 	select {
 	case producer.Input() <- deadLetter:
-		log.WithFields(fields).Error("kafka message dead-lettered")
+		log.Error("kafka message dead-lettered", fields...)
 	case <-ctx.Done():
 		// The message is not committed: it is handled again.
 	}

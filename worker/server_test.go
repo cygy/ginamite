@@ -145,7 +145,7 @@ func TestServer_recurringFuncs_run(t *testing.T) {
 
 	// The count logged by each task.
 	wantCounts := map[string]any{
-		recurring.DeleteExpiredTokens:     int64(3),
+		recurring.DeleteExpiredTokens:     3,
 		recurring.SanitizeAccounts:        uint(4),
 		recurring.DeleteNeverUsedAccounts: 1,
 		recurring.DeleteInactiveAccounts:  2,

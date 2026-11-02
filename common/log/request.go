@@ -6,6 +6,7 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"regexp"
 	"strings"
@@ -13,7 +14,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -117,28 +117,24 @@ func InjectRequestLogger(logResponseBody bool) gin.HandlerFunc {
 		end := time.Now()
 		latency := end.Sub(start)
 
-		entry := WithFields(logrus.Fields{
-			"IP":      requestIP,
-			"latency": latency,
-			"request": logrus.Fields{
-				"method":  requestMethod,
-				"URI":     requestPath,
-				"headers": requestHeaders,
-				"body":    requestBody,
-			},
-		})
+		attrs := []any{
+			"IP", requestIP,
+			"latency", latency,
+			slog.Group("request",
+				"method", requestMethod,
+				"URI", requestPath,
+				"headers", requestHeaders,
+				"body", requestBody,
+			),
+		}
 
 		// Get the error if provided
 		if err, errExists := c.Get(ErrorContextKey); errExists {
-			entry = entry.WithFields(logrus.Fields{
-				"error": fmt.Sprint(err),
-			})
+			attrs = append(attrs, "error", fmt.Sprint(err))
 		}
 
 		// Get the response details
-		responseLog := logrus.Fields{
-			"code": c.Writer.Status(),
-		}
+		responseLog := []any{"code", c.Writer.Status()}
 
 		if logResponseBody {
 			obfuscatedResponseBody := writer.body.Bytes()
@@ -160,17 +156,15 @@ func InjectRequestLogger(logResponseBody bool) gin.HandlerFunc {
 
 				if err != nil {
 					obfuscatedResponseBody = []byte{}
-					responseLog["error"] = "can not uncompress body"
+					responseLog = append(responseLog, "error", "can not uncompress body")
 				}
 			}
 
 			obfuscatedResponseBody = emailObfuscatorRegExp.ReplaceAll(obfuscatedResponseBody, emailObfuscatorReplacingString)
 
-			responseLog["body"] = string(obfuscatedResponseBody)
+			responseLog = append(responseLog, "body", string(obfuscatedResponseBody))
 		}
 
-		entry.WithFields(logrus.Fields{
-			"response": responseLog,
-		}).Info("request")
+		Info("request", append(attrs, slog.Group("response", responseLog...))...)
 	}
 }

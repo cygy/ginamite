@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -38,8 +39,7 @@ const Secret = "secret"
 
 func init() {
 	gin.SetMode(gin.TestMode)
-	log.Initialize("test", false)
-	log.Main.Logger.SetOutput(io.Discard)
+	log.Main = slog.New(slog.DiscardHandler)
 }
 
 // NewContext returns a gin context bound to a request and to the recorder of the response.

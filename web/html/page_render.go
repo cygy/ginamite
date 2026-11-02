@@ -9,7 +9,6 @@ import (
 	"github.com/cygy/ginamite/common/response"
 
 	"github.com/gin-gonic/gin"
-	"github.com/sirupsen/logrus"
 )
 
 // Process replaces the variables of the page into its properties, then executes its main template: the result is
@@ -52,11 +51,11 @@ func (page *Page) Process() {
 	// Parse the main template: it will be included to the decorator template later.
 	var output bytes.Buffer
 	if err := page.executeMainTemplate(&output); err != nil {
-		log.WithFields(logrus.Fields{
-			"template": page.Template.Main,
-			"page":     page.Key,
-			"error":    err.Error(),
-		}).Error("unable to execute the template")
+		log.Error("unable to execute the template",
+			"template", page.Template.Main,
+			"page", page.Key,
+			"error", err.Error(),
+		)
 	} else {
 		page.Content.parsedMainTemplate = output.String()
 	}

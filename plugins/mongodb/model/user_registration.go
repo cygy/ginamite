@@ -59,11 +59,11 @@ func (user *User) ValidateRegistrationByEmailAddress(ctx context.Context, code s
 	if user.RegistrationInfos.Code != code {
 		if user.RegistrationInfos.CodeAttempts+1 < maxAttempts {
 			if err := user.Update(ctx, bson.M{"$inc": bson.M{"registrationInfos.codeAttempts": 1}}, db); err != nil {
-				log.WithField("error", err).Error("unable to update")
+				log.Error("unable to update", "error", err)
 			}
 		} else {
 			if err := user.Update(ctx, bson.M{"$unset": bson.M{"registrationInfos.source": "", "registrationInfos.device": "", "registrationInfos.method": "", "registrationInfos.code": "", "registrationInfos.codeAttempts": ""}}, db); err != nil {
-				log.WithField("error", err).Error("unable to update")
+				log.Error("unable to update", "error", err)
 			}
 		}
 

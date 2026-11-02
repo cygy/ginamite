@@ -16,7 +16,6 @@ import (
 	r "github.com/cygy/ginamite/common/response"
 
 	"github.com/gin-gonic/gin"
-	"github.com/sirupsen/logrus"
 )
 
 // GetTerms returns the handler sending the current terms and version. The contents of the terms are cached by version
@@ -44,12 +43,12 @@ func getTerms(c *gin.Context, termsContents map[string]string) {
 		filePath := fmt.Sprintf("%s/%s.txt", ctxkey.Config.Get(c).Terms.Path, filename)
 		bytes, err := os.ReadFile(filePath)
 		if err != nil {
-			log.WithFields(logrus.Fields{
-				"version": version,
-				"locale":  locale,
-				"path":    filePath,
-				"error":   err.Error(),
-			}).Error("unable to read the terms")
+			log.Error("unable to read the terms",
+				"version", version,
+				"locale", locale,
+				"path", filePath,
+				"error", err.Error(),
+			)
 			response.InternalServerError(c)
 			return
 		}

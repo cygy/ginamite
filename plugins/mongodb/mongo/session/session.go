@@ -9,7 +9,6 @@ import (
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/plugins/mongodb/mongo/store"
 
-	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 	"go.mongodb.org/mongo-driver/v2/mongo/readpref"
@@ -88,9 +87,7 @@ func (session *Session) Close() {
 	defer cancel()
 
 	if err := session.Client.Disconnect(ctx); err != nil {
-		log.WithFields(logrus.Fields{
-			"error": err.Error(),
-		}).Error("unable to close the mongo connection")
+		log.Error("unable to close the mongo connection", "error", err.Error())
 	}
 }
 

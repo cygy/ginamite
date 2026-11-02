@@ -25,7 +25,7 @@ func New(producer broker.Producer) *Queue {
 // error and does nothing if the queue has no producer.
 func (q *Queue) send(key, message, topic string) {
 	if q == nil || q.producer == nil {
-		log.WithField("topic", topic).Error("unable to send the message: the queue has no producer")
+		log.Error("unable to send the message: the queue has no producer", "topic", topic)
 		return
 	}
 

@@ -81,7 +81,7 @@ func (s *Notifications) UpdateUserNotificationRead(ctx context.Context, userID, 
 	user := model.User{}
 	user.ID = objectID
 	if err := user.DecrementCountOfUnreadNotifications(ctx, db); err != nil {
-		log.WithField("error", err).Error("unable to decrement count of unread notifications")
+		log.Error("unable to decrement count of unread notifications", "error", err)
 	}
 
 	return nil
@@ -131,7 +131,7 @@ func (s *Notifications) DeleteUserNotification(ctx context.Context, userID, noti
 	user := model.User{}
 	user.ID = objectID
 	if err := user.UpdateCountOfNotifications(ctx, countOfNotifications, countOfUnreadNotifications, db); err != nil {
-		log.WithField("error", err).Error("unable to update count of notifications")
+		log.Error("unable to update count of notifications", "error", err)
 	}
 
 	return nil

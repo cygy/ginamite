@@ -16,7 +16,7 @@ func TestDeleteExpired(t *testing.T) {
 	DeleteExpired(context.Background(), "delete_expired_tokens", func(context.Context) (int64, error) { return 4, nil })
 
 	entry := workertest.Hook.LastEntry()
-	if entry == nil || entry.Message != "task done" || entry.Data["task"] != "delete_expired_tokens" || entry.Data["count"] != int64(4) {
+	if entry == nil || entry.Message != "task done" || entry.Data["task"] != "delete_expired_tokens" || entry.Data["count"] != 4 {
 		t.Errorf("entry = %+v", entry)
 	}
 }

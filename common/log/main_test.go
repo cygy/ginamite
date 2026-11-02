@@ -1,11 +1,11 @@
 package log
 
 import (
+	"log/slog"
 	"os"
 	"testing"
 
-	"github.com/sirupsen/logrus"
-	logtest "github.com/sirupsen/logrus/hooks/test"
+	"github.com/cygy/ginamite/common/log/logtest"
 )
 
 func TestMain(m *testing.M) {
@@ -17,13 +17,8 @@ func TestMain(m *testing.M) {
 func useHook(t *testing.T) *logtest.Hook {
 	t.Helper()
 
-	logger, hook := logtest.NewNullLogger()
-	logger.SetLevel(logrus.DebugLevel)
-	logger.ExitFunc = func(int) {}
-
-	old := Main
-	Main = logger.WithField("server", "test")
-	t.Cleanup(func() { Main = old })
+	hook, restore := logtest.Replace(&Main, slog.LevelDebug)
+	t.Cleanup(restore)
 
 	return hook
 }

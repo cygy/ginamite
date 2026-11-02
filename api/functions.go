@@ -32,7 +32,6 @@ import (
 
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
-	"github.com/sirupsen/logrus"
 )
 
 // errUndecodableCache is the error of a message of the cache which can not be decoded, which no retry can fix.
@@ -63,10 +62,10 @@ func (s *Server) CreateConsumers() []broker.MessageConsumer {
 				s.RevokedTokens.Add(p.Tokens)
 			default:
 				if s.Hooks.NewMessageFromQueueCache == nil || !s.Hooks.NewMessageFromQueueCache(msgType) {
-					log.WithFields(logrus.Fields{
-						"topic": queue.TopicCache,
-						"type":  msgType,
-					}).Warn("unknown kafka message")
+					log.Warn("unknown kafka message",
+						"topic", queue.TopicCache,
+						"type", msgType,
+					)
 				}
 			}
 

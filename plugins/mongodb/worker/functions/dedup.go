@@ -8,7 +8,6 @@ import (
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
 
-	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
@@ -37,7 +36,11 @@ func (d deduplicator) Handled(group, id string) bool {
 
 	count, err := d.functions.database().Collection(model.ProcessedMessageCollection).CountDocuments(ctx, bson.M{"_id": d.key(group, id)})
 	if err != nil {
-		log.WithFields(logrus.Fields{"group": group, "message_id": id, "error": err.Error()}).Error("unable to check whether the message was handled")
+		log.Error("unable to check whether the message was handled",
+			"group", group,
+			"message_id", id,
+			"error", err.Error(),
+		)
 
 		return false
 	}
@@ -53,6 +56,10 @@ func (d deduplicator) MarkHandled(group, id string) {
 	document := bson.M{"_id": d.key(group, id), "createdAt": time.Now()}
 	_, err := d.functions.database().Collection(model.ProcessedMessageCollection).InsertOne(ctx, document)
 	if err != nil && !mongo.IsDuplicateKeyError(err) {
-		log.WithFields(logrus.Fields{"group": group, "message_id": id, "error": err.Error()}).Error("unable to remember the handled message")
+		log.Error("unable to remember the handled message",
+			"group", group,
+			"message_id", id,
+			"error", err.Error(),
+		)
 	}
 }

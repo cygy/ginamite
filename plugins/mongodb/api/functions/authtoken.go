@@ -86,7 +86,7 @@ func (t *Tokens) ExtendTokenExpirationDateFromID(ctx context.Context, tokenID st
 		ID: authToken.UserID,
 	}
 	if err := user.UpdateLastLogin(ctx, db); err != nil {
-		log.WithField("error", err).Error("unable to update last login")
+		log.Error("unable to update last login", "error", err)
 	}
 
 	return nil
@@ -132,7 +132,7 @@ func (t *Tokens) SaveAuthenticationToken(ctx context.Context, details authentica
 		ID: userID,
 	}
 	if err := user.UpdateLastLogin(ctx, db); err != nil {
-		log.WithField("error", err).Error("unable to update last login")
+		log.Error("unable to update last login", "error", err)
 	}
 
 	return authTokenID, (location != nil), nil

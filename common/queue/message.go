@@ -6,8 +6,6 @@ import (
 	"strings"
 
 	"github.com/cygy/ginamite/common/log"
-
-	"github.com/sirupsen/logrus"
 )
 
 // Message is a message exchanged through Kafka: a type and its payload.
@@ -21,9 +19,7 @@ type Message struct {
 func (m *Message) Decode(bytes []byte) bool {
 	err := json.Unmarshal(bytes, m)
 	if err != nil {
-		log.WithFields(logrus.Fields{
-			"error": err.Error(),
-		}).Error("unable to decode kafka message")
+		log.Error("unable to decode kafka message", "error", err.Error())
 	}
 
 	return err == nil
@@ -35,18 +31,16 @@ func (m *Message) Decode(bytes []byte) bool {
 func ParseMessageAndPayload(value []byte, topic string) (string, []byte, bool) {
 	msg := &Message{}
 	if ok := msg.Decode(value); !ok {
-		log.WithFields(logrus.Fields{
-			"topic": topic,
-		}).Error("unable to decode the message")
+		log.Error("unable to decode the message", "topic", topic)
 		return "", nil, false
 	}
 
 	payload, err := json.Marshal(msg.Payload)
 	if err != nil {
-		log.WithFields(logrus.Fields{
-			"topic": topic,
-			"type":  msg.Type,
-		}).Error("unable to parse the payload from json")
+		log.Error("unable to parse the payload from json",
+			"topic", topic,
+			"type", msg.Type,
+		)
 		return "", nil, false
 	}
 
@@ -59,20 +53,20 @@ func ParseMessageAndPayload(value []byte, topic string) (string, []byte, bool) {
 func ParseGroupAbilityAndPayload(value []byte, topic string) (string, []byte, bool) {
 	msg := &GroupNotification{}
 	if err := json.Unmarshal(value, msg); err != nil {
-		log.WithFields(logrus.Fields{
-			"topic": topic,
-			"error": err.Error(),
-		}).Error("unable to decode kafka message")
+		log.Error("unable to decode kafka message",
+			"topic", topic,
+			"error", err.Error(),
+		)
 		return "", nil, false
 	}
 
 	payload, err := json.Marshal(msg.Payload)
 	if err != nil {
-		log.WithFields(logrus.Fields{
-			"topic": topic,
-			"type":  msg.Ability,
-			"error": err.Error(),
-		}).Error("unable to parse the payload from json")
+		log.Error("unable to parse the payload from json",
+			"topic", topic,
+			"type", msg.Ability,
+			"error", err.Error(),
+		)
 		return "", nil, false
 	}
 
@@ -99,10 +93,10 @@ func (q *Queue) sendMessage(messageType string, payload any, topic string) {
 
 	bytes, err := json.Marshal(message)
 	if err != nil {
-		log.WithFields(logrus.Fields{
-			"type":    messageType,
-			"payload": payload,
-		}).Error("unable to marshal JSON from message")
+		log.Error("unable to marshal JSON from message",
+			"type", messageType,
+			"payload", payload,
+		)
 		return
 	}
 

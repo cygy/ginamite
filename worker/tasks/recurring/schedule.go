@@ -33,7 +33,7 @@ func (s *Scheduler) Load(tasks []config.RecurringTask) {
 
 		s.tasks[task.Name] = ScheduledTask{RecurringTask: task}
 
-		log.WithField("name", task.Name).Info("scheduled task loaded")
+		log.Info("scheduled task loaded", "name", task.Name)
 	}
 }
 
@@ -65,7 +65,10 @@ func (s *Scheduler) start(ctx context.Context) {
 		}
 
 		if reason != "" {
-			log.WithField("name", name).WithField("reason", reason).Error("task not scheduled")
+			log.Error("task not scheduled",
+				"name", name,
+				"reason", reason,
+			)
 			continue
 		}
 
@@ -74,7 +77,11 @@ func (s *Scheduler) start(ctx context.Context) {
 
 		go run(ctx, name, startIn, interval, task.f)
 
-		log.WithField("name", name).WithField("start in", startIn).WithField("interval", interval).Info("task scheduled")
+		log.Info("task scheduled",
+			"name", name,
+			"start in", startIn,
+			"interval", interval,
+		)
 	}
 }
 

@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -15,9 +16,8 @@ import (
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/queue"
 
+	"github.com/cygy/ginamite/common/log/logtest"
 	"github.com/gin-gonic/gin"
-	"github.com/sirupsen/logrus"
-	logtest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestNewServer(t *testing.T) {
@@ -104,7 +104,8 @@ func TestServer_CreateConsumers(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			hook := logtest.NewLocal(log.Main.Logger)
+			hook, restore := logtest.Replace(&log.Main, slog.LevelInfo)
+			defer restore()
 			s := NewServer()
 			s.Hooks.NewMessageFromQueueCache = tt.handler
 
@@ -131,7 +132,7 @@ func TestServer_CreateConsumers(t *testing.T) {
 			}
 			warnings := 0
 			for _, entry := range hook.AllEntries() {
-				if entry.Level == logrus.WarnLevel {
+				if entry.Level == slog.LevelWarn {
 					warnings++
 				}
 			}
@@ -144,14 +145,14 @@ func TestServer_CreateConsumers(t *testing.T) {
 
 // countWarnings returns the number of warnings logged while calling fn.
 func countWarnings(fn func()) int {
-	hook := logtest.NewLocal(log.Main.Logger)
-	defer hook.Reset()
+	hook, restore := logtest.Replace(&log.Main, slog.LevelInfo)
+	defer restore()
 
 	fn()
 
 	count := 0
 	for _, entry := range hook.AllEntries() {
-		if entry.Level == logrus.WarnLevel {
+		if entry.Level == slog.LevelWarn {
 			count++
 		}
 	}

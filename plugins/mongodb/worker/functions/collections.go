@@ -7,7 +7,6 @@ import (
 
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
-	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
@@ -24,10 +23,10 @@ func (f *Functions) CreateCollections(ctx context.Context, collections []Collect
 		}
 
 		if err := db.CreateCollection(ctx, collection.Name, opts...); err != nil {
-			log.WithFields(logrus.Fields{
-				"error":      err.Error(),
-				"collection": collection.Name,
-			}).Error("create mongoDB collection")
+			log.Error("create mongoDB collection",
+				"error", err.Error(),
+				"collection", collection.Name,
+			)
 		}
 	}
 }
@@ -38,14 +37,14 @@ func (f *Functions) RemoveCollections(ctx context.Context, collections []string)
 
 	for _, collection := range collections {
 		if err := db.Collection(collection).Indexes().DropAll(ctx); err != nil {
-			log.WithField("error", err).Error("unable to drop all")
+			log.Error("unable to drop all", "error", err)
 		}
 		err := db.Collection(collection).Drop(ctx)
 		if err != nil && !IsNotFound(err, errorCodeNamespaceNotFound, fmt.Sprintf("collection not found with name [%s]", collection)) {
-			log.WithFields(logrus.Fields{
-				"error":      err.Error(),
-				"collection": collection,
-			}).Error("delete mongoDB collection")
+			log.Error("delete mongoDB collection",
+				"error", err.Error(),
+				"collection", collection,
+			)
 		}
 	}
 }

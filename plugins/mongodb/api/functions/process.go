@@ -103,11 +103,11 @@ func (p *Processes) VerifyProcess(ctx context.Context, processID, key string) (s
 	if subtle.ConstantTimeCompare([]byte(process.Code), []byte(key)) != 1 {
 		if process.Tries >= 2 {
 			if err := process.Delete(ctx, mongoSession); err != nil {
-				log.WithField("error", err).Error("unable to delete")
+				log.Error("unable to delete", "error", err)
 			}
 		} else {
 			if err := process.Increment(ctx, mongoSession); err != nil {
-				log.WithField("error", err).Error("unable to increment")
+				log.Error("unable to increment", "error", err)
 			}
 		}
 		return "", "", errors.ErrNotFound

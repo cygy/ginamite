@@ -8,16 +8,15 @@ import (
 	"github.com/cygy/ginamite/common/log"
 
 	"github.com/disintegration/imaging"
-	"github.com/sirupsen/logrus"
 )
 
 func save(src, directoryDest string, width, height int, saveSmallVersion, saveThumbVersion, fit bool) (*Versions, error) {
 	f, err := imaging.Open(src)
 	if err != nil {
-		log.WithFields(logrus.Fields{
-			"path":  src,
-			"error": err.Error(),
-		}).Error("unable to open a file image")
+		log.Error("unable to open a file image",
+			"path", src,
+			"error", err.Error(),
+		)
 		return nil, err
 	}
 
@@ -29,10 +28,10 @@ func save(src, directoryDest string, width, height int, saveSmallVersion, saveTh
 		directory := filepath.Dir(property.AbsolutePath)
 		if _, err := os.Stat(directory); os.IsNotExist(err) {
 			if err := os.MkdirAll(directory, 0o750); err != nil {
-				log.WithFields(logrus.Fields{
-					"path":  directory,
-					"error": err.Error(),
-				}).Error("unable to create directory")
+				log.Error("unable to create directory",
+					"path", directory,
+					"error", err.Error(),
+				)
 			}
 		}
 
@@ -46,11 +45,11 @@ func save(src, directoryDest string, width, height int, saveSmallVersion, saveTh
 
 		err = imaging.Save(image, property.AbsolutePath)
 		if err != nil {
-			log.WithFields(logrus.Fields{
-				"src":   src,
-				"dest":  property.AbsolutePath,
-				"error": err.Error(),
-			}).Error("unable to save a file image")
+			log.Error("unable to save a file image",
+				"src", src,
+				"dest", property.AbsolutePath,
+				"error", err.Error(),
+			)
 			return nil, err
 		}
 	}

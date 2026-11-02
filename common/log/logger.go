@@ -2,67 +2,48 @@
 package log
 
 import (
+	"log/slog"
 	"os"
-
-	"github.com/sirupsen/logrus"
 )
 
 // Main is the main logger of the application, set by Initialize.
-var Main *logrus.Entry
+var Main *slog.Logger
 
-// Initialize creates the main logger Main, writing to the standard output.
-// The output is JSON in production and text otherwise.
+// Initialize creates the main logger Main, writing to the standard output. The output is JSON in production and text
+// otherwise. Every record carries the name of the server.
 func Initialize(serverName string, productionEnvironment bool) {
-	log := logrus.New()
-	log.SetOutput(os.Stdout)
-
+	var handler slog.Handler
 	if productionEnvironment {
-		log.Formatter = &logrus.JSONFormatter{}
+		handler = slog.NewJSONHandler(os.Stdout, nil)
 	} else {
-		log.Formatter = &logrus.TextFormatter{}
+		handler = slog.NewTextHandler(os.Stdout, nil)
 	}
 
-	Main = log.WithFields(logrus.Fields{
-		"server": serverName,
-	})
+	Main = slog.New(handler).With("server", serverName)
 }
 
-// Debug logs a message at the debug level with the main logger.
-func Debug(args ...any) {
-	Main.Debug(args...)
-}
-
-// Error logs a message at the error level with the main logger.
-func Error(args ...any) {
-	Main.Error(args...)
+// Debug logs a message at the debug level with the main logger. The arguments are alternating keys and values, see
+// slog.Logger.Log.
+func Debug(msg string, args ...any) {
+	Main.Debug(msg, args...)
 }
 
 // Info logs a message at the info level with the main logger.
-func Info(args ...any) {
-	Main.Info(args...)
-}
-
-// Print logs a message with the main logger.
-func Print(args ...any) {
-	Main.Print(args...)
+func Info(msg string, args ...any) {
+	Main.Info(msg, args...)
 }
 
 // Warn logs a message at the warning level with the main logger.
-func Warn(args ...any) {
-	Main.Warn(args...)
+func Warn(msg string, args ...any) {
+	Main.Warn(msg, args...)
 }
 
-// Warning logs a message at the warning level with the main logger.
-func Warning(args ...any) {
-	Main.Warning(args...)
+// Error logs a message at the error level with the main logger.
+func Error(msg string, args ...any) {
+	Main.Error(msg, args...)
 }
 
-// WithField returns an entry of the main logger with the field.
-func WithField(key string, value any) *logrus.Entry {
-	return Main.WithField(key, value)
-}
-
-// WithFields returns an entry of the main logger with the fields.
-func WithFields(fields logrus.Fields) *logrus.Entry {
-	return Main.WithFields(fields)
+// With returns the main logger with the attributes added to each of its records.
+func With(args ...any) *slog.Logger {
+	return Main.With(args...)
 }

@@ -1,13 +1,15 @@
 package log
 
 import (
+	"encoding/json"
+	"log/slog"
+	"os"
+	"strings"
 	"testing"
-
-	"github.com/sirupsen/logrus"
 )
 
 func TestInitialize(t *testing.T) {
-	defer func(old *logrus.Entry) { Main = old }(Main)
+	defer func(old *slog.Logger) { Main = old }(Main)
 
 	tests := []struct {
 		name       string
@@ -20,14 +22,28 @@ func TestInitialize(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			Initialize("srv", tt.production)
-
-			if Main.Data["server"] != "srv" {
-				t.Errorf("server field = %v", Main.Data["server"])
+			output, err := os.CreateTemp(t.TempDir(), "log")
+			if err != nil {
+				t.Fatal(err)
 			}
-			_, isJSON := Main.Logger.Formatter.(*logrus.JSONFormatter)
+			defer func(old *os.File) { os.Stdout = old }(os.Stdout)
+			os.Stdout = output
+
+			Initialize("srv", tt.production)
+			Info("m", "k", "v")
+
+			written, err := os.ReadFile(output.Name())
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			var record map[string]any
+			isJSON := json.Unmarshal(written, &record) == nil
 			if isJSON != tt.wantJSON {
-				t.Errorf("JSON formatter = %v, want %v", isJSON, tt.wantJSON)
+				t.Errorf("JSON output = %v, want %v: %s", isJSON, tt.wantJSON, written)
+			}
+			if !strings.Contains(string(written), "srv") || !strings.Contains(string(written), "k") {
+				t.Errorf("the server name and the attributes must be logged: %s", written)
 			}
 		})
 	}
@@ -39,16 +55,13 @@ func TestShorthands(t *testing.T) {
 	tests := []struct {
 		name  string
 		log   func()
-		level logrus.Level
+		level slog.Level
 	}{
-		{"Debug", func() { Debug("m") }, logrus.DebugLevel},
-		{"Info", func() { Info("m") }, logrus.InfoLevel},
-		{"Print", func() { Print("m") }, logrus.InfoLevel},
-		{"Warn", func() { Warn("m") }, logrus.WarnLevel},
-		{"Warning", func() { Warning("m") }, logrus.WarnLevel},
-		{"Error", func() { Error("m") }, logrus.ErrorLevel},
-		{"WithField", func() { WithField("k", "v").Info("m") }, logrus.InfoLevel},
-		{"WithFields", func() { WithFields(logrus.Fields{"k": "v"}).Info("m") }, logrus.InfoLevel},
+		{"Debug", func() { Debug("m") }, slog.LevelDebug},
+		{"Info", func() { Info("m") }, slog.LevelInfo},
+		{"Warn", func() { Warn("m") }, slog.LevelWarn},
+		{"Error", func() { Error("m") }, slog.LevelError},
+		{"With", func() { With("k", "v").Info("m") }, slog.LevelInfo},
 	}
 
 	for _, tt := range tests {

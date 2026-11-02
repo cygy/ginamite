@@ -43,7 +43,7 @@ func CreateStoredNotification(ctx context.Context, userID, notificationType, dat
 		notificationIDs, err := model.GetOldestUserNotifications(ctx, userID, limit, db)
 		if err == nil {
 			if _, err := model.DeleteUserNotifications(ctx, notificationIDs, db); err != nil {
-				log.WithField("error", err).Error("unable to delete user notifications")
+				log.Error("unable to delete user notifications", "error", err)
 			}
 		}
 
@@ -59,7 +59,7 @@ func CreateStoredNotification(ctx context.Context, userID, notificationType, dat
 	user := model.User{}
 	user.ID = notification.UserID
 	if err := user.UpdateCountOfNotifications(ctx, countOfNotifications, countOfUnreadNotifications, db); err != nil {
-		log.WithField("error", err).Error("unable to update count of notifications")
+		log.Error("unable to update count of notifications", "error", err)
 	}
 
 	return nil

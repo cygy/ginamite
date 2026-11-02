@@ -11,8 +11,6 @@ import (
 
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/random"
-
-	"github.com/sirupsen/logrus"
 )
 
 // File is a sitemap file, gzipped. It is written to a temporary file, moved to its path when closed.
@@ -122,11 +120,11 @@ func (f *File) write(s string) {
 
 // logError logs an error about the file.
 func (f *File) logError(message string, err error) {
-	log.WithFields(logrus.Fields{
-		"path":     f.Path,
-		"tempPath": f.tempPath,
-		"error":    err,
-	}).Error(message)
+	log.Error(message,
+		"path", f.Path,
+		"tempPath", f.tempPath,
+		"error", err,
+	)
 }
 
 // firstError returns the first non-nil error.

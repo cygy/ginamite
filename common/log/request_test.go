@@ -11,11 +11,10 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/sirupsen/logrus"
 )
 
 // do sends a request through the logging middleware and returns the logged fields of the request.
-func do(t *testing.T, logBody bool, handler gin.HandlerFunc, req *http.Request) (logrus.Fields, *httptest.ResponseRecorder, *http.Request) {
+func do(t *testing.T, logBody bool, handler gin.HandlerFunc, req *http.Request) (map[string]any, *httptest.ResponseRecorder, *http.Request) {
 	t.Helper()
 
 	gin.SetMode(gin.TestMode)
@@ -80,7 +79,7 @@ func TestInjectRequestLogger_Request(t *testing.T) {
 		t.Errorf("IP = %v", fields["IP"])
 	}
 
-	logged := fields["request"].(logrus.Fields)
+	logged := fields["request"].(map[string]any)
 	if logged["method"] != http.MethodPost || logged["URI"] != "/login?x=1" {
 		t.Errorf("request = %v", logged)
 	}
@@ -88,7 +87,7 @@ func TestInjectRequestLogger_Request(t *testing.T) {
 		t.Errorf("body not obfuscated: %q", got)
 	}
 
-	response := fields["response"].(logrus.Fields)
+	response := fields["response"].(map[string]any)
 	if response["code"] != http.StatusCreated {
 		t.Errorf("response = %v", response)
 	}
@@ -115,7 +114,7 @@ func TestInjectRequestLogger_MasksSensitiveHeaders(t *testing.T) {
 		t.Errorf("the handler must still see the Authorization header, got %q", seenAuth)
 	}
 
-	headers := fields["request"].(logrus.Fields)["headers"].(map[string]string)
+	headers := fields["request"].(map[string]any)["headers"].(map[string]string)
 	for _, name := range []string{"Authorization", "Proxy-Authorization", "Cookie"} {
 		if headers[name] != obfuscatorReplacingString {
 			t.Errorf("%s = %q, want it masked", name, headers[name])
@@ -151,7 +150,7 @@ func TestInjectRequestLogger_Multipart(t *testing.T) {
 
 	fields, _, _ := do(t, false, func(c *gin.Context) {}, req)
 
-	if got := fields["request"].(logrus.Fields)["body"]; got != "not logged" {
+	if got := fields["request"].(map[string]any)["body"]; got != "not logged" {
 		t.Errorf("body = %v, want %q", got, "not logged")
 	}
 }
@@ -162,7 +161,7 @@ func TestInjectRequestLogger_NoBody(t *testing.T) {
 
 	fields, _, _ := do(t, false, func(c *gin.Context) {}, req)
 
-	if got := fields["request"].(logrus.Fields)["body"]; got != "" {
+	if got := fields["request"].(map[string]any)["body"]; got != "" {
 		t.Errorf("body = %v, want empty", got)
 	}
 }
@@ -226,7 +225,7 @@ func TestInjectRequestLogger_ResponseBody(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			fields, rec, _ := do(t, true, tt.write, httptest.NewRequest(http.MethodGet, "/", nil))
 
-			response := fields["response"].(logrus.Fields)
+			response := fields["response"].(map[string]any)
 			if response["body"] != tt.wantBody {
 				t.Errorf("body = %q, want %q", response["body"], tt.wantBody)
 			}

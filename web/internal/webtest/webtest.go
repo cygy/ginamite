@@ -23,10 +23,9 @@ import (
 	"github.com/cygy/ginamite/common/log"
 	htmlTemplate "github.com/cygy/ginamite/common/template/html"
 
+	"github.com/cygy/ginamite/common/log/logtest"
 	"github.com/gin-gonic/gin"
 	jwt "github.com/golang-jwt/jwt/v5"
-	"github.com/sirupsen/logrus"
-	logtest "github.com/sirupsen/logrus/hooks/test"
 )
 
 // Hook collects the entries of the main logger, which discards them.
@@ -62,9 +61,7 @@ var Localization *localization.Engine
 func init() {
 	gin.SetMode(gin.TestMode)
 
-	var logger *logrus.Logger
-	logger, Hook = logtest.NewNullLogger()
-	log.Main = logger.WithField("server", "test")
+	log.Main, Hook = logtest.New()
 }
 
 // Context returns a Gin context for a request, and the recorder of its response. The context holds the configuration

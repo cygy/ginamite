@@ -9,7 +9,6 @@ import (
 	"github.com/cygy/ginamite/common/log"
 
 	"github.com/IBM/sarama"
-	"github.com/sirupsen/logrus"
 )
 
 // TopicSpec describes the topics to create.
@@ -74,7 +73,10 @@ func createTopic(admin topicCreator, name string, spec TopicSpec, retention time
 	err := admin.CreateTopic(name, detail, false)
 	switch {
 	case err == nil:
-		log.WithFields(logrus.Fields{"topic": name, "partitions": detail.NumPartitions}).Info("kafka topic created")
+		log.Info("kafka topic created",
+			"topic", name,
+			"partitions", detail.NumPartitions,
+		)
 	case errors.Is(err, sarama.ErrTopicAlreadyExists):
 	default:
 		return fmt.Errorf("unable to create the topic %s: %w", name, err)

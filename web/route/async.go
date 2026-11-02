@@ -12,7 +12,6 @@ import (
 	"github.com/cygy/ginamite/web/api"
 
 	"github.com/gin-gonic/gin"
-	"github.com/sirupsen/logrus"
 )
 
 // loadAsyncRoutes loads the passthrough async calls of the routes file for the locale into the group.
@@ -28,10 +27,10 @@ func (r *Router) loadAsyncRoutes(group *gin.RouterGroup, locale string) {
 		case api.GET, api.POST, api.PUT, api.PATCH, api.DELETE:
 			group.Handle(method, path, forwardToAPI(r.api, async.Target, method))
 		default:
-			log.WithFields(logrus.Fields{
-				"async":  key,
-				"method": async.Method,
-			}).Warn("unsupported method for the async call")
+			log.Warn("unsupported method for the async call",
+				"async", key,
+				"method", async.Method,
+			)
 		}
 	}
 }

@@ -12,7 +12,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/golang-jwt/jwt/v5/request"
-	"github.com/sirupsen/logrus"
 )
 
 // Parse parses and saves the authenticated user to the context.
@@ -29,9 +28,9 @@ func Parse(secret string, buildUser GetUserAndLocaleFunc, authTokenMustBePresent
 			}
 
 			if authTokenMustBePresent || authTokenIsPresent {
-				log.WithFields(logrus.Fields{
-					"error": err.Error(),
-				}).Error("unable to extract the authentication token from the headers")
+				log.Error("unable to extract the authentication token from the headers",
+					"error", err.Error(),
+				)
 				response.UnauthorizedWithInvalidAuthorizationToken(c, requestLocale)
 				return
 			}
@@ -45,9 +44,9 @@ func Parse(secret string, buildUser GetUserAndLocaleFunc, authTokenMustBePresent
 			if token == nil {
 				// The token is not logged: it is a credential, which is still valid when only its signature failed to
 				// match for another reason, such as a rotated secret.
-				log.WithFields(logrus.Fields{
-					"error": err.Error(),
-				}).Error("unable to validate the authentication token from the headers")
+				log.Error("unable to validate the authentication token from the headers",
+					"error", err.Error(),
+				)
 
 				if errors.Is(err, jwt.ErrTokenExpired) {
 					response.UnauthorizedWithExpiredAuthorizationToken(c, requestLocale)

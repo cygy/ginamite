@@ -9,8 +9,6 @@ import (
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/queue"
 	"github.com/cygy/ginamite/worker/tasks"
-
-	"github.com/sirupsen/logrus"
 )
 
 // DeleteNeverUsed deletes the empty accounts which never logged in for intervalInDays days.
@@ -27,7 +25,10 @@ func DeleteNeverUsed(ctx context.Context, q *queue.Queue, taskName string, inter
 	for _, userID := range userIDs {
 		empty, err := isUserEmpty(ctx, userID)
 		if err != nil {
-			log.WithFields(logrus.Fields{"user": userID, "error": err.Error()}).Error("unable to know if the user is empty")
+			log.Error("unable to know if the user is empty",
+				"user", userID,
+				"error", err.Error(),
+			)
 
 			continue
 		}
@@ -37,9 +38,7 @@ func DeleteNeverUsed(ctx context.Context, q *queue.Queue, taskName string, inter
 		}
 	}
 
-	tasks.LogDone(taskName, &logrus.Fields{
-		"count": countOfDeletedUsers,
-	})
+	tasks.LogDone(taskName, "count", countOfDeletedUsers)
 }
 
 // DeleteInactive deletes the accounts inactive for intervalInMonths months.
@@ -59,9 +58,7 @@ func DeleteInactive(ctx context.Context, q *queue.Queue, taskName string, interv
 		}
 	}
 
-	tasks.LogDone(taskName, &logrus.Fields{
-		"count": countOfDeletedUsers,
-	})
+	tasks.LogDone(taskName, "count", countOfDeletedUsers)
 }
 
 // Sanitize deletes, or updates, the data associated to the deleted accounts.
@@ -69,14 +66,12 @@ func DeleteInactive(ctx context.Context, q *queue.Queue, taskName string, interv
 func Sanitize(ctx context.Context, taskName string, sanitizeAccounts func(context.Context) (uint, error)) {
 	count, err := sanitizeAccounts(ctx)
 	if err != nil {
-		tasks.LogError(taskName, fmt.Errorf("unable to sanitize the accounts: %w", err), &logrus.Fields{"count": count})
+		tasks.LogError(taskName, fmt.Errorf("unable to sanitize the accounts: %w", err), "count", count)
 
 		return
 	}
 
-	tasks.LogDone(taskName, &logrus.Fields{
-		"count": count,
-	})
+	tasks.LogDone(taskName, "count", count)
 }
 
 // deleteAndNotify deletes a user, invalidates the auth tokens revoked and asks the workers to delete the user. It
@@ -84,7 +79,10 @@ func Sanitize(ctx context.Context, taskName string, sanitizeAccounts func(contex
 func deleteAndNotify(ctx context.Context, q *queue.Queue, userID string, deleteUser func(context.Context, string) (map[string]time.Time, error)) bool {
 	revokedAuthTokens, err := deleteUser(ctx, userID)
 	if err != nil {
-		log.WithFields(logrus.Fields{"user": userID, "error": err.Error()}).Error("unable to delete the user")
+		log.Error("unable to delete the user",
+			"user", userID,
+			"error", err.Error(),
+		)
 
 		return false
 	}

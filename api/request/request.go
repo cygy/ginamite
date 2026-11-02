@@ -19,7 +19,7 @@ import (
 // DecodeBody decodes the JSON-formatted body of a request to a struct.
 func DecodeBody(c *gin.Context, v any) {
 	if err := json.NewDecoder(c.Request.Body).Decode(&v); err != nil {
-		log.WithField("error", err).Warn("unable to decode the request body")
+		log.Warn("unable to decode the request body", "error", err)
 	}
 }
 

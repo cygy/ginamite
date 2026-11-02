@@ -20,7 +20,6 @@ import (
 	res "github.com/cygy/ginamite/common/response"
 
 	"github.com/gin-gonic/gin"
-	"github.com/sirupsen/logrus"
 )
 
 // LoginWithPassword creates a token to log in an account.
@@ -306,6 +305,9 @@ func upgradePassword(c *gin.Context, userID, password, encryptedPassword string)
 		err = StorageOf(c).Accounts.UpdateEncryptedPasswordByUserID(c, userID, upgraded)
 	}
 	if err != nil {
-		log.WithFields(logrus.Fields{"user": userID, "error": err.Error()}).Error("unable to upgrade the encrypted password")
+		log.Error("unable to upgrade the encrypted password",
+			"user", userID,
+			"error", err.Error(),
+		)
 	}
 }

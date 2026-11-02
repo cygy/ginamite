@@ -8,7 +8,6 @@ import (
 
 	"github.com/cygy/ginamite/common/log"
 
-	"github.com/sirupsen/logrus"
 	yaml "gopkg.in/yaml.v3"
 )
 
@@ -38,10 +37,10 @@ func NewConfiguration() (conf *Configuration) {
 func (conf *Configuration) GetURL(key, locale string) string {
 	url, ok := conf.Routes[key].AbsolutePaths[locale]
 	if !ok {
-		log.WithFields(logrus.Fields{
-			"route":  key,
-			"locale": locale,
-		}).Warn("web url not found")
+		log.Warn("web url not found",
+			"route", key,
+			"locale", locale,
+		)
 	}
 
 	return url

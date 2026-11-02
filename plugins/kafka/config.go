@@ -9,7 +9,6 @@ import (
 	"github.com/cygy/ginamite/common/queue"
 
 	"github.com/IBM/sarama"
-	"github.com/sirupsen/logrus"
 )
 
 // optionsFrom returns the options of the connection to Kafka from its settings.
@@ -63,6 +62,6 @@ func createTopics(k Settings, host string, port int, options Options) {
 		DeadLetterRetention: time.Duration(k.Topics.DeadLetterRetentionHours) * time.Hour,
 	}
 	if err := EnsureTopics(host, port, options, k.TopicsPrefix, queue.Topics(), spec); err != nil {
-		log.WithFields(logrus.Fields{"error": err.Error()}).Error("unable to create the kafka topics")
+		log.Error("unable to create the kafka topics", "error", err.Error())
 	}
 }

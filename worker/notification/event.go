@@ -37,7 +37,7 @@ func (event Event) Dispatch(ctx context.Context) error {
 
 	targets, err := event.GetNotificationTargetsFunc(ctx, event.UserID, event.Type)
 	if err != nil {
-		log.WithField("error", err.Error()).Error("unable to get the notification targets of the user")
+		log.Error("unable to get the notification targets of the user", "error", err.Error())
 
 		return fmt.Errorf("unable to get the notification targets of the user: %w", err)
 	}

@@ -70,7 +70,7 @@ func (c *cache) runDeleteExpired(interval time.Duration) {
 
 	for now := range ticker.C {
 		if count := c.deleteExpired(now); count > 0 {
-			log.WithField("count", count).Info("remove expired tokens from the cache")
+			log.Info("remove expired tokens from the cache", "count", count)
 		}
 	}
 }

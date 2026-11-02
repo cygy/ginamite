@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
 	"testing"
@@ -17,9 +18,9 @@ import (
 
 	"github.com/cygy/ginamite/common/errors/auth"
 	"github.com/cygy/ginamite/common/log"
+	"github.com/cygy/ginamite/common/log/logtest"
 	"github.com/gin-gonic/gin"
 	jwt "github.com/golang-jwt/jwt/v5"
-	logtest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestParse(t *testing.T) {
@@ -105,8 +106,8 @@ func TestParse_ExpiredTokenAndLogs(t *testing.T) {
 
 	apitest.InitLocalization(t, map[string]string{"placeholder": "placeholder"})
 
-	hook := logtest.NewLocal(log.Main.Logger)
-	defer hook.Reset()
+	hook, restore := logtest.Replace(&log.Main, slog.LevelInfo)
+	defer restore()
 
 	router := gin.New()
 	router.Use(ctxkey.Localization.Inject(apitest.Localization), ctxLocale.Inject("en", []string{"en"}), InjectRevoked(func(string) bool { return false }))

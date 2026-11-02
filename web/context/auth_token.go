@@ -8,7 +8,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	jwt "github.com/golang-jwt/jwt/v5"
-	"github.com/sirupsen/logrus"
 )
 
 // SaveAuthToken returns a middleware saving the auth token found in the cookie cookieName to the context.
@@ -22,9 +21,9 @@ func SaveAuthToken(cookieName, secret string) gin.HandlerFunc {
 
 		token, err := authentication.ParseToken(signedToken, secret)
 		if token == nil || err != nil {
-			log.WithFields(logrus.Fields{
-				"error": err,
-			}).Error("unable to validate the authentication token from the cookie")
+			log.Error("unable to validate the authentication token from the cookie",
+				"error", err,
+			)
 			return
 		}
 

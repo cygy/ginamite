@@ -10,16 +10,14 @@ import (
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/queue"
 
+	"github.com/cygy/ginamite/common/log/logtest"
 	"github.com/gin-gonic/gin"
-	logtest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func init() {
 	gin.SetMode(gin.TestMode)
 
-	logger, _ := logtest.NewNullLogger()
-	logger.ExitFunc = func(int) {}
-	log.Main = logger.WithField("server", "test")
+	log.Main, _ = logtest.New()
 }
 
 type testPlugin struct {

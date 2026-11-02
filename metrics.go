@@ -31,11 +31,11 @@ func (s *Server) startMetrics() (stop func()) {
 		defer close(done)
 
 		if err := registry.Serve(ctx, address); err != nil {
-			log.WithField("error", err).Error("unable to serve the metrics")
+			log.Error("unable to serve the metrics", "error", err)
 		}
 	}()
 
-	log.WithField("address", address).Info("the metrics are served on /metrics")
+	log.Info("the metrics are served on /metrics", "address", address)
 
 	return func() {
 		cancel()

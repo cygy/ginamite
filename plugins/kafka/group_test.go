@@ -109,7 +109,7 @@ func TestGroupHandler_ConsumeClaim(t *testing.T) {
 				t.Errorf("the body is logged: %+v", entry)
 			}
 			if entry.Message == "kafka message received" {
-				received = entry.Data["size"] == len("secret-key") && entry.Data["partition"] == int32(1) && entry.Data["offset"] == int64(7)
+				received = entry.Data["size"] == len("secret-key") && entry.Data["partition"] == 1 && entry.Data["offset"] == 7
 			}
 		}
 		if !received {

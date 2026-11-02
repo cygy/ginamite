@@ -9,7 +9,6 @@ import (
 	"github.com/cygy/ginamite/common/log"
 
 	"github.com/IBM/sarama"
-	"github.com/sirupsen/logrus"
 )
 
 // groupHandler handles the messages of the partitions of a topic given to a consumer of a group.
@@ -49,14 +48,14 @@ func (h groupHandler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sa
 			}
 
 			// The body is not logged above the debug level: it holds secrets, such as the keys of the confirmation links.
-			fields := logrus.Fields{
-				"topic":     h.topic,
-				"partition": message.Partition,
-				"offset":    message.Offset,
-				"size":      len(message.Value),
+			fields := []any{
+				"topic", h.topic,
+				"partition", message.Partition,
+				"offset", message.Offset,
+				"size", len(message.Value),
 			}
-			log.WithFields(fields).Info("kafka message received")
-			log.WithFields(fields).WithField("message", string(message.Value)).Debug("kafka message body")
+			log.Info("kafka message received", fields...)
+			log.Debug("kafka message body", append(fields, "message", string(message.Value))...)
 			h.stats.countReceived()
 
 			if !h.handle(session.Context(), message) {
@@ -79,7 +78,11 @@ func (h groupHandler) handle(ctx context.Context, message *sarama.ConsumerMessag
 	id := messageID(message)
 	if id != "" && h.dedup != nil && h.dedup.Handled(h.group, id) {
 		h.stats.countDuplicate()
-		log.WithFields(logrus.Fields{"topic": h.topic, "group": h.group, "message_id": id}).Warn("kafka message already handled, ignored")
+		log.Warn("kafka message already handled, ignored",
+			"topic", h.topic,
+			"group", h.group,
+			"message_id", id,
+		)
 
 		return true
 	}
@@ -95,17 +98,17 @@ func (h groupHandler) handle(ctx context.Context, message *sarama.ConsumerMessag
 			return true
 		}
 
-		fields := logrus.Fields{
-			"topic":   h.topic,
-			"group":   h.group,
-			"attempt": attempt,
-			"error":   err.Error(),
+		fields := []any{
+			"topic", h.topic,
+			"group", h.group,
+			"attempt", attempt,
+			"error", err.Error(),
 		}
 		if broker.IsPermanent(err) || attempt >= h.attempts {
 			break
 		}
 
-		log.WithFields(fields).Warn("kafka message failed, trying again")
+		log.Warn("kafka message failed, trying again", fields...)
 		h.stats.countRetried()
 		if !sleep(ctx, h.backoff(attempt)) {
 			return false

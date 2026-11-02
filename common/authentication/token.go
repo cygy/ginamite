@@ -8,7 +8,6 @@ import (
 	"github.com/cygy/ginamite/common/log"
 
 	jwt "github.com/golang-jwt/jwt/v5"
-	"github.com/sirupsen/logrus"
 )
 
 // Token holds the content of an auth token.
@@ -35,21 +34,21 @@ func (h Hooks) GetSignedToken(ctx context.Context, signingMethod, secret, tokenI
 
 	token, err := h.BuildTokenFromID(ctx, tokenID)
 	if err != nil {
-		log.WithFields(logrus.Fields{
-			"token id":         tokenID,
-			"signature_method": signingMethod,
-			"error":            err,
-		}).Error("unable to build JWT token")
+		log.Error("unable to build JWT token",
+			"token id", tokenID,
+			"signature_method", signingMethod,
+			"error", err,
+		)
 		return "", err
 	}
 
 	extraProperties, err := h.ExtraPropertiesForTokenWithID(tokenID)
 	if err != nil {
-		log.WithFields(logrus.Fields{
-			"token id":         tokenID,
-			"signature_method": signingMethod,
-			"error":            err,
-		}).Error("unable to get extra properties for JWT token")
+		log.Error("unable to get extra properties for JWT token",
+			"token id", tokenID,
+			"signature_method", signingMethod,
+			"error", err,
+		)
 		return "", err
 	}
 
@@ -94,7 +93,7 @@ func SignToken(signingMethod, secret, tokenID string, token *Token, extraPropert
 	// Sign and get the final encoded token as a string.
 	signedToken, err := jwtToken.SignedString([]byte(secret))
 	if err != nil {
-		log.WithFields(logrus.Fields(jwtClaims)).WithField("signature_method", signingMethod).Error("unable to sign JWT token")
+		log.Error("unable to sign JWT token", "claims", jwtClaims, "signature_method", signingMethod)
 		return "", err
 	}
 

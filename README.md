@@ -310,6 +310,12 @@ The features other than `status`, `locales` and `timezones` sign and verify the 
 the start fails without it. Without a secret, the middlewares which authenticate (`MustBeAuthenticated`, `rights`,
 etc.) of the custom routes answer an error: set `jwt.secret` as soon as a route authenticates.
 
+### Logs
+
+The logs use `log/slog`: `log.Main` is a `*slog.Logger` (JSON in production, text otherwise) with the name of the server
+on each record. `log.Info("message", "key", value)`, `log.Warn`, `log.Error`, `log.Debug` and `log.With` log with it.
+In a test, `logtest.Replace(&log.Main, slog.LevelInfo)` collects the records of the code under test.
+
 ### Secrets
 
 The configuration file should hold no secret (`jwt.secret`, `database.password`, `kafka.sasl.password`, `smtp.password`,

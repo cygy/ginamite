@@ -15,8 +15,6 @@ import (
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/queue"
-
-	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -123,8 +121,8 @@ func withoutURL(err error) error {
 
 // logError logs that the location of an IP address can not be retrieved, and will not be by trying again.
 func logError(IPAddress string, err error) {
-	log.WithFields(logrus.Fields{
-		"IP":    IPAddress,
-		"error": withoutURL(err).Error(),
-	}).Error("unable to get or save the location of the IP address")
+	log.Error("unable to get or save the location of the IP address",
+		"IP", IPAddress,
+		"error", withoutURL(err).Error(),
+	)
 }

@@ -3,6 +3,7 @@ package kafka
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"maps"
 	"strings"
 	"sync/atomic"
@@ -12,8 +13,7 @@ import (
 	"github.com/cygy/ginamite/common/broker"
 
 	"github.com/IBM/sarama"
-	"github.com/sirupsen/logrus"
-	logtest "github.com/sirupsen/logrus/hooks/test"
+	"github.com/cygy/ginamite/common/log/logtest"
 )
 
 // fakeProducer is a producer which gives its messages to the test.
@@ -113,7 +113,7 @@ func TestClient_SendMessageToTopic_NoProducer(t *testing.T) {
 	NewClient().SendMessageToTopic("hello", "topic")
 
 	entry := hook.LastEntry()
-	if entry == nil || entry.Level != logrus.ErrorLevel || entry.Message != "can not send message" {
+	if entry == nil || entry.Level != slog.LevelError || entry.Message != "can not send message" {
 		t.Errorf("entry = %+v", entry)
 	}
 }
@@ -337,7 +337,7 @@ func TestClient_logStats(t *testing.T) {
 
 	for _, entry := range hook.AllEntries() {
 		if entry.Message == "kafka stats" {
-			if entry.Data["received"] != uint64(3) || entry.Data["lag app_mail/0"] != int64(4) {
+			if entry.Data["received"] != uint(3) || entry.Data["lag app_mail/0"] != 4 {
 				t.Errorf("stats = %v", entry.Data)
 			}
 

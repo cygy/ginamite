@@ -12,8 +12,6 @@ import (
 	"github.com/cygy/ginamite/worker/notification"
 	"github.com/cygy/ginamite/worker/tasks/async/location"
 	"github.com/cygy/ginamite/worker/tasks/async/user"
-
-	"github.com/sirupsen/logrus"
 )
 
 // errUndecodable is the error of a message which can not be decoded: it is dead-lettered without being tried again.
@@ -44,7 +42,7 @@ func (s *Server) CreateConsumers() []broker.MessageConsumer {
 	for _, wanted := range s.Config.WorkerConsumers {
 		i := slices.IndexFunc(all, func(c broker.MessageConsumer) bool { return c.Topic == wanted.Topic })
 		if i < 0 {
-			log.WithField("topic", wanted.Topic).Error("unknown kafka topic of the worker")
+			log.Error("unknown kafka topic of the worker", "topic", wanted.Topic)
 			continue
 		}
 
@@ -168,8 +166,8 @@ func (s *Server) handleMail(value []byte) error {
 
 // warnUnknownMessage logs a warning about a message no function handled.
 func warnUnknownMessage(topic, msgType string) {
-	log.WithFields(logrus.Fields{
-		"topic": topic,
-		"type":  msgType,
-	}).Warn("unknown kafka message")
+	log.Warn("unknown kafka message",
+		"topic", topic,
+		"type", msgType,
+	)
 }

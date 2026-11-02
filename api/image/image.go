@@ -7,8 +7,6 @@ import (
 	"strings"
 
 	"github.com/cygy/ginamite/common/log"
-
-	"github.com/sirupsen/logrus"
 )
 
 // SaveFill saves different versions of an image to destination.
@@ -28,10 +26,10 @@ func Delete(filenames []string, directory string) {
 			path := directory + "/" + filename
 			err := os.Remove(path)
 			if err != nil {
-				log.WithFields(logrus.Fields{
-					"path":  path,
-					"error": err.Error(),
-				}).Error("unable to delete a file")
+				log.Error("unable to delete a file",
+					"path", path,
+					"error", err.Error(),
+				)
 			}
 		}
 	}

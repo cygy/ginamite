@@ -9,8 +9,6 @@ import (
 	"strings"
 
 	"github.com/cygy/ginamite/common/log"
-
-	"github.com/sirupsen/logrus"
 )
 
 // Configuration holds the timezones, the countries and the links between them.
@@ -66,7 +64,7 @@ func (conf *Configuration) Initialize(filepath string) error {
 
 	defer func() {
 		if closeErr := file.Close(); closeErr != nil {
-			log.WithField("error", closeErr).Error("unable to close the timezones file")
+			log.Error("unable to close the timezones file", "error", closeErr)
 		}
 	}()
 
@@ -122,10 +120,10 @@ func (conf *Configuration) Initialize(filepath string) error {
 		conf.CountriesByTimezones[timezone] = values
 	}
 
-	log.WithFields(logrus.Fields{
-		"countries": len(conf.Countries),
-		"timezones": len(conf.Timezones),
-	}).Info("timezones loaded")
+	log.Info("timezones loaded",
+		"countries", len(conf.Countries),
+		"timezones", len(conf.Timezones),
+	)
 
 	return nil
 }

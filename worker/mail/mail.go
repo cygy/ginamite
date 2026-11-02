@@ -14,7 +14,6 @@ import (
 	"github.com/cygy/ginamite/common/weburl"
 
 	"github.com/domodwyer/mailyak/v3"
-	"github.com/sirupsen/logrus"
 )
 
 // The templates of the emails, each one having a HTML (.html) and a text (.txt) version.
@@ -55,7 +54,7 @@ func (f IsEmailAddressValidFunc) check(ctx context.Context, emailAddress string)
 
 	isValid, err := f(ctx, emailAddress)
 	if err != nil {
-		log.WithField("error", err.Error()).Error("unable to check the email address")
+		log.Error("unable to check the email address", "error", err.Error())
 	}
 
 	return isValid && err == nil
@@ -147,28 +146,28 @@ func (m *Mailer) Send(msg Message) error {
 
 	// The variables are not logged: they contain the keys of the confirmation links.
 	if err := m.settings.HTMLTemplates.ExecuteTemplate(message.HTML(), msg.Template+".html", fullHTMLVars); err != nil {
-		log.WithFields(logrus.Fields{
-			"template": msg.Template,
-			"error":    err.Error(),
-		}).Error("unable to execute the template")
+		log.Error("unable to execute the template",
+			"template", msg.Template,
+			"error", err.Error(),
+		)
 
 		return broker.Permanent(fmt.Errorf("unable to execute the template %s: %w", msg.Template, err))
 	}
 
 	if err := m.settings.TextTemplates.ExecuteTemplate(message.Plain(), msg.Template+".txt", fullTextVars); err != nil {
-		log.WithFields(logrus.Fields{
-			"template": msg.Template,
-			"error":    err.Error(),
-		}).Error("unable to execute the template")
+		log.Error("unable to execute the template",
+			"template", msg.Template,
+			"error", err.Error(),
+		)
 
 		return broker.Permanent(fmt.Errorf("unable to execute the template %s: %w", msg.Template, err))
 	}
 
 	if err := message.Send(); err != nil {
-		log.WithFields(logrus.Fields{
-			"SMTP":  m.smtpHost,
-			"error": err.Error(),
-		}).Error("unable to send mail")
+		log.Error("unable to send mail",
+			"SMTP", m.smtpHost,
+			"error", err.Error(),
+		)
 
 		return fmt.Errorf("unable to send mail: %w", err)
 	}

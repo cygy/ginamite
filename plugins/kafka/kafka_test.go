@@ -3,14 +3,14 @@ package kafka
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"testing"
 
 	"github.com/cygy/ginamite/common/broker"
 	"github.com/cygy/ginamite/common/log"
 
-	"github.com/sirupsen/logrus"
-	logtest "github.com/sirupsen/logrus/hooks/test"
+	"github.com/cygy/ginamite/common/log/logtest"
 )
 
 // hook collects the entries of the logger. The logger is never swapped back
@@ -18,9 +18,7 @@ import (
 var hook *logtest.Hook
 
 func TestMain(m *testing.M) {
-	var logger *logrus.Logger
-	logger, hook = logtest.NewNullLogger()
-	log.Main = logger.WithField("server", "test")
+	log.Main, hook = logtest.New()
 
 	os.Exit(m.Run())
 }
@@ -44,7 +42,7 @@ func TestRecover(t *testing.T) {
 		}()
 
 		entry := hook.LastEntry()
-		if entry == nil || entry.Level != logrus.WarnLevel || entry.Data["panic"] != "boom" {
+		if entry == nil || entry.Level != slog.LevelWarn || entry.Data["panic"] != "boom" {
 			t.Errorf("entry = %+v", entry)
 		}
 	})

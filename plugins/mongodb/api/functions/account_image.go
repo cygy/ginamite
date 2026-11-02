@@ -55,13 +55,13 @@ func (p *PublicAccount) UpdateImage(c *gin.Context) {
 	// is not allowed on the shared temporary directory.
 	tmpDirectory, err := os.MkdirTemp("", "account-image-")
 	if err != nil {
-		log.WithField("error", err).Error("unable to create the temporary directory")
+		log.Error("unable to create the temporary directory", "error", err)
 		response.UnableToSaveFile(c, ctxLocale.Get(c), errorMessageKey)
 		return
 	}
 	defer func() {
 		if err := os.RemoveAll(tmpDirectory); err != nil {
-			log.WithField("error", err).Error("unable to remove the temporary directory")
+			log.Error("unable to remove the temporary directory", "error", err)
 		}
 	}()
 

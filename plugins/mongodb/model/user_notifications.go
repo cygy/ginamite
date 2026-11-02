@@ -77,7 +77,7 @@ func GetUserNotificationTargetsByType(ctx context.Context, userID, notificationT
 	}
 	defer func() {
 		if err := cursor.Close(ctx); err != nil {
-			log.WithField("error", err).Error("unable to close the cursor")
+			log.Error("unable to close the cursor", "error", err)
 		}
 	}()
 

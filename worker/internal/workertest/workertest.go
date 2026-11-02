@@ -10,17 +10,14 @@ import (
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/queue"
 
-	"github.com/sirupsen/logrus"
-	logtest "github.com/sirupsen/logrus/hooks/test"
+	"github.com/cygy/ginamite/common/log/logtest"
 )
 
 // Hook collects the entries of the main logger, which discards them.
 var Hook *logtest.Hook
 
 func init() {
-	var logger *logrus.Logger
-	logger, Hook = logtest.NewNullLogger()
-	log.Main = logger.WithField("server", "test")
+	log.Main, Hook = logtest.New()
 }
 
 // Queue is the capture of the messages sent to the broker.

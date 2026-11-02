@@ -17,7 +17,6 @@ require (
 	github.com/gosimple/slug v1.15.0
 	github.com/mssola/useragent v1.0.0
 	github.com/nicksnyder/go-i18n/v2 v2.7.0
-	github.com/sirupsen/logrus v1.10.2
 	github.com/tredoe/osutil v1.5.0
 	golang.org/x/text v0.43.0
 	gopkg.in/yaml.v3 v3.0.1

@@ -62,11 +62,11 @@ func (p *Processes) WrongAccessToForgotPasswordProcess(ctx context.Context, proc
 
 	if fpp.Tries >= 2 {
 		if err := fpp.Delete(ctx, mongoSession); err != nil {
-			log.WithField("error", err).Error("unable to delete")
+			log.Error("unable to delete", "error", err)
 		}
 	} else {
 		if err := fpp.Increment(ctx, mongoSession); err != nil {
-			log.WithField("error", err).Error("unable to increment")
+			log.Error("unable to increment", "error", err)
 		}
 	}
 }

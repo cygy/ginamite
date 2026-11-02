@@ -7,8 +7,6 @@ import (
 	"strings"
 
 	"github.com/cygy/ginamite/common/log"
-
-	"github.com/sirupsen/logrus"
 )
 
 // SetVar defines a variable of the page.
@@ -101,18 +99,18 @@ func replaceVars(entry string, vars any) string {
 
 	t, err := template.New("_temp").Parse(entry)
 	if err != nil {
-		log.WithFields(logrus.Fields{
-			"string": entry,
-			"error":  err.Error(),
-		}).Error("unable to parse the string")
+		log.Error("unable to parse the string",
+			"string", entry,
+			"error", err.Error(),
+		)
 		return ""
 	}
 
 	if err := t.Execute(&output, vars); err != nil {
-		log.WithFields(logrus.Fields{
-			"string": entry,
-			"error":  err.Error(),
-		}).Error("unable to execute the template")
+		log.Error("unable to execute the template",
+			"string", entry,
+			"error", err.Error(),
+		)
 		return ""
 	}
 

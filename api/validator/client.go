@@ -10,7 +10,6 @@ import (
 	"github.com/cygy/ginamite/common/log"
 
 	resty "github.com/go-resty/resty/v2"
-	"github.com/sirupsen/logrus"
 )
 
 func apiClient(host string, timeOut, retryCount int, debugMode bool) *resty.Client {
@@ -27,18 +26,16 @@ func apiClient(host string, timeOut, retryCount int, debugMode bool) *resty.Clie
 func extractClaimsFromJWTToken(token string, value any, validator TokenValidator) bool {
 	segments := strings.Split(token, ".")
 	if len(segments) != 3 {
-		log.WithFields(logrus.Fields{
-			"source": validator.SourceName(),
-		}).Error("wrong JWT token format")
+		log.Error("wrong JWT token format", "source", validator.SourceName())
 		return false
 	}
 
 	parsed, err := base64.RawURLEncoding.DecodeString(segments[1])
 	if err != nil {
-		log.WithFields(logrus.Fields{
-			"source": validator.SourceName(),
-			"error":  err.Error(),
-		}).Error("unable to parse JWT token")
+		log.Error("unable to parse JWT token",
+			"source", validator.SourceName(),
+			"error", err.Error(),
+		)
 		return false
 	}
 
@@ -51,14 +48,11 @@ func extractClaimsFromJWTToken(token string, value any, validator TokenValidator
 
 func logResponseToken(validator TokenValidator, r *resty.Response, err error) bool {
 	if err != nil || r.StatusCode() != http.StatusOK {
-		entry := log.WithFields(logrus.Fields{
-			"source":     validator.SourceName(),
-			"statusCode": r.StatusCode(),
-		})
+		attrs := []any{"source", validator.SourceName(), "statusCode", r.StatusCode()}
 		if err != nil {
-			entry = entry.WithField("error", err.Error())
+			attrs = append(attrs, "error", err.Error())
 		}
-		entry.Error("unable to validate token")
+		log.Error("unable to validate token", attrs...)
 
 		return false
 	}
@@ -68,10 +62,10 @@ func logResponseToken(validator TokenValidator, r *resty.Response, err error) bo
 
 func logParseToken(validator TokenValidator, rawToken []byte, value any) bool {
 	if err := json.Unmarshal(rawToken, value); err != nil {
-		log.WithFields(logrus.Fields{
-			"source": validator.SourceName(),
-			"error":  err.Error(),
-		}).Error("unable to parse token")
+		log.Error("unable to parse token",
+			"source", validator.SourceName(),
+			"error", err.Error(),
+		)
 
 		return false
 	}

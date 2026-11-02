@@ -1,7 +1,7 @@
 package model
 
 import (
-	"io"
+	"log/slog"
 	"os"
 	"testing"
 
@@ -9,7 +9,6 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	log.Initialize("test", false)
-	log.Main.Logger.SetOutput(io.Discard)
+	log.Main = slog.New(slog.DiscardHandler)
 	os.Exit(m.Run())
 }

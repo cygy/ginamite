@@ -2,31 +2,30 @@ package tasks
 
 import (
 	"errors"
+	"log/slog"
 	"testing"
 
 	"github.com/cygy/ginamite/worker/internal/workertest"
-
-	"github.com/sirupsen/logrus"
 )
 
 func TestLog(t *testing.T) {
-	fields := &logrus.Fields{"count": 3}
+	fields := []any{"count", 3}
 
 	tests := []struct {
 		name      string
 		log       func()
-		wantLevel logrus.Level
+		wantLevel slog.Level
 		wantMsg   string
 		wantExtra bool
 		wantErr   string
 	}{
-		{"started", func() { LogStarted("t", nil) }, logrus.InfoLevel, "task started", false, ""},
-		{"started with fields", func() { LogStarted("t", fields) }, logrus.InfoLevel, "task started", true, ""},
-		{"done", func() { LogDone("t", nil) }, logrus.InfoLevel, "task done", false, ""},
-		{"done with fields", func() { LogDone("t", fields) }, logrus.InfoLevel, "task done", true, ""},
-		{"error", func() { LogError("t", errors.New("boom"), nil) }, logrus.ErrorLevel, "task error", false, "boom"},
-		{"error with fields", func() { LogError("t", errors.New("boom"), fields) }, logrus.ErrorLevel, "task error", true, "boom"},
-		{"error without error", func() { LogError("t", nil, nil) }, logrus.ErrorLevel, "task error", false, ""},
+		{"started", func() { LogStarted("t") }, slog.LevelInfo, "task started", false, ""},
+		{"started with fields", func() { LogStarted("t", fields...) }, slog.LevelInfo, "task started", true, ""},
+		{"done", func() { LogDone("t") }, slog.LevelInfo, "task done", false, ""},
+		{"done with fields", func() { LogDone("t", fields...) }, slog.LevelInfo, "task done", true, ""},
+		{"error", func() { LogError("t", errors.New("boom")) }, slog.LevelError, "task error", false, "boom"},
+		{"error with fields", func() { LogError("t", errors.New("boom"), fields...) }, slog.LevelError, "task error", true, "boom"},
+		{"error without error", func() { LogError("t", nil) }, slog.LevelError, "task error", false, ""},
 	}
 
 	for _, tt := range tests {

@@ -7,7 +7,6 @@ import (
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
 	"github.com/cygy/ginamite/plugins/mongodb/mongo/bson"
-	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
@@ -19,10 +18,10 @@ func (f *Functions) CreateIndexes(ctx context.Context, indexes []IndexToCreate) 
 	for _, index := range indexes {
 		_, err := db.Collection(index.Collection).Indexes().CreateOne(ctx, index.Index)
 		if err != nil {
-			log.WithFields(logrus.Fields{
-				"error":      err.Error(),
-				"collection": index.Collection,
-			}).Error("create mongoDB index")
+			log.Error("create mongoDB index",
+				"error", err.Error(),
+				"collection", index.Collection,
+			)
 		}
 	}
 }
@@ -34,11 +33,11 @@ func (f *Functions) RemoveIndexes(ctx context.Context, indexes []IndexToDelete) 
 	for _, index := range indexes {
 		err := db.Collection(index.Collection).Indexes().DropOne(ctx, index.IndexName)
 		if err != nil && !IsNotFound(err, errorCodeIndexNotFound, fmt.Sprintf("index not found with name [%s]", index.IndexName)) {
-			log.WithFields(logrus.Fields{
-				"error":      err.Error(),
-				"collection": index.Collection,
-				"index":      index.IndexName,
-			}).Error("delete mongoDB index")
+			log.Error("delete mongoDB index",
+				"error", err.Error(),
+				"collection", index.Collection,
+				"index", index.IndexName,
+			)
 		}
 	}
 }

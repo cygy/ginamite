@@ -13,8 +13,6 @@ import (
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/weburl"
 	"github.com/cygy/ginamite/worker/tasks"
-
-	"github.com/sirupsen/logrus"
 )
 
 // batchSize is the number of variables requested at once to generate the URLs of a route.
@@ -93,7 +91,7 @@ func (g *generator) generate(ctx context.Context) {
 
 	g.closeSitemaps(mainSitemaps)
 	if err := g.index.Close(); err != nil {
-		log.WithField("error", err).Error("unable to close the index sitemap")
+		log.Error("unable to close the index sitemap", "error", err)
 	}
 
 	tasks.LogDone(g.taskName, nil)
@@ -154,10 +152,8 @@ func (g *generator) createSitemaps(key string, round int) map[string]*File {
 func (g *generator) closeSitemaps(sitemaps map[string]*File) {
 	for _, sitemap := range sitemaps {
 		if err := sitemap.Close(); err != nil {
-			tasks.LogError(g.taskName, err, &logrus.Fields{
-				"filename": sitemap.Name,
-				"path":     sitemap.Path,
-			})
+			tasks.LogError(g.taskName, err, "filename", sitemap.Name,
+				"path", sitemap.Path)
 			continue
 		}
 
@@ -170,10 +166,8 @@ func (g *generator) closeSitemaps(sitemaps map[string]*File) {
 func (g *generator) newFile(filename string, isIndex bool) (*File, bool) {
 	sitemap, err := NewFile(g.path, filename, isIndex)
 	if err != nil {
-		tasks.LogError(g.taskName, err, &logrus.Fields{
-			"filename": filename,
-			"path":     g.path,
-		})
+		tasks.LogError(g.taskName, err, "filename", filename,
+			"path", g.path)
 		return nil, false
 	}
 
