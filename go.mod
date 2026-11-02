@@ -1,15 +1,14 @@
 module github.com/cygy/ginamite
 
-go 1.26.0
+go 1.26.10
 
 toolchain go1.27.3
 
 require (
 	github.com/IBM/sarama v1.61.1
-	github.com/disintegration/imaging v1.6.2
 	github.com/domodwyer/mailyak/v3 v3.6.2
 	github.com/dustin/go-humanize v1.1.0
-	github.com/gin-contrib/gzip v1.2.8
+	github.com/gin-contrib/gzip v1.2.9
 	github.com/gin-gonic/gin v1.12.0
 	github.com/go-resty/resty/v2 v2.17.2
 	github.com/golang-jwt/jwt/v5 v5.3.1
@@ -17,15 +16,15 @@ require (
 	github.com/gosimple/slug v1.15.0
 	github.com/mssola/useragent v1.0.0
 	github.com/nicksnyder/go-i18n/v2 v2.7.0
-	github.com/tredoe/osutil v1.5.0
 	golang.org/x/text v0.43.0
-	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
 	github.com/xdg-go/scram v1.2.0
 	go.mongodb.org/mongo-driver/v2 v2.9.2
+	go.yaml.in/yaml/v3 v3.0.6
 	golang.org/x/crypto v0.58.0
+	golang.org/x/image v0.47.0
 )
 
 require (
@@ -67,7 +66,6 @@ require (
 	github.com/xdg-go/stringprep v1.0.4 // indirect
 	github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78 // indirect
 	golang.org/x/arch v0.32.0 // indirect
-	golang.org/x/image v0.47.0 // indirect
 	golang.org/x/net v0.62.0 // indirect
 	golang.org/x/sync v0.24.0 // indirect
 	golang.org/x/sys v0.49.0 // indirect

@@ -14,7 +14,7 @@ import (
 	"github.com/cygy/ginamite/web/context"
 
 	"github.com/gin-gonic/gin"
-	yaml "gopkg.in/yaml.v3"
+	yaml "go.yaml.in/yaml/v3"
 )
 
 // Configuration is the configuration of the routes, loaded from the routes file.

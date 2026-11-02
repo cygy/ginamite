@@ -9,8 +9,6 @@ import (
 
 	"github.com/cygy/ginamite/common/authentication"
 	commonErrors "github.com/cygy/ginamite/common/errors"
-
-	"github.com/tredoe/osutil/user/crypt/sha512_crypt"
 )
 
 const loginDevice = `"source":"web","device":{"type":"mobile","name":"iPhone"}`
@@ -149,10 +147,8 @@ func TestRefreshAuthToken(t *testing.T) {
 }
 
 func TestLoginWithPassword_UpgradesTheLegacyHash(t *testing.T) {
-	legacy, err := sha512_crypt.New().Generate([]byte("Abcdefghij1"), []byte("$6$rounds=5000$abcdefghijklmnop$"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	// The SHA-512 crypt hash of Abcdefghij1, as the first versions of the package created it.
+	const legacy = "$6$rounds=5000$abcdefghijklmnop$mzcQgvZBP9wLh4ZqOH0h1gWll.8f6RtvBXf6jk1vWRdqnRo3i4FGWvNswXhZxA6wv.No39/Bp04w2duhCpvQS0"
 	current, err := authentication.EncryptPassword("Abcdefghij1")
 	if err != nil {
 		t.Fatal(err)

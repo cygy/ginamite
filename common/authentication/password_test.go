@@ -3,15 +3,13 @@ package authentication
 import (
 	"strings"
 	"testing"
-
-	"github.com/tredoe/osutil/user/crypt/sha512_crypt"
 )
 
 // legacyHash returns the SHA-512 crypt hash the first versions of the package created.
 func legacyHash(t *testing.T, password string) string {
 	t.Helper()
 
-	hash, err := sha512_crypt.New().Generate([]byte(password), []byte("$6$rounds=5000$abcdefghijklmnop$"))
+	hash, err := sha512Crypt(password, "$6$rounds=5000$abcdefghijklmnop$")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -109,5 +107,36 @@ func TestDummyCompare(t *testing.T) {
 
 	if !strings.HasPrefix(dummyHash(), "$argon2id$") || ComparePassword("anything", dummyHash()) {
 		t.Error("the dummy hash must be a valid hash of an unknown password")
+	}
+}
+
+func TestSHA512Crypt(t *testing.T) {
+	// The test vectors of the specification, https://www.akkadia.org/drepper/SHA-crypt.txt.
+	tests := []struct {
+		setting, password, want string
+	}{
+		{"$6$saltstring", "Hello world!", "$6$saltstring$svn8UoSVapNtMuq1ukKS4tPQd8iKwSMHWjl/O817G3uBnIFNjnQJuesI68u4OTLiBFdcbYEdFCoEOfaS35inz1"},
+		{"$6$rounds=10000$saltstringsaltstring", "Hello world!", "$6$rounds=10000$saltstringsaltst$OW1/O6BYHV6BcXZu8QVeXbDWra3Oeqh0sbHbbMCVNSnCM/UrjmM0Dp8vOuZeHBy/YTBmSK6H9qs/y3RnOaw5v."},
+		{"$6$rounds=5000$toolongsaltstring", "This is just a test", "$6$rounds=5000$toolongsaltstrin$lQ8jolhgVRVhY4b5pZKaysCLi0QBxGoNeKQzQ3glMhwllF7oGDZxUhx1yxdYcz/e1JSbq3y6JMxxl8audkUEm0"},
+		{"$6$rounds=10$roundstoolow", "the minimum number is still observed", "$6$rounds=1000$roundstoolow$kUMsbe306n21p9R.FRkW3IGn.S9NPN0x50YhH1xhLsPuWGsUSklZt58jaTfF4ZEQpyUNGc0dqbpBYYBaHHrsX."},
+	}
+
+	for _, tt := range tests {
+		got, err := sha512Crypt(tt.password, tt.setting)
+		if err != nil || got != tt.want {
+			t.Errorf("sha512Crypt(%q, %q) = %q, %v; want %q", tt.password, tt.setting, got, err, tt.want)
+		}
+		// A hash is its own setting: verifying it gives it back.
+		if again, err := sha512Crypt(tt.password, got); err != nil || again != got {
+			t.Errorf("sha512Crypt(%q, hash) = %q, %v; want the hash", tt.password, again, err)
+		}
+	}
+}
+
+func TestSHA512Crypt_InvalidSettings(t *testing.T) {
+	for _, setting := range []string{"$5$salt$", "salt", "$6$rounds=x$salt$", "$6$rounds=2000000$salt$"} {
+		if _, err := sha512Crypt("password", setting); err == nil {
+			t.Errorf("sha512Crypt(%q) must return an error", setting)
+		}
 	}
 }

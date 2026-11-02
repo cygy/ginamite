@@ -10,7 +10,6 @@ import (
 
 	"github.com/cygy/ginamite/common/random"
 
-	"github.com/tredoe/osutil/user/crypt/sha512_crypt"
 	"golang.org/x/crypto/argon2"
 )
 
@@ -123,13 +122,7 @@ func compareArgon2(password, hash string) bool {
 }
 
 func compareLegacy(password, encryptedPassword string) bool {
-	lastIndex := strings.LastIndex(encryptedPassword, "$")
-	if lastIndex < 0 {
-		return false
-	}
-
-	salt := encryptedPassword[:lastIndex]
-	hash, err := sha512_crypt.New().Generate([]byte(password), []byte(salt+"$"))
+	hash, err := sha512Crypt(password, encryptedPassword)
 
 	return err == nil && subtle.ConstantTimeCompare([]byte(hash), []byte(encryptedPassword)) == 1
 }

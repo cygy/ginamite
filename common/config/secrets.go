@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	yaml "gopkg.in/yaml.v3"
+	yaml "go.yaml.in/yaml/v3"
 )
 
 // Tags of the YAML values read from outside of the configuration file, so that it holds no secret:

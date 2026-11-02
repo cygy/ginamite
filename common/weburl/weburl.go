@@ -8,7 +8,7 @@ import (
 
 	"github.com/cygy/ginamite/common/log"
 
-	yaml "gopkg.in/yaml.v3"
+	yaml "go.yaml.in/yaml/v3"
 )
 
 // Configuration holds the web routes, loaded from a YAML file.

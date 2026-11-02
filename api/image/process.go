@@ -7,11 +7,11 @@ import (
 	"path/filepath"
 
 	"github.com/cygy/ginamite/common/log"
-
-	"github.com/disintegration/imaging"
 )
 
-func save(src, directoryDest string, width, height int, saveSmallVersion, saveThumbVersion, fit bool) (*Versions, error) {
+// save decodes the image src, then saves each of its versions in directoryDest, scaled to fit in its size if fitIn is
+// true, or to fill it otherwise. It returns an error if the image has too many pixels, can not be decoded or saved.
+func save(src, directoryDest string, width, height int, saveSmallVersion, saveThumbVersion, fitIn bool) (*Versions, error) {
 	if err := checkPixels(src); err != nil {
 		log.Error("unable to accept a file image",
 			"path", src,
@@ -20,7 +20,7 @@ func save(src, directoryDest string, width, height int, saveSmallVersion, saveTh
 		return nil, err
 	}
 
-	f, err := imaging.Open(src)
+	decoded, err := open(src)
 	if err != nil {
 		log.Error("unable to open a file image",
 			"path", src,
@@ -44,16 +44,12 @@ func save(src, directoryDest string, width, height int, saveSmallVersion, saveTh
 			}
 		}
 
-		var image *image.NRGBA
-
-		if fit {
-			image = imaging.Fit(f, property.Width, property.Height, imaging.Lanczos)
-		} else {
-			image = imaging.Fill(f, property.Width, property.Height, imaging.Center, imaging.Lanczos)
+		resize := fill
+		if fitIn {
+			resize = fit
 		}
 
-		err = imaging.Save(image, property.AbsolutePath)
-		if err != nil {
+		if err := write(resize(decoded, property.Width, property.Height), property.AbsolutePath); err != nil {
 			log.Error("unable to save a file image",
 				"src", src,
 				"dest", property.AbsolutePath,

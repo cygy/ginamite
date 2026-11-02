@@ -8,7 +8,7 @@ import (
 	"github.com/cygy/ginamite/common/config/environment"
 	"github.com/cygy/ginamite/common/config/version"
 
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 )
 
 // DefaultMaxBodySize is the default maximum size of the body of a request, in bytes, see
