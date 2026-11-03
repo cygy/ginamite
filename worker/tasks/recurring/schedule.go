@@ -67,8 +67,14 @@ func (s *Scheduler) Start(ctx context.Context) {
 			reason = "interval not defined"
 		}
 
+		// A task disabled in the configuration is expected; a task without function or interval is an error of the
+		// configuration or of the application.
 		if reason != "" {
-			log.Error("task not scheduled",
+			logNotScheduled := log.Error
+			if !task.Enabled {
+				logNotScheduled = log.Info
+			}
+			logNotScheduled("task not scheduled",
 				"name", name,
 				"reason", reason,
 			)

@@ -2,6 +2,7 @@ package recurring
 
 import (
 	"context"
+	"log/slog"
 	"sync"
 	"testing"
 	"time"
@@ -91,9 +92,12 @@ func TestScheduler_Start(t *testing.T) {
 	}
 
 	reasons := map[string]string{}
+	levels := map[string]slog.Level{}
 	for _, entry := range workertest.Hook.AllEntries() {
 		if entry.Message == "task not scheduled" {
-			reasons[entry.Data["name"].(string)] = entry.Data["reason"].(string)
+			name := entry.Data["name"].(string)
+			reasons[name] = entry.Data["reason"].(string)
+			levels[name] = entry.Level
 		}
 	}
 	want := map[string]string{"disabled": "not enabled", "no func": "func not defined", "no interval": "interval not defined"}
@@ -103,6 +107,13 @@ func TestScheduler_Start(t *testing.T) {
 	for name, reason := range want {
 		if reasons[name] != reason {
 			t.Errorf("reason of %q = %q, want %q", name, reasons[name], reason)
+		}
+	}
+	// A disabled task is expected, the others are errors.
+	wantLevels := map[string]slog.Level{"disabled": slog.LevelInfo, "no func": slog.LevelError, "no interval": slog.LevelError}
+	for name, level := range wantLevels {
+		if levels[name] != level {
+			t.Errorf("level of %q = %v, want %v", name, levels[name], level)
 		}
 	}
 }
