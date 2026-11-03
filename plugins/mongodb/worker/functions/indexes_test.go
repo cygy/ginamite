@@ -6,8 +6,10 @@ import (
 
 	"github.com/cygy/ginamite/plugins/mongodb/model"
 	"github.com/cygy/ginamite/plugins/mongodb/mongo/bson"
+	"github.com/cygy/ginamite/plugins/mongodb/mongo/store/mock"
 
 	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 func TestCreateIndexes(t *testing.T) {
@@ -26,6 +28,63 @@ func TestCreateIndexes(t *testing.T) {
 	fns.CreateIndexes(context.Background(), []IndexToCreate{{Collection: "one", Index: index}})
 	if len(db.Coll("one").IndexView.Created) != 2 {
 		t.Error("the index must be created again")
+	}
+}
+
+func TestCreateIndexes_Conflict(t *testing.T) {
+	named := mongo.IndexModel{Keys: bson.D{{Key: "a", Value: 1}}, Options: options.Index().SetName("a_1").SetUnique(true)}
+	unnamed := mongo.IndexModel{Keys: bson.D{{Key: "a", Value: 1}}, Options: options.Index().SetUnique(true)}
+	keySpecs := mongo.CommandError{Code: errorCodeIndexKeySpecsConflict, Message: "An existing index has the same name"}
+	optionsConflict := mongo.CommandError{Code: errorCodeIndexOptionsConflict, Message: "Index already exists with different options"}
+
+	tests := []struct {
+		name        string
+		index       mongo.IndexModel
+		createErrs  []error
+		err         error
+		wantDropped int
+		wantCreated int
+	}{
+		{"key specs conflict replaced", named, []error{keySpecs}, nil, 1, 2},
+		{"options conflict replaced", named, []error{optionsConflict}, nil, 1, 2},
+		{"index created again with an error", named, []error{keySpecs, errBoom}, nil, 1, 2},
+		{"no name to drop", unnamed, []error{keySpecs}, nil, 0, 1},
+		{"drop failed", named, []error{keySpecs}, errBoom, 1, 1},
+		{"other error", named, []error{errBoom}, nil, 0, 1},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fns, db := withMainSession(t)
+			view := &mock.IndexView{CreateErrs: tt.createErrs, Err: tt.err}
+			db.Coll("one").IndexView = view
+
+			fns.CreateIndexes(context.Background(), []IndexToCreate{{Collection: "one", Index: tt.index}})
+			if len(view.Dropped) != tt.wantDropped || len(view.Created) != tt.wantCreated {
+				t.Fatalf("dropped = %v, created %d indexes", view.Dropped, len(view.Created))
+			}
+			if tt.wantDropped == 1 && view.Dropped[0] != "a_1" {
+				t.Errorf("dropped = %v, want a_1", view.Dropped)
+			}
+		})
+	}
+}
+
+func TestIndexName(t *testing.T) {
+	tests := []struct {
+		name  string
+		index mongo.IndexModel
+		want  string
+	}{
+		{"no options", mongo.IndexModel{}, ""},
+		{"generated name", mongo.IndexModel{Options: options.Index().SetUnique(true)}, ""},
+		{"name set", mongo.IndexModel{Options: options.Index().SetUnique(true).SetName("a_1")}, "a_1"},
+	}
+
+	for _, tt := range tests {
+		if got := indexName(tt.index); got != tt.want {
+			t.Errorf("%s: indexName() = %q, want %q", tt.name, got, tt.want)
+		}
 	}
 }
 

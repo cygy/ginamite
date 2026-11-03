@@ -254,6 +254,15 @@ func TestIndexes(t *testing.T) {
 	if err := view.DropAll(ctx); !errors.Is(err, boom) {
 		t.Errorf("DropAll err = %v", err)
 	}
+
+	// The errors of CreateErrs come first, in order, then Err.
+	first := errors.New("first")
+	c.IndexView.CreateErrs = []error{first, nil}
+	for i, want := range []error{first, nil, boom} {
+		if _, err := view.CreateOne(ctx, mongo.IndexModel{}); !errors.Is(err, want) {
+			t.Errorf("CreateOne #%d err = %v, want %v", i, err, want)
+		}
+	}
 }
 
 func TestResult(t *testing.T) {

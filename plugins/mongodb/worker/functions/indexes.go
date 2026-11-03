@@ -2,21 +2,44 @@ package functions
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
 	"github.com/cygy/ginamite/plugins/mongodb/mongo/bson"
+	"github.com/cygy/ginamite/plugins/mongodb/mongo/store"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
-// CreateIndexes creates the indexes of the collections.
+const (
+	// errorCodeIndexOptionsConflict is the code of the MongoDB error returned when an index of the same name exists
+	// with other options.
+	errorCodeIndexOptionsConflict = 85
+
+	// errorCodeIndexKeySpecsConflict is the code of the MongoDB error returned when an index of the same name exists
+	// with other keys or another specification.
+	errorCodeIndexKeySpecsConflict = 86
+)
+
+// CreateIndexes creates the indexes of the collections. An index whose name is already used by an index with another
+// definition, created by an older version, is dropped and created again with its new definition.
 func (f *Functions) CreateIndexes(ctx context.Context, indexes []IndexToCreate) {
 	db := f.database()
 
 	for _, index := range indexes {
-		_, err := db.Collection(index.Collection).Indexes().CreateOne(ctx, index.Index)
+		view := db.Collection(index.Collection).Indexes()
+
+		_, err := view.CreateOne(ctx, index.Index)
+		if name := indexName(index.Index); err != nil && name != "" && isIndexConflict(err) {
+			if err = replaceIndex(ctx, view, name, index.Index); err == nil {
+				log.Info("mongoDB index replaced",
+					"collection", index.Collection,
+					"index", name,
+				)
+			}
+		}
 		if err != nil {
 			log.Error("create mongoDB index",
 				"error", err.Error(),
@@ -24,6 +47,45 @@ func (f *Functions) CreateIndexes(ctx context.Context, indexes []IndexToCreate) 
 			)
 		}
 	}
+}
+
+// replaceIndex drops the index of the name and creates the index of the model.
+func replaceIndex(ctx context.Context, view store.IndexView, name string, index mongo.IndexModel) error {
+	if err := view.DropOne(ctx, name); err != nil {
+		return fmt.Errorf("drop the index %q with another definition: %w", name, err)
+	}
+
+	_, err := view.CreateOne(ctx, index)
+
+	return err
+}
+
+// indexName returns the name set in the options of the index, or "" if the driver generates it.
+func indexName(index mongo.IndexModel) string {
+	if index.Options == nil {
+		return ""
+	}
+
+	opts := &options.IndexOptions{}
+	for _, set := range index.Options.List() {
+		if err := set(opts); err != nil {
+			return ""
+		}
+	}
+	if opts.Name == nil {
+		return ""
+	}
+
+	return *opts.Name
+}
+
+// isIndexConflict reports whether the error of the driver means that an index of the same name exists with another
+// definition.
+func isIndexConflict(err error) bool {
+	var serverError mongo.ServerError
+
+	return errors.As(err, &serverError) &&
+		(serverError.HasErrorCode(errorCodeIndexOptionsConflict) || serverError.HasErrorCode(errorCodeIndexKeySpecsConflict))
 }
 
 // RemoveIndexes removes indexes from the collections.

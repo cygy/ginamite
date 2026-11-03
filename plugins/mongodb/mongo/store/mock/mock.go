@@ -476,6 +476,8 @@ func convert(src, dst any) error {
 type IndexView struct {
 	// Err is returned by every method.
 	Err error
+	// CreateErrs are returned, in order, by the first calls of CreateOne, before Err.
+	CreateErrs []error
 
 	mu      sync.Mutex
 	Created []mongo.IndexModel
@@ -489,6 +491,13 @@ func (v *IndexView) CreateOne(_ context.Context, model mongo.IndexModel, _ ...op
 	defer v.mu.Unlock()
 
 	v.Created = append(v.Created, model)
+
+	if len(v.CreateErrs) > 0 {
+		err := v.CreateErrs[0]
+		v.CreateErrs = v.CreateErrs[1:]
+
+		return "index", err
+	}
 
 	return "index", v.Err
 }

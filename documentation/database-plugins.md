@@ -40,3 +40,10 @@ requests. Its settings (`Plugin.UserMaxImageSize`, etc., see `Plugin.Settings`) 
 with `mongodb.NewPlugin()`, set the properties that differ from the defaults (abilities, size of the images, etc.), then
 register it. Its hooks let the application add its own collections, indexes and default documents, and update the
 documents which reference the users.
+
+At its start, the worker creates the indexes of the plugin and of the application. When the name of an index is already
+used by an index with another definition (other keys, partial filter or options, left by an older version), MongoDB
+refuses it (`IndexKeySpecsConflict` or `IndexOptionsConflict`): the worker then drops the old index and creates the new
+one, and logs `mongoDB index replaced`. Only the indexes with a name set in their options can be replaced. If the new
+definition cannot be created (for example a unique index on duplicated values), the error is logged and the collection
+is left without this index.
