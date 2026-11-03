@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
@@ -36,6 +37,16 @@ func (d driverDatabase) CreateCollection(ctx context.Context, name string, opts 
 	return d.db.CreateCollection(ctx, name, opts...)
 }
 
+// matchAll returns an empty filter for a nil filter, which mgo accepted to match all the documents and which the
+// driver rejects with mongo.ErrNilDocument.
+func matchAll(filter any) any {
+	if filter == nil {
+		return bson.D{}
+	}
+
+	return filter
+}
+
 // driverCollection adapts a *mongo.Collection to Collection.
 type driverCollection struct {
 	coll *mongo.Collection
@@ -50,32 +61,32 @@ func (c driverCollection) UpdateByID(ctx context.Context, id, update any, opts .
 }
 
 func (c driverCollection) UpdateOne(ctx context.Context, filter, update any, opts ...options.Lister[options.UpdateOneOptions]) (*mongo.UpdateResult, error) {
-	return c.coll.UpdateOne(ctx, filter, update, opts...)
+	return c.coll.UpdateOne(ctx, matchAll(filter), update, opts...)
 }
 
 func (c driverCollection) UpdateMany(ctx context.Context, filter, update any, opts ...options.Lister[options.UpdateManyOptions]) (*mongo.UpdateResult, error) {
-	return c.coll.UpdateMany(ctx, filter, update, opts...)
+	return c.coll.UpdateMany(ctx, matchAll(filter), update, opts...)
 }
 
 func (c driverCollection) DeleteOne(ctx context.Context, filter any, opts ...options.Lister[options.DeleteOneOptions]) (*mongo.DeleteResult, error) {
-	return c.coll.DeleteOne(ctx, filter, opts...)
+	return c.coll.DeleteOne(ctx, matchAll(filter), opts...)
 }
 
 func (c driverCollection) DeleteMany(ctx context.Context, filter any, opts ...options.Lister[options.DeleteManyOptions]) (*mongo.DeleteResult, error) {
-	return c.coll.DeleteMany(ctx, filter, opts...)
+	return c.coll.DeleteMany(ctx, matchAll(filter), opts...)
 }
 
 func (c driverCollection) FindOne(ctx context.Context, filter any, opts ...options.Lister[options.FindOneOptions]) SingleResult {
-	return c.coll.FindOne(ctx, filter, opts...)
+	return c.coll.FindOne(ctx, matchAll(filter), opts...)
 }
 
 func (c driverCollection) FindOneAndUpdate(ctx context.Context, filter, update any, opts ...options.Lister[options.FindOneAndUpdateOptions]) SingleResult {
-	return c.coll.FindOneAndUpdate(ctx, filter, update, opts...)
+	return c.coll.FindOneAndUpdate(ctx, matchAll(filter), update, opts...)
 }
 
 // Find returns a nil Cursor, not a typed nil, if the query fails.
 func (c driverCollection) Find(ctx context.Context, filter any, opts ...options.Lister[options.FindOptions]) (Cursor, error) {
-	cursor, err := c.coll.Find(ctx, filter, opts...)
+	cursor, err := c.coll.Find(ctx, matchAll(filter), opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +95,7 @@ func (c driverCollection) Find(ctx context.Context, filter any, opts ...options.
 }
 
 func (c driverCollection) CountDocuments(ctx context.Context, filter any, opts ...options.Lister[options.CountOptions]) (int64, error) {
-	return c.coll.CountDocuments(ctx, filter, opts...)
+	return c.coll.CountDocuments(ctx, matchAll(filter), opts...)
 }
 
 // Aggregate returns a nil Cursor, not a typed nil, if the query fails.

@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -94,5 +95,50 @@ func TestCollection_Cursors(t *testing.T) {
 	cursor, err = c.Aggregate(ctx, bson.A{})
 	if err == nil || cursor != nil {
 		t.Errorf("Aggregate = %v, %v", cursor, err)
+	}
+}
+
+func TestMatchAll(t *testing.T) {
+	if got, ok := matchAll(nil).(bson.D); !ok || len(got) != 0 {
+		t.Errorf("matchAll(nil) = %v, want an empty bson.D", got)
+	}
+
+	filter := bson.M{"a": 1}
+	if got := matchAll(filter).(bson.M); got["a"] != 1 {
+		t.Errorf("matchAll(filter) = %v, want the filter unchanged", got)
+	}
+}
+
+// TestCollection_NilFilter checks that a nil filter, which matches all the documents, is not rejected by the driver.
+func TestCollection_NilFilter(t *testing.T) {
+	ctx := context.Background()
+	c := offline(t).Collection("users")
+	update := bson.M{"$set": bson.M{"a": 1}}
+
+	cursor, findErr := c.Find(ctx, nil)
+	if cursor != nil {
+		t.Error("expected a nil cursor")
+	}
+
+	tests := []struct {
+		name string
+		err  error
+	}{
+		{"Find", findErr},
+		{"FindOne", c.FindOne(ctx, nil).Err()},
+		{"FindOneAndUpdate", c.FindOneAndUpdate(ctx, nil, update).Err()},
+		{"CountDocuments", func() error { _, err := c.CountDocuments(ctx, nil); return err }()},
+		{"UpdateOne", func() error { _, err := c.UpdateOne(ctx, nil, update); return err }()},
+		{"UpdateMany", func() error { _, err := c.UpdateMany(ctx, nil, update); return err }()},
+		{"DeleteOne", func() error { _, err := c.DeleteOne(ctx, nil); return err }()},
+		{"DeleteMany", func() error { _, err := c.DeleteMany(ctx, nil); return err }()},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.err == nil || errors.Is(tt.err, mongo.ErrNilDocument) {
+				t.Errorf("error = %v, want the connection error", tt.err)
+			}
+		})
 	}
 }
