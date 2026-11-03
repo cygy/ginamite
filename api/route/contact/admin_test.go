@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/cygy/ginamite/api/request"
+	commonErrors "github.com/cygy/ginamite/common/errors"
 )
 
 func TestGetAdminContacts(t *testing.T) {
@@ -54,6 +55,11 @@ func TestGetAdminContact(t *testing.T) {
 	if got := serve(GetAdminContact, http.MethodGet, "/abc", ""); got != http.StatusInternalServerError {
 		t.Errorf("failing function: status = %d, want %d", got, http.StatusInternalServerError)
 	}
+
+	testStorage.get = func(context.Context, string) (any, error) { return nil, commonErrors.ErrNotFound }
+	if got := serve(GetAdminContact, http.MethodGet, "/abc", ""); got != http.StatusNotFound {
+		t.Errorf("missing contact: status = %d, want %d", got, http.StatusNotFound)
+	}
 }
 
 func TestUpdate(t *testing.T) {
@@ -76,5 +82,10 @@ func TestUpdate(t *testing.T) {
 	testStorage.update = func(context.Context, string, bool) error { return errors.New("boom") }
 	if got := serve(Update, http.MethodPut, "/abc", `{"done":true}`); got != http.StatusInternalServerError {
 		t.Errorf("failing function: status = %d, want %d", got, http.StatusInternalServerError)
+	}
+
+	testStorage.update = func(context.Context, string, bool) error { return commonErrors.ErrNotFound }
+	if got := serve(Update, http.MethodPut, "/abc", `{"done":true}`); got != http.StatusNotFound {
+		t.Errorf("missing contact: status = %d, want %d", got, http.StatusNotFound)
 	}
 }

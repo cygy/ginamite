@@ -50,7 +50,7 @@ func GetAdminContact(c *gin.Context) {
 
 	contact, err := storage.GetContact(c, contactID)
 	if err != nil {
-		response.InternalServerError(c)
+		response.SendError(c, err)
 		return
 	}
 
@@ -79,7 +79,7 @@ func Update(c *gin.Context) {
 
 	err := storage.UpdateContact(c, contactID, jsonBody.Done)
 	if err != nil {
-		response.InternalServerError(c)
+		response.SendError(c, err)
 		return
 	}
 

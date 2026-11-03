@@ -3,6 +3,7 @@ package document
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"os"
 	"reflect"
 	"testing"
@@ -10,6 +11,7 @@ import (
 
 	commonErrors "github.com/cygy/ginamite/common/errors"
 	"github.com/cygy/ginamite/common/log"
+	"github.com/cygy/ginamite/common/log/logtest"
 	"github.com/cygy/ginamite/plugins/mongodb/mongo/bson"
 	"github.com/cygy/ginamite/plugins/mongodb/mongo/store"
 	"github.com/cygy/ginamite/plugins/mongodb/mongo/store/mock"
@@ -541,5 +543,29 @@ func TestNotFound(t *testing.T) {
 
 	if got := notFound(nil); got != nil {
 		t.Errorf("notFound(nil) = %v, want nil", got)
+	}
+}
+
+func TestGetDocumentByID_NotFoundNotLogged(t *testing.T) {
+	hook, restore := logtest.Replace(&log.Main, slog.LevelDebug)
+	t.Cleanup(restore)
+
+	// A missing document is an expected result, not a database error.
+	err := GetDocumentByID(context.Background(), &fakeDocument{}, "users", bson.NewObjectID().Hex(), mock.NewDatabase("app"))
+	if !commonErrors.IsNotFound(err) {
+		t.Fatalf("err = %v, want not found", err)
+	}
+	if entries := hook.AllEntries(); len(entries) != 0 {
+		t.Errorf("logs = %v, want none", entries)
+	}
+
+	// A query error is logged.
+	db := mock.NewDatabase("app")
+	db.Coll("users").Err = errors.New("boom")
+	if err := GetDocumentByID(context.Background(), &fakeDocument{}, "users", bson.NewObjectID().Hex(), db); err == nil {
+		t.Fatal("the query error must be returned")
+	}
+	if len(hook.AllEntries()) != 1 {
+		t.Errorf("logs = %v, want the database error", hook.AllEntries())
 	}
 }

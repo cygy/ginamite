@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"testing"
 
+	commonErrors "github.com/cygy/ginamite/common/errors"
 	"github.com/cygy/ginamite/common/notifications"
 )
 
@@ -34,6 +35,7 @@ func TestGetNotification(t *testing.T) {
 		{name: "missing ID", userID: testUserID, setup: get(nil), want: http.StatusBadRequest},
 		{name: "invalid ID", userID: testUserID, id: "nope", setup: get(nil), want: http.StatusBadRequest},
 		{name: "error", userID: testUserID, id: validNotificationID, setup: get(errBoom), want: http.StatusInternalServerError},
+		{name: "not found", userID: testUserID, id: validNotificationID, setup: get(commonErrors.ErrNotFound), want: http.StatusNotFound},
 		{name: "success", userID: testUserID, id: validNotificationID, setup: get(nil), want: http.StatusOK, check: contains("n1")},
 	})
 }
@@ -45,6 +47,7 @@ func notificationUpdateCases(inject func(err error) func()) []testCase {
 		{name: "missing ID", userID: testUserID, setup: inject(nil), want: http.StatusBadRequest},
 		{name: "invalid ID", userID: testUserID, id: "nope", setup: inject(nil), want: http.StatusBadRequest},
 		{name: "error", userID: testUserID, id: validNotificationID, setup: inject(errBoom), want: http.StatusInternalServerError},
+		{name: "not found", userID: testUserID, id: validNotificationID, setup: inject(commonErrors.ErrNotFound), want: http.StatusNotFound},
 		{name: "success", userID: testUserID, id: validNotificationID, setup: inject(nil), want: http.StatusOK},
 	}
 }

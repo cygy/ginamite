@@ -95,11 +95,10 @@ func GetDocumentByID(ctx context.Context, document Document, collection string, 
 	}
 
 	err = db.Collection(collection).FindOne(ctx, bson.D{{Key: "_id", Value: objectID}}).Decode(document)
-	log.DatabaseError(err, collection)
-
 	if stderrors.Is(err, mongo.ErrNoDocuments) || (err == nil && !document.IsSaved()) {
 		return errors.ErrNotFound
 	}
+	log.DatabaseError(err, collection)
 
 	return err
 }

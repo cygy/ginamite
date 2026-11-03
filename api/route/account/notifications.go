@@ -59,7 +59,7 @@ func GetNotification(c *gin.Context) {
 
 	notification, err := StorageOf(c).Notifications.NotificationReceivedByUser(c, userID, notificationID, ctxLocale.Get(c))
 	if err != nil {
-		response.InternalServerError(c)
+		response.SendError(c, err)
 		return
 	}
 
@@ -86,7 +86,7 @@ func UpdateNotificationRead(c *gin.Context) {
 	}
 
 	if err != nil {
-		response.InternalServerError(c)
+		response.SendError(c, err)
 		return
 	}
 
@@ -115,7 +115,7 @@ func UpdateNotificationNotified(c *gin.Context) {
 	}
 
 	if err != nil {
-		response.InternalServerError(c)
+		response.SendError(c, err)
 		return
 	}
 
@@ -141,7 +141,7 @@ func DeleteNotification(c *gin.Context) {
 	}
 
 	if err != nil {
-		response.InternalServerError(c)
+		response.SendError(c, err)
 		return
 	}
 
