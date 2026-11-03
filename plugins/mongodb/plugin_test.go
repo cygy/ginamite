@@ -217,7 +217,7 @@ func TestPlugin_Configure_WorkerHooks(t *testing.T) {
 	var sanitized, deleted, empty bool
 	p := NewPlugin()
 	p.session = &session.Session{Store: db}
-	p.SanitizeAccounts = func(store.Database) uint { sanitized = true; return 5 }
+	p.SanitizeAccounts = func(context.Context, store.Database) uint { sanitized = true; return 5 }
 	p.UpdateDocumentsReferencingToDeletedUser = func(context.Context, string, store.Database) error { deleted = true; return nil }
 	p.IsUserEmpty = func(context.Context, string, store.Database) bool { empty = true; return false }
 
@@ -264,9 +264,9 @@ func TestPlugin_startUpTasks(t *testing.T) {
 
 		var steps []string
 		step := func(name string) { steps = append(steps, name) }
-		documents := func(name string) func(string, string, store.Database) {
-			return func(environment, version string, _ store.Database) {
-				if environment != "test" || version != "1.0" {
+		documents := func(name string) workerFunctions.DefaultDocumentsHook {
+			return func(ctx context.Context, environment, version string, _ store.Database) {
+				if ctx == nil || environment != "test" || version != "1.0" {
 					t.Errorf("%s: arguments = %q, %q", name, environment, version)
 				}
 				step(name)

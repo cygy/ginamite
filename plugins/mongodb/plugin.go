@@ -48,15 +48,15 @@ type Plugin struct {
 	UpdateDocumentsReferencingToDisabledUser              func(ctx context.Context, userID string, mongoSession store.Database) error
 	UpdateDocumentsReferencingToEnabledUser               func(ctx context.Context, userID string, mongoSession store.Database) error
 	UpdateDocumentsReferencingToUpdatedUserSocialNetworks func(ctx context.Context, userID string, mongoSession store.Database) error
-	SanitizeAccounts                                      func(mongoSession store.Database) uint
+	SanitizeAccounts                                      func(ctx context.Context, mongoSession store.Database) uint
 
 	CollectionsToRemove    func() []string
 	CollectionsToCreate    func() []workerFunctions.CollectionToCreate
 	IndexesToRemove        func() []workerFunctions.IndexToDelete
 	IndexesToCreate        func() []workerFunctions.IndexToCreate
-	CreateDefaultDocuments func(string, string, store.Database)
-	RemoveDefaultDocuments func(string, string, store.Database)
-	UpdateDefaultDocuments func(string, string, store.Database)
+	CreateDefaultDocuments workerFunctions.DefaultDocumentsHook
+	RemoveDefaultDocuments workerFunctions.DefaultDocumentsHook
+	UpdateDefaultDocuments workerFunctions.DefaultDocumentsHook
 	StartUpTasks           func()
 
 	IsUserEmpty func(context.Context, string, store.Database) bool
@@ -211,17 +211,17 @@ func (p *Plugin) startUpTasks(ctx context.Context, environment, version string) 
 
 	workerFunctions.RemoveUnusedDefaultDocuments(environment, version)
 	if p.RemoveDefaultDocuments != nil {
-		workers.RemoveDefaultDocuments(environment, version, p.RemoveDefaultDocuments)
+		workers.RemoveDefaultDocuments(ctx, environment, version, p.RemoveDefaultDocuments)
 	}
 
 	workerFunctions.CreateAllDefaultDocuments(environment, version)
 	if p.CreateDefaultDocuments != nil {
-		workers.CreateDefaultDocuments(environment, version, p.CreateDefaultDocuments)
+		workers.CreateDefaultDocuments(ctx, environment, version, p.CreateDefaultDocuments)
 	}
 
 	workerFunctions.UpdateAllDefaultDocuments(environment, version)
 	if p.UpdateDefaultDocuments != nil {
-		workers.UpdateDefaultDocuments(environment, version, p.UpdateDefaultDocuments)
+		workers.UpdateDefaultDocuments(ctx, environment, version, p.UpdateDefaultDocuments)
 	}
 
 	if p.StartUpTasks != nil {

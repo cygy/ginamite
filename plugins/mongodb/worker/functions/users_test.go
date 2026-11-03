@@ -18,14 +18,16 @@ import (
 func TestSanitize(t *testing.T) {
 	fns, db := withMainSession(t)
 
-	fns.Hooks.SanitizeAccounts = func(got store.Database) uint {
-		if got != store.Database(db) {
-			t.Errorf("database = %v", got)
+	type key struct{}
+	ctx := context.WithValue(context.Background(), key{}, "task")
+	fns.Hooks.SanitizeAccounts = func(gotCtx context.Context, got store.Database) uint {
+		if gotCtx.Value(key{}) != "task" || got != store.Database(db) {
+			t.Errorf("arguments = %v, %v", gotCtx, got)
 		}
 
 		return 3
 	}
-	if got, err := fns.Sanitize(context.Background()); err != nil || got != 3 {
+	if got, err := fns.Sanitize(ctx); err != nil || got != 3 {
 		t.Errorf("Sanitize() = %d, %v", got, err)
 	}
 

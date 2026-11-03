@@ -24,7 +24,7 @@ type UserHook func(ctx context.Context, userID string, db store.Database) error
 type Hooks struct {
 	// SanitizeAccounts updates, or deletes, the data left by the deleted users and returns the count of documents
 	// sanitized.
-	SanitizeAccounts func(db store.Database) uint
+	SanitizeAccounts func(ctx context.Context, db store.Database) uint
 	// IsUserEmpty reports whether a user never did any action. Every user is empty if it is nil.
 	IsUserEmpty func(ctx context.Context, userID string, db store.Database) bool
 	// UpdateDocumentsReferencingToDeletedUser runs when a user is deleted.

@@ -30,12 +30,12 @@ func wrapHook(err error) error {
 
 // Sanitize runs the hook SanitizeAccounts, which updates or deletes the data left by the deleted users, and returns the
 // number of documents sanitized. It returns 0 if there is no hook.
-func (f *Functions) Sanitize(_ context.Context) (uint, error) {
+func (f *Functions) Sanitize(ctx context.Context) (uint, error) {
 	if f.Hooks.SanitizeAccounts == nil {
 		return 0, nil
 	}
 
-	return f.Hooks.SanitizeAccounts(f.database()), nil
+	return f.Hooks.SanitizeAccounts(ctx, f.database()), nil
 }
 
 // Delete deletes a user and all its bound documents: the documents referencing the user are updated by the hook, if
