@@ -47,9 +47,7 @@ func (session *Session) Initialize(address, database, username, password string,
 		SetHosts([]string{address}).
 		SetConnectTimeout(timeout).
 		SetServerSelectionTimeout(timeout).
-		// The zero structs are omitted by the omitempty tag, otherwise the empty OAuth infos of a user would be
-		// stored and rejected by the unique partial indexes of the identification methods.
-		SetBSONOptions(&options.BSONOptions{OmitZeroStruct: true})
+		SetBSONOptions(bsonOptions())
 
 	// Like with mgo, the user is authenticated against the database itself.
 	if username != "" {
@@ -102,4 +100,16 @@ func (session *Session) Database() store.Database {
 	}
 
 	return store.NewDatabase(session.Client.Database(session.DatabaseName))
+}
+
+// bsonOptions returns the options of the marshaling, to behave like mgo did: the zero structs are omitted by the
+// omitempty tag, otherwise the empty OAuth infos of a user would be stored and rejected by the unique partial indexes
+// of the identification methods, and the nil maps and slices are stored as empty documents and arrays, otherwise
+// updating a field of a nil map ("$set": {"locales.en-us": ...}) would fail.
+func bsonOptions() *options.BSONOptions {
+	return &options.BSONOptions{
+		OmitZeroStruct:  true,
+		NilMapAsEmpty:   true,
+		NilSliceAsEmpty: true,
+	}
 }

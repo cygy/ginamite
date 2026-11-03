@@ -103,6 +103,12 @@ func TestMatchAll(t *testing.T) {
 		t.Errorf("matchAll(nil) = %v, want an empty bson.D", got)
 	}
 
+	for _, nilFilter := range []any{bson.D(nil), bson.M(nil), (*bson.M)(nil)} {
+		if got, ok := matchAll(nilFilter).(bson.D); !ok || len(got) != 0 {
+			t.Errorf("matchAll(%T(nil)) = %v, want an empty bson.D", nilFilter, got)
+		}
+	}
+
 	filter := bson.M{"a": 1}
 	if got := matchAll(filter).(bson.M); got["a"] != 1 {
 		t.Errorf("matchAll(filter) = %v, want the filter unchanged", got)
@@ -115,7 +121,7 @@ func TestCollection_NilFilter(t *testing.T) {
 	c := offline(t).Collection("users")
 	update := bson.M{"$set": bson.M{"a": 1}}
 
-	cursor, findErr := c.Find(ctx, nil)
+	cursor, findErr := c.Find(ctx, bson.D(nil))
 	if cursor != nil {
 		t.Error("expected a nil cursor")
 	}

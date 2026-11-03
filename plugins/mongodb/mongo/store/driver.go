@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"reflect"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
@@ -42,6 +43,14 @@ func (d driverDatabase) CreateCollection(ctx context.Context, name string, opts 
 func matchAll(filter any) any {
 	if filter == nil {
 		return bson.D{}
+	}
+
+	// A nil bson.D, bson.M or pointer in an interface is not a nil interface, and is marshaled as null.
+	switch value := reflect.ValueOf(filter); value.Kind() {
+	case reflect.Slice, reflect.Map, reflect.Pointer:
+		if value.IsNil() {
+			return bson.D{}
+		}
 	}
 
 	return filter
