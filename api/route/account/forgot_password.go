@@ -9,10 +9,8 @@ import (
 	"github.com/cygy/ginamite/api/request"
 	"github.com/cygy/ginamite/api/response"
 	commonErrors "github.com/cygy/ginamite/common/errors"
-	authError "github.com/cygy/ginamite/common/errors/auth"
 	"github.com/cygy/ginamite/common/queue"
 	"github.com/cygy/ginamite/common/random"
-	res "github.com/cygy/ginamite/common/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -61,17 +59,9 @@ func ForgotPassword(c *gin.Context) {
 	user, err := StorageOf(c).Accounts.GetUserDetailsByIdentifier(c, identifier)
 	if err != nil {
 		if commonErrors.IsNotFound(err) {
-			message := t("error.forgot_password.account.not_found.message")
-			reason := t("error.forgot_password.account.not_found.reason")
-			recovery := t("error.forgot_password.account.not_found.recovery")
-
-			response.NotFoundWithError(c, res.Error{
-				Domain:   authError.Domain,
-				Code:     authError.AccountNotFound,
-				Message:  message,
-				Reason:   reason,
-				Recovery: recovery,
-			})
+			// Do not reveal that the account does not exist: the response is the one of an account found, so that
+			// this route can not be used to guess the identifiers of the users.
+			response.OkWithStatus(c, t("status.forgot_password.email_sent"))
 		} else {
 			response.InternalServerError(c)
 		}

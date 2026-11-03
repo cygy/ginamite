@@ -3,6 +3,7 @@ package account
 import (
 	"context"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/cygy/ginamite/common/authentication"
@@ -26,7 +27,17 @@ func TestForgotPassword(t *testing.T) {
 		{name: "storage of the accounts not defined", body: body, setup: all(create(nil), withoutAccounts), want: http.StatusInternalServerError},
 		{name: "storage of the processes not defined", body: body, setup: all(lookup(nil), withoutProcesses), want: http.StatusInternalServerError},
 		{name: "missing identifier", body: `{}`, setup: all(lookup(nil), create(nil)), want: http.StatusBadRequest},
-		{name: "unknown account", body: body, setup: all(lookup(commonErrors.ErrNotFound), create(nil)), want: http.StatusNotFound},
+		// The response must not reveal that the account does not exist: no process, no key, same status as a known account.
+		{
+			name: "unknown account", body: body, setup: all(lookup(commonErrors.ErrNotFound), create(errBoom), inTestEnvironment),
+			want: http.StatusOK, check: func(t *testing.T, body string) {
+				t.Helper()
+
+				if strings.Contains(body, "key") || strings.Contains(body, "process-id") {
+					t.Errorf("body %q must not contain the data of a process", body)
+				}
+			},
+		},
 		{name: "lookup error", body: body, setup: all(lookup(errBoom), create(nil)), want: http.StatusInternalServerError},
 		{name: "process error", body: body, setup: all(lookup(nil), create(errBoom)), want: http.StatusInternalServerError},
 		{name: "success", body: body, setup: all(lookup(nil), create(nil)), want: http.StatusOK},
