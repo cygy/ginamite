@@ -21,6 +21,7 @@ require (
 
 require (
 	github.com/pelletier/go-toml/v2 v2.4.3
+	github.com/stripe/stripe-go/v87 v87.1.0
 	github.com/xdg-go/scram v1.2.0
 	go.mongodb.org/mongo-driver/v2 v2.9.2
 	go.yaml.in/yaml/v3 v3.0.6
@@ -60,6 +61,7 @@ require (
 	github.com/quic-go/qpack v0.6.0 // indirect
 	github.com/quic-go/quic-go v0.64.1 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20250401214520-65e299d6c5c9 // indirect
+	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.3.2 // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect

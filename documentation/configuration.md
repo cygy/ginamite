@@ -17,6 +17,7 @@ default values. The main sections are:
 | `metrics`, `rate_limits` | Prometheus endpoint and limits of the requests (see [Security](security.md) and [Observability](observability.md)). |
 | `broker` | The message broker: `service` (for instance `kafka`, the plugin which connects), `host` and `port`. |
 | `kafka` | Read by `plugins/kafka`: connection to Kafka (version, TLS, SASL), prefix of the topics, retries, creation of the topics, statistics. |
+| `stripe` | Read by `plugins/stripe`: the keys of Stripe, the currency, the payment methods, the path of the webhook, see [Payments with Stripe](stripe.md). |
 | `worker_consumers` | Kafka topics consumed by a worker, with their consumer group. |
 
 The sections `broker`, `kafka` and `worker_consumers`, and the way the workers consume the messages, are described in

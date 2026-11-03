@@ -143,6 +143,7 @@ The arguments `-dlq*`, added by `plugins/kafka`, run a command on the dead lette
 | [Web server](documentation/web-server.md) | The routes file, the templates and the translations. |
 | [Worker](documentation/worker.md) | The messages consumed, the recurring tasks, the storage and the hooks. |
 | [Message broker and Kafka](documentation/kafka.md) | The broker, the Kafka plugin, the consumer groups and the dead letters. |
+| [Payments with Stripe](documentation/stripe.md) | The Stripe plugin: checkout sessions, payment intents, the webhook and its store. |
 | [Database plugins](documentation/database-plugins.md) | The interfaces a database plugin implements, and the MongoDB plugin. |
 | [Security](documentation/security.md) | Passwords, JWT, rate limiting, trusted proxies and secrets. |
 | [Observability](documentation/observability.md) | The Prometheus metrics and the logs. |

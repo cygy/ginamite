@@ -24,6 +24,7 @@ The core depends on no database nor broker: a **plugin** provides them, register
 - A **database plugin** (`plugins/mongodb`) sets the storages and the hooks of the API and of the worker, see
   [Database plugins](database-plugins.md).
 - A **broker plugin** (`plugins/kafka`) connects the servers, see [Message broker and Kafka](kafka.md).
+- The **payment plugin** (`plugins/stripe`) takes payments with Stripe, see [Payments with Stripe](stripe.md).
 
 The storages are interfaces taking the `context.Context` and returning errors. A feature whose storage is not set is
 disabled, so an application can use the core without a database.
