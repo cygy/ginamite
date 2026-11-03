@@ -46,7 +46,10 @@ func (session *Session) Initialize(address, database, username, password string,
 	opts := options.Client().
 		SetHosts([]string{address}).
 		SetConnectTimeout(timeout).
-		SetServerSelectionTimeout(timeout)
+		SetServerSelectionTimeout(timeout).
+		// The zero structs are omitted by the omitempty tag, otherwise the empty OAuth infos of a user would be
+		// stored and rejected by the unique partial indexes of the identification methods.
+		SetBSONOptions(&options.BSONOptions{OmitZeroStruct: true})
 
 	// Like with mgo, the user is authenticated against the database itself.
 	if username != "" {
