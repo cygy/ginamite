@@ -84,7 +84,7 @@ func setup(t *testing.T) {
 	testHooks.BuildTokenFromID = func(context.Context, string) (*authentication.Token, error) {
 		return &authentication.Token{UserID: testUserID, ExpirationDate: time.Now().Add(time.Hour), CreationDate: time.Now()}, nil
 	}
-	testHooks.ExtraPropertiesForTokenWithID = func(string) (map[string]string, error) { return nil, nil }
+	testHooks.ExtraPropertiesForTokenWithID = func(context.Context, string) (map[string]string, error) { return nil, nil }
 	testHooks.ExtendTokenExpirationDateFromID = func(context.Context, string, time.Duration) error { return nil }
 
 	t.Cleanup(func() {

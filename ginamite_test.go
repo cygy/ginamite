@@ -79,7 +79,7 @@ func TestNewServer_Placeholders(t *testing.T) {
 	if token, err := f.BuildTokenFromID(context.Background(), "id"); err != nil || token == nil {
 		t.Errorf("BuildTokenFromID() = %v, %v", token, err)
 	}
-	if props, err := f.ExtraPropertiesForTokenWithID("id"); err != nil || props == nil || len(props) != 0 {
+	if props, err := f.ExtraPropertiesForTokenWithID(context.Background(), "id"); err != nil || props == nil || len(props) != 0 {
 		t.Errorf("ExtraPropertiesForTokenWithID() = %v, %v", props, err)
 	}
 	if err := f.ExtendTokenExpirationDateFromID(context.Background(), "id", time.Hour); err != nil {

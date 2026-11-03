@@ -42,7 +42,7 @@ func (h Hooks) GetSignedToken(ctx context.Context, signingMethod, secret, tokenI
 		return "", err
 	}
 
-	extraProperties, err := h.ExtraPropertiesForTokenWithID(tokenID)
+	extraProperties, err := h.ExtraPropertiesForTokenWithID(ctx, tokenID)
 	if err != nil {
 		log.Error("unable to get extra properties for JWT token",
 			"token id", tokenID,

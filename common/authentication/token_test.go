@@ -25,7 +25,7 @@ func okBuild(context.Context, string) (*Token, error) {
 	}, nil
 }
 
-func okExtra(string) (map[string]string, error) {
+func okExtra(context.Context, string) (map[string]string, error) {
 	return map[string]string{"plan": "pro"}, nil
 }
 
@@ -47,7 +47,7 @@ func TestGetSignedToken_Errors(t *testing.T) {
 		{
 			"extra error",
 			okBuild,
-			func(string) (map[string]string, error) { return nil, errBoom },
+			func(context.Context, string) (map[string]string, error) { return nil, errBoom },
 			errBoom,
 		},
 	}
@@ -64,6 +64,23 @@ func TestGetSignedToken_Errors(t *testing.T) {
 				t.Errorf("error = %v, want %v", err, tt.want)
 			}
 		})
+	}
+}
+
+func TestGetSignedToken_PassesTheContext(t *testing.T) {
+	type key struct{}
+	ctx := context.WithValue(context.Background(), key{}, "request")
+
+	var got any
+	extra := func(ctx context.Context, _ string) (map[string]string, error) {
+		got = ctx.Value(key{})
+		return nil, nil
+	}
+	if _, err := (Hooks{okBuild, extra, nil}).GetSignedToken(ctx, "HS256", testSecret, "token-1"); err != nil {
+		t.Fatal(err)
+	}
+	if got != "request" {
+		t.Errorf("context value = %v, want the context of the request", got)
 	}
 }
 

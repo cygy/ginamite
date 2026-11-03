@@ -116,7 +116,7 @@ func NewServer() *Server {
 	server.API.Hooks.BuildTokenFromID = func(context.Context, string) (*authentication.Token, error) {
 		return &authentication.Token{}, nil
 	}
-	server.API.Hooks.ExtraPropertiesForTokenWithID = func(string) (map[string]string, error) {
+	server.API.Hooks.ExtraPropertiesForTokenWithID = func(context.Context, string) (map[string]string, error) {
 		return map[string]string{}, nil
 	}
 	server.API.Hooks.ExtendTokenExpirationDateFromID = func(context.Context, string, time.Duration) error {

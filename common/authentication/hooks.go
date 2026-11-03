@@ -8,8 +8,9 @@ import (
 // BuildTokenFunc builds a token from its ID.
 type BuildTokenFunc func(ctx context.Context, tokenID string) (*Token, error)
 
-// ExtraPropertiesForTokenWithIDFunc returns some extra properties to include in the auth token.
-type ExtraPropertiesForTokenWithIDFunc func(tokenID string) (map[string]string, error)
+// ExtraPropertiesForTokenWithIDFunc returns some extra properties to include in the auth token. ctx is the context of
+// the request signing the token.
+type ExtraPropertiesForTokenWithIDFunc func(ctx context.Context, tokenID string) (map[string]string, error)
 
 // ExtendTokenExpirationDateFunc extends the expiration date of a token from its ID.
 type ExtendTokenExpirationDateFunc func(ctx context.Context, tokenID string, ttl time.Duration) error
