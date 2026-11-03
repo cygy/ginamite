@@ -24,7 +24,12 @@ const enTranslations = `[
   {"id": "only_en", "translation": "Only in English"}
 ]`
 
-// writeTranslations writes the translation files, named "<locale>.all.json", and returns their directory.
+const frTOML = `hello = "Bonjour"
+greeting = "Bonjour {{.Name}}"
+"error.request.invalid" = "Requête invalide"
+`
+
+// writeTranslations writes the translation files, named "<locale>.all.json" or "<locale>.all.toml", and returns their directory.
 func writeTranslations(t *testing.T, files map[string]string) string {
 	t.Helper()
 

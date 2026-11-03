@@ -18,8 +18,9 @@ routes:
 
 - The templates are the files of the sub-directories of `templates_path` (for instance `templates/pages/`), named by
   their file name. A page also has `meta`, `scripts`, `access` and `partial`, see `web/html.Page`.
-- The translations are in `<localization_path>/<locale>.all.json`, one file per locale of `locales`, which lists the
-  locales served.
+- The translations are in `<localization_path>/<locale>.all.toml` (or `.all.json` when there is no TOML file), one file
+  per locale of `locales`, which lists the locales served. In TOML, a key containing dots is quoted:
+  `"error.not_found" = "Page not found"`.
 - The web server serves `robots.txt` (`robots_file_path`) and the error pages, whose keys are `error.not_found`,
   `error.internal_server`, `error.unauthorized`, etc. Without a locale, a request is redirected to the default locale.
 - The section `async` of the routes file forwards calls of the browser to the API (`api.host`, `api.port`).

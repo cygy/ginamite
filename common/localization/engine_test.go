@@ -28,6 +28,8 @@ func TestEngine_Initialize_Errors(t *testing.T) {
 		{"missing file", map[string]string{}},
 		{"invalid json", map[string]string{"fr-fr.all.json": "["}},
 		{"no message", map[string]string{"fr-fr.all.json": "[]"}},
+		{"invalid toml", map[string]string{"fr-fr.all.toml": "hello = "}},
+		{"empty toml", map[string]string{"fr-fr.all.toml": ""}},
 	}
 
 	for _, tt := range tests {
@@ -38,6 +40,44 @@ func TestEngine_Initialize_Errors(t *testing.T) {
 				t.Error("Initialize() must return an error")
 			}
 		})
+	}
+}
+
+func TestEngine_Initialize_TOML(t *testing.T) {
+	dir := writeTranslations(t, map[string]string{
+		"fr-fr.all.toml": frTOML,
+		"en-gb.all.json": enTranslations,
+	})
+
+	e := NewEngine()
+	if err := e.Initialize(dir, []string{"fr-FR", "en-GB"}); err != nil {
+		t.Fatal(err)
+	}
+
+	if got := e.Translations["fr-FR"]["error.request.invalid"]; got != "Requête invalide" {
+		t.Errorf("dotted key = %q", got)
+	}
+	if got := e.Translations["fr-FR"]["greeting"]; got != "Bonjour {{.Name}}" {
+		t.Errorf("greeting = %q", got)
+	}
+	if got := e.Translations["en-GB"]["hello"]; got != "Hello" {
+		t.Errorf("the JSON locale must still be loaded, hello = %q", got)
+	}
+}
+
+func TestEngine_Initialize_TOMLPreferred(t *testing.T) {
+	dir := writeTranslations(t, map[string]string{
+		"fr-fr.all.toml": "hello = \"Salut\"\n",
+		"fr-fr.all.json": frTranslations,
+	})
+
+	e := NewEngine()
+	if err := e.Initialize(dir, []string{"fr-FR"}); err != nil {
+		t.Fatal(err)
+	}
+
+	if got := e.Translations["fr-FR"]["hello"]; got != "Salut" {
+		t.Errorf("hello = %q, the TOML file must win over the JSON file", got)
 	}
 }
 
