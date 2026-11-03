@@ -3,6 +3,7 @@ package document
 import (
 	"context"
 	stderrors "errors"
+	"fmt"
 
 	"github.com/cygy/ginamite/common/errors"
 	"github.com/cygy/ginamite/common/log"
@@ -31,11 +32,11 @@ func SaveDocument(ctx context.Context, document Document, collection string, db 
 }
 
 // UpdateDocument applies the update to the document documentID of a collection.
-// It returns mongo.ErrNoDocuments if no document matches.
+// It returns an error which is, and wraps, errors.ErrNotFound and mongo.ErrNoDocuments if no document matches.
 func UpdateDocument(ctx context.Context, documentID bson.ObjectID, collection string, update any, db store.Database) error {
 	result, err := db.Collection(collection).UpdateByID(ctx, documentID, update)
 	if err == nil && result.MatchedCount == 0 {
-		err = mongo.ErrNoDocuments
+		err = notFound(mongo.ErrNoDocuments)
 	}
 	log.DatabaseError(err, collection)
 	return err
@@ -64,11 +65,11 @@ func UpsertDocumentBySelector(ctx context.Context, collection string, selector a
 }
 
 // DeleteDocument deletes the document documentID from a collection.
-// It returns mongo.ErrNoDocuments if no document matches.
+// It returns an error which is, and wraps, errors.ErrNotFound and mongo.ErrNoDocuments if no document matches.
 func DeleteDocument(ctx context.Context, documentID bson.ObjectID, collection string, db store.Database) error {
 	result, err := db.Collection(collection).DeleteOne(ctx, bson.D{{Key: "_id", Value: documentID}})
 	if err == nil && result.DeletedCount == 0 {
-		err = mongo.ErrNoDocuments
+		err = notFound(mongo.ErrNoDocuments)
 	}
 	log.DatabaseError(err, collection)
 	return err
@@ -189,7 +190,7 @@ func GetDocumentBySelectorAndSort(ctx context.Context, document Document, collec
 		opts.SetSort(sortKeys(sort...))
 	}
 
-	err := db.Collection(collection).FindOne(ctx, selector, opts).Decode(document)
+	err := notFound(db.Collection(collection).FindOne(ctx, selector, opts).Decode(document))
 	log.DatabaseError(err, collection)
 
 	return err
@@ -235,7 +236,7 @@ func PipeAll(ctx context.Context, result any, collection string, pipeline any, d
 }
 
 // PipeOne decodes the first result of an aggregation pipeline into result.
-// It returns mongo.ErrNoDocuments if the pipeline has no result.
+// It returns an error which is, and wraps, errors.ErrNotFound and mongo.ErrNoDocuments if the pipeline has no result.
 func PipeOne(ctx context.Context, result any, collection string, pipeline any, db store.Database) error {
 	cursor, err := db.Collection(collection).Aggregate(ctx, pipeline)
 	if err == nil {
@@ -248,10 +249,20 @@ func PipeOne(ctx context.Context, result any, collection string, pipeline any, d
 		if cursor.Next(ctx) {
 			err = cursor.Decode(result)
 		} else if err = cursor.Err(); err == nil {
-			err = mongo.ErrNoDocuments
+			err = notFound(mongo.ErrNoDocuments)
 		}
 	}
 	log.DatabaseError(err, collection)
+
+	return err
+}
+
+// notFound makes the error of the driver for a missing document also match errors.ErrNotFound, which is what the
+// code independent of the database tests with errors.IsNotFound. Any other error is returned unchanged.
+func notFound(err error) error {
+	if stderrors.Is(err, mongo.ErrNoDocuments) && !stderrors.Is(err, errors.ErrNotFound) {
+		return fmt.Errorf("%w: %w", errors.ErrNotFound, err)
+	}
 
 	return err
 }

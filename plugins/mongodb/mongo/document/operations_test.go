@@ -523,3 +523,23 @@ func TestPipeOne_Stub(t *testing.T) {
 		}
 	})
 }
+
+func TestNotFound(t *testing.T) {
+	err := notFound(mongo.ErrNoDocuments)
+	if !commonErrors.IsNotFound(err) || !errors.Is(err, mongo.ErrNoDocuments) {
+		t.Errorf("notFound(ErrNoDocuments) = %v, want an error matching ErrNotFound and ErrNoDocuments", err)
+	}
+
+	if again := notFound(err); !errors.Is(again, err) || again.Error() != err.Error() {
+		t.Errorf("notFound() must not wrap twice, got %v", again)
+	}
+
+	other := errors.New("boom")
+	if got := notFound(other); !errors.Is(got, other) || got.Error() != other.Error() {
+		t.Errorf("notFound(other) = %v, want it unchanged", got)
+	}
+
+	if got := notFound(nil); got != nil {
+		t.Errorf("notFound(nil) = %v, want nil", got)
+	}
+}
