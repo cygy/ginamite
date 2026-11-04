@@ -14,7 +14,8 @@ default values. The main sections are:
 | `smtp`, `sender_*` | Sending of the emails. |
 | `facebook`, `google` | Sign-in with a social network. |
 | `recurring_tasks`, `run_start_up_tasks` | Tasks executed by the workers, see [Worker](worker.md). |
-| `metrics`, `rate_limits` | Prometheus endpoint and limits of the requests (see [Security](security.md) and [Observability](observability.md)). |
+| `metrics` | Prometheus endpoint, see [Observability](observability.md). |
+| `api_rate_limiter` | `limits` of the requests (`authentication`, `registration`, `forgot_password`, each with `requests` and `seconds`), and the subsections `mongodb` and `redis` read by the rate limiting plugins, see [Rate limiting](rate-limiting.md). `rate_limits` is removed. |
 | `broker` | The message broker: `service` (for instance `kafka`, the plugin which connects), `host` and `port`. |
 | `kafka` | Read by `plugins/kafka`: connection to Kafka (version, TLS, SASL), prefix of the topics, retries, creation of the topics, statistics. |
 | `stripe` | Read by `plugins/stripe`: the keys of Stripe, the currency, the payment methods, the path of the webhook, see [Payments with Stripe](stripe.md). |

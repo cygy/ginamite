@@ -39,6 +39,7 @@ configuration).
 - The API and web servers save them in the Gin context of the requests, and the handlers read them with
   `ctxkey.Config.Get(c)`, `ctxkey.Localization.Get(c)` and `ctxkey.Queue.Get(c)`. The storages of the application, such as the ones
   of the storage plugin, are saved the same way: `account.StorageOf(c)`, `ctxAuthToken.HooksOf(c)`, etc.
+- The routes of the website (`-web-routes`) are shared the same way: `weburl.Of(c)` in the API and web handlers, `Server.WebRoutes()` for the plugins and the application, see [Web routes](web-routes.md).
 - The web server also saves its pages, `html.Of(c)`, and the worker builds a `mail.Mailer` from its services.
 - The code without a request receives what it needs as arguments: for instance the worker builds a `recurring.Scheduler`
   and a `mail.Mailer` from its services.

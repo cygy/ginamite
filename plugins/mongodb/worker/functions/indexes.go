@@ -287,22 +287,6 @@ func (f *Functions) CreateAllIndexes(ctx context.Context) {
 			},
 		},
 
-		// Index of the collection "rateLimits": the counters are removed when their window ends.
-		{
-			Collection: model.RateLimitCollection,
-			Index: mongo.IndexModel{
-				Keys: bson.D{
-					{
-						Key:   "expireAt",
-						Value: 1,
-					},
-				},
-				Options: options.Index().
-					SetName("expireAt_1_1").
-					SetExpireAfterSeconds(0),
-			},
-		},
-
 		// Indexes of the collection "updateProperty".
 		{
 			Collection: model.UpdatePropertyProcessCollection,

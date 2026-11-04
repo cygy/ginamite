@@ -233,7 +233,6 @@ func (p *Plugin) startUpTasks(ctx context.Context, environment, version string) 
 // routes.
 func (p *Plugin) configureAPI(a *api.Server) {
 	a.Hooks.IsValidID = isValidID
-	a.Hooks.NewRateLimiter = apiFunctions.NewRateLimiters(p.database)
 
 	tokens := apiFunctions.NewTokens(p.database)
 	a.Hooks.BuildTokenFromID = tokens.BuildTokenFromID

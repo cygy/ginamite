@@ -19,6 +19,7 @@ import (
 	"github.com/cygy/ginamite/common/notifications"
 	"github.com/cygy/ginamite/common/queue"
 	"github.com/cygy/ginamite/common/timezone"
+	"github.com/cygy/ginamite/common/weburl"
 
 	"github.com/gin-gonic/gin"
 )
@@ -33,6 +34,9 @@ type Server struct {
 	Localization *localization.Engine
 	// Timezones are the timezones of the countries, set by the main server before it starts.
 	Timezones *timezone.Configuration
+	// WebRoutes are the routes of the website, set by the main server before it starts, or nil if no web routes file
+	// is given. The handlers read them with weburl.Of.
+	WebRoutes *weburl.Configuration
 	// Notifications is the registry of the notifications the users can subscribe to, set by the main server before it
 	// starts.
 	Notifications *notifications.Registry
@@ -86,7 +90,11 @@ type Hooks struct {
 	// them. Optional.
 	RouterConfigureDefaultRoutes route.ConfigureDefaultRoutes
 
-	// NewRateLimiter returns the limiters of the requests which try to guess a secret, see the setting rate_limits. The
-	// default limiters keep their counters in memory, by instance of the API.
+	// NewRateLimiter returns the limiters of the requests which try to guess a secret, see the setting
+	// api_rate_limiter. The default limiters keep their counters in memory, by instance of the API. A rate limiting
+	// plugin sets it with RateLimiterStore, see the package plugins/ratelimit.
 	NewRateLimiter request.NewRateLimiterFunc
+	// RateLimiterStore is the name of the storage of the counters of NewRateLimiter, such as "redis": the API logs it
+	// when it starts. It is "memory" if NewRateLimiter is nil.
+	RateLimiterStore string
 }

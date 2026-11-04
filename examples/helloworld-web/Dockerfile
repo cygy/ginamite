@@ -14,4 +14,4 @@ COPY examples/helloworld-web/conf /app/conf
 COPY examples/helloworld-web/localization /app/localization
 COPY examples/helloworld-web/templates /app/templates
 EXPOSE 8080
-ENTRYPOINT ["/app/helloworld-web", "-web", "-name", "helloworld-web", "-env", "production", "-conf-server", "/app/conf/server.yaml", "-routes", "/app/conf/routes.yaml"]
+ENTRYPOINT ["/app/helloworld-web", "-web", "-name", "helloworld-web", "-env", "production", "-conf-server", "/app/conf/server.yaml", "-web-routes", "/app/conf/routes.yaml"]

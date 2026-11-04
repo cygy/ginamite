@@ -50,12 +50,12 @@ type Configuration struct {
 	Terms               TermsConfiguration
 	UserNotifications   UserNotificationsConfiguration `yaml:"user_notifications"`
 	Account             AccountConfiguration
-	Metrics             MetricsConfiguration    `yaml:"metrics"`          // Prometheus metrics, disabled by default
-	RateLimits          RateLimitsConfiguration `yaml:"rate_limits"`      // limits of the requests by client, 0 to disable
-	Broker              BrokerConfiguration     `yaml:"broker"`           // address of the message broker, and the plugin which connects to it
-	WorkerConsumers     []ConsumerConfiguration `yaml:"worker_consumers"` // topics consumed by the worker, all if empty
-	RecurringTasks      []RecurringTask         `yaml:"recurring_tasks"`  // tasks executed by the workers
-	RunStartUpTasks     bool                    `yaml:"run_start_up_tasks"`
+	Metrics             MetricsConfiguration        `yaml:"metrics"`          // Prometheus metrics, disabled by default
+	APIRateLimiter      APIRateLimiterConfiguration `yaml:"api_rate_limiter"` // limits of the requests by client (0 to disable) and storage of their counters
+	Broker              BrokerConfiguration         `yaml:"broker"`           // address of the message broker, and the plugin which connects to it
+	WorkerConsumers     []ConsumerConfiguration     `yaml:"worker_consumers"` // topics consumed by the worker, all if empty
+	RecurringTasks      []RecurringTask             `yaml:"recurring_tasks"`  // tasks executed by the workers
+	RunStartUpTasks     bool                        `yaml:"run_start_up_tasks"`
 
 	// sections are the sections of the file which are not known by the core: they belong to the plugins, see Section.
 	sections map[string]yaml.Node
@@ -83,9 +83,9 @@ func NewConfiguration() (config *Configuration) {
 	config.JWT.SigningMethod = "HS256"
 	config.JWT.TTL = 3600
 	config.API.TimeOut = 2000
-	config.RateLimits.Authentication = RateLimitConfiguration{Requests: 10, Seconds: 60}
-	config.RateLimits.Registration = RateLimitConfiguration{Requests: 5, Seconds: 60}
-	config.RateLimits.ForgotPassword = RateLimitConfiguration{Requests: 5, Seconds: 60}
+	config.APIRateLimiter.Limits.Authentication = RateLimitConfiguration{Requests: 10, Seconds: 60}
+	config.APIRateLimiter.Limits.Registration = RateLimitConfiguration{Requests: 5, Seconds: 60}
+	config.APIRateLimiter.Limits.ForgotPassword = RateLimitConfiguration{Requests: 5, Seconds: 60}
 	config.Facebook.Enabled = false
 	config.Google.Enabled = false
 	config.ExpiredAuthTokens.FlushCacheInterval = 60
@@ -116,6 +116,10 @@ func (config *Configuration) Initialize(file, env, ver string) error {
 
 	if err := unmarshal(source, config, &config.sections); err != nil {
 		return fmt.Errorf("unable to load the configuration file %s: %w", file, err)
+	}
+
+	if _, ok := config.sections[removedRateLimitsSection]; ok {
+		return errRateLimitsRemoved
 	}
 
 	config.Environment = env
@@ -155,6 +159,22 @@ func (config *Configuration) Section(name string, out any) error {
 
 	if err := node.Decode(out); err != nil {
 		return fmt.Errorf("invalid section %q of the configuration: %w", name, err)
+	}
+
+	return nil
+}
+
+// RateLimiterStore decodes the subsection of the section "api_rate_limiter" with the name, such as "redis", into out,
+// which holds the default values. It is meant for the rate limiting plugins and it leaves out unchanged if the subsection
+// is absent. The values tagged !file or !env are already resolved.
+func (config *Configuration) RateLimiterStore(name string, out any) error {
+	node, ok := config.APIRateLimiter.Stores[name]
+	if !ok {
+		return nil
+	}
+
+	if err := node.Decode(out); err != nil {
+		return fmt.Errorf("invalid section %q of the configuration: %w", "api_rate_limiter."+name, err)
 	}
 
 	return nil

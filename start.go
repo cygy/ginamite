@@ -14,6 +14,7 @@ import (
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/timezone"
+	"github.com/cygy/ginamite/common/weburl"
 	"github.com/cygy/ginamite/internal/robots"
 )
 
@@ -73,8 +74,12 @@ func (s *Server) run(ctx context.Context, f *flags.Flags) error {
 		return err
 	}
 
+	if err := s.loadWebRoutes(f); err != nil {
+		return err
+	}
+
 	if f.IsAPIServer || f.IsWorkerServer {
-		closeAll, err := s.connectPlugins(s.Config)
+		closeAll, err := s.connectPlugins(s.Config, f.IsAPIServer)
 		if err != nil {
 			return err
 		}
@@ -155,9 +160,9 @@ func (s *Server) initializeConfiguration(f *flags.Flags) error {
 }
 
 // connectPlugins connects, with the configuration, the plugins which are Connectors, and returns the function which
-// closes them, in the reverse order. If a connection fails, it closes the connectors already connected and returns
+// closes them, in the reverse order. The APIOnly ones are skipped if the API does not run. If a connection fails, it closes the connectors already connected and returns
 // the error.
-func (s *Server) connectPlugins(configuration *config.Configuration) (closeAll func(), err error) {
+func (s *Server) connectPlugins(configuration *config.Configuration, isAPI bool) (closeAll func(), err error) {
 	var connected []Connector
 	closeAll = func() {
 		for _, c := range slices.Backward(connected) {
@@ -167,6 +172,9 @@ func (s *Server) connectPlugins(configuration *config.Configuration) (closeAll f
 
 	for _, plugin := range s.plugins {
 		if connector, ok := plugin.(Connector); ok {
+			if _, apiOnly := plugin.(APIOnly); apiOnly && !isAPI {
+				continue
+			}
 			if err := connector.Connect(configuration); err != nil {
 				closeAll()
 				return nil, err
@@ -178,17 +186,39 @@ func (s *Server) connectPlugins(configuration *config.Configuration) (closeAll f
 	return closeAll, nil
 }
 
-// specializedServer returns the server chosen by the arguments, with its routes file if it uses one, or nil if none is.
-// The API server wins over the worker, which wins over the web server.
+// loadWebRoutes loads the web routes file of the arguments once, with the host of the website of the configuration,
+// and shares the routes with the three servers. Without file, the routes are nil. It returns an error if the file
+// can not be read, since the servers can not give the right URLs without it.
+func (s *Server) loadWebRoutes(f *flags.Flags) error {
+	s.webRoutes = nil
+	if f.WebRoutesFile == "" {
+		if f.IsAPIServer || f.IsWorkerServer {
+			log.Warn("no web routes file (argument -web-routes): the URLs of the website are not available", "routes", "nil")
+		}
+	} else {
+		routes, err := weburl.Load(f.WebRoutesFile, s.Config.Hosts.Web)
+		if err != nil {
+			return err
+		}
+		s.webRoutes = routes
+		log.Info("web routes loaded", "file", f.WebRoutesFile, "count", len(routes.Routes))
+	}
+	s.API.WebRoutes, s.Worker.Routes, s.Web.Routes = s.webRoutes, s.webRoutes, s.webRoutes
+
+	return nil
+}
+
+// specializedServer returns the server chosen by the arguments, or nil if none is.
+// The API server wins over the worker, which wins over the web server. The web server also gets the routes file,
+// which describes its pages.
 func (s *Server) specializedServer(f *flags.Flags) runner {
 	switch {
 	case f.IsAPIServer:
 		return s.API
 	case f.IsWorkerServer:
-		s.Worker.RoutesFile = f.RoutesFile
 		return s.Worker
 	case f.IsWebServer:
-		s.Web.RoutesFile = f.RoutesFile
+		s.Web.RoutesFile = f.WebRoutesFile
 		return s.Web
 	}
 

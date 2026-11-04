@@ -13,6 +13,7 @@ import (
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/request"
 	htmlTemplate "github.com/cygy/ginamite/common/template/html"
+	"github.com/cygy/ginamite/common/weburl"
 	"github.com/cygy/ginamite/internal/httpserver"
 	"github.com/cygy/ginamite/web/api"
 	"github.com/cygy/ginamite/web/html"
@@ -36,9 +37,13 @@ type Server struct {
 	// Localization translates the messages of the pages, set by the main server before it starts.
 	Localization *localization.Engine
 	// Robots is the content of the robots.txt file, loaded by the main server before it starts.
-	Robots     string
-	RoutesFile string // The path of the routes file.
-	Functions  Handlers
+	Robots string
+	// RoutesFile is the path of the routes file, which describes the pages. Set by the main server before it starts.
+	RoutesFile string
+	// Routes gives the URLs of the routes of the file, set by the main server before it starts; the handlers read
+	// them with weburl.Of.
+	Routes    *weburl.Configuration
+	Functions Handlers
 
 	customRoutes []route.ConfigureCustomRoutes
 	apiClient    *api.Client         // The client of the API, created when the server is set up.
@@ -184,7 +189,7 @@ func (s *Server) setUp(engine *gin.Engine) error {
 		return err
 	}
 	s.pages = pages
-	engine.Use(ctxkey.Config.Inject(s.Config), ctxkey.Localization.Inject(s.Localization), html.Inject(pages))
+	engine.Use(ctxkey.Config.Inject(s.Config), ctxkey.Localization.Inject(s.Localization), html.Inject(pages), weburl.Inject(s.Routes))
 
 	router := route.NewRouter(engine, pages, client,
 		s.Config.SupportedLocales, s.Config.DefaultLocale,

@@ -15,7 +15,7 @@ func TestNewFlags(t *testing.T) {
 }
 
 func TestFlags_Parse(t *testing.T) {
-	valid := []string{"-api", "-name", "srv", "-conf-server", "s.yml", "-routes", "r.yml"}
+	valid := []string{"-api", "-name", "srv", "-conf-server", "s.yml", "-web-routes", "r.yml"}
 
 	t.Run("api server", func(t *testing.T) {
 		f := NewFlags()
@@ -24,7 +24,7 @@ func TestFlags_Parse(t *testing.T) {
 			t.Fatal(err)
 		}
 		if !f.IsAPIServer || f.IsWorkerServer || f.IsWebServer || f.ServerName != "srv" ||
-			f.ServerConfigurationFile != "s.yml" || f.RoutesFile != "r.yml" ||
+			f.ServerConfigurationFile != "s.yml" || f.WebRoutesFile != "r.yml" ||
 			f.Environment != "development" || f.Version != "final" {
 			t.Errorf("unexpected flags %+v", f)
 		}
@@ -87,13 +87,14 @@ func TestFlags_Validate(t *testing.T) {
 		want      string
 	}{
 		{"api server", Flags{IsAPIServer: true, ServerName: "n", ServerConfigurationFile: "s"}, false, ""},
-		{"web server", Flags{IsWebServer: true, ServerName: "n", ServerConfigurationFile: "s", RoutesFile: "r"}, false, ""},
+		{"web server", Flags{IsWebServer: true, ServerName: "n", ServerConfigurationFile: "s", WebRoutesFile: "r"}, false, ""},
 		{"with application configuration", Flags{IsWorkerServer: true, ServerName: "n", ServerConfigurationFile: "s", ApplicationConfigurationFile: "a"}, true, ""},
 		{"no server type", Flags{ServerName: "n", ServerConfigurationFile: "s"}, false, "'api', 'worker' or 'web'"},
 		{"no server name", Flags{IsAPIServer: true, ServerConfigurationFile: "s"}, false, "server name"},
 		{"no server configuration", Flags{IsAPIServer: true, ServerName: "n"}, false, "server configuration file"},
 		{"no application configuration", Flags{IsAPIServer: true, ServerName: "n", ServerConfigurationFile: "s"}, true, "application configuration file"},
-		{"no routes", Flags{IsWebServer: true, ServerName: "n", ServerConfigurationFile: "s"}, false, "routes file"},
+		{"no routes", Flags{IsWebServer: true, ServerName: "n", ServerConfigurationFile: "s"}, false, "-web-routes"},
+		{"optional routes", Flags{IsWorkerServer: true, ServerName: "n", ServerConfigurationFile: "s"}, false, ""},
 	}
 
 	for _, tt := range tests {

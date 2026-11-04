@@ -21,7 +21,7 @@ type Flags struct {
 	Version                      string
 	ServerConfigurationFile      string
 	ApplicationConfigurationFile string
-	RoutesFile                   string
+	WebRoutesFile                string
 }
 
 // NewFlags returns an empty Flags.
@@ -45,7 +45,7 @@ func (f *Flags) Parse(args []string, output io.Writer, register ...func(*flag.Fl
 	set.StringVar(&f.Version, "version", version.Final, fmt.Sprintf("Running version of the server (%s, %s or %s)", version.Final, version.Beta, version.Alpha))
 	set.StringVar(&f.ServerConfigurationFile, "conf-server", "", "Path to the server configuration file.")
 	set.StringVar(&f.ApplicationConfigurationFile, "conf-app", "", "Path to the application configuration file.")
-	set.StringVar(&f.RoutesFile, "routes", "", "Path to the web routes file.")
+	set.StringVar(&f.WebRoutesFile, "web-routes", "", "Path to the web routes file: mandatory for the web server, optional for the API and the worker, which then have no web URL.")
 
 	for _, add := range register {
 		add(set)
@@ -66,8 +66,8 @@ func (f *Flags) Validate(applicationConfigurationRequired bool) error {
 		return errors.New("a path to the server configuration file must be defined: show the help to learn more about")
 	case applicationConfigurationRequired && len(f.ApplicationConfigurationFile) == 0:
 		return errors.New("a path to the application configuration file must be defined: show the help to learn more about")
-	case f.IsWebServer && len(f.RoutesFile) == 0:
-		return errors.New("a path to the web routes file must be defined: show the help to learn more about")
+	case f.IsWebServer && len(f.WebRoutesFile) == 0:
+		return errors.New("a path to the web routes file (-web-routes) must be defined for the web server: show the help to learn more about")
 	}
 
 	return nil

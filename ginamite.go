@@ -21,6 +21,7 @@ import (
 	"github.com/cygy/ginamite/common/notifications"
 	"github.com/cygy/ginamite/common/queue"
 	"github.com/cygy/ginamite/common/timezone"
+	"github.com/cygy/ginamite/common/weburl"
 	"github.com/cygy/ginamite/web"
 	"github.com/cygy/ginamite/worker"
 )
@@ -41,7 +42,8 @@ type Server struct {
 	Web                      *web.Server
 
 	// private properties
-	plugins []Plugin
+	plugins   []Plugin
+	webRoutes *weburl.Configuration
 }
 
 // runner is a specialized server: API, worker or web.
@@ -90,6 +92,12 @@ type Connector interface {
 	Close()
 }
 
+// APIOnly is a Connector which the API alone needs: Run does not connect it when only the worker runs.
+type APIOnly interface {
+	Connector
+	APIOnly()
+}
+
 // NewServer returns a Server whose API functions are placeholders which accept nothing: a plugin or the application
 // is expected to replace them.
 func NewServer() *Server {
@@ -130,6 +138,14 @@ func NewServer() *Server {
 	}
 
 	return server
+}
+
+// WebRoutes returns the routes of the website, loaded by Run from the file given by the argument -web-routes and
+// shared with the three servers. It is nil if no file is given, which the API and the worker allow: a nil
+// *weburl.Configuration is safe to use, its URLs are empty. The plugins read it in Configure, the application in the
+// functions it gives to the servers, after Run loaded it.
+func (s *Server) WebRoutes() *weburl.Configuration {
+	return s.webRoutes
 }
 
 // AddPlugin adds a plugin, which is configured by Run.

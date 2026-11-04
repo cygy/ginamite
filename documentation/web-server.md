@@ -1,6 +1,6 @@
 # Web server
 
-The pages are described by the routes file (`-routes`), rendered with the Go templates of `templates_path`, and
+The pages are described by the routes file (`-web-routes`), rendered with the Go templates of `templates_path`, and
 translated with the files of `localization_path`. See the example [helloworld-web](../examples/helloworld-web).
 
 ```yaml

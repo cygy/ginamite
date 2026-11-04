@@ -6,6 +6,7 @@ import (
 	"errors"
 	"flag"
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"slices"
@@ -26,7 +27,7 @@ func TestServer_ConnectPlugins(t *testing.T) {
 
 	configuration := config.NewConfiguration()
 	configuration.Database.Service = "db"
-	closeAll, err := s.connectPlugins(configuration)
+	closeAll, err := s.connectPlugins(configuration, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -42,11 +43,44 @@ func TestServer_ConnectPlugins(t *testing.T) {
 	}
 }
 
+// apiConnector is a testConnector that only the API needs.
+type apiConnector struct{ testConnector }
+
+func (*apiConnector) APIOnly() {}
+
+func TestServer_ConnectPlugins_APIOnly(t *testing.T) {
+	var events []string
+	s := NewServer()
+	s.AddPlugin(&apiConnector{testConnector{name: "api", events: &events}})
+	s.AddPlugin(&testConnector{name: "all", events: &events})
+
+	closeAll, err := s.connectPlugins(config.NewConfiguration(), false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	closeAll()
+
+	if want := []string{"connect all ", "close all"}; !slices.Equal(events, want) {
+		t.Errorf("without the API, events = %v, want %v", events, want)
+	}
+
+	events = nil
+	closeAll, err = s.connectPlugins(config.NewConfiguration(), true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	closeAll()
+
+	if want := []string{"connect api ", "connect all ", "close all", "close api"}; !slices.Equal(events, want) {
+		t.Errorf("with the API, events = %v, want %v", events, want)
+	}
+}
+
 func TestServer_ConnectPlugins_NoConnector(t *testing.T) {
 	s := NewServer()
 	s.AddPlugin(&testPlugin{})
 
-	closeAll, err := s.connectPlugins(config.NewConfiguration())
+	closeAll, err := s.connectPlugins(config.NewConfiguration(), true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -62,7 +96,7 @@ func TestServer_ConnectPlugins_Error(t *testing.T) {
 	s.AddPlugin(&testConnector{name: "second", events: &events, connectErr: boom})
 	s.AddPlugin(&testConnector{name: "third", events: &events})
 
-	closeAll, err := s.connectPlugins(config.NewConfiguration())
+	closeAll, err := s.connectPlugins(config.NewConfiguration(), true)
 
 	if !errors.Is(err, boom) || closeAll != nil {
 		t.Errorf("connectPlugins() = %v, want the error", err)
@@ -79,8 +113,8 @@ func TestServer_SpecializedServer(t *testing.T) {
 		want  func(s *Server) runner
 	}{
 		{"api", flags.Flags{IsAPIServer: true}, func(s *Server) runner { return s.API }},
-		{"worker", flags.Flags{IsWorkerServer: true, RoutesFile: "routes.yaml"}, func(s *Server) runner { return s.Worker }},
-		{"web", flags.Flags{IsWebServer: true, RoutesFile: "routes.yaml"}, func(s *Server) runner { return s.Web }},
+		{"worker", flags.Flags{IsWorkerServer: true, WebRoutesFile: "routes.yaml"}, func(s *Server) runner { return s.Worker }},
+		{"web", flags.Flags{IsWebServer: true, WebRoutesFile: "routes.yaml"}, func(s *Server) runner { return s.Web }},
 		{"api wins", flags.Flags{IsAPIServer: true, IsWorkerServer: true, IsWebServer: true}, func(s *Server) runner { return s.API }},
 		{"worker wins over web", flags.Flags{IsWorkerServer: true, IsWebServer: true}, func(s *Server) runner { return s.Worker }},
 		{"none", flags.Flags{}, func(*Server) runner { return nil }},
@@ -95,10 +129,8 @@ func TestServer_SpecializedServer(t *testing.T) {
 			if want := tt.want(s); got != want {
 				t.Errorf("specializedServer() = %v, want %v", got, want)
 			}
-			if got != nil {
-				if routes := map[string]string{"worker": s.Worker.RoutesFile, "web": s.Web.RoutesFile}; routes[tt.name] != tt.flags.RoutesFile && tt.flags.RoutesFile != "" {
-					t.Errorf("routes files = %v", routes)
-				}
+			if tt.name == "web" && s.Web.RoutesFile != "routes.yaml" {
+				t.Errorf("Web.RoutesFile = %q, want the web routes file", s.Web.RoutesFile)
 			}
 		})
 	}
@@ -235,6 +267,7 @@ func TestServer_run_Errors(t *testing.T) {
 			boom, "",
 		},
 		{"missing timezones", nil, flags.Flags{IsWorkerServer: true, ServerConfigurationFile: conf}, nil, "timezones"},
+		{"unreadable web routes", nil, flags.Flags{IsAPIServer: true, ServerConfigurationFile: valid, WebRoutesFile: filepath.Join(dir, "missing-routes.yml")}, nil, "routes"},
 		{"missing robots", nil, flags.Flags{IsWebServer: true, ServerConfigurationFile: conf}, nil, "robots"},
 		{"configuration failure", []Plugin{&testPlugin{err: boom}}, flags.Flags{IsAPIServer: true, ServerConfigurationFile: valid}, boom, ""},
 	}
@@ -310,4 +343,51 @@ func TestServer_Run_Arguments(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestServer_loadWebRoutes(t *testing.T) {
+	file := writeFile(t, filepath.Join(t.TempDir(), "routes.yml"), "routes:\n  home:\n    paths:\n      en: /en/\n")
+
+	t.Run("shared with the servers and the plugins", func(t *testing.T) {
+		s := NewServer()
+		s.Config.Hosts.Web = "https://web"
+
+		if err := s.loadWebRoutes(&flags.Flags{WebRoutesFile: file}); err != nil {
+			t.Fatal(err)
+		}
+
+		routes := s.WebRoutes()
+		if routes == nil || routes.GetURL("home", "en") != "https://web/en/" {
+			t.Fatalf("WebRoutes() = %+v", routes)
+		}
+		if s.API.WebRoutes != routes || s.Worker.Routes != routes || s.Web.Routes != routes {
+			t.Error("the routes must be shared with the three servers")
+		}
+	})
+
+	t.Run("no file", func(t *testing.T) {
+		s := NewServer()
+		var logs bytes.Buffer
+		oldLog := log.Main
+		t.Cleanup(func() { log.Main = oldLog })
+		log.Main = slog.New(slog.NewTextHandler(&logs, nil))
+
+		if err := s.loadWebRoutes(&flags.Flags{IsAPIServer: true}); err != nil {
+			t.Fatal(err)
+		}
+		if out := logs.String(); !strings.Contains(out, "level=WARN") || !strings.Contains(out, "-web-routes") {
+			t.Errorf("the absence of routes must be logged as a warning, logs = %q", out)
+		}
+		if s.WebRoutes() != nil || s.API.WebRoutes != nil || s.Worker.Routes != nil || s.Web.Routes != nil {
+			t.Error("the routes must be nil without file")
+		}
+	})
+
+	t.Run("unreadable file", func(t *testing.T) {
+		s := NewServer()
+
+		if err := s.loadWebRoutes(&flags.Flags{WebRoutesFile: file + ".missing"}); err == nil {
+			t.Error("loadWebRoutes() must fail")
+		}
+	})
 }

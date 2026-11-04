@@ -29,6 +29,7 @@ import (
 	commonRequest "github.com/cygy/ginamite/common/request"
 	"github.com/cygy/ginamite/common/template/html"
 	"github.com/cygy/ginamite/common/timezone"
+	"github.com/cygy/ginamite/common/weburl"
 	"github.com/cygy/ginamite/internal/httpserver"
 
 	"github.com/gin-contrib/gzip"
@@ -114,7 +115,7 @@ func (s *Server) Run(ctx context.Context) error {
 	if s.Requests != nil {
 		server.Use(s.Requests.Middleware())
 	}
-	server.Use(ctxkey.Config.Inject(s.Config), ctxkey.Queue.Inject(s.Queue), ctxkey.Localization.Inject(s.Localization), ctxkey.Timezones.Inject(s.Timezones), ctxkey.Notifications.Inject(s.Notifications))
+	server.Use(ctxkey.Config.Inject(s.Config), ctxkey.Queue.Inject(s.Queue), ctxkey.Localization.Inject(s.Localization), ctxkey.Timezones.Inject(s.Timezones), ctxkey.Notifications.Inject(s.Notifications), weburl.Inject(s.WebRoutes))
 	server.Use(s.Middlewares...)
 	server.Use(s.idValidator())
 	server.Use(ctxAuthToken.InjectRevoked(s.RevokedTokens.IsRevoked))
@@ -164,10 +165,14 @@ func (s *Server) Run(ctx context.Context) error {
 	}
 	router.Notifications = s.Notifications
 	// The middlewares are built here, not called: each request limits itself with its own context.
+	if s.Hooks.NewRateLimiter == nil {
+		s.Hooks.RateLimiterStore = "memory"
+	}
+	log.Info("rate limiter", "store", s.Hooks.RateLimiterStore)
 	router.Limits = route.RateLimits{
-		Authentication: request.RateLimitFromConfiguration("authentication", s.Config.RateLimits.Authentication, s.Hooks.NewRateLimiter),  //nolint:contextcheck // see above
-		Registration:   request.RateLimitFromConfiguration("registration", s.Config.RateLimits.Registration, s.Hooks.NewRateLimiter),      //nolint:contextcheck // see above
-		ForgotPassword: request.RateLimitFromConfiguration("forgot_password", s.Config.RateLimits.ForgotPassword, s.Hooks.NewRateLimiter), //nolint:contextcheck // see above
+		Authentication: request.RateLimitFromConfiguration("authentication", s.Config.APIRateLimiter.Limits.Authentication, s.Hooks.NewRateLimiter),  //nolint:contextcheck // see above
+		Registration:   request.RateLimitFromConfiguration("registration", s.Config.APIRateLimiter.Limits.Registration, s.Hooks.NewRateLimiter),      //nolint:contextcheck // see above
+		ForgotPassword: request.RateLimitFromConfiguration("forgot_password", s.Config.APIRateLimiter.Limits.ForgotPassword, s.Hooks.NewRateLimiter), //nolint:contextcheck // see above
 	}
 	router.LoadDefaultRoutes()
 	for _, customRoute := range s.customRoutes {

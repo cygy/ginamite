@@ -115,7 +115,7 @@ Run the same binary once per server:
 ```bash
 go run . -api    -name api    -env production -conf-server conf/server.yaml
 go run . -worker -name worker -env production -conf-server conf/server.yaml
-go run . -web    -name web    -env production -conf-server conf/server.yaml -routes conf/routes.yaml
+go run . -web    -name web    -env production -conf-server conf/server.yaml -web-routes conf/routes.yaml
 ```
 
 | Argument | Description |
@@ -126,7 +126,7 @@ go run . -web    -name web    -env production -conf-server conf/server.yaml -rou
 | `-version` | Version: `final` (default), `beta` or `alpha`. |
 | `-conf-server` | Path to the server configuration file (YAML). |
 | `-conf-app` | Path to the application configuration file, see `ApplicationConfiguration`. |
-| `-routes` | Path to the routes file, required by the web server only. |
+| `-web-routes` | Path to the web routes file: required by the web server, optional for the API and the worker, whose URLs of the website are then empty. Loaded once, shared by the three servers and the plugins, see [Web routes](documentation/web-routes.md). |
 | `-help` | Print the help, with the arguments added by the plugins. |
 
 The arguments `-dlq*`, added by `plugins/kafka`, run a command on the dead letters of Kafka instead of a server, see
@@ -139,12 +139,14 @@ The arguments `-dlq*`, added by `plugins/kafka`, run a command on the dead lette
 | [Architecture](documentation/architecture.md) | The three servers, the plugins, the injected services, the packages. |
 | [Configuration](documentation/configuration.md) | The configuration file and its sections. |
 | [API features](documentation/api-features.md) | The default routes of the API, by feature. |
+| [Web routes](documentation/web-routes.md) | Build the URLs of the website from the API, the worker and the plugins. |
 | [Custom routes](documentation/custom-routes.md) | Add the routes of the application to the API and to the web server. |
 | [Web server](documentation/web-server.md) | The routes file, the templates and the translations. |
 | [Worker](documentation/worker.md) | The messages consumed, the recurring tasks, the storage and the hooks. |
 | [Message broker and Kafka](documentation/kafka.md) | The broker, the Kafka plugin, the consumer groups and the dead letters. |
 | [Payments with Stripe](documentation/stripe.md) | The Stripe plugin: checkout sessions, payment intents, the webhook and its store. |
 | [Database plugins](documentation/database-plugins.md) | The interfaces a database plugin implements, and the MongoDB plugin. |
+| [Rate limiting](documentation/rate-limiting.md) | The limits of the requests, in memory or shared between the API instances with the Redis or MongoDB plugin. |
 | [Security](documentation/security.md) | Passwords, JWT, rate limiting, trusted proxies and secrets. |
 | [Observability](documentation/observability.md) | The Prometheus metrics and the logs. |
 | [Tests](documentation/testing.md) | End-to-end tests of an API, and the logs in the tests. |
