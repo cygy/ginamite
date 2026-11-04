@@ -31,7 +31,7 @@ Run it from its own directory, since the paths of the configuration are relative
 
 ```bash
 cd examples/helloworld-web
-go run . -web -name helloworld-web -conf-server conf/server.yaml -routes conf/routes.yaml
+go run . -web -name helloworld-web -conf-server conf/server.yaml -web-routes conf/routes.yaml
 curl -L localhost:8080
 ```
 
