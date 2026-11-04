@@ -55,6 +55,9 @@ database:
   password: !env DB_PASSWORD              # the environment variable
 ```
 
+An application which reads its own YAML file (the application configuration) gets the same tags with
+`yaml.Unmarshal(source, &settings)` from `common/yaml`.
+
 Prefer `!file` with the secrets of Docker or Kubernetes, mounted in memory: the environment variables show up in
 `docker inspect` and in the dumps of the process. The start fails, naming the key and the file or the variable but never
 the value, if the file is unreadable or the variable is not set. In production it also fails if `jwt.secret` still

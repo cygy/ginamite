@@ -14,6 +14,13 @@ const Section = "stripe"
 // the API.
 const DefaultWebhookPath = "/stripe/hook"
 
+// DefaultIntentPath is the path of the route creating a payment intent, relative to the group of the version of the API.
+const DefaultIntentPath = "/stripe/intent"
+
+// DefaultCheckoutPath is the path of the route creating a checkout session, relative to the group of the version of the
+// API.
+const DefaultCheckoutPath = "/stripe/checkout"
+
 // DefaultCurrency is the currency of the payments when the settings give none.
 const DefaultCurrency = "eur"
 
@@ -22,7 +29,13 @@ type Settings struct {
 	// Enabled enables the plugin: without it, the plugin adds no route and Plugin.Service returns nil.
 	Enabled bool
 
-	// PublishableAPIKey is the key given to the browsers, which the plugin does not use.
+	// IntentEnabled adds the route creating the payment intents, see Plugin.OrderFunc.
+	IntentEnabled bool `yaml:"intent_enabled"`
+	// CheckoutEnabled adds the route creating the checkout sessions, see Plugin.OrderFunc.
+	CheckoutEnabled bool `yaml:"checkout_enabled"`
+
+	// PublishableAPIKey is the key given to the browsers, which the plugin does not use to call Stripe, but gives to the
+	// templates of the pages, see Plugin.WebVars.
 	PublishableAPIKey string `yaml:"publishable_api_key"`
 	// SecretAPIKey is the key of the calls to the API of Stripe.
 	SecretAPIKey string `yaml:"secret_api_key"`
@@ -38,6 +51,11 @@ type Settings struct {
 	// WebhookPath is the path of the webhook, relative to the group of the version of the API. DefaultWebhookPath if
 	// empty.
 	WebhookPath string `yaml:"webhook_path"`
+	// IntentPath and CheckoutPath are the paths of the routes creating the payments, relative to the group of the
+	// version of the API. They may hold parameters such as "/store/packs/:id/purchase/intent", which the OrderFunc
+	// reads from the context. DefaultIntentPath and DefaultCheckoutPath if empty.
+	IntentPath   string `yaml:"intent_path"`
+	CheckoutPath string `yaml:"checkout_path"`
 }
 
 // settingsFrom returns the settings of the section "stripe" of the configuration.
@@ -57,6 +75,13 @@ func (s Settings) withDefaults() Settings {
 
 	if s.WebhookPath == "" {
 		s.WebhookPath = DefaultWebhookPath
+	}
+
+	if s.IntentPath == "" {
+		s.IntentPath = DefaultIntentPath
+	}
+	if s.CheckoutPath == "" {
+		s.CheckoutPath = DefaultCheckoutPath
 	}
 
 	return s

@@ -1,5 +1,43 @@
 # Changelog
 
+## v0.11.0
+
+### Added
+
+- The package `common/yaml` is public: `yaml.Unmarshal(source, outs...)` decodes a YAML document after replacing the
+  scalars tagged `!file` (content of a file, without its trailing line break) and `!env` (environment variable), and
+  `yaml.Resolve(node, key)` does it on a `yaml.Node`. The applications use it to read their own configuration file
+  with the same secrets as ginamite. The behaviour of the server configuration is unchanged.
+- `plugins/stripe` adds the API routes creating the payments: `POST intent_path` (payment intent, for Stripe.js) and
+  `POST checkout_path` (checkout session), behind the middlewares checking the authentication and the acceptance of the
+  latest terms. The application says what is bought with `Plugin.OrderFunc` (`func(c *gin.Context) (stripe.Order, bool)`):
+  the items and their prices, the customer, the metadata, and the keys of the web routes where Stripe sends the user back.
+  The function answers the request itself when it refuses the order. The plugin builds the success and cancel URLs from
+  the web routes of the server, in the locale of the request. The handlers are also exported
+  (`Service.IntentHandler`, `Service.CheckoutHandler`).
+- New settings of the section `stripe`: `intent_enabled`, `checkout_enabled` (both `false` by default), `intent_path`
+  (default `/stripe/intent`) and `checkout_path` (default `/stripe/checkout`), which may hold path parameters such as
+  `/store/packs/:id/purchase/intent`.
+- `Plugin.WebVars()` gives the variables of the pages paying with Stripe (`StripePublishableKey`, `IntentEnabled`,
+  `CheckoutEnabled`) from the settings, to set in the templates of the application.
+- `ginamite.Server.Role()` (`RoleAPI`, `RoleWorker`, `RoleWeb`, `RoleNone`) tells a plugin which server runs, set by `Run`
+  before the plugins are configured. The Stripe plugin uses it: the web server only reads the settings, so its section
+  `stripe` needs no secret, store or `OrderFunc`.
+
+### Migration
+
+- Nothing changes for an application which only uses the webhook: both new routes are disabled until
+  `intent_enabled` or `checkout_enabled` is set.
+- An application which had its own routes creating payments with `Plugin.Service()` can keep them, or move to
+  `Plugin.OrderFunc` and delete its handlers. In that case, set `intent_path` and `checkout_path` to its current
+  paths so the clients do not change, check that the checks its route middlewares did (identifying the item, its
+  availability) are in the `OrderFunc`, and move the settings it kept elsewhere to the section `stripe` (or keep
+  `Plugin.SettingsFunc`).
+- Enabling the intents or the checkouts without an `OrderFunc` makes the API fail at startup.
+- The web server now runs the plugin with the section `stripe` of **its own** configuration file (before, an
+  application using `SettingsFunc` could share one source): add `enabled`, `publishable_api_key` and the two
+  `*_enabled` flags to it; the secrets are not needed there.
+
 ## v0.10.0
 
 ### Breaking changes

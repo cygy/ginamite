@@ -70,6 +70,15 @@ func (s *Server) run(ctx context.Context, f *flags.Flags) error {
 		return errors.New("no server selected: use one of the arguments -api, -worker or -web")
 	}
 
+	switch {
+	case f.IsAPIServer:
+		s.role = RoleAPI
+	case f.IsWorkerServer:
+		s.role = RoleWorker
+	default:
+		s.role = RoleWeb
+	}
+
 	if err := s.initializeConfiguration(f); err != nil {
 		return err
 	}

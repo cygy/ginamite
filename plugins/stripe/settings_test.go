@@ -9,12 +9,13 @@ import (
 )
 
 func TestSettings_WithDefaults(t *testing.T) {
-	if s := (Settings{}).withDefaults(); s.Currency != DefaultCurrency || s.WebhookPath != DefaultWebhookPath {
+	if s := (Settings{}).withDefaults(); s.Currency != DefaultCurrency || s.WebhookPath != DefaultWebhookPath ||
+		s.IntentPath != DefaultIntentPath || s.CheckoutPath != DefaultCheckoutPath {
 		t.Errorf("defaults = %+v", s)
 	}
 
-	s := Settings{Currency: "USD", WebhookPath: "/payments/hook"}.withDefaults()
-	if s.Currency != "usd" || s.WebhookPath != "/payments/hook" {
+	s := Settings{Currency: "USD", WebhookPath: "/payments/hook", IntentPath: "/i", CheckoutPath: "/c"}.withDefaults()
+	if s.Currency != "usd" || s.WebhookPath != "/payments/hook" || s.IntentPath != "/i" || s.CheckoutPath != "/c" {
 		t.Errorf("settings = %+v, want the given values, the currency in lower case", s)
 	}
 }
@@ -49,13 +50,14 @@ func configuration(t *testing.T, content string) *config.Configuration {
 }
 
 func TestSettingsFrom(t *testing.T) {
-	c := configuration(t, "stripe:\n  enabled: true\n  secret_api_key: sk\n  secret_webhook_key: whsec\n  currency: usd\n  payment_method_types: [card]\n")
+	c := configuration(t, "stripe:\n  enabled: true\n  secret_api_key: sk\n  secret_webhook_key: whsec\n  currency: usd\n  payment_method_types: [card]\n  intent_enabled: true\n  checkout_path: /buy\n")
 
 	s, err := settingsFrom(c)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !s.Enabled || s.SecretAPIKey != "sk" || s.SecretWebhookKey != "whsec" || s.Currency != "usd" || len(s.PaymentMethodTypes) != 1 {
+	if !s.Enabled || s.SecretAPIKey != "sk" || s.SecretWebhookKey != "whsec" || s.Currency != "usd" || len(s.PaymentMethodTypes) != 1 ||
+		!s.IntentEnabled || s.CheckoutEnabled || s.CheckoutPath != "/buy" {
 		t.Errorf("settings = %+v", s)
 	}
 
