@@ -41,7 +41,7 @@
    (`github.com/cygy/ginamite/plugins/ratelimit/redis`) with `api_rate_limiter.redis`, or
    `mongodb.NewPlugin()` (`github.com/cygy/ginamite/plugins/ratelimit/mongodb`) with `api_rate_limiter.mongodb`.
 4. The collection `rateLimits` of the database of the MongoDB plugin is no longer used: drop it
-   (`db.rateLimits.drop()`). The MongoDB rate limiting plugin uses its own database and collection.
+   (`db.rateLimits.drop()`). The MongoDB rate limiting plugin has its own settings, and can use another database.
 
 ## v0.10.0
 

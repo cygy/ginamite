@@ -121,7 +121,7 @@ func prepare(ctx context.Context, database store.Database, collection string) er
 	err := database.CreateCollection(ctx, collection)
 
 	var serverError mongo.ServerError
-	if err != nil && !(errors.As(err, &serverError) && serverError.HasErrorCode(errorCodeNamespaceExists)) {
+	if err != nil && (!errors.As(err, &serverError) || !serverError.HasErrorCode(errorCodeNamespaceExists)) {
 		return fmt.Errorf("unable to create the collection %s: %w", collection, err)
 	}
 
