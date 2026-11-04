@@ -28,15 +28,16 @@ type Server struct {
 	Queue *queue.Queue
 	// Localization translates the emails, set by the main server before it starts.
 	Localization *localization.Engine
-	RoutesFile   string
+	// Routes gives the URLs of the pages of the website, set by the main server before it starts, or nil if no web
+	// routes file is given: the URLs are then empty and the sitemaps are not generated.
+	Routes *weburl.Configuration
 	// Storage is the storage of the application, such as the one of the storage plugin.
 	Storage Storage
 	// Hooks are the optional functions of the application.
 	Hooks Hooks
 
-	routes    *weburl.Configuration // The routes of the website, loaded when the worker starts.
-	mailer    *mail.Mailer          // Sends the emails, created when the worker starts.
-	scheduler *recurring.Scheduler  // Runs the recurring tasks.
+	mailer    *mail.Mailer         // Sends the emails, created when the worker starts.
+	scheduler *recurring.Scheduler // Runs the recurring tasks.
 }
 
 // NewServer returns a new worker.
@@ -44,7 +45,7 @@ func NewServer() *Server {
 	return &Server{Config: config.NewConfiguration(), Queue: queue.New(nil), Localization: localization.NewEngine(), scheduler: recurring.NewScheduler()}
 }
 
-// Run runs the worker: it loads the templates and the routes, initializes the emails, runs the start up tasks
+// Run runs the worker: it loads the templates, initializes the emails, runs the start up tasks
 // and starts the recurring tasks. It returns once ctx is done and the running recurring tasks returned, so that the
 // caller can stop the consumption of the messages and close the connections, or at once with an error if the set up
 // fails.
@@ -62,16 +63,10 @@ func (s *Server) Run(ctx context.Context) error {
 	return nil
 }
 
-// setup prepares and starts the worker, except the consumption of the messages. It returns an error if the routes or
-// the templates can not be loaded.
+// setup prepares and starts the worker, except the consumption of the messages. It returns an error if the templates can
+// not be loaded.
 func (s *Server) setup(ctx context.Context) error {
 	s.warnUndefinedStorages()
-
-	routes, err := weburl.Load(s.RoutesFile, s.Config.Hosts.Web)
-	if err != nil {
-		return err
-	}
-	s.routes = routes
 
 	htmlTemplates, err := html.LoadTemplatesWithDelimiters(s.Config.TemplatesPath+"/html", "[[", "]]", nil)
 	if err != nil {
@@ -96,7 +91,7 @@ func (s *Server) setup(ctx context.Context) error {
 		HTMLVars:      commonHTMLVars,
 		TextVars:      commonTextVars,
 		Localization:  s.Localization,
-		Routes:        s.routes,
+		Routes:        s.Routes,
 		HTMLTemplates: htmlTemplates,
 		TextTemplates: textTemplates,
 	})
@@ -183,9 +178,9 @@ func (s *Server) recurringFuncs() map[string]recurring.Func {
 	}
 
 	// Generate the XML sitemap files.
-	if st.Sitemap != nil {
+	if st.Sitemap != nil && s.Routes != nil {
 		funcs[recurring.GenerateSitemaps] = func(ctx context.Context, taskName string) {
-			sitemap.Generate(ctx, taskName, s.Config, s.routes, st.Sitemap.LocalizedRouteVariables)
+			sitemap.Generate(ctx, taskName, s.Config, s.Routes, st.Sitemap.LocalizedRouteVariables)
 		}
 	}
 

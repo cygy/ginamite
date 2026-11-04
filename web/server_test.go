@@ -15,6 +15,7 @@ import (
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/config/environment"
 	"github.com/cygy/ginamite/common/response"
+	"github.com/cygy/ginamite/common/weburl"
 	"github.com/cygy/ginamite/web/api"
 	"github.com/cygy/ginamite/web/internal/webtest"
 	"github.com/cygy/ginamite/web/route"
@@ -108,9 +109,14 @@ func TestServer_SetUp(t *testing.T) {
 	server.Functions.APIMiddlewares = []api.ResponseHandlerFunc{
 		func(*gin.Context, int, error, response.Error) bool { apiHandled = true; return false },
 	}
+	server.Routes = weburl.NewConfiguration()
+	var routesOfRequest *weburl.Configuration
 	server.AddCustomRoutes(func(g *gin.RouterGroup, locale string, _ route.Middlewares, getRelativePath func(string) (string, bool, gin.HandlerFunc, bool)) {
 		path, _, savePageKey, _ := getRelativePath("custom")
-		g.GET(path, savePageKey, func(c *gin.Context) { c.String(http.StatusOK, "custom "+locale) })
+		g.GET(path, savePageKey, func(c *gin.Context) {
+			routesOfRequest = weburl.Of(c)
+			c.String(http.StatusOK, "custom "+locale)
+		})
 	})
 
 	engine := gin.New()
@@ -136,6 +142,10 @@ func TestServer_SetUp(t *testing.T) {
 		if rec.Code != tt.status || !strings.Contains(rec.Body.String(), tt.body) {
 			t.Errorf("%s: status = %d, body = %q, want %d containing %q", tt.target, rec.Code, rec.Body.String(), tt.status, tt.body)
 		}
+	}
+
+	if routesOfRequest != server.Routes {
+		t.Errorf("weburl.Of() = %p, want the routes of the server", routesOfRequest)
 	}
 
 	t.Run("API client", func(t *testing.T) {

@@ -17,7 +17,7 @@ import (
 )
 
 func TestNewServer(t *testing.T) {
-	if s := NewServer(); s == nil || s.RoutesFile != "" {
+	if s := NewServer(); s == nil || s.Routes != nil {
 		t.Errorf("server = %+v", s)
 	}
 }
@@ -109,8 +109,14 @@ func TestServer_recurringFuncs(t *testing.T) {
 
 		want := []string{recurring.DeleteExpiredTokens, recurring.DeleteInactiveAccounts, recurring.DeleteNeverUsedAccounts, recurring.GenerateSitemaps, recurring.SanitizeAccounts}
 		sort.Strings(want)
-		if got := names(&Server{Config: c, Storage: allStorages()}); !slices.Equal(got, want) {
+		if got := names(&Server{Config: c, Routes: weburl.NewConfiguration(), Storage: allStorages()}); !slices.Equal(got, want) {
 			t.Errorf("tasks = %v, want %v", got, want)
+		}
+	})
+
+	t.Run("the sitemaps need the web routes", func(t *testing.T) {
+		if got := names(&Server{Config: &config.Configuration{}, Storage: allStorages()}); slices.Contains(got, recurring.GenerateSitemaps) {
+			t.Errorf("tasks = %v", got)
 		}
 	})
 
@@ -142,7 +148,7 @@ func TestServer_recurringFuncs_run(t *testing.T) {
 	c.Sitemap = config.SitemapConfiguration{Path: t.TempDir(), Name: "sitemap", MaximumURLsPerPage: 1000}
 
 	q := workertest.CaptureQueue(t)
-	s := &Server{Config: c, Queue: q.Sender, routes: weburl.NewConfiguration(), Storage: allStorages()}
+	s := &Server{Config: c, Queue: q.Sender, Routes: weburl.NewConfiguration(), Storage: allStorages()}
 
 	// The count logged by each task.
 	wantCounts := map[string]any{
@@ -225,7 +231,6 @@ func TestServer_setup(t *testing.T) {
 	}
 	write("templates/html/mails/hello.html", "<p>[[.Name]]</p>")
 	write("templates/text/mails/hello.txt", "Hello {{.Name}}")
-	write("routes.yml", "routes:\n  home:\n    paths:\n      en: /en/\n")
 
 	c := &config.Configuration{Environment: "test", Version: "1.0", TemplatesPath: filepath.Join(dir, "templates"), RunStartUpTasks: true}
 	c.Hosts.Web = "https://web"
@@ -234,7 +239,8 @@ func TestServer_setup(t *testing.T) {
 
 	var env, version string
 	var calls []string
-	s := &Server{Config: c, scheduler: recurring.NewScheduler(), RoutesFile: filepath.Join(dir, "routes.yml")}
+	s := &Server{Config: c, scheduler: recurring.NewScheduler(), Routes: weburl.NewConfiguration()}
+	s.Routes.Routes["home"] = weburl.Route{AbsolutePaths: map[string]string{"en": "https://web/en/"}}
 	s.Hooks.StartUpTasks = func(_ context.Context, environment, v string) {
 		env, version = environment, v
 		calls = append(calls, "start up")
@@ -252,7 +258,7 @@ func TestServer_setup(t *testing.T) {
 	if s.mailer == nil {
 		t.Fatal("the mailer is not created")
 	}
-	if got := s.routes.GetURL("home", "en"); got != "https://web/en/" {
+	if got := s.Routes.GetURL("home", "en"); got != "https://web/en/" {
 		t.Errorf("URL of the home = %q", got)
 	}
 	if !s.scheduler.HasFunc(recurring.DeleteExpiredTokens) {
@@ -282,14 +288,13 @@ func TestServer_Run_SetUpErrors(t *testing.T) {
 		routesFile string
 		want       string
 	}{
-		{"missing routes", filepath.Join(dir, "missing.yml"), "routes"},
 		{"missing templates", routes, "templates"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := &config.Configuration{TemplatesPath: filepath.Join(dir, "templates")}
-			s := &Server{Config: c, scheduler: recurring.NewScheduler(), RoutesFile: tt.routesFile}
+			s := &Server{Config: c, scheduler: recurring.NewScheduler()}
 
 			if err := s.Run(t.Context()); err == nil || !strings.Contains(err.Error(), tt.want) {
 				t.Errorf("Run() = %v, want an error about %q", err, tt.want)
@@ -303,7 +308,6 @@ func TestServer_Run_StopsWithTheContext(t *testing.T) {
 	for path, content := range map[string]string{
 		"templates/html/mails/hello.html": "<p>[[.Name]]</p>",
 		"templates/text/mails/hello.txt":  "Hello {{.Name}}",
-		"routes.yml":                      "routes: {}\n",
 	} {
 		path = filepath.Join(dir, path)
 		if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
@@ -316,7 +320,7 @@ func TestServer_Run_StopsWithTheContext(t *testing.T) {
 
 	c := &config.Configuration{TemplatesPath: filepath.Join(dir, "templates")}
 	c.RecurringTasks = []config.RecurringTask{{Name: "custom", Interval: 1, StartAt: "bad", Enabled: true}}
-	s := &Server{Config: c, scheduler: recurring.NewScheduler(), RoutesFile: filepath.Join(dir, "routes.yml")}
+	s := &Server{Config: c, scheduler: recurring.NewScheduler()}
 	s.Hooks.SetFuncOfRecurringTasks = func(register func(string, recurring.Func)) {
 		register("custom", func(context.Context, string) {})
 	}

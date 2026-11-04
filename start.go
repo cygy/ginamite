@@ -14,6 +14,7 @@ import (
 	"github.com/cygy/ginamite/common/localization"
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/common/timezone"
+	"github.com/cygy/ginamite/common/weburl"
 	"github.com/cygy/ginamite/internal/robots"
 )
 
@@ -70,6 +71,10 @@ func (s *Server) run(ctx context.Context, f *flags.Flags) error {
 	}
 
 	if err := s.initializeConfiguration(f); err != nil {
+		return err
+	}
+
+	if err := s.loadWebRoutes(f); err != nil {
 		return err
 	}
 
@@ -178,17 +183,34 @@ func (s *Server) connectPlugins(configuration *config.Configuration) (closeAll f
 	return closeAll, nil
 }
 
-// specializedServer returns the server chosen by the arguments, with its routes file if it uses one, or nil if none is.
-// The API server wins over the worker, which wins over the web server.
+// loadWebRoutes loads the web routes file of the arguments once, with the host of the website of the configuration,
+// and shares the routes with the three servers. Without file, the routes are nil. It returns an error if the file
+// can not be read, since the servers can not give the right URLs without it.
+func (s *Server) loadWebRoutes(f *flags.Flags) error {
+	s.webRoutes = nil
+	if f.WebRoutesFile != "" {
+		routes, err := weburl.Load(f.WebRoutesFile, s.Config.Hosts.Web)
+		if err != nil {
+			return err
+		}
+		s.webRoutes = routes
+	}
+	s.API.WebRoutes, s.Worker.Routes, s.Web.Routes = s.webRoutes, s.webRoutes, s.webRoutes
+
+	return nil
+}
+
+// specializedServer returns the server chosen by the arguments, or nil if none is.
+// The API server wins over the worker, which wins over the web server. The web server also gets the routes file,
+// which describes its pages.
 func (s *Server) specializedServer(f *flags.Flags) runner {
 	switch {
 	case f.IsAPIServer:
 		return s.API
 	case f.IsWorkerServer:
-		s.Worker.RoutesFile = f.RoutesFile
 		return s.Worker
 	case f.IsWebServer:
-		s.Web.RoutesFile = f.RoutesFile
+		s.Web.RoutesFile = f.WebRoutesFile
 		return s.Web
 	}
 

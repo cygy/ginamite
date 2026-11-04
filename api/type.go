@@ -19,6 +19,7 @@ import (
 	"github.com/cygy/ginamite/common/notifications"
 	"github.com/cygy/ginamite/common/queue"
 	"github.com/cygy/ginamite/common/timezone"
+	"github.com/cygy/ginamite/common/weburl"
 
 	"github.com/gin-gonic/gin"
 )
@@ -33,6 +34,9 @@ type Server struct {
 	Localization *localization.Engine
 	// Timezones are the timezones of the countries, set by the main server before it starts.
 	Timezones *timezone.Configuration
+	// WebRoutes are the routes of the website, set by the main server before it starts, or nil if no web routes file
+	// is given. The handlers read them with weburl.Of.
+	WebRoutes *weburl.Configuration
 	// Notifications is the registry of the notifications the users can subscribe to, set by the main server before it
 	// starts.
 	Notifications *notifications.Registry

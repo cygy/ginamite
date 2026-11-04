@@ -29,6 +29,7 @@ import (
 	commonRequest "github.com/cygy/ginamite/common/request"
 	"github.com/cygy/ginamite/common/template/html"
 	"github.com/cygy/ginamite/common/timezone"
+	"github.com/cygy/ginamite/common/weburl"
 	"github.com/cygy/ginamite/internal/httpserver"
 
 	"github.com/gin-contrib/gzip"
@@ -114,7 +115,7 @@ func (s *Server) Run(ctx context.Context) error {
 	if s.Requests != nil {
 		server.Use(s.Requests.Middleware())
 	}
-	server.Use(ctxkey.Config.Inject(s.Config), ctxkey.Queue.Inject(s.Queue), ctxkey.Localization.Inject(s.Localization), ctxkey.Timezones.Inject(s.Timezones), ctxkey.Notifications.Inject(s.Notifications))
+	server.Use(ctxkey.Config.Inject(s.Config), ctxkey.Queue.Inject(s.Queue), ctxkey.Localization.Inject(s.Localization), ctxkey.Timezones.Inject(s.Timezones), ctxkey.Notifications.Inject(s.Notifications), weburl.Inject(s.WebRoutes))
 	server.Use(s.Middlewares...)
 	server.Use(s.idValidator())
 	server.Use(ctxAuthToken.InjectRevoked(s.RevokedTokens.IsRevoked))
