@@ -165,10 +165,14 @@ func (s *Server) Run(ctx context.Context) error {
 	}
 	router.Notifications = s.Notifications
 	// The middlewares are built here, not called: each request limits itself with its own context.
+	if s.Hooks.NewRateLimiter == nil {
+		s.Hooks.RateLimiterStore = "memory"
+	}
+	log.Info("rate limiter", "store", s.Hooks.RateLimiterStore)
 	router.Limits = route.RateLimits{
-		Authentication: request.RateLimitFromConfiguration("authentication", s.Config.RateLimits.Authentication, s.Hooks.NewRateLimiter),  //nolint:contextcheck // see above
-		Registration:   request.RateLimitFromConfiguration("registration", s.Config.RateLimits.Registration, s.Hooks.NewRateLimiter),      //nolint:contextcheck // see above
-		ForgotPassword: request.RateLimitFromConfiguration("forgot_password", s.Config.RateLimits.ForgotPassword, s.Hooks.NewRateLimiter), //nolint:contextcheck // see above
+		Authentication: request.RateLimitFromConfiguration("authentication", s.Config.APIRateLimiter.Limits.Authentication, s.Hooks.NewRateLimiter),  //nolint:contextcheck // see above
+		Registration:   request.RateLimitFromConfiguration("registration", s.Config.APIRateLimiter.Limits.Registration, s.Hooks.NewRateLimiter),      //nolint:contextcheck // see above
+		ForgotPassword: request.RateLimitFromConfiguration("forgot_password", s.Config.APIRateLimiter.Limits.ForgotPassword, s.Hooks.NewRateLimiter), //nolint:contextcheck // see above
 	}
 	router.LoadDefaultRoutes()
 	for _, customRoute := range s.customRoutes {

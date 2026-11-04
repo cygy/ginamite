@@ -171,11 +171,11 @@ func writeFile(t *testing.T, content string) string {
 func TestNewConfiguration_RateLimits(t *testing.T) {
 	c := NewConfiguration()
 
-	if c.RateLimits.Authentication.Requests != 10 || c.RateLimits.Authentication.Seconds != 60 {
-		t.Errorf("authentication = %+v", c.RateLimits.Authentication)
+	if c.APIRateLimiter.Limits.Authentication.Requests != 10 || c.APIRateLimiter.Limits.Authentication.Seconds != 60 {
+		t.Errorf("authentication = %+v", c.APIRateLimiter.Limits.Authentication)
 	}
-	if c.RateLimits.Registration.Requests == 0 || c.RateLimits.ForgotPassword.Requests == 0 {
-		t.Errorf("limits = %+v", c.RateLimits)
+	if c.APIRateLimiter.Limits.Registration.Requests == 0 || c.APIRateLimiter.Limits.ForgotPassword.Requests == 0 {
+		t.Errorf("limits = %+v", c.APIRateLimiter.Limits)
 	}
 	if c.Server.TrustedProxies == nil || len(c.Server.TrustedProxies) != 0 {
 		t.Errorf("trusted proxies = %v, want none", c.Server.TrustedProxies)
@@ -255,5 +255,61 @@ func TestCookieConfiguration_SameSite(t *testing.T) {
 		if err := c.validate(); (err != nil) != tt.wantErr {
 			t.Errorf("validate(%q, secure %v) = %v, want an error: %v", tt.setting, tt.secure, err, tt.wantErr)
 		}
+	}
+}
+
+func TestConfiguration_RateLimiterStore(t *testing.T) {
+	file := writeFile(t, `
+api_rate_limiter:
+  limits:
+    authentication: { requests: 3, seconds: 30 }
+  redis:
+    address: localhost:6379
+    password: !env RATE_LIMITER_PASSWORD
+`)
+	t.Setenv("RATE_LIMITER_PASSWORD", "secret")
+
+	c := NewConfiguration()
+	if err := c.Initialize(file, environment.Test, version.Final); err != nil {
+		t.Fatal(err)
+	}
+
+	if got := c.APIRateLimiter.Limits.Authentication; got.Requests != 3 || got.Seconds != 30 {
+		t.Errorf("authentication = %+v", got)
+	}
+	if got := c.APIRateLimiter.Limits.Registration.Requests; got != 5 {
+		t.Errorf("registration requests = %d, want the default", got)
+	}
+
+	t.Run("present", func(t *testing.T) {
+		settings := struct{ Address, Password, Prefix string }{Prefix: "default"}
+		if err := c.RateLimiterStore("redis", &settings); err != nil {
+			t.Fatal(err)
+		}
+		if settings.Address != "localhost:6379" || settings.Password != "secret" || settings.Prefix != "default" {
+			t.Errorf("settings = %+v", settings)
+		}
+	})
+
+	t.Run("absent", func(t *testing.T) {
+		settings := struct{ Address string }{Address: "default"}
+		if err := c.RateLimiterStore("mongodb", &settings); err != nil || settings.Address != "default" {
+			t.Errorf("settings = %+v, err = %v", settings, err)
+		}
+	})
+
+	t.Run("invalid", func(t *testing.T) {
+		settings := struct{ Address int }{}
+		if err := c.RateLimiterStore("redis", &settings); err == nil {
+			t.Error("a string must not decode into an int")
+		}
+	})
+}
+
+func TestConfiguration_Initialize_RemovedRateLimits(t *testing.T) {
+	file := writeFile(t, "rate_limits:\n  authentication: { requests: 3, seconds: 30 }\n")
+
+	if err := NewConfiguration().Initialize(file, environment.Test, version.Final); err == nil {
+		t.Error("the section rate_limits must be refused")
 	}
 }

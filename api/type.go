@@ -90,7 +90,11 @@ type Hooks struct {
 	// them. Optional.
 	RouterConfigureDefaultRoutes route.ConfigureDefaultRoutes
 
-	// NewRateLimiter returns the limiters of the requests which try to guess a secret, see the setting rate_limits. The
-	// default limiters keep their counters in memory, by instance of the API.
+	// NewRateLimiter returns the limiters of the requests which try to guess a secret, see the setting
+	// api_rate_limiter. The default limiters keep their counters in memory, by instance of the API. A rate limiting
+	// plugin sets it with RateLimiterStore, see the package plugins/ratelimit.
 	NewRateLimiter request.NewRateLimiterFunc
+	// RateLimiterStore is the name of the storage of the counters of NewRateLimiter, such as "redis": the API logs it
+	// when it starts. It is "memory" if NewRateLimiter is nil.
+	RateLimiterStore string
 }

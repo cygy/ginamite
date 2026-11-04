@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+
+	"go.yaml.in/yaml/v3"
 )
 
 // GZipConfiguration holds the GZip settings.
@@ -215,12 +217,23 @@ type RateLimitConfiguration struct {
 	Seconds  int
 }
 
-// RateLimitsConfiguration holds the limits of the requests which try to guess a secret, by group of routes. By default
-// the counters are kept in memory by each instance of the API, see api.Server.Hooks.NewRateLimiter.
+// RateLimitsConfiguration holds the limits of the requests which try to guess a secret, by group of routes. They apply
+// whatever the storage of the counters is, see APIRateLimiterConfiguration.
 type RateLimitsConfiguration struct {
 	Authentication RateLimitConfiguration `yaml:"authentication"`
 	Registration   RateLimitConfiguration `yaml:"registration"`
 	ForgotPassword RateLimitConfiguration `yaml:"forgot_password"`
+}
+
+// APIRateLimiterConfiguration is the section "api_rate_limiter": the limits of the requests, and the settings of the
+// storage of the counters. By default the counters are kept in memory by each instance of the API; a rate limiting
+// plugin, see api.Server.Hooks.NewRateLimiter, keeps them elsewhere and reads its own subsection, such as "mongodb" or
+// "redis", with Configuration.RateLimiterStore.
+type APIRateLimiterConfiguration struct {
+	Limits RateLimitsConfiguration `yaml:"limits"`
+
+	// Stores are the subsections of the rate limiting plugins, by name: read them with Configuration.RateLimiterStore.
+	Stores map[string]yaml.Node `yaml:",inline"`
 }
 
 // MetricsConfiguration holds the settings of the Prometheus metrics.
