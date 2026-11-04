@@ -391,3 +391,35 @@ func TestServer_loadWebRoutes(t *testing.T) {
 		}
 	})
 }
+
+func TestServer_run_Role(t *testing.T) {
+	dir := t.TempDir()
+	conf := writeFile(t, filepath.Join(dir, "server.yaml"), "timezones_file_path: data/zone1970.tab\nrobots_file_path: "+writeFile(t, filepath.Join(dir, "robots.txt"), "User-agent: *\n")+"\n")
+
+	oldLog := log.Main
+	t.Cleanup(func() { log.Main = oldLog })
+
+	tests := map[Role]flags.Flags{
+		RoleAPI:    {IsAPIServer: true},
+		RoleWorker: {IsWorkerServer: true},
+		RoleWeb:    {IsWebServer: true},
+	}
+
+	for want, f := range tests {
+		t.Run(string(want), func(t *testing.T) {
+			plugin := &testPlugin{err: errors.New("stop")}
+			s := NewServer()
+			s.AddPlugin(plugin)
+			if s.Role() != RoleNone {
+				t.Errorf("Role() = %q before Run, want none", s.Role())
+			}
+
+			f.ServerName, f.Environment, f.ServerConfigurationFile = "test", "test", conf
+			_ = s.run(t.Context(), &f)
+
+			if len(plugin.configured) != 1 || plugin.configured[0].Role() != want {
+				t.Errorf("Role() = %q when the plugin is configured, want %q", s.Role(), want)
+			}
+		})
+	}
+}

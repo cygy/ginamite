@@ -44,6 +44,29 @@ type Server struct {
 	// private properties
 	plugins   []Plugin
 	webRoutes *weburl.Configuration
+	role      Role
+}
+
+// Role is the specialized server a process runs.
+type Role string
+
+// The roles of a server.
+const (
+	// RoleNone is the role before Run chose a server, and in the tests which configure a Server by hand.
+	RoleNone Role = ""
+	// RoleAPI is the role of the process running the API.
+	RoleAPI Role = "api"
+	// RoleWorker is the role of the process running the worker.
+	RoleWorker Role = "worker"
+	// RoleWeb is the role of the process running the web server.
+	RoleWeb Role = "web"
+)
+
+// Role returns the server which runs: Run sets it, from the command line arguments, before it configures the plugins,
+// so that a plugin can skip what only another server needs, such as the secrets of the API in the web server. It is
+// RoleNone outside Run.
+func (s *Server) Role() Role {
+	return s.role
 }
 
 // runner is a specialized server: API, worker or web.
