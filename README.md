@@ -146,6 +146,7 @@ The arguments `-dlq*`, added by `plugins/kafka`, run a command on the dead lette
 | [Message broker and Kafka](documentation/kafka.md) | The broker, the Kafka plugin, the consumer groups and the dead letters. |
 | [Payments with Stripe](documentation/stripe.md) | The Stripe plugin: checkout sessions, payment intents, the webhook and its store. |
 | [Database plugins](documentation/database-plugins.md) | The interfaces a database plugin implements, and the MongoDB plugin. |
+| [Rate limiting](documentation/rate-limiting.md) | The limits of the requests, in memory or shared between the API instances with the Redis or MongoDB plugin. |
 | [Security](documentation/security.md) | Passwords, JWT, rate limiting, trusted proxies and secrets. |
 | [Observability](documentation/observability.md) | The Prometheus metrics and the logs. |
 | [Tests](documentation/testing.md) | End-to-end tests of an API, and the logs in the tests. |

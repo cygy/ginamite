@@ -8,15 +8,15 @@
   A `jwt` secret shorter than 32 characters logs a warning.
 - **Rate limiting**: the sign-in, registration and forgot-password routes are limited per client IP. A refused request
   gets a `429` and a `Retry-After` header. By default the counters are a token bucket in the memory of each instance,
-  so the limit applies per API instance. The MongoDB plugin replaces them with counters in the database
-  (`rateLimits`, fixed windows), shared by the instances; another plugin can set `api.Server.Hooks.NewRateLimiter`
-  to its own `request.RateLimiter`. A failure of the limiter lets the request through.
+  so the limit applies per API instance. A rate limiting plugin shares the counters between the instances, see
+  [Rate limiting](rate-limiting.md). A failure of the limiter lets the request through.
 
   ```yaml
-  rate_limits:
-    authentication:  { requests: 10, seconds: 60 }
-    registration:    { requests: 5,  seconds: 60 }
-    forgot_password: { requests: 5,  seconds: 60 }
+  api_rate_limiter:
+    limits:
+      authentication:  { requests: 10, seconds: 60 }
+      registration:    { requests: 5,  seconds: 60 }
+      forgot_password: { requests: 5,  seconds: 60 }
   server:
     trusted_proxies: ["10.0.0.0/8"]  # the proxies allowed to give the client IP
   ```

@@ -6,7 +6,7 @@ the extension points below, and is registered with `server.AddPlugin`.
 | Extension point | Role |
 | --- | --- |
 | `ginamite.Plugin.Configure` | Sets the storages and the hooks of the API (`api.Server.Contacts`, `Account`, `Hooks`, etc.) and the storages and the hooks of the worker (`worker.Server.Storage`, `Hooks`). An error stops `Run`. |
-| `ginamite.Connector` (optional) | `Connect` opens the connection before the plugins are configured, and returns an error if it fails; `Close` closes it when the server stops. Called only for the API and worker servers. |
+| `ginamite.Connector` (optional) | `Connect` opens the connection before the plugins are configured, and returns an error if it fails; `Close` closes it when the server stops. Called only for the API and worker servers, and for the API alone if the plugin also implements `ginamite.APIOnly`. |
 | `api.Server.Middlewares` | Gin middlewares added before the routes, for instance to add a request ID or a CORS policy. A database plugin does not need them. |
 | `api.Server.Hooks.IsValidID` | Reports whether an identifier in a URL is well-formed. It depends on the database (an ObjectID for MongoDB, a UUID or an integer for SQL). By default every identifier is accepted. |
 
@@ -26,8 +26,8 @@ startup. Each method takes the `context.Context` of the request (or of the task,
 | Worker | `Storage` | `worker.Storage`: `Tokens`, `Accounts`, `Users`, `Notifications`, `Locations`, `Emails` and `Sitemap` |
 | Worker | `Hooks` | `worker.Hooks`: the tasks, mails and notifications of the application |
 
-The rate limiters of the requests (`api.Server.Hooks.NewRateLimiter`) keep their counters in memory by default: a plugin
-can provide limiters shared between the instances by implementing `request.RateLimiter`, as the MongoDB plugin does.
+The rate limiters of the requests are not stored by the database plugins: they keep their counters in memory by default,
+and a rate limiting plugin of its own shares them between the instances, see [Rate limiting](rate-limiting.md).
 
 ## MongoDB
 
