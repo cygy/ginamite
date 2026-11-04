@@ -4,12 +4,16 @@ package weburl
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/cygy/ginamite/common/log"
 
 	yaml "go.yaml.in/yaml/v3"
 )
+
+// pathParameter matches a parameter of a path, such as ":id".
+var pathParameter = regexp.MustCompile(`:[A-Za-z0-9_]+`)
 
 // Configuration holds the web routes, loaded from a YAML file.
 type Configuration struct {
@@ -33,8 +37,15 @@ func NewConfiguration() (conf *Configuration) {
 }
 
 // GetURL returns the absolute URL of the web route key for the locale.
-// It logs a warning and returns an empty string if the route or the locale is unknown.
+// It logs a warning and returns an empty string if the route or the locale is unknown, or if the configuration is nil,
+// which is the case when no web routes file is given to the server.
 func (conf *Configuration) GetURL(key, locale string) string {
+	if conf == nil {
+		log.Warn("web routes not loaded", "route", key, "locale", locale)
+
+		return ""
+	}
+
 	url, ok := conf.Routes[key].AbsolutePaths[locale]
 	if !ok {
 		log.Warn("web url not found",
@@ -44,6 +55,32 @@ func (conf *Configuration) GetURL(key, locale string) string {
 	}
 
 	return url
+}
+
+// GetURLWithParams returns the absolute URL of the web route key for the locale, where each parameter of the path
+// (i.e. ":id" in "/order/:id") is replaced by its value: params maps the name of a parameter, with or without the
+// leading colon, to its value. The values are inserted as they are, escape them if needed. A parameter of the path
+// without value is left as it is, and a value without parameter in the path is ignored. A name is matched entirely:
+// "id" does not alter ":identifier".
+// It behaves like GetURL if the route is unknown or the configuration is nil.
+func (conf *Configuration) GetURLWithParams(key, locale string, params map[string]string) string {
+	url := conf.GetURL(key, locale)
+	if url == "" || len(params) == 0 {
+		return url
+	}
+
+	values := make(map[string]string, len(params))
+	for name, value := range params {
+		values[strings.TrimPrefix(name, ":")] = value
+	}
+
+	return pathParameter.ReplaceAllStringFunc(url, func(parameter string) string {
+		if value, ok := values[parameter[1:]]; ok {
+			return value
+		}
+
+		return parameter
+	})
 }
 
 // Initialize loads the routes from the YAML file and computes their absolute paths,
