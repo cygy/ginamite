@@ -10,6 +10,8 @@ and shares the same `*weburl.Configuration` with the three servers and the plugi
 | API | the routes are `nil` | fails to start |
 | worker | the routes are `nil`: the URLs of the emails are empty and the sitemaps are not generated | fails to start |
 
+The API and the worker log a warning at start when the argument is missing, and an info line with the number of routes when it is loaded.
+
 A `nil` `*weburl.Configuration` is safe to use: `GetURL` and `GetURLWithParams` log a warning and return an empty string.
 
 ## Where to read the routes

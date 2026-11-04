@@ -188,12 +188,17 @@ func (s *Server) connectPlugins(configuration *config.Configuration) (closeAll f
 // can not be read, since the servers can not give the right URLs without it.
 func (s *Server) loadWebRoutes(f *flags.Flags) error {
 	s.webRoutes = nil
-	if f.WebRoutesFile != "" {
+	if f.WebRoutesFile == "" {
+		if f.IsAPIServer || f.IsWorkerServer {
+			log.Warn("no web routes file (argument -web-routes): the URLs of the website are not available", "routes", "nil")
+		}
+	} else {
 		routes, err := weburl.Load(f.WebRoutesFile, s.Config.Hosts.Web)
 		if err != nil {
 			return err
 		}
 		s.webRoutes = routes
+		log.Info("web routes loaded", "file", f.WebRoutesFile, "count", len(routes.Routes))
 	}
 	s.API.WebRoutes, s.Worker.Routes, s.Web.Routes = s.webRoutes, s.webRoutes, s.webRoutes
 

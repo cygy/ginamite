@@ -6,6 +6,7 @@ import (
 	"errors"
 	"flag"
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"slices"
@@ -333,9 +334,16 @@ func TestServer_loadWebRoutes(t *testing.T) {
 
 	t.Run("no file", func(t *testing.T) {
 		s := NewServer()
+		var logs bytes.Buffer
+		oldLog := log.Main
+		t.Cleanup(func() { log.Main = oldLog })
+		log.Main = slog.New(slog.NewTextHandler(&logs, nil))
 
-		if err := s.loadWebRoutes(&flags.Flags{}); err != nil {
+		if err := s.loadWebRoutes(&flags.Flags{IsAPIServer: true}); err != nil {
 			t.Fatal(err)
+		}
+		if out := logs.String(); !strings.Contains(out, "level=WARN") || !strings.Contains(out, "-web-routes") {
+			t.Errorf("the absence of routes must be logged as a warning, logs = %q", out)
 		}
 		if s.WebRoutes() != nil || s.API.WebRoutes != nil || s.Worker.Routes != nil || s.Web.Routes != nil {
 			t.Error("the routes must be nil without file")
