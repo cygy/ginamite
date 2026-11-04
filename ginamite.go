@@ -92,6 +92,12 @@ type Connector interface {
 	Close()
 }
 
+// APIOnly is a Connector which the API alone needs: Run does not connect it when only the worker runs.
+type APIOnly interface {
+	Connector
+	APIOnly()
+}
+
 // NewServer returns a Server whose API functions are placeholders which accept nothing: a plugin or the application
 // is expected to replace them.
 func NewServer() *Server {

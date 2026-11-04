@@ -27,7 +27,7 @@ func TestServer_ConnectPlugins(t *testing.T) {
 
 	configuration := config.NewConfiguration()
 	configuration.Database.Service = "db"
-	closeAll, err := s.connectPlugins(configuration)
+	closeAll, err := s.connectPlugins(configuration, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -43,11 +43,44 @@ func TestServer_ConnectPlugins(t *testing.T) {
 	}
 }
 
+// apiConnector is a testConnector that only the API needs.
+type apiConnector struct{ testConnector }
+
+func (*apiConnector) APIOnly() {}
+
+func TestServer_ConnectPlugins_APIOnly(t *testing.T) {
+	var events []string
+	s := NewServer()
+	s.AddPlugin(&apiConnector{testConnector{name: "api", events: &events}})
+	s.AddPlugin(&testConnector{name: "all", events: &events})
+
+	closeAll, err := s.connectPlugins(config.NewConfiguration(), false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	closeAll()
+
+	if want := []string{"connect all ", "close all"}; !slices.Equal(events, want) {
+		t.Errorf("without the API, events = %v, want %v", events, want)
+	}
+
+	events = nil
+	closeAll, err = s.connectPlugins(config.NewConfiguration(), true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	closeAll()
+
+	if want := []string{"connect api ", "connect all ", "close all", "close api"}; !slices.Equal(events, want) {
+		t.Errorf("with the API, events = %v, want %v", events, want)
+	}
+}
+
 func TestServer_ConnectPlugins_NoConnector(t *testing.T) {
 	s := NewServer()
 	s.AddPlugin(&testPlugin{})
 
-	closeAll, err := s.connectPlugins(config.NewConfiguration())
+	closeAll, err := s.connectPlugins(config.NewConfiguration(), true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -63,7 +96,7 @@ func TestServer_ConnectPlugins_Error(t *testing.T) {
 	s.AddPlugin(&testConnector{name: "second", events: &events, connectErr: boom})
 	s.AddPlugin(&testConnector{name: "third", events: &events})
 
-	closeAll, err := s.connectPlugins(config.NewConfiguration())
+	closeAll, err := s.connectPlugins(config.NewConfiguration(), true)
 
 	if !errors.Is(err, boom) || closeAll != nil {
 		t.Errorf("connectPlugins() = %v, want the error", err)

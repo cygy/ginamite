@@ -79,7 +79,7 @@ func (s *Server) run(ctx context.Context, f *flags.Flags) error {
 	}
 
 	if f.IsAPIServer || f.IsWorkerServer {
-		closeAll, err := s.connectPlugins(s.Config)
+		closeAll, err := s.connectPlugins(s.Config, f.IsAPIServer)
 		if err != nil {
 			return err
 		}
@@ -160,9 +160,9 @@ func (s *Server) initializeConfiguration(f *flags.Flags) error {
 }
 
 // connectPlugins connects, with the configuration, the plugins which are Connectors, and returns the function which
-// closes them, in the reverse order. If a connection fails, it closes the connectors already connected and returns
+// closes them, in the reverse order. The APIOnly ones are skipped if the API does not run. If a connection fails, it closes the connectors already connected and returns
 // the error.
-func (s *Server) connectPlugins(configuration *config.Configuration) (closeAll func(), err error) {
+func (s *Server) connectPlugins(configuration *config.Configuration, isAPI bool) (closeAll func(), err error) {
 	var connected []Connector
 	closeAll = func() {
 		for _, c := range slices.Backward(connected) {
@@ -172,6 +172,9 @@ func (s *Server) connectPlugins(configuration *config.Configuration) (closeAll f
 
 	for _, plugin := range s.plugins {
 		if connector, ok := plugin.(Connector); ok {
+			if _, apiOnly := plugin.(APIOnly); apiOnly && !isAPI {
+				continue
+			}
 			if err := connector.Connect(configuration); err != nil {
 				closeAll()
 				return nil, err
