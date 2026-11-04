@@ -1,4 +1,4 @@
-package functions
+package mongodb
 
 import (
 	"context"
@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/cygy/ginamite/api/request"
-	"github.com/cygy/ginamite/plugins/mongodb/model"
 	"github.com/cygy/ginamite/plugins/mongodb/mongo/store"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -16,20 +15,21 @@ import (
 
 // RateLimiter is a request.RateLimiter keeping its counters in the database, shared by the instances of the API. It
 // counts the requests of each client in fixed windows of the period: a client can send up to twice the limit around the
-// end of a window. The counters expire with their window, see model.RateLimitCollection.
+// end of a window. The counters expire with their window, see Settings.Collection.
 type RateLimiter struct {
-	database func() store.Database
-	name     string
-	requests int
-	period   time.Duration
-	now      func() time.Time
+	database   func() store.Database
+	collection string
+	name       string
+	requests   int
+	period     time.Duration
+	now        func() time.Time
 }
 
 // NewRateLimiters returns the function creating the limiters of the groups of routes, to set as
-// api.Server.Hooks.NewRateLimiter. The database is the one of the plugin.
-func NewRateLimiters(database func() store.Database) request.NewRateLimiterFunc {
+// api.Server.Hooks.NewRateLimiter. The database is the one of the plugin, the counters are in the collection.
+func NewRateLimiters(database func() store.Database, collection string) request.NewRateLimiterFunc {
 	return func(name string, requests int, period time.Duration) request.RateLimiter {
-		return &RateLimiter{database: database, name: name, requests: requests, period: period, now: time.Now}
+		return &RateLimiter{database: database, collection: collection, name: name, requests: requests, period: period, now: time.Now}
 	}
 }
 
@@ -48,7 +48,7 @@ func (l *RateLimiter) Allow(ctx context.Context, client string) (ok bool, retryA
 		Count int `bson:"count"`
 	}
 
-	collection := l.database().Collection(model.RateLimitCollection)
+	collection := l.database().Collection(l.collection)
 	err = collection.FindOneAndUpdate(ctx, filter, update, opts).Decode(&counter)
 	if mongo.IsDuplicateKeyError(err) {
 		// Two instances created the counter at the same time: the second update increments it.

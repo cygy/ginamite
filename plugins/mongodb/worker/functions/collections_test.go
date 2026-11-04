@@ -90,7 +90,7 @@ func TestCreateAllCollections(t *testing.T) {
 
 	want := []string{
 		model.AuthTokenCollection, model.DeletedUserCollection, model.DisabledUserCollection, model.ForgotPasswordProcessCollection,
-		model.IPLocationCollection, model.ProcessedMessageCollection, model.RateLimitCollection, model.UpdatePropertyProcessCollection, model.UserCollection,
+		model.IPLocationCollection, model.ProcessedMessageCollection, model.UpdatePropertyProcessCollection, model.UserCollection,
 	}
 	got := db.Created()
 	if len(got) != len(want) {

@@ -1,4 +1,4 @@
-package functions
+package mongodb
 
 import (
 	"context"
@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cygy/ginamite/plugins/mongodb/model"
 	"github.com/cygy/ginamite/plugins/mongodb/mongo/store"
 	"github.com/cygy/ginamite/plugins/mongodb/mongo/store/mock"
 
@@ -18,7 +17,7 @@ func newTestLimiter(t *testing.T, now time.Time) (*RateLimiter, *mock.Database) 
 	t.Helper()
 
 	db := mock.NewDatabase("test")
-	limiter := NewRateLimiters(func() store.Database { return db })("authentication", 3, time.Minute).(*RateLimiter)
+	limiter := NewRateLimiters(func() store.Database { return db }, DefaultCollection)("authentication", 3, time.Minute).(*RateLimiter)
 	limiter.now = func() time.Time { return now }
 
 	return limiter, db
@@ -40,14 +39,14 @@ func TestRateLimiter_Allow(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			limiter, db := newTestLimiter(t, now)
-			db.Coll(model.RateLimitCollection).One = mock.Result{Value: bson.M{"count": tt.count}}
+			db.Coll(DefaultCollection).One = mock.Result{Value: bson.M{"count": tt.count}}
 
 			ok, retryAfter, err := limiter.Allow(context.Background(), "1.2.3.4")
 			if err != nil || ok != tt.wantOK || retryAfter != tt.wantRetry {
 				t.Fatalf("Allow() = %v, %v, %v", ok, retryAfter, err)
 			}
 
-			calls := db.Coll(model.RateLimitCollection).Calls()
+			calls := db.Coll(DefaultCollection).Calls()
 			if len(calls) != 1 || calls[0].Method != "FindOneAndUpdate" {
 				t.Fatalf("calls = %+v", calls)
 			}
@@ -67,7 +66,7 @@ func TestRateLimiter_Allow_Errors(t *testing.T) {
 
 	t.Run("database error", func(t *testing.T) {
 		limiter, db := newTestLimiter(t, time.Now())
-		db.Coll(model.RateLimitCollection).Err = boom
+		db.Coll(DefaultCollection).Err = boom
 
 		if _, _, err := limiter.Allow(context.Background(), "c"); !errors.Is(err, boom) {
 			t.Errorf("err = %v", err)
@@ -76,12 +75,12 @@ func TestRateLimiter_Allow_Errors(t *testing.T) {
 
 	t.Run("duplicate key: the update is tried again", func(t *testing.T) {
 		limiter, db := newTestLimiter(t, time.Now())
-		db.Coll(model.RateLimitCollection).Err = mongo.WriteException{WriteErrors: mongo.WriteErrors{{Code: 11000}}}
+		db.Coll(DefaultCollection).Err = mongo.WriteException{WriteErrors: mongo.WriteErrors{{Code: 11000}}}
 
 		if _, _, err := limiter.Allow(context.Background(), "c"); err == nil {
 			t.Error("a persistent duplicate key must fail")
 		}
-		if calls := db.Coll(model.RateLimitCollection).Calls(); len(calls) != 2 {
+		if calls := db.Coll(DefaultCollection).Calls(); len(calls) != 2 {
 			t.Errorf("calls = %d, want 2", len(calls))
 		}
 	})

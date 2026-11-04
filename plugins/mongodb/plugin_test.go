@@ -111,17 +111,6 @@ func TestPlugin_Configure_IsValidID(t *testing.T) {
 	}
 }
 
-func TestPlugin_Configure_RateLimiter(t *testing.T) {
-	server := ginamite.NewServer()
-	if err := NewPlugin().Configure(server); err != nil {
-		t.Fatal(err)
-	}
-
-	if server.API.Hooks.NewRateLimiter == nil {
-		t.Error("the API must share its rate limits through the database")
-	}
-}
-
 func TestPlugin_Configure_Deduplicator(t *testing.T) {
 	server := ginamite.NewServer()
 	memory := server.Deduplicator
