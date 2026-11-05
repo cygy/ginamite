@@ -50,13 +50,23 @@ func newTranslateFunc(localizer *i18n.Localizer) TranslateFunc {
 	}
 }
 
-// pluralCount returns the count in a form go-i18n accepts: floats must be given as strings.
+// pluralCount returns the count in a form go-i18n accepts: floats and unsigned integers must be given as strings.
 func pluralCount(count any) any {
 	switch v := count.(type) {
 	case float32:
 		return strconv.FormatFloat(float64(v), 'f', -1, 32)
 	case float64:
 		return strconv.FormatFloat(v, 'f', -1, 64)
+	case uint:
+		return strconv.FormatUint(uint64(v), 10)
+	case uint8:
+		return strconv.FormatUint(uint64(v), 10)
+	case uint16:
+		return strconv.FormatUint(uint64(v), 10)
+	case uint32:
+		return strconv.FormatUint(uint64(v), 10)
+	case uint64:
+		return strconv.FormatUint(v, 10)
 	}
 
 	return count
