@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- Dependencies updated: `go.mongodb.org/mongo-driver/v2` v2.9.3, `github.com/xdg-go/scram` v1.4.0 and the indirect
+  modules (`gin-contrib/sse`, `validator/v10`, `klauspost/cpuid/v2`, `quic-go`, `shopspring/decimal`). The integration
+  tests pass against MongoDB 9 and Kafka 4.4.0.
+- `make integration` also runs the integration test of the MongoDB rate limiter (`plugins/ratelimit/mongodb`), which
+  its documentation announced but the target did not run.
+
+## v0.11.1
+
+### Fixed
+
+- The translations accept the unsigned integers (`uint`, `uint8` to `uint64`) as plural counts, like the signed ones.
+  go-i18n does not accept them as they are: they are now converted to strings, as the floats already were.
+
 ## v0.11.0
 
 ### Added
