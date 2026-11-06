@@ -38,6 +38,7 @@ func TestTranslateFunc(t *testing.T) {
 		{"uint32 count", fr, "items", []any{uint32(1)}, "1 élément"},
 		{"uint64 count", fr, "items", []any{uint64(3)}, "3 éléments"},
 		{"string count", fr, "items", []any{"1"}, "1 élément"},
+		{"text is the value of Count", fr, "since", []any{"06/11/2026 16:00"}, "Depuis le 06/11/2026 16:00"},
 		{"count then data", fr, "greeting", []any{2, H{"Name": "Cyril"}}, "Bonjour Cyril"},
 		{"count in data", fr, "items", []any{H{"Count": 1}}, "1 élément"},
 		{"missing message returns its ID", fr, "missing", nil, "missing"},

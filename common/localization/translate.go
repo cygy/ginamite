@@ -23,10 +23,16 @@ func newTranslateFunc(localizer *i18n.Localizer) TranslateFunc {
 			}
 		}
 
+		// A text that is not a number (a formatted date, an identifier, a name...) is the value of {{.Count}}.
+		// It cannot select a plural form.
+		text, isText := data.(string)
+
 		// v1 exposed the count to the templates as {{.Count}}, and also accepted
 		// a "Count" key in the data to select the plural form.
 		templateData := toMap(data)
-		if count != nil {
+		if isText {
+			templateData["Count"] = text
+		} else if count != nil {
 			templateData["Count"] = count
 		} else if c, ok := templateData["Count"]; ok {
 			count = c
