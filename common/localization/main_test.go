@@ -16,6 +16,7 @@ func TestMain(m *testing.M) {
 const frTranslations = `[
   {"id": "hello", "translation": "Bonjour"},
   {"id": "greeting", "translation": "Bonjour {{.Name}}"},
+  {"id": "since", "translation": "Depuis le {{.Count}}"},
   {"id": "items", "translation": {"one": "{{.Count}} élément", "other": "{{.Count}} éléments"}}
 ]`
 
