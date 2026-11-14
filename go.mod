@@ -25,7 +25,7 @@ require (
 	github.com/redis/go-redis/v9 v9.23.0
 	github.com/stripe/stripe-go/v87 v87.1.0
 	github.com/xdg-go/scram v1.4.0
-	go.mongodb.org/mongo-driver/v2 v2.9.3
+	go.mongodb.org/mongo-driver/v2 v2.10.0
 	go.yaml.in/yaml/v3 v3.0.6
 	golang.org/x/crypto v0.58.0
 	golang.org/x/image v0.47.0
