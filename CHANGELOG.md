@@ -1,5 +1,26 @@
 # Changelog
 
+## v0.12.0
+
+### Changed
+
+- **Breaking:** the location of the IP addresses of the auth tokens comes from the
+  [geoip](https://github.com/cygy/geoip) API instead of ipstack (#12). The section `ipstack` (`host`, `key`) of the
+  configuration is replaced by `geoip`: `host` (such as `http://geoip:8080`) and `timeout` (`5s` by default).
+  `config.IPStackConfiguration` is replaced by `config.GeoIPConfiguration`, `location.GetIPAddressDetails` returns
+  only the details, and `IPAddressDetails` reads `region` instead of `region_name`.
+- The location is optional (#12, #13, #14, #15): without `geoip.host` no request is sent and the database is not read,
+  and a worker consuming `task_location` or `task` logs a warning when it starts. A failure of the API (unreachable,
+  timeout, unexpected status, invalid response) is logged as an error and no longer retried, so it no longer ends in a
+  dead letter; an unknown address (`404`) is not logged.
+- Dependencies updated: `go.mongodb.org/mongo-driver/v2` v2.10.0 (#10), `github.com/gin-contrib/gzip` v1.2.10,
+  `golang.org/x/text` v0.44.0, `golang.org/x/crypto` v0.59.0, `golang.org/x/image` v0.48.0 (#11).
+
+### Security
+
+- The Go toolchain is 1.27.4 (#9): it fixes GO-2026-6859, a crash of the HTTP/1 server (`MaxBytesReader` header race
+  in `net/http`). The minimum Go version of the applications is unchanged, 1.26.10.
+
 ## v0.11.2
 
 ### Changed
