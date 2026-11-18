@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"slices"
@@ -19,6 +20,36 @@ import (
 func TestNewServer(t *testing.T) {
 	if s := NewServer(); s == nil || s.Routes != nil {
 		t.Errorf("server = %+v", s)
+	}
+}
+
+func TestServer_warnDisabledLocation(t *testing.T) {
+	withHost := config.NewConfiguration()
+	withHost.GeoIP.Host = "http://geoip:8080"
+	withLocations := Storage{Locations: fakeLocations{}}
+
+	tests := []struct {
+		name   string
+		server *Server
+		want   bool
+	}{
+		{"locations without host", &Server{Config: config.NewConfiguration(), Storage: withLocations}, true},
+		{"locations with host", &Server{Config: withHost, Storage: withLocations}, false},
+		{"no locations, no host", &Server{Config: config.NewConfiguration()}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			workertest.Hook.Reset()
+			tt.server.warnDisabledLocation()
+
+			entry := workertest.Hook.LastEntry()
+			if got := entry != nil; got != tt.want {
+				t.Fatalf("warned = %v, want %v", got, tt.want)
+			}
+			if tt.want && (entry.Level != slog.LevelWarn || !strings.Contains(entry.Message, "geoip.host is undefined")) {
+				t.Errorf("log = %+v", entry)
+			}
+		})
 	}
 }
 
