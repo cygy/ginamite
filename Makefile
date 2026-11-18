@@ -65,15 +65,17 @@ bump_minor: ## Release the next minor version
 bump_patch: ## Release the next patch version
 	@$(MAKE) release NEXT="$(shell echo $(VERSION) | awk -F. '{print $$1"."$$2"."$$3+1}')"
 
+# The release commits CHANGELOG.md with VERSION: it is the only file that may be modified.
 ensure-clean:
-	@test -z "$$($(GIT) status --porcelain)" || { echo "the working tree is not clean"; exit 1; }
+	@test -z "$$($(GIT) status --porcelain -- . ':!CHANGELOG.md')" || { echo "the working tree is not clean"; exit 1; }
 
 # release is internal: use bump_major, bump_minor or bump_patch.
 release: ensure-clean check
 	@test -n "$(NEXT)" || { echo "NEXT is not set"; exit 1; }
+	@grep -q '^## v$(NEXT)$$' CHANGELOG.md || { echo "CHANGELOG.md has no section ## v$(NEXT)"; exit 1; }
 	echo $(NEXT) > VERSION
 	$(GO) mod tidy
-	$(GIT) add VERSION go.mod go.sum
+	$(GIT) add VERSION CHANGELOG.md go.mod go.sum
 	$(GIT) commit -s -m "Version v$(NEXT)"
 	$(GIT) tag -a v$(NEXT) -m "Version v$(NEXT)"
 	$(GIT) push $(REMOTE)
