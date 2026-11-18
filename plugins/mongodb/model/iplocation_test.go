@@ -45,3 +45,12 @@ func TestIPLocation_IsEmpty(t *testing.T) {
 		})
 	}
 }
+
+func TestIPLocationCountry_Flag(t *testing.T) {
+	tests := map[string]string{"FR": "🇫🇷", "us": "🇺🇸", "": "", "F": "", "FRA": "", "F1": "", "É1": ""}
+	for code, want := range tests {
+		if got := (IPLocationCountry{Code: code}).Flag(); got != want {
+			t.Errorf("Flag(%q) = %q, want %q", code, got, want)
+		}
+	}
+}
