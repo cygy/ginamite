@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.13.0
+
+### Added
+
+- `model.IPLocationCountry.Flag()` returns the emoji of the flag of the country from its ISO 3166-1 alpha-2 code
+  (#17), for the templates: `{{.Location.Country.Flag}}` on the auth tokens.
+
 ## v0.12.0
 
 ### Changed
