@@ -67,6 +67,7 @@ func (s *Server) Run(ctx context.Context) error {
 // not be loaded.
 func (s *Server) setup(ctx context.Context) error {
 	s.warnUndefinedStorages()
+	s.warnDisabledLocation()
 
 	htmlTemplates, err := html.LoadTemplatesWithDelimiters(s.Config.TemplatesPath+"/html", "[[", "]]", nil)
 	if err != nil {
@@ -185,6 +186,14 @@ func (s *Server) recurringFuncs() map[string]recurring.Func {
 	}
 
 	return funcs
+}
+
+// warnDisabledLocation logs a warning if the IP addresses can be saved but not located: the storage of the locations is
+// defined and the host of the geoip API is not, so the auth tokens get no location.
+func (s *Server) warnDisabledLocation() {
+	if s.Storage.Locations != nil && s.Config.GeoIP.Host == "" {
+		log.Warn("geoip.host is undefined: the IP addresses of the auth tokens are not located")
+	}
 }
 
 // warnUndefinedStorages logs a warning for each undefined storage, since the features relying on it are disabled.

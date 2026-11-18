@@ -60,7 +60,7 @@ A message whose handling fails is handled again, then sent to a **dead-letter to
   handler of your own (`broker.MessageConsumer.Action`) follows the same rule.
 - The hooks of the plugin `plugins/mongodb` which update the documents referencing a user
   (`UpdateDocumentsReferencingTo...`) return an error, and the message is handled again when they fail, so they must be
-  safe to run again. The location is optional: a failure of the geoip API (unreachable, timeout, unexpected status,
+  safe to run again. The location is optional (no `geoip.host`: a warning at the start of the worker, no request): a failure of the geoip API (unreachable, timeout, unexpected status,
   invalid response) is logged as an error and not retried, the token keeps no location; an unknown address (`404`)
   is not logged.
 - If the producer is not connected, the failed message is dropped and logged as an error.
