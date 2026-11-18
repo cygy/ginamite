@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/cygy/ginamite/common/config"
+	"github.com/cygy/ginamite/common/queue"
 	"github.com/cygy/ginamite/common/weburl"
 	"github.com/cygy/ginamite/worker/internal/workertest"
 	"github.com/cygy/ginamite/worker/tasks/recurring"
@@ -27,6 +28,14 @@ func TestServer_warnDisabledLocation(t *testing.T) {
 	withHost := config.NewConfiguration()
 	withHost.GeoIP.Host = "http://geoip:8080"
 	withLocations := Storage{Locations: fakeLocations{}}
+	consuming := func(topics ...string) *config.Configuration {
+		c := config.NewConfiguration()
+		for _, topic := range topics {
+			c.WorkerConsumers = append(c.WorkerConsumers, config.ConsumerConfiguration{Topic: topic})
+		}
+
+		return c
+	}
 
 	tests := []struct {
 		name   string
@@ -36,6 +45,9 @@ func TestServer_warnDisabledLocation(t *testing.T) {
 		{"locations without host", &Server{Config: config.NewConfiguration(), Storage: withLocations}, true},
 		{"locations with host", &Server{Config: withHost, Storage: withLocations}, false},
 		{"no locations, no host", &Server{Config: config.NewConfiguration()}, false},
+		{"consumes task_location", &Server{Config: consuming(queue.TopicMail, queue.TopicTaskLocation), Storage: withLocations}, true},
+		{"consumes task", &Server{Config: consuming(queue.TopicTasks), Storage: withLocations}, true},
+		{"consumes no location topic", &Server{Config: consuming(queue.TopicMail, queue.TopicTaskUser), Storage: withLocations}, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

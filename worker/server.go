@@ -5,6 +5,7 @@ package worker
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/cygy/ginamite/common/config"
 	"github.com/cygy/ginamite/common/localization"
@@ -188,12 +189,26 @@ func (s *Server) recurringFuncs() map[string]recurring.Func {
 	return funcs
 }
 
-// warnDisabledLocation logs a warning if the IP addresses can be saved but not located: the storage of the locations is
-// defined and the host of the geoip API is not, so the auth tokens get no location.
+// warnDisabledLocation logs a warning if the worker handles the location tasks but can not locate the IP addresses:
+// the storage of the locations is defined, the worker consumes a topic carrying them, and the host of the geoip API is
+// not defined, so the auth tokens get no location.
 func (s *Server) warnDisabledLocation() {
-	if s.Storage.Locations != nil && s.Config.GeoIP.Host == "" {
+	if s.Storage.Locations != nil && s.Config.GeoIP.Host == "" && s.consumesLocationTasks() {
 		log.Warn("geoip.host is undefined: the IP addresses of the auth tokens are not located")
 	}
+}
+
+// consumesLocationTasks reports whether the worker consumes a topic carrying the location tasks: "task_location", or
+// "task", which still carries the ones sent before they had their own topic. A worker without worker_consumers
+// consumes all the topics.
+func (s *Server) consumesLocationTasks() bool {
+	if len(s.Config.WorkerConsumers) == 0 {
+		return true
+	}
+
+	return slices.ContainsFunc(s.Config.WorkerConsumers, func(c config.ConsumerConfiguration) bool {
+		return c.Topic == queue.TopicTaskLocation || c.Topic == queue.TopicTasks
+	})
 }
 
 // warnUndefinedStorages logs a warning for each undefined storage, since the features relying on it are disabled.
