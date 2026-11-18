@@ -13,8 +13,8 @@ const (
 	// tasks sent before they had their own topics, which the workers keep handling.
 	TopicTasks = "task"
 
-	// TopicTaskLocation is the name of the topic for the location of the IP addresses: slow tasks, which depend on an
-	// external service.
+	// TopicTaskLocation is the name of the topic for the location of the IP addresses: tasks which depend on another
+	// service, the geoip API.
 	TopicTaskLocation = "task_location"
 
 	// TopicTaskUser is the name of the topic for the tasks on the data of the users (deleting, disabling, enabling,
