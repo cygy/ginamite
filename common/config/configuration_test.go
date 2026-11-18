@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/cygy/ginamite/common/config/environment"
 	"github.com/cygy/ginamite/common/config/version"
@@ -48,6 +49,9 @@ worker_consumers:
   - topic: mail
     group: mails
   - topic: task
+geoip:
+  host: http://geoip:8080
+  timeout: 3s
 `)
 
 	c := NewConfiguration()
@@ -78,6 +82,9 @@ worker_consumers:
 	}
 	if want := []ConsumerConfiguration{{Topic: "mail", Group: "mails"}, {Topic: "task"}}; !slices.Equal(c.WorkerConsumers, want) {
 		t.Errorf("worker consumers = %+v, want %+v", c.WorkerConsumers, want)
+	}
+	if want := (GeoIPConfiguration{Host: "http://geoip:8080", Timeout: 3 * time.Second}); c.GeoIP != want {
+		t.Errorf("geoip = %+v, want %+v", c.GeoIP, want)
 	}
 }
 

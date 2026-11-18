@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.12.0
+
+### Changed
+
+- **Breaking:** the location of the IP addresses comes from the [geoip](https://github.com/cygy/geoip) API instead
+  of ipstack. The section `ipstack` (`host`, `key`) of the configuration is replaced by `geoip`: `host` (such as
+  `http://geoip:8080`) and `timeout` (`5s` by default). `config.IPStackConfiguration` is replaced by
+  `config.GeoIPConfiguration`, and `location.GetIPAddressDetails` returns only the details.
+- The location is optional: with no `geoip.host` the addresses are not located; a failure of the API (unreachable,
+  timeout, unexpected status, invalid response) is logged as an error and no longer retried, so it no longer ends in
+  a dead letter. An unknown address (`404`) is not logged. `IPAddressDetails` reads `region` instead of `region_name`.
+
 ## v0.11.2
 
 ### Changed

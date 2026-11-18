@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/cygy/ginamite/common/broker"
 	"github.com/cygy/ginamite/common/config"
@@ -14,13 +15,13 @@ import (
 )
 
 // useAPI starts a server for the handler for the duration of the test, and returns the configuration of the API to it.
-func useAPI(t *testing.T, handler http.HandlerFunc) config.IPStackConfiguration {
+func useAPI(t *testing.T, handler http.HandlerFunc) config.GeoIPConfiguration {
 	t.Helper()
 
 	server := httptest.NewServer(handler)
 	t.Cleanup(server.Close)
 
-	return config.IPStackConfiguration{Host: server.URL, Key: "secret key"}
+	return config.GeoIPConfiguration{Host: server.URL}
 }
 
 func TestGetIPInfo(t *testing.T) {
@@ -29,7 +30,7 @@ func TestGetIPInfo(t *testing.T) {
 		var gotCtx context.Context
 		var gotFunc DetailsFunc
 
-		err := GetIPInfo([]byte(`{"ip":"1.2.3.4","token_id":"tid"}`), config.IPStackConfiguration{}, func(ctx context.Context, IPAddress, tokenID string, get DetailsFunc) error {
+		err := GetIPInfo([]byte(`{"ip":"1.2.3.4","token_id":"tid"}`), config.GeoIPConfiguration{}, func(ctx context.Context, IPAddress, tokenID string, get DetailsFunc) error {
 			gotCtx, gotIP, gotToken, gotFunc = ctx, IPAddress, tokenID, get
 
 			return nil
@@ -39,13 +40,36 @@ func TestGetIPInfo(t *testing.T) {
 		}
 
 		if gotCtx == nil || gotIP != "1.2.3.4" || gotToken != "tid" || gotFunc == nil {
-			t.Errorf("got %v, %q, %q, func defined: %v", gotCtx, gotIP, gotToken, gotFunc != nil)
+			t.Fatalf("got %v, %q, %q, func defined: %v", gotCtx, gotIP, gotToken, gotFunc != nil)
+		}
+
+		// Without host, the function locates nothing and fails never.
+		if details, err := gotFunc("1.2.3.4"); details != nil || err != nil {
+			t.Errorf("details = %+v, error = %v, want neither", details, err)
+		}
+	})
+
+	t.Run("the function uses the API", func(t *testing.T) {
+		geoIP := useAPI(t, func(w http.ResponseWriter, _ *http.Request) {
+			_, _ = w.Write([]byte(`{"country_code":"FR","country_name":"France","region":"Occitanie","city":"Toulouse"}`))
+		})
+
+		err := GetIPInfo([]byte(`{"ip":"1.2.3.4","token_id":"tid"}`), geoIP, func(_ context.Context, IPAddress, _ string, get DetailsFunc) error {
+			details, err := get(IPAddress)
+			if err != nil || details == nil || details.City != "Toulouse" {
+				t.Errorf("details = %+v, error = %v", details, err)
+			}
+
+			return nil
+		})
+		if err != nil {
+			t.Errorf("GetIPInfo() error = %v", err)
 		}
 	})
 
 	t.Run("the error of the function", func(t *testing.T) {
 		boom := errors.New("boom")
-		err := GetIPInfo([]byte(`{"ip":"1.2.3.4"}`), config.IPStackConfiguration{}, func(context.Context, string, string, DetailsFunc) error {
+		err := GetIPInfo([]byte(`{"ip":"1.2.3.4"}`), config.GeoIPConfiguration{}, func(context.Context, string, string, DetailsFunc) error {
 			return boom
 		})
 		if !errors.Is(err, boom) || broker.IsPermanent(err) {
@@ -54,7 +78,7 @@ func TestGetIPInfo(t *testing.T) {
 	})
 
 	t.Run("invalid payload", func(t *testing.T) {
-		err := GetIPInfo([]byte("{"), config.IPStackConfiguration{}, func(context.Context, string, string, DetailsFunc) error {
+		err := GetIPInfo([]byte("{"), config.GeoIPConfiguration{}, func(context.Context, string, string, DetailsFunc) error {
 			t.Error("the function must not be called")
 
 			return nil
@@ -65,7 +89,7 @@ func TestGetIPInfo(t *testing.T) {
 	})
 
 	t.Run("undefined function", func(t *testing.T) {
-		if err := GetIPInfo([]byte(`{"ip":"1.2.3.4"}`), config.IPStackConfiguration{}, nil); err != nil {
+		if err := GetIPInfo([]byte(`{"ip":"1.2.3.4"}`), config.GeoIPConfiguration{}, nil); err != nil {
 			t.Errorf("GetIPInfo() error = %v", err)
 		}
 	})
@@ -73,43 +97,88 @@ func TestGetIPInfo(t *testing.T) {
 
 func TestGetIPAddressDetails(t *testing.T) {
 	t.Run("found", func(t *testing.T) {
-		var gotPath, gotKey string
-		ipStack := useAPI(t, func(w http.ResponseWriter, r *http.Request) {
-			gotPath, gotKey = r.URL.Path, r.URL.Query().Get("access_key")
-			_, _ = w.Write([]byte(`{"region_name":"Occitanie","city":"Toulouse","country_code":"FR","country_name":"France"}`))
+		var gotPath, gotAccept string
+		geoIP := useAPI(t, func(w http.ResponseWriter, r *http.Request) {
+			gotPath, gotAccept = r.URL.Path, r.Header.Get("Accept")
+			_, _ = w.Write([]byte(`{"ip":"2a01:cb00::1","country_code":"FR","country_name":"France","flag":"🇫🇷",` +
+				`"continent_code":"EU","region":"Occitanie","city":"Toulouse"}`))
 		})
+		geoIP.Host += "/"
 
-		details, err := GetIPAddressDetails(ipStack, "1.2.3.4")
-		if err != nil {
-			t.Fatalf("error = %v", err)
-		}
+		details := GetIPAddressDetails(geoIP, "2a01:cb00::1")
 
 		want := IPAddressDetails{Region: "Occitanie", City: "Toulouse", CountryCode: "FR", CountryName: "France"}
 		if details == nil || *details != want {
 			t.Errorf("details = %+v, want %+v", details, want)
 		}
-		if gotPath != "/1.2.3.4" || gotKey != "secret key" {
-			t.Errorf("path = %q, key = %q", gotPath, gotKey)
+		if gotPath != "/v1/ip/2a01:cb00::1" || gotAccept != "application/json" {
+			t.Errorf("path = %q, Accept = %q", gotPath, gotAccept)
 		}
 	})
 
+	t.Run("no host: no request, no log", func(t *testing.T) {
+		workertest.Hook.Reset()
+
+		if details := GetIPAddressDetails(config.GeoIPConfiguration{}, "1.2.3.4"); details != nil {
+			t.Errorf("details = %+v, want nil", details)
+		}
+		if entry := workertest.Hook.LastEntry(); entry != nil {
+			t.Errorf("log = %+v, want none", entry)
+		}
+	})
+
+	t.Run("unknown address: no log", func(t *testing.T) {
+		workertest.Hook.Reset()
+		geoIP := useAPI(t, func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNotFound) })
+
+		if details := GetIPAddressDetails(geoIP, "1.2.3.4"); details != nil {
+			t.Errorf("details = %+v, want nil", details)
+		}
+		if entry := workertest.Hook.LastEntry(); entry != nil {
+			t.Errorf("log = %+v, want none", entry)
+		}
+	})
+
+	unreachable := useAPI(t, func(http.ResponseWriter, *http.Request) {})
+	unreachable.Host = "http://127.0.0.1:1"
+	invalidURL := config.GeoIPConfiguration{Host: "http://[::1"}
+	slow := useAPI(t, func(w http.ResponseWriter, r *http.Request) {
+		select {
+		case <-r.Context().Done():
+		case <-time.After(time.Second):
+		}
+		w.WriteHeader(http.StatusOK)
+	})
+	slow.Timeout = 10 * time.Millisecond
+
 	tests := []struct {
 		name    string
-		handler http.HandlerFunc
+		geoIP   config.GeoIPConfiguration
 		wantLog string
 	}{
-		{"client error", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusForbidden) }, "unexpected status 403"},
-		{"invalid JSON", func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte("{")) }, "unexpected end of JSON input"},
-		{"no location", func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte(`{"city":"Toulouse"}`)) }, "get no location from the API"},
+		{"unreachable", unreachable, "connect"},
+		{"invalid URL", invalidURL, "missing ']'"},
+		{"timeout", slow, "deadline exceeded"},
+		{"server error", useAPI(t, func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusBadGateway) }), "unexpected status 502"},
+		{"bad request", useAPI(t, func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusBadRequest) }), "unexpected status 400"},
+		{"invalid JSON", useAPI(t, func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte("{")) }), "unexpected end of JSON input"},
+		{"no location", useAPI(t, func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte(`{"city":"Toulouse"}`)) }), "get no location from the API"},
+		{
+			"truncated body",
+			useAPI(t, func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set("Content-Length", "100")
+				_, _ = w.Write([]byte("{"))
+			}),
+			"unexpected EOF",
+		},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+		t.Run(tt.name+" is logged, not retried", func(t *testing.T) {
 			workertest.Hook.Reset()
-			ipStack := useAPI(t, tt.handler)
 
-			if details, err := GetIPAddressDetails(ipStack, "1.2.3.4"); details != nil || err != nil {
-				t.Errorf("details = %+v, error = %v, want neither: asking again would not help", details, err)
+			if details := GetIPAddressDetails(tt.geoIP, "1.2.3.4"); details != nil {
+				t.Errorf("details = %+v, want nil", details)
 			}
 
 			entry := workertest.Hook.LastEntry()
@@ -118,52 +187,4 @@ func TestGetIPAddressDetails(t *testing.T) {
 			}
 		})
 	}
-
-	temporary := []struct {
-		name    string
-		handler http.HandlerFunc
-		wantErr string
-	}{
-		{"server error", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusBadGateway) }, "unexpected status 502"},
-		{"too many requests", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusTooManyRequests) }, "unexpected status 429"},
-		{
-			"truncated body",
-			func(w http.ResponseWriter, _ *http.Request) {
-				w.Header().Set("Content-Length", "100")
-				_, _ = w.Write([]byte("{"))
-			},
-			"unexpected EOF",
-		},
-	}
-
-	for _, tt := range temporary {
-		t.Run(tt.name+" is an error to retry", func(t *testing.T) {
-			ipStack := useAPI(t, tt.handler)
-
-			details, err := GetIPAddressDetails(ipStack, "1.2.3.4")
-			if details != nil || err == nil || !strings.Contains(err.Error(), tt.wantErr) {
-				t.Errorf("details = %+v, error = %v, want %q", details, err, tt.wantErr)
-			}
-		})
-	}
-
-	t.Run("API unreachable, the key is not in the error", func(t *testing.T) {
-		ipStack := useAPI(t, func(http.ResponseWriter, *http.Request) {})
-		ipStack.Host = "http://127.0.0.1:1"
-
-		details, err := GetIPAddressDetails(ipStack, "1.2.3.4")
-		if details != nil || err == nil || strings.Contains(err.Error(), "secret") {
-			t.Errorf("details = %+v, error = %v", details, err)
-		}
-	})
-
-	t.Run("invalid URL, the key is not in the error", func(t *testing.T) {
-		ipStack := useAPI(t, func(http.ResponseWriter, *http.Request) {})
-		ipStack.Host = "http://[::1"
-
-		details, err := GetIPAddressDetails(ipStack, "1.2.3.4")
-		if details != nil || err == nil || strings.Contains(err.Error(), "secret") {
-			t.Errorf("details = %+v, error = %v", details, err)
-		}
-	})
 }

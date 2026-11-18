@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"go.yaml.in/yaml/v3"
 )
@@ -165,10 +166,13 @@ type SocialMediaConfiguration struct {
 	Twitter  string
 }
 
-// IPStackConfiguration holds the settings of the ipstack.com API.
-type IPStackConfiguration struct {
+// GeoIPConfiguration holds the settings of the geoip API (https://github.com/cygy/geoip), which locates the IP
+// addresses of the auth tokens. The location is optional: with an empty host, the IP addresses are not located.
+type GeoIPConfiguration struct {
+	// Host is the base URL of the API, such as http://geoip:8080.
 	Host string
-	Key  string
+	// Timeout is the maximum duration of a request, 5 seconds if zero.
+	Timeout time.Duration
 }
 
 // ExpiredAuthTokensConfiguration holds the settings of the management of the expired auth tokens.
