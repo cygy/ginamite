@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"strings"
 
 	"github.com/cygy/ginamite/plugins/mongodb/mongo/bson"
 	"github.com/cygy/ginamite/plugins/mongodb/mongo/document"
@@ -24,6 +25,27 @@ type IPLocation struct {
 type IPLocationCountry struct {
 	Code string `json:"code" bson:"code"`
 	Name string `json:"name" bson:"name"`
+}
+
+// Flag returns the emoji of the flag of the country, such as 🇫🇷 for FR, from its ISO 3166-1 alpha-2 code, for the
+// templates ({{.Location.Country.Flag}}). It returns an empty string if the code is not two letters.
+func (country IPLocationCountry) Flag() string {
+	code := strings.ToUpper(country.Code)
+	if len(code) != 2 {
+		return ""
+	}
+
+	// A flag is the pair of the regional indicator symbols of the letters, from U+1F1E6 for A.
+	const regionalIndicatorA = 0x1F1E6
+	flag := make([]rune, 0, 2)
+	for _, letter := range code {
+		if letter < 'A' || letter > 'Z' {
+			return ""
+		}
+		flag = append(flag, regionalIndicatorA+letter-'A')
+	}
+
+	return string(flag)
 }
 
 // NewIPLocation returns a new IPLocation.
