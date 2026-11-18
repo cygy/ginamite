@@ -25,12 +25,15 @@ func useAPI(t *testing.T, handler http.HandlerFunc) config.GeoIPConfiguration {
 }
 
 func TestGetIPInfo(t *testing.T) {
+	// configured is a geoip configuration with a host, which the tests below never reach.
+	configured := config.GeoIPConfiguration{Host: "http://geoip.invalid"}
+
 	t.Run("saves the location", func(t *testing.T) {
 		var gotIP, gotToken string
 		var gotCtx context.Context
 		var gotFunc DetailsFunc
 
-		err := GetIPInfo([]byte(`{"ip":"1.2.3.4","token_id":"tid"}`), config.GeoIPConfiguration{}, func(ctx context.Context, IPAddress, tokenID string, get DetailsFunc) error {
+		err := GetIPInfo([]byte(`{"ip":"1.2.3.4","token_id":"tid"}`), configured, func(ctx context.Context, IPAddress, tokenID string, get DetailsFunc) error {
 			gotCtx, gotIP, gotToken, gotFunc = ctx, IPAddress, tokenID, get
 
 			return nil
@@ -40,12 +43,18 @@ func TestGetIPInfo(t *testing.T) {
 		}
 
 		if gotCtx == nil || gotIP != "1.2.3.4" || gotToken != "tid" || gotFunc == nil {
-			t.Fatalf("got %v, %q, %q, func defined: %v", gotCtx, gotIP, gotToken, gotFunc != nil)
+			t.Errorf("got %v, %q, %q, func defined: %v", gotCtx, gotIP, gotToken, gotFunc != nil)
 		}
+	})
 
-		// Without host, the function locates nothing and fails never.
-		if details, err := gotFunc("1.2.3.4"); details != nil || err != nil {
-			t.Errorf("details = %+v, error = %v, want neither", details, err)
+	t.Run("no host: the function is not called", func(t *testing.T) {
+		err := GetIPInfo([]byte(`{"ip":"1.2.3.4","token_id":"tid"}`), config.GeoIPConfiguration{}, func(context.Context, string, string, DetailsFunc) error {
+			t.Error("the function must not be called: the database would be read for nothing")
+
+			return nil
+		})
+		if err != nil {
+			t.Errorf("GetIPInfo() error = %v", err)
 		}
 	})
 
@@ -69,7 +78,7 @@ func TestGetIPInfo(t *testing.T) {
 
 	t.Run("the error of the function", func(t *testing.T) {
 		boom := errors.New("boom")
-		err := GetIPInfo([]byte(`{"ip":"1.2.3.4"}`), config.GeoIPConfiguration{}, func(context.Context, string, string, DetailsFunc) error {
+		err := GetIPInfo([]byte(`{"ip":"1.2.3.4"}`), configured, func(context.Context, string, string, DetailsFunc) error {
 			return boom
 		})
 		if !errors.Is(err, boom) || broker.IsPermanent(err) {
@@ -78,7 +87,7 @@ func TestGetIPInfo(t *testing.T) {
 	})
 
 	t.Run("invalid payload", func(t *testing.T) {
-		err := GetIPInfo([]byte("{"), config.GeoIPConfiguration{}, func(context.Context, string, string, DetailsFunc) error {
+		err := GetIPInfo([]byte("{"), configured, func(context.Context, string, string, DetailsFunc) error {
 			t.Error("the function must not be called")
 
 			return nil

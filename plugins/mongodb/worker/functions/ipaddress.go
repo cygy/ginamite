@@ -11,7 +11,8 @@ import (
 // SaveIPAddressDetails saves the location of the IP address of an auth token, and updates the location of the token.
 // The location is read from the database if it is known, and from getIPAddressDetailsFunc otherwise. Nothing is
 // done if the token does not exist anymore or if the location is unknown. It returns the error of the database or of
-// the API, if any: it can be called again.
+// getIPAddressDetailsFunc, if any: it can be called again. The function of the geoip API returns none: it only logs
+// its failures.
 func (f *Functions) SaveIPAddressDetails(ctx context.Context, IPAddress, tokenID string, getIPAddressDetailsFunc location.DetailsFunc) error {
 	db := f.database()
 

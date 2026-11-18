@@ -151,7 +151,9 @@ func TestServer_handleTask(t *testing.T) {
 		}
 	}
 
-	s := &Server{Config: config.NewConfiguration(), Storage: Storage{
+	configuration := config.NewConfiguration()
+	configuration.GeoIP.Host = "http://geoip.invalid" // the location is optional: without a host, nothing is called
+	s := &Server{Config: configuration, Storage: Storage{
 		Locations: fakeLocations{save: func(_ context.Context, IPAddress, tokenID string, _ location.DetailsFunc) error {
 			calls = append(calls, "ip:"+IPAddress+":"+tokenID)
 			return nil
@@ -270,6 +272,7 @@ func TestServer_handleTask_Errors(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Server{Config: config.NewConfiguration(), Storage: tt.storage, Hooks: tt.hooks, Queue: workertest.CaptureQueue(t).Sender}
+			s.Config.GeoIP.Host = "http://geoip.invalid" // the location is optional: without a host, nothing is called
 
 			err := consumerErr(t, s, queue.TopicTasks)(message(t, tt.messageType, tt.payload))
 
