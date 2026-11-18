@@ -11,7 +11,7 @@ The worker consumes these topics, or the ones listed in `worker_consumers`, see
 
 | Topics | Handled |
 | --- | --- |
-| `task`, `task_location`, `task_user`, `task_registration` | The built-in tasks: location of an IP address, deletion, disabling and enabling of a user, update of the social networks, registration done and validated. |
+| `task`, `task_location`, `task_user`, `task_registration` | The built-in tasks: location of an IP address (from the [geoip](https://github.com/cygy/geoip) API, see `geoip` in [Configuration](configuration.md)), deletion, disabling and enabling of a user, update of the social networks, registration done and validated. |
 | `mail` | The emails of the registration, the forgotten password, the changes of email address and password, and the deletion, disabling and enabling of an account. |
 | `user_notification`, `group_notification` | The notifications of a user, or of the users with an ability. |
 

@@ -71,7 +71,7 @@ func (s *Server) handleTaskMessage(topic string, value []byte) error {
 
 	switch msgType {
 	case queue.MessageTaskIPLocation:
-		return location.GetIPInfo(payload, s.Config.IPStack, s.Storage.saveIPAddressDetailsFunc())
+		return location.GetIPInfo(payload, s.Config.GeoIP, s.Storage.saveIPAddressDetailsFunc())
 	case queue.MessageTaskDeleteUser:
 		return user.DeleteByID(payload, s.Queue, s.Storage.deleteUserFunc())
 	case queue.MessageTaskDisableUser:

@@ -15,7 +15,7 @@ stopped in the middle of a message does not lose it (the message is handled agai
 - A worker consumes all the topics (`task`, `task_location`, `task_user`, `task_registration`, `group_notification`,
   `user_notification`, `mail`) unless `worker_consumers` lists the ones it consumes. The group is the topic by default,
   so two workers listing the same topic share it. The tasks have a topic per kind: `task_location` (the location of the
-  IP addresses, slow because of ipstack), `task_user` (deleting, disabling, enabling a user, social networks, ordered by
+  IP addresses, from the geoip API), `task_user` (deleting, disabling, enabling a user, social networks, ordered by
   user), `task_registration`, and `task` for your own tasks (`Queue.CreateTask`). All of them handle the built-in
   tasks, so the ones still waiting in `task` after an upgrade are handled. A worker which only runs the location can
   list only `task_location`:
@@ -60,8 +60,9 @@ A message whose handling fails is handled again, then sent to a **dead-letter to
   handler of your own (`broker.MessageConsumer.Action`) follows the same rule.
 - The hooks of the plugin `plugins/mongodb` which update the documents referencing a user
   (`UpdateDocumentsReferencingTo...`) return an error, and the message is handled again when they fail, so they must be
-  safe to run again. The temporary failures of the ipstack API (network, `429`, `5xx`) are retried the same way; an
-  unknown location or a client error is logged and not retried.
+  safe to run again. The location is optional: a failure of the geoip API (unreachable, timeout, unexpected status,
+  invalid response) is logged as an error and not retried, the token keeps no location; an unknown address (`404`)
+  is not logged.
 - If the producer is not connected, the failed message is dropped and logged as an error.
 
 #### Dead letters command

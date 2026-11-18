@@ -44,7 +44,7 @@ type Configuration struct {
 	Facebook            FacebookConfiguration
 	Google              GoogleConfiguration
 	SocialNetworks      SocialMediaConfiguration       `yaml:"social_networks"`
-	IPStack             IPStackConfiguration           `yaml:"ipstack"`
+	GeoIP               GeoIPConfiguration             `yaml:"geoip"`
 	ExpiredAuthTokens   ExpiredAuthTokensConfiguration `yaml:"expired_auth_tokens"`
 	Sitemap             SitemapConfiguration
 	Terms               TermsConfiguration
