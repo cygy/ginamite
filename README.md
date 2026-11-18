@@ -168,7 +168,9 @@ CI runs `make check` and `govulncheck` on every pull request. See [CONTRIBUTING.
 
 ### Release
 
-The release targets check the code, bump the `VERSION` file, commit it, tag it and push:
+Write the section `## vX.Y.Z` of the next version at the top of `CHANGELOG.md`, without committing it. The release
+targets then check the code, bump the `VERSION` file, commit it with `CHANGELOG.md` (the only file that may be
+modified), tag this commit and push:
 
 ```bash
 make bump_patch   # or bump_minor, bump_major
