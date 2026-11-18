@@ -41,10 +41,10 @@ type IPAddressDetails struct {
 
 // GetIPInfo decodes the payload of a location task and calls saveIPAddressDetailsFunc, which saves the location
 // returned by the function it receives, which uses the geoip API of the configuration. Nothing happens if the function
-// is nil. It returns the error of the function, or a permanent error, see broker.Permanent, if the payload can not be
-// decoded.
+// is nil or if the host of the API is empty (the location is optional): the database is not read either. It returns
+// the error of the function, or a permanent error, see broker.Permanent, if the payload can not be decoded.
 func GetIPInfo(payload []byte, geoIP config.GeoIPConfiguration, saveIPAddressDetailsFunc func(ctx context.Context, IPAddress, tokenID string, getIPAddressDetailsFunc DetailsFunc) error) error {
-	if saveIPAddressDetailsFunc == nil {
+	if saveIPAddressDetailsFunc == nil || geoIP.Host == "" {
 		return nil
 	}
 
