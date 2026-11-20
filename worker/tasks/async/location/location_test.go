@@ -110,13 +110,16 @@ func TestGetIPAddressDetails(t *testing.T) {
 		geoIP := useAPI(t, func(w http.ResponseWriter, r *http.Request) {
 			gotPath, gotAccept = r.URL.Path, r.Header.Get("Accept")
 			_, _ = w.Write([]byte(`{"ip":"2a01:cb00::1","country_code":"FR","country_name":"France","flag":"🇫🇷",` +
-				`"continent_code":"EU","region":"Occitanie","city":"Toulouse"}`))
+				`"continent_code":"EU","region":"Occitanie","region_code":"FR-OCC","city":"Toulouse","source":"dbip"}`))
 		})
 		geoIP.Host += "/"
 
 		details := GetIPAddressDetails(geoIP, "2a01:cb00::1")
 
-		want := IPAddressDetails{Region: "Occitanie", City: "Toulouse", CountryCode: "FR", CountryName: "France"}
+		want := IPAddressDetails{
+			Region: "Occitanie", RegionCode: "FR-OCC", City: "Toulouse", CountryCode: "FR", CountryName: "France",
+			Source: "dbip",
+		}
 		if details == nil || *details != want {
 			t.Errorf("details = %+v, want %+v", details, want)
 		}

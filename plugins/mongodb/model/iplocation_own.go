@@ -2,19 +2,23 @@ package model
 
 // OwnIPLocation is the view of an IPLocation exposed to its owner.
 type OwnIPLocation struct {
-	IP      string            `json:"IP"`
-	Region  string            `json:"region"`
-	City    string            `json:"city"`
-	Country IPLocationCountry `json:"country"`
+	IP         string            `json:"IP"`
+	Region     string            `json:"region"`
+	RegionCode string            `json:"regionCode"`
+	City       string            `json:"city"`
+	Country    IPLocationCountry `json:"country"`
+	Source     string            `json:"source"`
 }
 
 // NewOwnIPLocation returns a new OwnIPLocation.
 func NewOwnIPLocation(location IPLocation) *OwnIPLocation {
 	return &OwnIPLocation{
-		IP:      location.IP,
-		Region:  location.Region,
-		City:    location.City,
-		Country: location.Country,
+		IP:         location.IP,
+		Region:     location.Region,
+		RegionCode: location.RegionCode,
+		City:       location.City,
+		Country:    location.Country,
+		Source:     location.Source,
 	}
 }
 
