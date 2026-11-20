@@ -2,19 +2,23 @@ package model
 
 // AdminIPLocation is the view of an IPLocation exposed to the administrators.
 type AdminIPLocation struct {
-	IP      string            `json:"IP"`
-	Region  string            `json:"region"`
-	City    string            `json:"city"`
-	Country IPLocationCountry `json:"country"`
+	IP         string            `json:"IP"`
+	Region     string            `json:"region"`
+	RegionCode string            `json:"regionCode"`
+	City       string            `json:"city"`
+	Country    IPLocationCountry `json:"country"`
+	Source     string            `json:"source"`
 }
 
 // NewAdminIPLocation returns a new AdminIPLocation.
 func NewAdminIPLocation(location IPLocation) *AdminIPLocation {
 	return &AdminIPLocation{
-		IP:      location.IP,
-		Region:  location.Region,
-		City:    location.City,
-		Country: location.Country,
+		IP:         location.IP,
+		Region:     location.Region,
+		RegionCode: location.RegionCode,
+		City:       location.City,
+		Country:    location.Country,
+		Source:     location.Source,
 	}
 }
 

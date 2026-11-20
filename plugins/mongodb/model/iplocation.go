@@ -12,13 +12,17 @@ import (
 // IPLocationCollection is the name of the collection of the ipLocation documents.
 const IPLocationCollection = "IPLocation"
 
-// IPLocation is the geographic location of an IP address.
+// IPLocation is the geographic location of an IP address. RegionCode is ISO 3166-2, such as FR-NAQ. Source is the
+// name of the source of the location given by the geoip API, such as icloud-private-relay or dbip; it is empty for
+// the locations saved before the API gave it, all from DB-IP.
 type IPLocation struct {
-	ID      bson.ObjectID     `json:"id,omitempty" bson:"_id,omitempty"`
-	IP      string            `json:"IP" bson:"IP"`
-	Region  string            `json:"region" bson:"region"`
-	City    string            `json:"city" bson:"city"`
-	Country IPLocationCountry `json:"country" bson:"country"`
+	ID         bson.ObjectID     `json:"id,omitempty" bson:"_id,omitempty"`
+	IP         string            `json:"IP" bson:"IP"`
+	Region     string            `json:"region" bson:"region"`
+	RegionCode string            `json:"regionCode" bson:"regionCode,omitempty"`
+	City       string            `json:"city" bson:"city"`
+	Country    IPLocationCountry `json:"country" bson:"country"`
+	Source     string            `json:"source" bson:"source,omitempty"`
 }
 
 // IPLocationCountry is the country of an IPLocation.

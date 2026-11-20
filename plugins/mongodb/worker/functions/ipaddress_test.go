@@ -18,7 +18,10 @@ func TestSaveIPAddressDetails(t *testing.T) {
 	tokenID := bson.NewObjectID()
 	locationID := bson.NewObjectID()
 
-	details := &location.IPAddressDetails{Region: "IDF", City: "Paris", CountryCode: "FR", CountryName: "France"}
+	details := &location.IPAddressDetails{
+		Region: "IDF", RegionCode: "FR-IDF", City: "Paris", CountryCode: "FR", CountryName: "France",
+		Source: "icloud-private-relay",
+	}
 	var asked []string
 	lookup := func(ip string) (*location.IPAddressDetails, error) {
 		asked = append(asked, ip)
@@ -41,7 +44,8 @@ func TestSaveIPAddressDetails(t *testing.T) {
 		}
 
 		saved := db.Coll(model.IPLocationCollection).LastCall().Args[0].(*model.IPLocation)
-		if len(asked) != 1 || saved.IP != "1.2.3.4" || saved.Region != "IDF" || saved.City != "Paris" || saved.Country.Code != "FR" || saved.Country.Name != "France" {
+		if len(asked) != 1 || saved.IP != "1.2.3.4" || saved.Region != "IDF" || saved.City != "Paris" || saved.Country.Code != "FR" || saved.Country.Name != "France" ||
+			saved.RegionCode != "FR-IDF" || saved.Source != "icloud-private-relay" {
 			t.Errorf("asked = %v, location = %+v", asked, saved)
 		}
 

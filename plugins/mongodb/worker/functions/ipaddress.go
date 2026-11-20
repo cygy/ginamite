@@ -43,9 +43,11 @@ func (f *Functions) SaveIPAddressDetails(ctx context.Context, IPAddress, tokenID
 		// Save into the db.
 		location.IP = IPAddress
 		location.Region = details.Region
+		location.RegionCode = details.RegionCode
 		location.City = details.City
 		location.Country.Code = details.CountryCode
 		location.Country.Name = details.CountryName
+		location.Source = details.Source
 
 		if _, err := location.Save(ctx, db); err != nil {
 			return fmt.Errorf("unable to save the location of the IP address: %w", err)

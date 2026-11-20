@@ -31,12 +31,15 @@ const (
 // unknown or can not be retrieved, and an error only if asking again later can succeed.
 type DetailsFunc func(IPAddress string) (*IPAddressDetails, error)
 
-// IPAddressDetails is the location of an IP address, as the geoip API returns it.
+// IPAddressDetails is the location of an IP address, as the geoip API returns it. RegionCode is ISO 3166-2, such as
+// FR-NAQ; Source is the name of the source of the location, such as icloud-private-relay or dbip. Both may be empty.
 type IPAddressDetails struct {
 	Region      string `json:"region"`
+	RegionCode  string `json:"region_code"`
 	City        string `json:"city"`
 	CountryCode string `json:"country_code"`
 	CountryName string `json:"country_name"`
+	Source      string `json:"source"`
 }
 
 // GetIPInfo decodes the payload of a location task and calls saveIPAddressDetailsFunc, which saves the location
