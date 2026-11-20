@@ -64,6 +64,43 @@ func TestHandleAPICallToPage(t *testing.T) {
 	}
 }
 
+func TestHandleAPICallToDataPage(t *testing.T) {
+	apiError := response.Error{Code: 1, Domain: "test", Message: "It failed"}
+	tests := []struct {
+		name        string
+		result      api.Result
+		ok          bool
+		wantHandled bool
+		wantStatus  int
+		wantBody    string
+	}{
+		{"success", api.Result{StatusCode: http.StatusOK}, true, false, http.StatusOK, ""},
+		{"already handled", api.Result{StatusCode: http.StatusBadRequest, Handled: true}, false, true, http.StatusOK, ""},
+		{"API error is not displayed", api.Result{StatusCode: http.StatusConflict, APIError: apiError}, false, true, http.StatusInternalServerError, "<html>|||Error </html>"},
+		{"bad request", api.Result{StatusCode: http.StatusBadRequest, APIError: apiError}, false, true, http.StatusNotFound, "<html>|||</html>"},
+		{"not found", api.Result{StatusCode: http.StatusNotFound}, false, true, http.StatusNotFound, "<html>|||</html>"},
+		{"unauthorized", api.Result{StatusCode: http.StatusUnauthorized}, false, true, http.StatusUnauthorized, "<html>|||</html>"},
+		{"internal server error", api.Result{StatusCode: http.StatusInternalServerError}, false, true, http.StatusInternalServerError, "<html>|||Error </html>"},
+		{"no response", api.Result{RequestError: errors.New("timeout")}, false, true, http.StatusInternalServerError, "<html>|||Error </html>"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var handled bool
+			rec := serve(t, func(c *gin.Context) {
+				handled = HandleAPICallToDataPage(c, tt.result, tt.ok)
+			})
+
+			if handled != tt.wantHandled {
+				t.Errorf("handled = %v, want %v", handled, tt.wantHandled)
+			}
+			if rec.Code != tt.wantStatus || rec.Body.String() != tt.wantBody {
+				t.Errorf("response = %d %q, want %d %q", rec.Code, rec.Body.String(), tt.wantStatus, tt.wantBody)
+			}
+		})
+	}
+}
+
 func TestHandleAPICallToPartialPage(t *testing.T) {
 	tests := []struct {
 		name        string
