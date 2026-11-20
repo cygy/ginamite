@@ -112,15 +112,6 @@ func InjectRequestLogger(logResponseBody bool) gin.HandlerFunc {
 		requestIP := c.ClientIP()
 
 		requestMethod := c.Request.Method
-
-		// The code logging with the context of the request, such as DatabaseOperationError, tells which request it
-		// served. The route is the pattern, never the path, which holds IDs and secrets.
-		requestContext := ContextWithAttributes(c.Request.Context(),
-			"request_id", c.Request.Header.Get(RequestIDHeaderName),
-			"method", requestMethod,
-			"route", c.FullPath(),
-		)
-		c.Request = c.Request.WithContext(requestContext)
 		requestPath := c.Request.URL.Path
 		requestQuery := c.Request.URL.RawQuery
 		if len(requestQuery) > 0 {
@@ -138,6 +129,15 @@ func InjectRequestLogger(logResponseBody bool) gin.HandlerFunc {
 			requestBody = string(obfuscateBody(body))
 			c.Request.Body = readCloser{Reader: io.MultiReader(bytes.NewReader(body), original), Closer: original}
 		}
+
+		// The code logging with the context of the request, such as DatabaseOperationError, tells which request it
+		// served. The route is the pattern, never the path, which holds IDs and secrets.
+		requestContext := ContextWithAttributes(c.Request.Context(),
+			"request_id", c.Request.Header.Get(RequestIDHeaderName),
+			"method", requestMethod,
+			"route", c.FullPath(),
+		)
+		c.Request = c.Request.WithContext(requestContext)
 
 		requestHeaders := map[string]string{}
 		for key, value := range c.Request.Header {

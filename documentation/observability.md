@@ -26,7 +26,8 @@ are masked, see [Security](security.md).
 ### Application version
 
 Set `Server.ApplicationVersion` to the release of the application, such as `"1.2.3"`, usually at the build with
-`-ldflags "-X main.version=1.2.3"`: each record then carries `version`, so that a log tells which release wrote it.
+`-ldflags "-X main.version=1.2.3"`: each record then carries `version`, so that a log tells which release wrote it. It is not the argument `-version` (`final`, `beta` or `alpha`), which
+chooses the kind of instance.
 
 ### Database errors
 
@@ -35,7 +36,7 @@ The MongoDB plugin logs a failed operation as `database error`, with enough to f
 | Attribute | Content |
 | --- | --- |
 | `operation`, `collection` | The driver operation (`Aggregate`, `FindOne`, `UpdateMany`...) and the collection. |
-| `caller`, `source` | The function of the application which called the plugin, and its file and line. |
+| `caller`, `source` | The function which called the code reporting the error, with its file and line: the function of the application for a call of the plugin, or the function of a plugin model for the ones it makes itself. |
 | `request_id`, `method`, `route` | The request being served: the ID (the header `X-Request-ID`), the method and the route pattern. |
 | `error` | The error of the driver. |
 

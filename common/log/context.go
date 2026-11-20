@@ -1,6 +1,10 @@
 package log
 
-import "context"
+import (
+	"context"
+
+	"github.com/gin-gonic/gin"
+)
 
 // attributesKey is the key of the log attributes in a context.
 type attributesKey struct{}
@@ -22,10 +26,17 @@ func ContextWithAttributes(ctx context.Context, args ...any) context.Context {
 	return context.WithValue(ctx, attributesKey{}, attrs)
 }
 
-// AttributesFromContext returns the attributes saved in ctx by ContextWithAttributes, or nil if there is none.
+// AttributesFromContext returns the attributes saved in ctx by ContextWithAttributes, or nil if there is none. The
+// context of the request of a *gin.Context is read too: the handlers often pass the gin context itself to the storage.
+//
+//nolint:contextcheck // the context of the request of a gin context is read on purpose
 func AttributesFromContext(ctx context.Context) []any {
 	if ctx == nil {
 		return nil
+	}
+
+	if c, ok := ctx.(*gin.Context); ok && c.Request != nil {
+		ctx = c.Request.Context()
 	}
 
 	attrs, _ := ctx.Value(attributesKey{}).([]any)

@@ -328,6 +328,9 @@ func TestInjectRequestLogger_ContextAttributes(t *testing.T) {
 	router.Use(InjectRequestLogger(false))
 	router.GET("/puzzle/:id", func(c *gin.Context) {
 		attrs = AttributesFromContext(c.Request.Context())
+		if viaGin := AttributesFromContext(c); !reflect.DeepEqual(viaGin, attrs) {
+			t.Errorf("attributes through the gin context = %v, want %v", viaGin, attrs)
+		}
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/puzzle/abc?token=secret", nil)
