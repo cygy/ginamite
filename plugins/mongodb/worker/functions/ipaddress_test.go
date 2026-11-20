@@ -61,7 +61,7 @@ func TestSaveIPAddressDetails(t *testing.T) {
 	t.Run("known location is not looked up", func(t *testing.T) {
 		asked = nil
 		fns, db := newDB()
-		db.Coll(model.IPLocationCollection).One = mock.Result{Value: bson.M{"_id": locationID, "IP": "1.2.3.4", "city": "Lyon"}}
+		db.Coll(model.IPLocationCollection).One = mock.Result{Value: bson.M{"_id": locationID, "IP": "1.2.3.4", "city": "Lyon", "source": "dbip"}}
 
 		if err := fns.SaveIPAddressDetails(ctx, "1.2.3.4", tokenID.Hex(), lookup); err != nil {
 			t.Fatalf("error = %v", err)
@@ -77,6 +77,47 @@ func TestSaveIPAddressDetails(t *testing.T) {
 		}
 		if got := db.Coll(model.AuthTokenCollection).LastCall().Args[1].(bson.M)["$set"].(bson.M)["location"].(model.IPLocation); got.City != "Lyon" {
 			t.Errorf("location = %+v", got)
+		}
+	})
+
+	t.Run("known location without source is asked again and updated", func(t *testing.T) {
+		asked = nil
+		fns, db := newDB()
+		db.Coll(model.IPLocationCollection).One = mock.Result{Value: bson.M{"_id": locationID, "IP": "1.2.3.4", "city": "Lyon"}}
+
+		if err := fns.SaveIPAddressDetails(ctx, "1.2.3.4", tokenID.Hex(), lookup); err != nil {
+			t.Fatalf("error = %v", err)
+		}
+
+		if len(asked) != 1 {
+			t.Errorf("asked = %v, want the IP once", asked)
+		}
+		update := db.Coll(model.IPLocationCollection).LastCall()
+		if update.Method != "UpdateByID" || update.Args[0] != locationID {
+			t.Fatalf("location call = %+v, want an update", update)
+		}
+		set := update.Args[1].(bson.M)["$set"].(bson.M)
+		if set["source"] != "icloud-private-relay" || set["city"] != "Paris" || set["regionCode"] != "FR-IDF" {
+			t.Errorf("update = %+v", set)
+		}
+		if got := db.Coll(model.AuthTokenCollection).LastCall().Args[1].(bson.M)["$set"].(bson.M)["location"].(model.IPLocation); got.City != "Paris" || got.Source != "icloud-private-relay" {
+			t.Errorf("location of the token = %+v", got)
+		}
+	})
+
+	t.Run("known location without source is kept when the API finds nothing", func(t *testing.T) {
+		fns, db := newDB()
+		db.Coll(model.IPLocationCollection).One = mock.Result{Value: bson.M{"_id": locationID, "IP": "1.2.3.4", "city": "Lyon"}}
+
+		if err := fns.SaveIPAddressDetails(ctx, "1.2.3.4", tokenID.Hex(), func(string) (*location.IPAddressDetails, error) { return nil, nil }); err != nil {
+			t.Fatalf("error = %v", err)
+		}
+
+		if got := methods(db, model.IPLocationCollection); len(got) != 1 {
+			t.Errorf("location calls = %v, want only the lookup", got)
+		}
+		if got := db.Coll(model.AuthTokenCollection).LastCall().Args[1].(bson.M)["$set"].(bson.M)["location"].(model.IPLocation); got.City != "Lyon" {
+			t.Errorf("location of the token = %+v", got)
 		}
 	})
 
@@ -128,6 +169,10 @@ func TestSaveIPAddressDetails(t *testing.T) {
 		}},
 		{"save of the location", func(db *mock.Database) {
 			db.Coll(model.IPLocationCollection).Errs = map[string]error{"InsertOne": errBoom}
+		}},
+		{"update of the location", func(db *mock.Database) {
+			db.Coll(model.IPLocationCollection).One = mock.Result{Value: bson.M{"_id": bson.NewObjectID(), "IP": "1.2.3.4"}}
+			db.Coll(model.IPLocationCollection).Errs = map[string]error{"UpdateByID": errBoom}
 		}},
 		{"update of the token", func(db *mock.Database) {
 			db.Coll(model.AuthTokenCollection).Errs = map[string]error{"UpdateByID": errBoom}
