@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.14.0
+
+### Added
+
+- The location of an IP address keeps its `source` (`icloud-private-relay`, `cloudflare`, `google-cloud`, `dbip`) and
+  its `region_code` (ISO 3166-2), given by the geoip API: `IPAddressDetails`, `IPLocation`, `OwnIPLocation` and
+  `AdminIPLocation` (#20). A cached location without source is asked again to the API.
+- `geoip.cache_duration` (`24h` by default): how long a location is kept in the database and reused before the API is
+  asked again (#21).
+
+### Changed
+
+- The IP locations are kept one day instead of for ever (#21): the TTL index `updatedAt_1_1` of the collection
+  `IPLocation` deletes them, and the unique index `IP_1_1` has no TTL anymore. All the workers must use the same
+  `geoip.cache_duration`: at its start, a worker creates the index again with its own value.
+- At the start, the worker deletes the locations saved without `updatedAt`, which the TTL index never deleted (#21).
+
 ## v0.13.0
 
 ### Added
