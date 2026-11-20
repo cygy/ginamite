@@ -24,6 +24,8 @@ The core depends on no database nor broker: a **plugin** provides them, register
 - A **database plugin** (`plugins/mongodb`) sets the storages and the hooks of the API and of the worker, see
   [Database plugins](database-plugins.md).
 - A **broker plugin** (`plugins/kafka`) connects the servers, see [Message broker and Kafka](kafka.md).
+- The **rate limiting plugins** (`plugins/ratelimit/redis`, `plugins/ratelimit/mongodb`) share the counters between the
+  API instances, see [Rate limiting](rate-limiting.md).
 - The **payment plugin** (`plugins/stripe`) takes payments with Stripe, see [Payments with Stripe](stripe.md).
 
 The storages are interfaces taking the `context.Context` and returning errors. A feature whose storage is not set is
@@ -57,7 +59,7 @@ configuration).
 | `worker/` | The worker server: message consumers, notifications, mails, async and recurring tasks. |
 | `web/` | The web server: HTML routes, pages, cookies, calls to the API, `robots.txt`. |
 | `common/` | Shared packages: configuration, flags, logger, localization, templates, broker interfaces, JWT, timezones. |
-| `plugins/` | The plugins: the database (`mongodb`) and the message broker (`kafka`). |
+| `plugins/` | The plugins: the database (`mongodb`), the message broker (`kafka`), the rate limiting (`ratelimit`) and the payments (`stripe`). |
 | `examples/` | Small projects built with ginamite, deployed with a Dockerfile. See [examples](../examples/README.md). |
 
 The packages under an `internal/` directory are the implementation of the servers: the HTTP server, the handlers of

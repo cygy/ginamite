@@ -33,10 +33,12 @@ writes what is its own.
 ## Requirements
 
 - Go 1.26 or later.
-- Optional: a database, through a plugin, for the default routes which store data. The only plugin for now is
+- Optional: a database, through a plugin, for the default routes which store data. The only database plugin for now is
   `plugins/mongodb`.
-- Optional: a message broker, through a plugin, to send messages between the servers. The only plugin for now is
+- Optional: a message broker, through a plugin, to send messages between the servers. The only broker plugin for now is
   `plugins/kafka`. Without a broker, the messages are not sent and an error is logged for each.
+- Optional: `plugins/ratelimit/redis` or `plugins/ratelimit/mongodb` to share the rate limits between the API
+  instances, and `plugins/stripe` to take payments.
 
 ## Installation
 
@@ -157,13 +159,16 @@ The arguments `-dlq*`, added by `plugins/kafka`, run a command on the dead lette
 The `Makefile` lists its targets with `make help`:
 
 ```bash
-make check   # build, formatting, go vet, golangci-lint and the tests with the race detector
-make cover   # tests and total coverage
-make fmt     # gofumpt and goimports
+make check        # build, formatting, go vet, golangci-lint and the tests with the race detector
+make cover        # tests and total coverage
+make fmt          # gofumpt and goimports
+make integration  # the tests needing a real MongoDB and Kafka (MONGO_HOST, KAFKA_HOST, ... override localhost)
+make fuzz         # each fuzz test, FUZZTIME (30s) by default
 ```
 
 The code is formatted with `gofumpt`, `golangci-lint` must report no issue, and the code is tested along with it. The
-CI runs `make check` and `govulncheck` on every pull request. See [CONTRIBUTING.md](CONTRIBUTING.md) to contribute, and
+CI runs `make check`, `make integration` (with MongoDB and Kafka) and `govulncheck` on every pull request, and
+`govulncheck` every Monday. See [CONTRIBUTING.md](CONTRIBUTING.md) to contribute, and
 [SECURITY.md](SECURITY.md) to report a vulnerability.
 
 ### Release
