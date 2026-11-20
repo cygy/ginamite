@@ -3,19 +3,21 @@ package functions
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/cygy/ginamite/plugins/mongodb/model"
 	"github.com/cygy/ginamite/plugins/mongodb/mongo/bson"
+	"github.com/cygy/ginamite/plugins/mongodb/mongo/document"
 	"github.com/cygy/ginamite/plugins/mongodb/mongo/store"
 	"github.com/cygy/ginamite/worker/tasks/async/location"
 )
 
 // SaveIPAddressDetails saves the location of the IP address of an auth token, and updates the location of the token.
-// The location is read from the database if it is known with its source, and from getIPAddressDetailsFunc otherwise:
-// a location saved before the geoip API gave the source is asked again and updated, and kept if the API finds
-// nothing. Nothing is done if the token does not exist anymore or if the location is unknown. It returns the error of
-// the database or of getIPAddressDetailsFunc, if any: it can be called again. The function of the geoip API returns
-// none: it only logs its failures.
+// The location is read from the database if it was given by getIPAddressDetailsFunc less than LocationCacheDuration
+// before, and from getIPAddressDetailsFunc otherwise: an older location is asked again and updated, and kept if the
+// API finds nothing. Nothing is done if the token does not exist anymore or if the location is unknown. It returns the
+// error of the database or of getIPAddressDetailsFunc, if any: it can be called again. The function of the geoip API
+// returns none: it only logs its failures. The token keeps its copy of the location, which is not refreshed.
 func (f *Functions) SaveIPAddressDetails(ctx context.Context, IPAddress, tokenID string, getIPAddressDetailsFunc location.DetailsFunc) error {
 	db := f.database()
 
@@ -29,12 +31,12 @@ func (f *Functions) SaveIPAddressDetails(ctx context.Context, IPAddress, tokenID
 		return fmt.Errorf("unable to get the auth token: %w", err)
 	}
 
-	// Verify the location of the IP address is in cache, with its source.
+	// Verify the location of the IP address is in cache, and fresh.
 	location := &model.IPLocation{}
 	if err := location.GetByIPAddress(ctx, IPAddress, db); err != nil && !documentMissing(err) {
 		return fmt.Errorf("unable to get the location of the IP address: %w", err)
 	}
-	if !location.IsSaved() || location.Source == "" {
+	if now := time.Now(); !location.IsSaved() || !location.IsFresh(now, f.locationCacheDuration()) {
 		details, err := getIPAddressDetailsFunc(IPAddress)
 		if err != nil {
 			return fmt.Errorf("unable to get the location of the IP address: %w", err)
@@ -43,7 +45,7 @@ func (f *Functions) SaveIPAddressDetails(ctx context.Context, IPAddress, tokenID
 			return nil
 		}
 		if details != nil {
-			if err := saveLocation(ctx, location, IPAddress, details, db); err != nil {
+			if err := saveLocation(ctx, location, IPAddress, details, now, db); err != nil {
 				return err
 			}
 		}
@@ -56,8 +58,9 @@ func (f *Functions) SaveIPAddressDetails(ctx context.Context, IPAddress, tokenID
 	return nil
 }
 
-// saveLocation sets the details of the IP address in the location, then inserts it, or updates it if it is saved.
-func saveLocation(ctx context.Context, ipLocation *model.IPLocation, IPAddress string, details *location.IPAddressDetails, db store.Database) error {
+// saveLocation sets the details of the IP address, given at now, in the location, then inserts it, or updates it if it
+// is saved.
+func saveLocation(ctx context.Context, ipLocation *model.IPLocation, IPAddress string, details *location.IPAddressDetails, now time.Time, db store.Database) error {
 	ipLocation.IP = IPAddress
 	ipLocation.Region = details.Region
 	ipLocation.RegionCode = details.RegionCode
@@ -65,11 +68,12 @@ func saveLocation(ctx context.Context, ipLocation *model.IPLocation, IPAddress s
 	ipLocation.Country.Code = details.CountryCode
 	ipLocation.Country.Name = details.CountryName
 	ipLocation.Source = details.Source
+	ipLocation.UpdatedAt = now
 
 	if ipLocation.IsSaved() {
 		update := bson.M{"$set": bson.M{
 			"region": ipLocation.Region, "regionCode": ipLocation.RegionCode, "city": ipLocation.City,
-			"country": ipLocation.Country, "source": ipLocation.Source,
+			"country": ipLocation.Country, "source": ipLocation.Source, "updatedAt": ipLocation.UpdatedAt,
 		}}
 		if err := ipLocation.Update(ctx, update, db); err != nil && !documentMissing(err) {
 			return fmt.Errorf("unable to update the location of the IP address: %w", err)
@@ -83,4 +87,12 @@ func saveLocation(ctx context.Context, ipLocation *model.IPLocation, IPAddress s
 	}
 
 	return nil
+}
+
+// RemoveUndatedIPLocations deletes the locations saved without updatedAt, before they were kept for a limited
+// duration: the TTL index of updatedAt never deletes them. It is a cache, they are asked again if needed. A failure is
+// logged by the database.
+func (f *Functions) RemoveUndatedIPLocations(ctx context.Context) {
+	selector := bson.M{"updatedAt": bson.M{"$exists": false}}
+	_, _ = document.DeleteDocumentsBySelector(ctx, model.IPLocationCollection, selector, f.database())
 }

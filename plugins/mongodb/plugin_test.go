@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"slices"
 	"testing"
+	"time"
 
 	"github.com/cygy/ginamite"
 	"github.com/cygy/ginamite/api/rights"
@@ -60,9 +61,13 @@ func TestPlugin_Connect_Unreachable(t *testing.T) {
 	configuration.Database.Host = "127.0.0.1"
 	configuration.Database.Port = 1
 	configuration.Database.TimeOut = 1
+	configuration.GeoIP.CacheDuration = time.Hour
 
 	if err := p.Connect(configuration); err == nil || p.session != nil {
 		t.Errorf("Connect() = %v, session = %+v, want an error and no session", err, p.session)
+	}
+	if got := p.workers().LocationCacheDuration; got != time.Hour {
+		t.Errorf("LocationCacheDuration of the workers = %s, want 1h from geoip.cache_duration", got)
 	}
 }
 
@@ -245,6 +250,9 @@ func TestPlugin_startUpTasks(t *testing.T) {
 			if view := db.Coll(name).IndexView; view == nil || len(view.Created) == 0 {
 				t.Errorf("the indexes of %s must be created", name)
 			}
+		}
+		if !slices.ContainsFunc(db.Coll(model.IPLocationCollection).Calls(), func(c mock.Call) bool { return c.Method == "DeleteMany" }) {
+			t.Error("the undated locations must be removed")
 		}
 	})
 

@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"strings"
+	"time"
 
 	"github.com/cygy/ginamite/plugins/mongodb/mongo/bson"
 	"github.com/cygy/ginamite/plugins/mongodb/mongo/document"
@@ -14,7 +15,8 @@ const IPLocationCollection = "IPLocation"
 
 // IPLocation is the geographic location of an IP address. RegionCode is ISO 3166-2, such as FR-NAQ. Source is the
 // name of the source of the location given by the geoip API, such as icloud-private-relay or dbip; it is empty for
-// the locations saved before the API gave it, all from DB-IP.
+// the locations saved before the API gave it, all from DB-IP. UpdatedAt is the time the API gave the location; it is
+// zero for the locations saved before it was kept.
 type IPLocation struct {
 	ID         bson.ObjectID     `json:"id,omitempty" bson:"_id,omitempty"`
 	IP         string            `json:"IP" bson:"IP"`
@@ -23,6 +25,7 @@ type IPLocation struct {
 	City       string            `json:"city" bson:"city"`
 	Country    IPLocationCountry `json:"country" bson:"country"`
 	Source     string            `json:"source" bson:"source,omitempty"`
+	UpdatedAt  time.Time         `json:"-" bson:"updatedAt,omitempty"`
 }
 
 // IPLocationCountry is the country of an IPLocation.
@@ -55,6 +58,11 @@ func (country IPLocationCountry) Flag() string {
 // NewIPLocation returns a new IPLocation.
 func NewIPLocation() *IPLocation {
 	return &IPLocation{}
+}
+
+// IsFresh reports whether the location was given by the geoip API less than cacheDuration before now.
+func (location *IPLocation) IsFresh(now time.Time, cacheDuration time.Duration) bool {
+	return !location.UpdatedAt.IsZero() && now.Sub(location.UpdatedAt) < cacheDuration
 }
 
 // IsSaved reports whether the IPLocation document is saved in the collection.
