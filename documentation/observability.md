@@ -27,7 +27,6 @@ are masked, see [Security](security.md).
 
 Set `Server.ApplicationVersion` to the release of the application, such as `"1.2.3"`, usually at the build with
 `-ldflags "-X main.version=1.2.3"`: each record then carries `version`, so that a log tells which release wrote it.
-It is not the argument `-version` (`final`, `beta` or `alpha`), which chooses the kind of instance.
 chooses the kind of instance.
 
 ### Database errors
