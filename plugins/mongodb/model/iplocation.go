@@ -13,10 +13,6 @@ import (
 // IPLocationCollection is the name of the collection of the ipLocation documents.
 const IPLocationCollection = "IPLocation"
 
-// IPLocationTTL is the number of seconds a location is kept in cache after it is given by the geoip API: it is asked
-// again after, and the document is deleted by the TTL index of updatedAt.
-const IPLocationTTL = 24 * 3600
-
 // IPLocation is the geographic location of an IP address. RegionCode is ISO 3166-2, such as FR-NAQ. Source is the
 // name of the source of the location given by the geoip API, such as icloud-private-relay or dbip; it is empty for
 // the locations saved before the API gave it, all from DB-IP. UpdatedAt is the time the API gave the location; it is
@@ -64,9 +60,9 @@ func NewIPLocation() *IPLocation {
 	return &IPLocation{}
 }
 
-// IsFresh reports whether the location was given by the geoip API less than IPLocationTTL seconds before now.
-func (location *IPLocation) IsFresh(now time.Time) bool {
-	return !location.UpdatedAt.IsZero() && now.Sub(location.UpdatedAt) < IPLocationTTL*time.Second
+// IsFresh reports whether the location was given by the geoip API less than cacheDuration before now.
+func (location *IPLocation) IsFresh(now time.Time, cacheDuration time.Duration) bool {
+	return !location.UpdatedAt.IsZero() && now.Sub(location.UpdatedAt) < cacheDuration
 }
 
 // IsSaved reports whether the IPLocation document is saved in the collection.

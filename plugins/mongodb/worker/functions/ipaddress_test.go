@@ -202,3 +202,16 @@ func TestSaveIPAddressDetails(t *testing.T) {
 		})
 	}
 }
+
+func TestRemoveUndatedIPLocations(t *testing.T) {
+	fns, db := withMainSession(t)
+	fns.RemoveUndatedIPLocations(context.Background())
+
+	call := db.Coll(model.IPLocationCollection).LastCall()
+	if call.Method != "DeleteMany" {
+		t.Fatalf("call = %+v, want DeleteMany", call)
+	}
+	if selector, ok := call.Args[0].(bson.M); !ok || selector["updatedAt"].(bson.M)["$exists"] != false {
+		t.Errorf("selector = %+v", call.Args[0])
+	}
+}

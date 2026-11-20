@@ -246,6 +246,9 @@ func TestPlugin_startUpTasks(t *testing.T) {
 				t.Errorf("the indexes of %s must be created", name)
 			}
 		}
+		if !slices.ContainsFunc(db.Coll(model.IPLocationCollection).Calls(), func(c mock.Call) bool { return c.Method == "DeleteMany" }) {
+			t.Error("the undated locations must be removed")
+		}
 	})
 
 	t.Run("hooks run after the default tasks, in order", func(t *testing.T) {

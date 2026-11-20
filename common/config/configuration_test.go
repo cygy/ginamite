@@ -52,6 +52,7 @@ worker_consumers:
 geoip:
   host: http://geoip:8080
   timeout: 3s
+  cache_duration: 6h
 `)
 
 	c := NewConfiguration()
@@ -83,7 +84,7 @@ geoip:
 	if want := []ConsumerConfiguration{{Topic: "mail", Group: "mails"}, {Topic: "task"}}; !slices.Equal(c.WorkerConsumers, want) {
 		t.Errorf("worker consumers = %+v, want %+v", c.WorkerConsumers, want)
 	}
-	if want := (GeoIPConfiguration{Host: "http://geoip:8080", Timeout: 3 * time.Second}); c.GeoIP != want {
+	if want := (GeoIPConfiguration{Host: "http://geoip:8080", Timeout: 3 * time.Second, CacheDuration: 6 * time.Hour}); c.GeoIP != want {
 		t.Errorf("geoip = %+v, want %+v", c.GeoIP, want)
 	}
 }

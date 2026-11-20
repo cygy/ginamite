@@ -62,6 +62,8 @@ type Plugin struct {
 	IsUserEmpty func(context.Context, string, store.Database) bool
 
 	session *session.Session // The session of the database, opened by Connect.
+	// locationCacheDuration is geoip.cache_duration of the configuration, read by Connect.
+	locationCacheDuration time.Duration
 }
 
 // NewPlugin returns a Plugin with the default settings of the model package.
@@ -102,6 +104,7 @@ func (p *Plugin) Connect(configuration *config.Configuration) error {
 		return err
 	}
 	p.session = s
+	p.locationCacheDuration = configuration.GeoIP.LocationCacheDuration()
 
 	return nil
 }
@@ -149,6 +152,7 @@ func (p *Plugin) database() store.Database {
 // workers returns the functions of the workers working on the database of the plugin.
 func (p *Plugin) workers() *workerFunctions.Functions {
 	f := workerFunctions.New(p.database)
+	f.LocationCacheDuration = p.locationCacheDuration
 	f.Hooks = workerFunctions.Hooks{
 		SanitizeAccounts:                                      p.SanitizeAccounts,
 		IsUserEmpty:                                           p.IsUserEmpty,
@@ -208,6 +212,7 @@ func (p *Plugin) startUpTasks(ctx context.Context, environment, version string) 
 		indexes := p.IndexesToCreate()
 		workers.CreateIndexes(ctx, indexes)
 	}
+	workers.RemoveUndatedIPLocations(ctx)
 
 	workerFunctions.RemoveUnusedDefaultDocuments(environment, version)
 	if p.RemoveDefaultDocuments != nil {

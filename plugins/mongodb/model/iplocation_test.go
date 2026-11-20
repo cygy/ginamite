@@ -58,18 +58,19 @@ func TestIPLocationCountry_Flag(t *testing.T) {
 
 func TestIPLocation_IsFresh(t *testing.T) {
 	now := time.Now()
+	const day = 24 * time.Hour
 	tests := map[string]struct {
 		updatedAt time.Time
 		want      bool
 	}{
 		"never updated":        {time.Time{}, false},
 		"updated an hour ago":  {now.Add(-time.Hour), true},
-		"updated one day ago":  {now.Add(-IPLocationTTL * time.Second), false},
+		"updated one day ago":  {now.Add(-day), false},
 		"updated two days ago": {now.Add(-48 * time.Hour), false},
 	}
 	for name, tt := range tests {
 		location := &IPLocation{UpdatedAt: tt.updatedAt}
-		if got := location.IsFresh(now); got != tt.want {
+		if got := location.IsFresh(now, day); got != tt.want {
 			t.Errorf("%s: IsFresh = %v, want %v", name, got, tt.want)
 		}
 	}

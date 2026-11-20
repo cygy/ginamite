@@ -2,7 +2,9 @@ package functions
 
 import (
 	"context"
+	"math"
 	"testing"
+	"time"
 
 	"github.com/cygy/ginamite/plugins/mongodb/model"
 	"github.com/cygy/ginamite/plugins/mongodb/mongo/bson"
@@ -135,6 +137,15 @@ func TestRemoveUnusedIndexes(t *testing.T) {
 	for _, index := range db.Coll(model.UserCollection).IndexView.Dropped {
 		if index == "" {
 			t.Error("an index has no name")
+		}
+	}
+}
+
+func TestExpireAfterSeconds(t *testing.T) {
+	tests := map[time.Duration]int32{24 * time.Hour: 86400, 1500 * time.Millisecond: 1, 1 << 62: math.MaxInt32}
+	for d, want := range tests {
+		if got := expireAfterSeconds(d); got != want {
+			t.Errorf("expireAfterSeconds(%s) = %d, want %d", d, got, want)
 		}
 	}
 }

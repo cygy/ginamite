@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
+	"time"
 
 	"github.com/cygy/ginamite/common/log"
 	"github.com/cygy/ginamite/plugins/mongodb/model"
@@ -269,7 +271,8 @@ func (f *Functions) CreateAllIndexes(ctx context.Context) {
 					SetUnique(true),
 			},
 		},
-		// The locations are kept one day in cache: the geoip API has no quota, and its sources change.
+		// The locations are kept LocationCacheDuration (geoip.cache_duration, one day by default): the geoip API has no
+		// quota, and its sources change. A new duration replaces the index.
 		{
 			Collection: model.IPLocationCollection,
 			Index: mongo.IndexModel{
@@ -281,7 +284,7 @@ func (f *Functions) CreateAllIndexes(ctx context.Context) {
 				},
 				Options: options.Index().
 					SetName("updatedAt_1_1").
-					SetExpireAfterSeconds(model.IPLocationTTL),
+					SetExpireAfterSeconds(expireAfterSeconds(f.locationCacheDuration())),
 			},
 		},
 
@@ -642,4 +645,14 @@ func (f *Functions) RemoveUnusedIndexes(ctx context.Context) {
 	}
 
 	f.RemoveIndexes(ctx, indexes)
+}
+
+// expireAfterSeconds returns the duration in seconds for a TTL index, at most math.MaxInt32.
+func expireAfterSeconds(d time.Duration) int32 {
+	seconds := int64(d / time.Second)
+	if seconds > math.MaxInt32 {
+		return math.MaxInt32
+	}
+
+	return int32(seconds) //nolint:gosec // bounded above by math.MaxInt32, and the durations are positive
 }

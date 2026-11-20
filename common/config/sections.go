@@ -173,6 +173,22 @@ type GeoIPConfiguration struct {
 	Host string
 	// Timeout is the maximum duration of a request, 5 seconds if zero.
 	Timeout time.Duration
+	// CacheDuration is how long a location given by the API is kept and reused before the API is asked again,
+	// DefaultGeoIPCacheDuration if zero or negative. See LocationCacheDuration.
+	CacheDuration time.Duration `yaml:"cache_duration"`
+}
+
+// DefaultGeoIPCacheDuration is the duration a location is kept when geoip.cache_duration is not set.
+const DefaultGeoIPCacheDuration = 24 * time.Hour
+
+// LocationCacheDuration returns how long a location is kept: CacheDuration, or DefaultGeoIPCacheDuration if it is not
+// positive, and at least one second.
+func (c GeoIPConfiguration) LocationCacheDuration() time.Duration {
+	if c.CacheDuration <= 0 {
+		return DefaultGeoIPCacheDuration
+	}
+
+	return max(c.CacheDuration, time.Second)
 }
 
 // ExpiredAuthTokensConfiguration holds the settings of the management of the expired auth tokens.

@@ -3,6 +3,9 @@ package functions
 
 import (
 	"context"
+	"time"
+
+	"github.com/cygy/ginamite/common/config"
 
 	"github.com/cygy/ginamite/plugins/mongodb/mongo/store"
 	"github.com/cygy/ginamite/worker"
@@ -43,6 +46,10 @@ type Functions struct {
 	// Hooks complete the default functions.
 	Hooks Hooks
 
+	// LocationCacheDuration is how long a location of an IP address is kept, by SaveIPAddressDetails and by the TTL
+	// index of the collection IPLocation; config.DefaultGeoIPCacheDuration if zero.
+	LocationCacheDuration time.Duration
+
 	database func() store.Database
 }
 
@@ -50,4 +57,9 @@ type Functions struct {
 // needs the database.
 func New(database func() store.Database) *Functions {
 	return &Functions{database: database}
+}
+
+// locationCacheDuration returns LocationCacheDuration, or config.DefaultGeoIPCacheDuration if it is zero.
+func (f *Functions) locationCacheDuration() time.Duration {
+	return config.GeoIPConfiguration{CacheDuration: f.LocationCacheDuration}.LocationCacheDuration()
 }
