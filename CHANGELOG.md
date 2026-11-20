@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.16.0
+
+### Added
+
+- `web.HandleAPICallToDataPage` handles the result of an API call made for a page which can not be rendered without
+  the data of the call (the page of an object, a list...). Unlike `web.HandleAPICallToPage`, it never renders the page
+  with the error of the API (a 200 with a template running without data): the response is an error page, not found
+  for 404 and 400, unauthorized for 401, internal server error otherwise (#25).
+
 ## v0.15.0
 
 ### Added
