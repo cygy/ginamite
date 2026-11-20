@@ -147,6 +147,9 @@ func (s *Server) runCommand(ctx context.Context, f *flags.Flags, out io.Writer) 
 // with the specialized servers, and the application configuration.
 func (s *Server) initializeConfiguration(f *flags.Flags) error {
 	log.Initialize(f.ServerName, f.Environment == environment.Production)
+	if s.ApplicationVersion != "" {
+		log.SetApplicationVersion(s.ApplicationVersion)
+	}
 
 	s.Config = config.NewConfiguration()
 	if err := s.Config.Initialize(f.ServerConfigurationFile, f.Environment, f.Version); err != nil {

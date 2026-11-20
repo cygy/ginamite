@@ -26,7 +26,7 @@ func SaveDocument(ctx context.Context, document Document, collection string, db 
 	}
 
 	_, err := db.Collection(collection).InsertOne(ctx, document)
-	log.DatabaseError(err, collection)
+	log.DatabaseOperationError(ctx, err, "InsertOne", collection)
 
 	return objectID, err
 }
@@ -38,7 +38,7 @@ func UpdateDocument(ctx context.Context, documentID bson.ObjectID, collection st
 	if err == nil && result.MatchedCount == 0 {
 		err = notFound(mongo.ErrNoDocuments)
 	}
-	log.DatabaseError(err, collection)
+	log.DatabaseOperationError(ctx, err, "UpdateByID", collection)
 	return err
 }
 
@@ -46,7 +46,7 @@ func UpdateDocument(ctx context.Context, documentID bson.ObjectID, collection st
 // and returns the number of documents matched.
 func UpdateDocumentsBySelector(ctx context.Context, collection string, selector any, update any, db store.Database) (int64, error) {
 	result, err := db.Collection(collection).UpdateMany(ctx, selector, update)
-	log.DatabaseError(err, collection)
+	log.DatabaseOperationError(ctx, err, "UpdateMany", collection)
 	if err != nil {
 		return 0, err
 	}
@@ -57,7 +57,7 @@ func UpdateDocumentsBySelector(ctx context.Context, collection string, selector 
 // inserting a document if there is none, and returns the number of documents matched.
 func UpsertDocumentBySelector(ctx context.Context, collection string, selector any, update any, db store.Database) (int64, error) {
 	result, err := db.Collection(collection).UpdateOne(ctx, selector, update, options.UpdateOne().SetUpsert(true))
-	log.DatabaseError(err, collection)
+	log.DatabaseOperationError(ctx, err, "UpdateOne (upsert)", collection)
 	if err != nil {
 		return 0, err
 	}
@@ -71,7 +71,7 @@ func DeleteDocument(ctx context.Context, documentID bson.ObjectID, collection st
 	if err == nil && result.DeletedCount == 0 {
 		err = notFound(mongo.ErrNoDocuments)
 	}
-	log.DatabaseError(err, collection)
+	log.DatabaseOperationError(ctx, err, "DeleteOne", collection)
 	return err
 }
 
@@ -79,7 +79,7 @@ func DeleteDocument(ctx context.Context, documentID bson.ObjectID, collection st
 // and returns the number of documents deleted.
 func DeleteDocumentsBySelector(ctx context.Context, collection string, selector any, db store.Database) (int64, error) {
 	result, err := db.Collection(collection).DeleteMany(ctx, selector)
-	log.DatabaseError(err, collection)
+	log.DatabaseOperationError(ctx, err, "DeleteMany", collection)
 	if err != nil {
 		return 0, err
 	}
@@ -98,7 +98,7 @@ func GetDocumentByID(ctx context.Context, document Document, collection string, 
 	if stderrors.Is(err, mongo.ErrNoDocuments) || (err == nil && !document.IsSaved()) {
 		return errors.ErrNotFound
 	}
-	log.DatabaseError(err, collection)
+	log.DatabaseOperationError(ctx, err, "FindOne", collection)
 
 	return err
 }
@@ -131,7 +131,7 @@ func GetDocumentsBySelectorAndSortWithFieldsOffsetAndLimit(ctx context.Context, 
 		// All() decodes every document into result (a pointer to a slice) and closes the cursor.
 		err = cursor.All(ctx, result)
 	}
-	log.DatabaseError(err, collection)
+	log.DatabaseOperationError(ctx, err, "Find", collection)
 
 	return err
 }
@@ -190,7 +190,7 @@ func GetDocumentBySelectorAndSort(ctx context.Context, document Document, collec
 	}
 
 	err := notFound(db.Collection(collection).FindOne(ctx, selector, opts).Decode(document))
-	log.DatabaseError(err, collection)
+	log.DatabaseOperationError(ctx, err, "FindOne", collection)
 
 	return err
 }
@@ -213,7 +213,7 @@ func GetDocument(ctx context.Context, document Document, collection string, db s
 // CountBySelector returns the number of documents of a collection matching the selector.
 func CountBySelector(ctx context.Context, collection string, selector any, db store.Database) (int64, error) {
 	count, err := db.Collection(collection).CountDocuments(ctx, selector)
-	log.DatabaseError(err, collection)
+	log.DatabaseOperationError(ctx, err, "CountDocuments", collection)
 
 	return count, err
 }
@@ -229,7 +229,7 @@ func PipeAll(ctx context.Context, result any, collection string, pipeline any, d
 	if err == nil {
 		err = cursor.All(ctx, result)
 	}
-	log.DatabaseError(err, collection)
+	log.DatabaseOperationError(ctx, err, "Aggregate", collection)
 
 	return err
 }
@@ -241,7 +241,7 @@ func PipeOne(ctx context.Context, result any, collection string, pipeline any, d
 	if err == nil {
 		defer func() {
 			if closeErr := cursor.Close(ctx); closeErr != nil {
-				log.DatabaseError(closeErr, collection)
+				log.DatabaseOperationError(ctx, closeErr, "cursor.Close", collection)
 			}
 		}()
 
@@ -251,7 +251,7 @@ func PipeOne(ctx context.Context, result any, collection string, pipeline any, d
 			err = notFound(mongo.ErrNoDocuments)
 		}
 	}
-	log.DatabaseError(err, collection)
+	log.DatabaseOperationError(ctx, err, "Aggregate", collection)
 
 	return err
 }
