@@ -145,8 +145,18 @@ func TestServer_InitializeConfiguration(t *testing.T) {
 	oldLog := log.Main
 	t.Cleanup(func() { log.Main = oldLog })
 
+	// The main logger writes to the standard output: keep it to check its records.
+	output, err := os.CreateTemp(dir, "log")
+	if err != nil {
+		t.Fatal(err)
+	}
+	oldStdout := os.Stdout
+	os.Stdout = output
+	t.Cleanup(func() { os.Stdout = oldStdout })
+
 	var appFile string
 	s := NewServer()
+	s.ApplicationVersion = "1.2.3"
 	s.ApplicationConfiguration.InitializeFunc = func(path string) { appFile = path }
 
 	if err := s.initializeConfiguration(&flags.Flags{ServerName: "web", Environment: "test", Version: "final", ServerConfigurationFile: conf, ApplicationConfigurationFile: "app.yaml"}); err != nil {
@@ -161,6 +171,14 @@ func TestServer_InitializeConfiguration(t *testing.T) {
 	}
 	if appFile != "app.yaml" {
 		t.Errorf("application file = %q", appFile)
+	}
+	log.Info("started")
+	written, err := os.ReadFile(output.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(written), "version=1.2.3") {
+		t.Errorf("the logs must carry the version of the application: %q", written)
 	}
 	if got := s.Localization.Translate("en-us")("hello"); got != "Hello" {
 		t.Errorf("translation = %q", got)

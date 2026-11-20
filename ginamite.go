@@ -37,9 +37,12 @@ type Server struct {
 	Localization             *localization.Engine    // The translations, loaded by Run.
 	Timezones                *timezone.Configuration // The timezones of the countries, loaded by Run for the API and the worker.
 	ApplicationConfiguration ApplicationConfiguration
-	Worker                   *worker.Server
-	API                      *api.Server
-	Web                      *web.Server
+	// ApplicationVersion is the release of the application, such as "1.2.3": if set, every log record carries it as
+	// the attribute "version". It is usually set at the build, with -ldflags "-X main.version=1.2.3".
+	ApplicationVersion string
+	Worker             *worker.Server
+	API                *api.Server
+	Web                *web.Server
 
 	// private properties
 	plugins   []Plugin

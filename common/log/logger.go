@@ -22,6 +22,12 @@ func Initialize(serverName string, productionEnvironment bool) {
 	Main = slog.New(handler).With("server", serverName)
 }
 
+// SetApplicationVersion adds the version of the application, such as its release "1.2.3", to every record of the main
+// logger as the attribute "version", so that a log tells which release wrote it. Call it after Initialize.
+func SetApplicationVersion(version string) {
+	Main = Main.With("version", version)
+}
+
 // Debug logs a message at the debug level with the main logger. The arguments are alternating keys and values, see
 // slog.Logger.Log.
 func Debug(msg string, args ...any) {

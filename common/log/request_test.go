@@ -8,6 +8,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -315,5 +316,26 @@ func TestInjectRequestLogger_BodyOverLimit(t *testing.T) {
 	var maxErr *http.MaxBytesError
 	if !errors.As(readErr, &maxErr) || read != `{"a":` {
 		t.Errorf("handler read %q, %v; want the bytes allowed then the limit error", read, readErr)
+	}
+}
+
+func TestInjectRequestLogger_ContextAttributes(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	useHook(t)
+
+	var attrs []any
+	router := gin.New()
+	router.Use(InjectRequestLogger(false))
+	router.GET("/puzzle/:id", func(c *gin.Context) {
+		attrs = AttributesFromContext(c.Request.Context())
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/puzzle/abc?token=secret", nil)
+	req.Header.Set(RequestIDHeaderName, "req-1")
+	router.ServeHTTP(httptest.NewRecorder(), req)
+
+	want := []any{"request_id", "req-1", "method", http.MethodGet, "route", "/puzzle/:id"}
+	if !reflect.DeepEqual(attrs, want) {
+		t.Errorf("attributes = %v, want %v", attrs, want)
 	}
 }

@@ -72,7 +72,7 @@ func GetUserNotificationTargetsByType(ctx context.Context, userID, notificationT
 
 	cursor, err := db.Collection(AuthTokenCollection).Aggregate(ctx, pipeline)
 	if err != nil {
-		log.DatabaseError(err, AuthTokenCollection)
+		log.DatabaseOperationError(ctx, err, "Aggregate", AuthTokenCollection)
 		return targets, err
 	}
 	defer func() {
@@ -83,7 +83,7 @@ func GetUserNotificationTargetsByType(ctx context.Context, userID, notificationT
 
 	err = cursor.All(ctx, &targets)
 	if err != nil {
-		log.DatabaseError(err, AuthTokenCollection)
+		log.DatabaseOperationError(ctx, err, "cursor.All", AuthTokenCollection)
 		return targets, err
 	}
 

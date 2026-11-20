@@ -79,3 +79,15 @@ func TestShorthands(t *testing.T) {
 		})
 	}
 }
+
+func TestSetApplicationVersion(t *testing.T) {
+	defer func(old *slog.Logger) { Main = old }(Main)
+
+	hook := useHook(t)
+	SetApplicationVersion("1.2.3")
+	Info("m")
+
+	if got := hook.LastEntry().Data["version"]; got != "1.2.3" {
+		t.Errorf("version = %v", got)
+	}
+}

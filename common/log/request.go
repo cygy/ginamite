@@ -94,11 +94,14 @@ func (w requestLogWriter) Write(b []byte) (int, error) {
 }
 
 // InjectRequestLogger returns a middleware logging each request and its response.
-// It generates a request ID if the request has none. The values of the JSON keys and of the
+// It generates a request ID if the request has none, and saves it with the method and the route in the context of the
+// request (see ContextWithAttributes). The values of the JSON keys and of the
 // query parameters containing password, token or secret, and the local part of the email
 // addresses, are obfuscated in the bodies and the query; the Authorization,
 // Proxy-Authorization and Cookie headers are masked, and multipart bodies are not logged.
 // The response body is logged, gzip-decoded, only if logResponseBody is true.
+//
+//nolint:contextcheck // the context is the one of the request, read from the gin context of each call
 func InjectRequestLogger(logResponseBody bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Get the request details
@@ -109,6 +112,15 @@ func InjectRequestLogger(logResponseBody bool) gin.HandlerFunc {
 		requestIP := c.ClientIP()
 
 		requestMethod := c.Request.Method
+
+		// The code logging with the context of the request, such as DatabaseOperationError, tells which request it
+		// served. The route is the pattern, never the path, which holds IDs and secrets.
+		requestContext := ContextWithAttributes(c.Request.Context(),
+			"request_id", c.Request.Header.Get(RequestIDHeaderName),
+			"method", requestMethod,
+			"route", c.FullPath(),
+		)
+		c.Request = c.Request.WithContext(requestContext)
 		requestPath := c.Request.URL.Path
 		requestQuery := c.Request.URL.RawQuery
 		if len(requestQuery) > 0 {
