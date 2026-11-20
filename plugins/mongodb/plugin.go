@@ -94,6 +94,7 @@ func (p *Plugin) Connect(configuration *config.Configuration) error {
 		return nil
 	}
 
+	p.locationCacheDuration = configuration.GeoIP.LocationCacheDuration()
 	database := configuration.Database
 	s := session.NewSession()
 	if err := s.Initialize(database.Host+":"+strconv.Itoa(database.Port),
@@ -104,7 +105,6 @@ func (p *Plugin) Connect(configuration *config.Configuration) error {
 		return err
 	}
 	p.session = s
-	p.locationCacheDuration = configuration.GeoIP.LocationCacheDuration()
 
 	return nil
 }

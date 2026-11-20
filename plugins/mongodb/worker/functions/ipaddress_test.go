@@ -215,3 +215,30 @@ func TestRemoveUndatedIPLocations(t *testing.T) {
 		t.Errorf("selector = %+v", call.Args[0])
 	}
 }
+
+func TestSaveIPAddressDetails_LocationCacheDuration(t *testing.T) {
+	ctx := context.Background()
+	tokenID := bson.NewObjectID()
+	updatedAt := time.Now().Add(-2 * time.Hour)
+
+	for duration, asked := range map[time.Duration]bool{0: false, time.Hour: true} {
+		fns, db := withMainSession(t)
+		fns.LocationCacheDuration = duration
+		db.Coll(model.AuthTokenCollection).One = mock.Result{Value: bson.M{"_id": tokenID}}
+		db.Coll(model.IPLocationCollection).One = mock.Result{Value: bson.M{
+			"_id": bson.NewObjectID(), "IP": "1.2.3.4", "city": "Lyon", "source": "dbip", "updatedAt": updatedAt,
+		}}
+
+		got := false
+		lookup := func(string) (*location.IPAddressDetails, error) {
+			got = true
+			return &location.IPAddressDetails{City: "Paris", CountryCode: "FR", CountryName: "France", Source: "dbip"}, nil
+		}
+		if err := fns.SaveIPAddressDetails(ctx, "1.2.3.4", tokenID.Hex(), lookup); err != nil {
+			t.Fatalf("error = %v", err)
+		}
+		if got != asked {
+			t.Errorf("duration %s, location updated 2h ago: asked = %v, want %v", duration, got, asked)
+		}
+	}
+}

@@ -149,3 +149,38 @@ func TestExpireAfterSeconds(t *testing.T) {
 		}
 	}
 }
+
+// ttlOf returns the expireAfterSeconds of the index of the name created in the collection, or nil.
+func ttlOf(t *testing.T, db *mock.Database, collection, name string) *int32 {
+	t.Helper()
+
+	for _, index := range db.Coll(collection).IndexView.Created {
+		opts := &options.IndexOptions{}
+		for _, set := range index.Options.List() {
+			if err := set(opts); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if opts.Name != nil && *opts.Name == name {
+			return opts.ExpireAfterSeconds
+		}
+	}
+	t.Fatalf("no index %s in %s", name, collection)
+
+	return nil
+}
+
+func TestCreateAllIndexes_LocationCacheDuration(t *testing.T) {
+	for duration, want := range map[time.Duration]int32{0: 86400, time.Hour: 3600} {
+		fns, db := withMainSession(t)
+		fns.LocationCacheDuration = duration
+		fns.CreateAllIndexes(context.Background())
+
+		if got := ttlOf(t, db, model.IPLocationCollection, "updatedAt_1_1"); got == nil || *got != want {
+			t.Errorf("duration %s: expireAfterSeconds = %v, want %d", duration, got, want)
+		}
+		if got := ttlOf(t, db, model.IPLocationCollection, "IP_1_1"); got != nil {
+			t.Errorf("IP_1_1 has a TTL of %d", *got)
+		}
+	}
+}
