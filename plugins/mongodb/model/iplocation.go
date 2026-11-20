@@ -16,7 +16,8 @@ const IPLocationCollection = "IPLocation"
 // IPLocation is the geographic location of an IP address. RegionCode is ISO 3166-2, such as FR-NAQ. Source is the
 // name of the source of the location given by the geoip API, such as icloud-private-relay or dbip; it is empty for
 // the locations saved before the API gave it, all from DB-IP. UpdatedAt is the time the API gave the location; it is
-// zero for the locations saved before it was kept.
+// zero for the locations saved before it was kept. It is stored in the database, hidden from the JSON, and copied
+// with the location into the auth token, whose copy is not refreshed.
 type IPLocation struct {
 	ID         bson.ObjectID     `json:"id,omitempty" bson:"_id,omitempty"`
 	IP         string            `json:"IP" bson:"IP"`
