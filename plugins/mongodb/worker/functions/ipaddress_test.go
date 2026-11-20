@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/cygy/ginamite/plugins/mongodb/model"
 	"github.com/cygy/ginamite/plugins/mongodb/mongo/bson"
@@ -45,7 +46,7 @@ func TestSaveIPAddressDetails(t *testing.T) {
 
 		saved := db.Coll(model.IPLocationCollection).LastCall().Args[0].(*model.IPLocation)
 		if len(asked) != 1 || saved.IP != "1.2.3.4" || saved.Region != "IDF" || saved.City != "Paris" || saved.Country.Code != "FR" || saved.Country.Name != "France" ||
-			saved.RegionCode != "FR-IDF" || saved.Source != "icloud-private-relay" {
+			saved.RegionCode != "FR-IDF" || saved.Source != "icloud-private-relay" || saved.UpdatedAt.IsZero() {
 			t.Errorf("asked = %v, location = %+v", asked, saved)
 		}
 
@@ -58,10 +59,12 @@ func TestSaveIPAddressDetails(t *testing.T) {
 		}
 	})
 
-	t.Run("known location is not looked up", func(t *testing.T) {
+	t.Run("fresh location is not looked up", func(t *testing.T) {
 		asked = nil
 		fns, db := newDB()
-		db.Coll(model.IPLocationCollection).One = mock.Result{Value: bson.M{"_id": locationID, "IP": "1.2.3.4", "city": "Lyon", "source": "dbip"}}
+		db.Coll(model.IPLocationCollection).One = mock.Result{Value: bson.M{
+			"_id": locationID, "IP": "1.2.3.4", "city": "Lyon", "source": "dbip", "updatedAt": time.Now().Add(-time.Hour),
+		}}
 
 		if err := fns.SaveIPAddressDetails(ctx, "1.2.3.4", tokenID.Hex(), lookup); err != nil {
 			t.Fatalf("error = %v", err)
@@ -80,32 +83,42 @@ func TestSaveIPAddressDetails(t *testing.T) {
 		}
 	})
 
-	t.Run("known location without source is asked again and updated", func(t *testing.T) {
-		asked = nil
-		fns, db := newDB()
-		db.Coll(model.IPLocationCollection).One = mock.Result{Value: bson.M{"_id": locationID, "IP": "1.2.3.4", "city": "Lyon"}}
+	for name, cached := range map[string]bson.M{
+		"saved before the date was kept": {"_id": locationID, "IP": "1.2.3.4", "city": "Lyon"},
+		"older than one day": {
+			"_id": locationID, "IP": "1.2.3.4", "city": "Lyon", "source": "dbip",
+			"updatedAt": time.Now().Add(-25 * time.Hour),
+		},
+	} {
+		t.Run("stale location "+name+" is asked again and updated", func(t *testing.T) {
+			asked = nil
+			fns, db := newDB()
+			db.Coll(model.IPLocationCollection).One = mock.Result{Value: cached}
+			before := time.Now()
 
-		if err := fns.SaveIPAddressDetails(ctx, "1.2.3.4", tokenID.Hex(), lookup); err != nil {
-			t.Fatalf("error = %v", err)
-		}
+			if err := fns.SaveIPAddressDetails(ctx, "1.2.3.4", tokenID.Hex(), lookup); err != nil {
+				t.Fatalf("error = %v", err)
+			}
 
-		if len(asked) != 1 {
-			t.Errorf("asked = %v, want the IP once", asked)
-		}
-		update := db.Coll(model.IPLocationCollection).LastCall()
-		if update.Method != "UpdateByID" || update.Args[0] != locationID {
-			t.Fatalf("location call = %+v, want an update", update)
-		}
-		set := update.Args[1].(bson.M)["$set"].(bson.M)
-		if set["source"] != "icloud-private-relay" || set["city"] != "Paris" || set["regionCode"] != "FR-IDF" {
-			t.Errorf("update = %+v", set)
-		}
-		if got := db.Coll(model.AuthTokenCollection).LastCall().Args[1].(bson.M)["$set"].(bson.M)["location"].(model.IPLocation); got.City != "Paris" || got.Source != "icloud-private-relay" {
-			t.Errorf("location of the token = %+v", got)
-		}
-	})
+			if len(asked) != 1 {
+				t.Errorf("asked = %v, want the IP once", asked)
+			}
+			update := db.Coll(model.IPLocationCollection).LastCall()
+			if update.Method != "UpdateByID" || update.Args[0] != locationID {
+				t.Fatalf("location call = %+v, want an update", update)
+			}
+			set := update.Args[1].(bson.M)["$set"].(bson.M)
+			if set["source"] != "icloud-private-relay" || set["city"] != "Paris" || set["regionCode"] != "FR-IDF" ||
+				set["updatedAt"].(time.Time).Before(before) {
+				t.Errorf("update = %+v", set)
+			}
+			if got := db.Coll(model.AuthTokenCollection).LastCall().Args[1].(bson.M)["$set"].(bson.M)["location"].(model.IPLocation); got.City != "Paris" || got.Source != "icloud-private-relay" {
+				t.Errorf("location of the token = %+v", got)
+			}
+		})
+	}
 
-	t.Run("known location without source is kept when the API finds nothing", func(t *testing.T) {
+	t.Run("stale location is kept when the API finds nothing", func(t *testing.T) {
 		fns, db := newDB()
 		db.Coll(model.IPLocationCollection).One = mock.Result{Value: bson.M{"_id": locationID, "IP": "1.2.3.4", "city": "Lyon"}}
 

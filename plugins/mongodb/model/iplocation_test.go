@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/cygy/ginamite/plugins/mongodb/mongo/bson"
 	"github.com/cygy/ginamite/plugins/mongodb/mongo/document"
@@ -51,6 +52,25 @@ func TestIPLocationCountry_Flag(t *testing.T) {
 	for code, want := range tests {
 		if got := (IPLocationCountry{Code: code}).Flag(); got != want {
 			t.Errorf("Flag(%q) = %q, want %q", code, got, want)
+		}
+	}
+}
+
+func TestIPLocation_IsFresh(t *testing.T) {
+	now := time.Now()
+	tests := map[string]struct {
+		updatedAt time.Time
+		want      bool
+	}{
+		"never updated":        {time.Time{}, false},
+		"updated an hour ago":  {now.Add(-time.Hour), true},
+		"updated one day ago":  {now.Add(-IPLocationTTL * time.Second), false},
+		"updated two days ago": {now.Add(-48 * time.Hour), false},
+	}
+	for name, tt := range tests {
+		location := &IPLocation{UpdatedAt: tt.updatedAt}
+		if got := location.IsFresh(now); got != tt.want {
+			t.Errorf("%s: IsFresh = %v, want %v", name, got, tt.want)
 		}
 	}
 }

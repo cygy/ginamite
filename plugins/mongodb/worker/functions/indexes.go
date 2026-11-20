@@ -266,8 +266,22 @@ func (f *Functions) CreateAllIndexes(ctx context.Context) {
 				},
 				Options: options.Index().
 					SetName("IP_1_1").
-					SetUnique(true).
-					SetExpireAfterSeconds(1296000),
+					SetUnique(true),
+			},
+		},
+		// The locations are kept one day in cache: the geoip API has no quota, and its sources change.
+		{
+			Collection: model.IPLocationCollection,
+			Index: mongo.IndexModel{
+				Keys: bson.D{
+					{
+						Key:   "updatedAt",
+						Value: 1,
+					},
+				},
+				Options: options.Index().
+					SetName("updatedAt_1_1").
+					SetExpireAfterSeconds(model.IPLocationTTL),
 			},
 		},
 
