@@ -1,5 +1,26 @@
 # Changelog
 
+## v0.15.0
+
+### Added
+
+- The `database error` log of the MongoDB plugin tells where it comes from (#24): the `operation` (`FindOne`,
+  `Aggregate`, ...), the `caller` function with its `source` file and line, and the `request_id`, `method` and `route`
+  of the request being served. `log.DatabaseOperationError(ctx, err, operation, collection)` reports such an error;
+  `log.ContextWithAttributes` and `log.AttributesFromContext` save and read the attributes of a context, and
+  `log.InjectRequestLogger` saves the request ones. The storage calls must receive the context of the request (or the
+  `*gin.Context`) for them to be logged.
+- `Server.ApplicationVersion` (`log.SetApplicationVersion`): when set, usually with
+  `-ldflags "-X main.version=1.2.3"`, every log record carries the `version` of the application (#24).
+
+### Changed
+
+- `log.DatabaseError` also logs the `caller` and the `source` (#24).
+
+### Documentation
+
+- The READMEs and the guides are up to date with the plugins, the Makefile targets and the CI jobs (#23).
+
 ## v0.14.0
 
 ### Added
