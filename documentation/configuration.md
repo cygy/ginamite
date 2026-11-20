@@ -13,7 +13,7 @@ default values. The main sections are:
 | `locales`, `default_locale`, `localization_path`, `templates_path` | Languages, translations and templates. |
 | `smtp`, `sender_*` | Sending of the emails. |
 | `facebook`, `google` | Sign-in with a social network. |
-| `geoip` | The location of the IP addresses of the auth tokens: `host` of the [geoip](https://github.com/cygy/geoip) API (for instance `http://geoip:8080`) `timeout` of a request (`5s` by default), and `cache_duration`, how long a location is kept and reused before the API is asked again (`24h` by default; the TTL index of the collection `IPLocation` follows it). Optional: with no host, the addresses are not located, and a worker consuming `task_location` or `task` logs a warning when it starts. |
+| `geoip` | The location of the IP addresses of the auth tokens: `host` of the [geoip](https://github.com/cygy/geoip) API (for instance `http://geoip:8080`), `timeout` of a request (`5s` by default), and `cache_duration`, how long a location is kept and reused before the API is asked again (`24h` by default; the TTL index of the collection `IPLocation` follows it). Optional: with no host, the addresses are not located, and a worker consuming `task_location` or `task` logs a warning when it starts. |
 | `recurring_tasks`, `run_start_up_tasks` | Tasks executed by the workers, see [Worker](worker.md). |
 | `metrics` | Prometheus endpoint, see [Observability](observability.md). |
 | `api_rate_limiter` | `limits` of the requests (`authentication`, `registration`, `forgot_password`, each with `requests` and `seconds`), and the subsections `mongodb` and `redis` read by the rate limiting plugins, see [Rate limiting](rate-limiting.md). `rate_limits` is removed. |

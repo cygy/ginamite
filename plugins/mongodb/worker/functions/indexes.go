@@ -106,7 +106,10 @@ func (f *Functions) RemoveIndexes(ctx context.Context, indexes []IndexToDelete) 
 	}
 }
 
-// CreateAllIndexes checks the indexes of the collections.
+// CreateAllIndexes checks the indexes of the collections. An index whose options changed is dropped then created
+// again, such as the unique index of the IP of IPLocation or the TTL index of its updatedAt: the constraint is missing
+// for a short while, harmless for a cache, but a duplicate inserted in that window makes the creation fail, which is
+// only logged.
 func (f *Functions) CreateAllIndexes(ctx context.Context) {
 	indexes := []IndexToCreate{
 		// Indexes of the collection "authTokens".
