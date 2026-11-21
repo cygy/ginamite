@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cygy/ginamite/common/yaml"
+	"github.com/cygy-solutions/ginamite/common/yaml"
 )
 
 type settings struct {

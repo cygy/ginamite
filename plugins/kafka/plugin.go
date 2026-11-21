@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/cygy/ginamite"
-	"github.com/cygy/ginamite/common/config"
+	"github.com/cygy-solutions/ginamite"
+	"github.com/cygy-solutions/ginamite/common/config"
 )
 
 // Service is the name of Kafka as a broker.Service of the configuration.

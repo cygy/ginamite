@@ -3,7 +3,7 @@ package config
 import (
 	"errors"
 
-	"github.com/cygy/ginamite/common/yaml"
+	"github.com/cygy-solutions/ginamite/common/yaml"
 )
 
 // placeholderSecretPrefix starts the values of the example configurations, which are not secrets.

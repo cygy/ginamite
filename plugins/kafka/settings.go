@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/cygy/ginamite/common/config"
+	"github.com/cygy-solutions/ginamite/common/config"
 )
 
 // Settings holds the settings of the connection to Kafka and of its topics, in the section "kafka" of the

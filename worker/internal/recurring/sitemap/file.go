@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/cygy/ginamite/common/log"
-	"github.com/cygy/ginamite/common/random"
+	"github.com/cygy-solutions/ginamite/common/log"
+	"github.com/cygy-solutions/ginamite/common/random"
 )
 
 // File is a sitemap file, gzipped. It is written to a temporary file, moved to its path when closed.

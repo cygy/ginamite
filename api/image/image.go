@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/cygy/ginamite/common/log"
+	"github.com/cygy-solutions/ginamite/common/log"
 )
 
 // SaveFill saves different versions of an image to destination.

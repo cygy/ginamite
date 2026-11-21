@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cygy/ginamite/web/internal/webtest"
+	"github.com/cygy-solutions/ginamite/web/internal/webtest"
 )
 
 func TestLoad(t *testing.T) {

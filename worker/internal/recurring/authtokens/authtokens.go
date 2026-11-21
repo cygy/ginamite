@@ -5,7 +5,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/cygy/ginamite/worker/tasks"
+	"github.com/cygy-solutions/ginamite/worker/tasks"
 )
 
 // DeleteExpired deletes the expired auth tokens.

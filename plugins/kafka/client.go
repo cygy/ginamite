@@ -11,9 +11,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cygy/ginamite/common/broker"
-	"github.com/cygy/ginamite/common/log"
-	"github.com/cygy/ginamite/common/random"
+	"github.com/cygy-solutions/ginamite/common/broker"
+	"github.com/cygy-solutions/ginamite/common/log"
+	"github.com/cygy-solutions/ginamite/common/random"
 
 	"github.com/IBM/sarama"
 )

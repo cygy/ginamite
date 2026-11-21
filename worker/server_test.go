@@ -11,11 +11,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cygy/ginamite/common/config"
-	"github.com/cygy/ginamite/common/queue"
-	"github.com/cygy/ginamite/common/weburl"
-	"github.com/cygy/ginamite/worker/internal/workertest"
-	"github.com/cygy/ginamite/worker/tasks/recurring"
+	"github.com/cygy-solutions/ginamite/common/config"
+	"github.com/cygy-solutions/ginamite/common/queue"
+	"github.com/cygy-solutions/ginamite/common/weburl"
+	"github.com/cygy-solutions/ginamite/worker/internal/workertest"
+	"github.com/cygy-solutions/ginamite/worker/tasks/recurring"
 )
 
 func TestNewServer(t *testing.T) {

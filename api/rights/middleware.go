@@ -2,9 +2,9 @@
 package rights
 
 import (
-	ctxLocale "github.com/cygy/ginamite/api/context/locale"
-	ctxUser "github.com/cygy/ginamite/api/context/user"
-	"github.com/cygy/ginamite/api/response"
+	ctxLocale "github.com/cygy-solutions/ginamite/api/context/locale"
+	ctxUser "github.com/cygy-solutions/ginamite/api/context/user"
+	"github.com/cygy-solutions/ginamite/api/response"
 
 	"github.com/gin-gonic/gin"
 )

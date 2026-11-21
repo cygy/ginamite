@@ -5,8 +5,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/cygy/ginamite/web/context"
-	"github.com/cygy/ginamite/web/internal/pagetest"
+	"github.com/cygy-solutions/ginamite/web/context"
+	"github.com/cygy-solutions/ginamite/web/internal/pagetest"
 
 	"github.com/gin-gonic/gin"
 )

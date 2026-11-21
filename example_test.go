@@ -8,10 +8,10 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/cygy/ginamite"
-	"github.com/cygy/ginamite/api/route"
-	"github.com/cygy/ginamite/plugins/kafka"
-	"github.com/cygy/ginamite/plugins/mongodb"
+	"github.com/cygy-solutions/ginamite"
+	"github.com/cygy-solutions/ginamite/api/route"
+	"github.com/cygy-solutions/ginamite/plugins/kafka"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb"
 
 	"github.com/gin-gonic/gin"
 )

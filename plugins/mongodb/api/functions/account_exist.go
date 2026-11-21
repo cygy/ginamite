@@ -3,8 +3,8 @@ package functions
 import (
 	"context"
 
-	"github.com/cygy/ginamite/plugins/mongodb/model"
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/store"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/model"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/mongo/store"
 )
 
 // DoesAccountWithUsernameExist reports whether an account with this username exists.

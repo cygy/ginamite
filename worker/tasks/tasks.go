@@ -2,7 +2,7 @@
 package tasks
 
 import (
-	"github.com/cygy/ginamite/common/log"
+	"github.com/cygy-solutions/ginamite/common/log"
 )
 
 // LogStarted logs that a task started. The arguments are alternating keys and values, added to the record.

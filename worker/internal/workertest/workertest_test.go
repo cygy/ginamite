@@ -3,8 +3,8 @@ package workertest
 import (
 	"testing"
 
-	"github.com/cygy/ginamite/common/log"
-	"github.com/cygy/ginamite/common/queue"
+	"github.com/cygy-solutions/ginamite/common/log"
+	"github.com/cygy-solutions/ginamite/common/queue"
 )
 
 func TestCaptureQueue(t *testing.T) {

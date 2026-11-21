@@ -7,10 +7,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/cygy/ginamite/common/broker"
-	"github.com/cygy/ginamite/common/log"
+	"github.com/cygy-solutions/ginamite/common/broker"
+	"github.com/cygy-solutions/ginamite/common/log"
 
-	"github.com/cygy/ginamite/common/log/logtest"
+	"github.com/cygy-solutions/ginamite/common/log/logtest"
 )
 
 // hook collects the entries of the logger. The logger is never swapped back

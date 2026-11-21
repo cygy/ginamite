@@ -3,7 +3,7 @@ package authentication_test
 import (
 	"fmt"
 
-	"github.com/cygy/ginamite/common/authentication"
+	"github.com/cygy-solutions/ginamite/common/authentication"
 )
 
 // A password is stored as its Argon2id hash, then compared with the password given to sign in.

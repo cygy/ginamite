@@ -5,12 +5,12 @@ import (
 	"crypto/subtle"
 	"errors"
 
-	commonErrors "github.com/cygy/ginamite/common/errors"
-	"github.com/cygy/ginamite/common/log"
-	"github.com/cygy/ginamite/common/notifications"
-	"github.com/cygy/ginamite/plugins/mongodb/model"
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/bson"
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/store"
+	commonErrors "github.com/cygy-solutions/ginamite/common/errors"
+	"github.com/cygy-solutions/ginamite/common/log"
+	"github.com/cygy-solutions/ginamite/common/notifications"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/model"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/mongo/bson"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/mongo/store"
 )
 
 // Notifications stores the notifications of the users in a database. It is an account.NotificationsStorage. Create it

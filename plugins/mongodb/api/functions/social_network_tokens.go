@@ -3,9 +3,9 @@ package functions
 import (
 	"context"
 
-	"github.com/cygy/ginamite/api/validator"
-	"github.com/cygy/ginamite/plugins/mongodb/model"
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/bson"
+	"github.com/cygy-solutions/ginamite/api/validator"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/model"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/mongo/bson"
 )
 
 // SaveFacebookUserTokenDetailsToUser saves the user's facebook details of a user.

@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/cygy/ginamite/web/api"
-	"github.com/cygy/ginamite/web/internal/webtest"
+	"github.com/cygy-solutions/ginamite/web/api"
+	"github.com/cygy-solutions/ginamite/web/internal/webtest"
 )
 
 func TestSet(t *testing.T) {

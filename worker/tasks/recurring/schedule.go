@@ -6,9 +6,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cygy/ginamite/common/config"
-	"github.com/cygy/ginamite/common/log"
-	"github.com/cygy/ginamite/worker/tasks"
+	"github.com/cygy-solutions/ginamite/common/config"
+	"github.com/cygy-solutions/ginamite/common/log"
+	"github.com/cygy-solutions/ginamite/worker/tasks"
 )
 
 // Func is the function of a scheduled task. It receives the context of the scheduler, done when the worker stops: a

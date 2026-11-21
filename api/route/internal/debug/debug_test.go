@@ -6,10 +6,10 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/cygy/ginamite/api/internal/apitest"
-	"github.com/cygy/ginamite/common/authentication"
-	"github.com/cygy/ginamite/common/config"
-	"github.com/cygy/ginamite/common/ctxkey"
+	"github.com/cygy-solutions/ginamite/api/internal/apitest"
+	"github.com/cygy-solutions/ginamite/common/authentication"
+	"github.com/cygy-solutions/ginamite/common/config"
+	"github.com/cygy-solutions/ginamite/common/ctxkey"
 
 	jwt "github.com/golang-jwt/jwt/v5"
 )

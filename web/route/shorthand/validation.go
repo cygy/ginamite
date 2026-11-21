@@ -4,10 +4,10 @@ package shorthand
 import (
 	"net/http"
 
-	"github.com/cygy/ginamite/web/api"
-	"github.com/cygy/ginamite/web/context"
-	"github.com/cygy/ginamite/web/html"
-	"github.com/cygy/ginamite/web/response"
+	"github.com/cygy-solutions/ginamite/web/api"
+	"github.com/cygy-solutions/ginamite/web/context"
+	"github.com/cygy-solutions/ginamite/web/html"
+	"github.com/cygy-solutions/ginamite/web/response"
 
 	"github.com/gin-gonic/gin"
 )

@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cygy/ginamite/common/config"
-	"github.com/cygy/ginamite/web/internal/webtest"
+	"github.com/cygy-solutions/ginamite/common/config"
+	"github.com/cygy-solutions/ginamite/web/internal/webtest"
 )
 
 // newTestClient returns a client of an API server running the handler, closed at the end of the test.

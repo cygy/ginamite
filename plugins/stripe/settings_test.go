@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/cygy/ginamite/common/config"
+	"github.com/cygy-solutions/ginamite/common/config"
 )
 
 func TestSettings_WithDefaults(t *testing.T) {

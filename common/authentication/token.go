@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/cygy/ginamite/common/log"
+	"github.com/cygy-solutions/ginamite/common/log"
 
 	jwt "github.com/golang-jwt/jwt/v5"
 )

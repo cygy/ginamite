@@ -10,9 +10,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/cygy/ginamite"
-	"github.com/cygy/ginamite/common/config"
-	"github.com/cygy/ginamite/plugins/ratelimit"
+	"github.com/cygy-solutions/ginamite"
+	"github.com/cygy-solutions/ginamite/common/config"
+	"github.com/cygy-solutions/ginamite/plugins/ratelimit"
 
 	goredis "github.com/redis/go-redis/v9"
 )

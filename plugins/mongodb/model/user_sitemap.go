@@ -3,9 +3,9 @@ package model
 import (
 	"context"
 
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/bson"
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/document"
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/store"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/mongo/bson"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/mongo/document"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/mongo/store"
 )
 
 // SitemapUser is the view of a User used to build the XML sitemap files.

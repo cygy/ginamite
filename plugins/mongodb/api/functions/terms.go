@@ -3,8 +3,8 @@ package functions
 import (
 	"context"
 
-	"github.com/cygy/ginamite/plugins/mongodb/model"
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/store"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/model"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/mongo/store"
 )
 
 // Terms stores the version of the terms accepted by the users in a database. It is a terms.Storage. Create it with

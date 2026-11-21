@@ -8,10 +8,10 @@ import (
 	"net/smtp"
 	texttemplate "text/template"
 
-	"github.com/cygy/ginamite/common/broker"
-	"github.com/cygy/ginamite/common/localization"
-	"github.com/cygy/ginamite/common/log"
-	"github.com/cygy/ginamite/common/weburl"
+	"github.com/cygy-solutions/ginamite/common/broker"
+	"github.com/cygy-solutions/ginamite/common/localization"
+	"github.com/cygy-solutions/ginamite/common/log"
+	"github.com/cygy-solutions/ginamite/common/weburl"
 
 	"github.com/domodwyer/mailyak/v3"
 )

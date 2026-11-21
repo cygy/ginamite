@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/cygy/ginamite/api/validator"
-	"github.com/cygy/ginamite/common/authentication"
+	"github.com/cygy-solutions/ginamite/api/validator"
+	"github.com/cygy-solutions/ginamite/common/authentication"
 )
 
 // NotificationsStorage is the storage of the notifications of the users, provided by the application, such as the one

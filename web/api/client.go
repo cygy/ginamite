@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/cygy/ginamite/common/log"
-	r "github.com/cygy/ginamite/common/request"
-	"github.com/cygy/ginamite/common/response"
-	"github.com/cygy/ginamite/web/context"
-	"github.com/cygy/ginamite/web/cookie"
+	"github.com/cygy-solutions/ginamite/common/log"
+	r "github.com/cygy-solutions/ginamite/common/request"
+	"github.com/cygy-solutions/ginamite/common/response"
+	"github.com/cygy-solutions/ginamite/web/context"
+	"github.com/cygy-solutions/ginamite/web/cookie"
 
 	"github.com/gin-gonic/gin"
 	resty "github.com/go-resty/resty/v2"

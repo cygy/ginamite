@@ -6,11 +6,11 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/cygy/ginamite/common/broker"
-	"github.com/cygy/ginamite/common/log"
-	"github.com/cygy/ginamite/common/queue"
+	"github.com/cygy-solutions/ginamite/common/broker"
+	"github.com/cygy-solutions/ginamite/common/log"
+	"github.com/cygy-solutions/ginamite/common/queue"
 
-	"github.com/cygy/ginamite/common/log/logtest"
+	"github.com/cygy-solutions/ginamite/common/log/logtest"
 )
 
 // Hook collects the entries of the main logger, which discards them.

@@ -4,9 +4,9 @@ import (
 	"context"
 	"slices"
 
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/bson"
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/document"
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/store"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/mongo/bson"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/mongo/document"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/mongo/store"
 )
 
 // HasAbility reports whether the user has the ability.

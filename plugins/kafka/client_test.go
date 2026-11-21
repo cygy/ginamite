@@ -10,10 +10,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cygy/ginamite/common/broker"
+	"github.com/cygy-solutions/ginamite/common/broker"
 
 	"github.com/IBM/sarama"
-	"github.com/cygy/ginamite/common/log/logtest"
+	"github.com/cygy-solutions/ginamite/common/log/logtest"
 )
 
 // fakeProducer is a producer which gives its messages to the test.

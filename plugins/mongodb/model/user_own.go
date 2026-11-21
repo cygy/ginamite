@@ -3,7 +3,7 @@ package model
 import (
 	"slices"
 
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/bson"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/mongo/bson"
 )
 
 // OwnUser is the view of a User exposed to its owner.

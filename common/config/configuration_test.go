@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cygy/ginamite/common/config/environment"
-	"github.com/cygy/ginamite/common/config/version"
+	"github.com/cygy-solutions/ginamite/common/config/environment"
+	"github.com/cygy-solutions/ginamite/common/config/version"
 )
 
 func TestNewConfiguration(t *testing.T) {

@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/cygy/ginamite/common/authentication"
+	"github.com/cygy-solutions/ginamite/common/authentication"
 
 	"github.com/gin-gonic/gin"
 )

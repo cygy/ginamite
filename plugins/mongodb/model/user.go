@@ -5,12 +5,12 @@ import (
 	stderrors "errors"
 	"time"
 
-	"github.com/cygy/ginamite/common/authentication"
-	"github.com/cygy/ginamite/common/config"
-	"github.com/cygy/ginamite/common/errors"
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/bson"
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/document"
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/store"
+	"github.com/cygy-solutions/ginamite/common/authentication"
+	"github.com/cygy-solutions/ginamite/common/config"
+	"github.com/cygy-solutions/ginamite/common/errors"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/mongo/bson"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/mongo/document"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/mongo/store"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 

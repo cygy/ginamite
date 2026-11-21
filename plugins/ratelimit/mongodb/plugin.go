@@ -10,11 +10,11 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/cygy/ginamite"
-	"github.com/cygy/ginamite/common/config"
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/session"
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/store"
-	"github.com/cygy/ginamite/plugins/ratelimit"
+	"github.com/cygy-solutions/ginamite"
+	"github.com/cygy-solutions/ginamite/common/config"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/mongo/session"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/mongo/store"
+	"github.com/cygy-solutions/ginamite/plugins/ratelimit"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"

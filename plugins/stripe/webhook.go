@@ -5,7 +5,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/cygy/ginamite/common/log"
+	"github.com/cygy-solutions/ginamite/common/log"
 
 	"github.com/gin-gonic/gin"
 	stripeapi "github.com/stripe/stripe-go/v87"

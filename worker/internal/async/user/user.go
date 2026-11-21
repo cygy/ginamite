@@ -8,8 +8,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/cygy/ginamite/common/broker"
-	"github.com/cygy/ginamite/common/queue"
+	"github.com/cygy-solutions/ginamite/common/broker"
+	"github.com/cygy-solutions/ginamite/common/queue"
 )
 
 // DeleteByID decodes the payload of a task to delete a user and calls deleteUserByIDFunc, which deletes the user

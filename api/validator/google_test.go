@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cygy/ginamite/common/authentication"
+	"github.com/cygy-solutions/ginamite/common/authentication"
 )
 
 func TestGoogleTokenValidator(t *testing.T) {

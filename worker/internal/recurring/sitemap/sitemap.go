@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cygy/ginamite/common/config"
-	"github.com/cygy/ginamite/common/log"
-	"github.com/cygy/ginamite/common/weburl"
-	"github.com/cygy/ginamite/worker/tasks"
+	"github.com/cygy-solutions/ginamite/common/config"
+	"github.com/cygy-solutions/ginamite/common/log"
+	"github.com/cygy-solutions/ginamite/common/weburl"
+	"github.com/cygy-solutions/ginamite/worker/tasks"
 )
 
 // batchSize is the number of variables requested at once to generate the URLs of a route.

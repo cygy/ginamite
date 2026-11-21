@@ -59,7 +59,7 @@
 ### Changed
 
 - **Breaking:** the location of the IP addresses of the auth tokens comes from the
-  [geoip](https://github.com/cygy/geoip) API instead of ipstack (#12). The section `ipstack` (`host`, `key`) of the
+  [geoip](https://github.com/cygy-solutions/geoip) API instead of ipstack (#12). The section `ipstack` (`host`, `key`) of the
   configuration is replaced by `geoip`: `host` (such as `http://geoip:8080`) and `timeout` (`5s` by default).
   `config.IPStackConfiguration` is replaced by `config.GeoIPConfiguration`, `location.GetIPAddressDetails` returns
   only the details, and `IPAddressDetails` reads `region` instead of `region_name`.
@@ -192,8 +192,8 @@
 
 5. With a single instance of the API, nothing else: the counters are in memory.
 6. With several instances, add a plugin before `Run` and its subsection: `server.AddPlugin(redis.NewPlugin())`
-   (`github.com/cygy/ginamite/plugins/ratelimit/redis`) with `api_rate_limiter.redis`, or
-   `mongodb.NewPlugin()` (`github.com/cygy/ginamite/plugins/ratelimit/mongodb`) with `api_rate_limiter.mongodb`.
+   (`github.com/cygy-solutions/ginamite/plugins/ratelimit/redis`) with `api_rate_limiter.redis`, or
+   `mongodb.NewPlugin()` (`github.com/cygy-solutions/ginamite/plugins/ratelimit/mongodb`) with `api_rate_limiter.mongodb`.
 7. The collection `rateLimits` of the database of the MongoDB plugin is no longer used: drop it
    (`db.rateLimits.drop()`). The MongoDB rate limiting plugin has its own settings, and can use another database.
 

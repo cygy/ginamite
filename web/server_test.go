@@ -10,15 +10,15 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cygy/ginamite/web/html"
+	"github.com/cygy-solutions/ginamite/web/html"
 
-	"github.com/cygy/ginamite/common/config"
-	"github.com/cygy/ginamite/common/config/environment"
-	"github.com/cygy/ginamite/common/response"
-	"github.com/cygy/ginamite/common/weburl"
-	"github.com/cygy/ginamite/web/api"
-	"github.com/cygy/ginamite/web/internal/webtest"
-	"github.com/cygy/ginamite/web/route"
+	"github.com/cygy-solutions/ginamite/common/config"
+	"github.com/cygy-solutions/ginamite/common/config/environment"
+	"github.com/cygy-solutions/ginamite/common/response"
+	"github.com/cygy-solutions/ginamite/common/weburl"
+	"github.com/cygy-solutions/ginamite/web/api"
+	"github.com/cygy-solutions/ginamite/web/internal/webtest"
+	"github.com/cygy-solutions/ginamite/web/route"
 
 	"github.com/gin-gonic/gin"
 )

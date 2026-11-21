@@ -5,10 +5,10 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/cygy/ginamite/common/broker"
-	"github.com/cygy/ginamite/common/notifications"
-	"github.com/cygy/ginamite/common/queue"
-	"github.com/cygy/ginamite/worker/internal/workertest"
+	"github.com/cygy-solutions/ginamite/common/broker"
+	"github.com/cygy-solutions/ginamite/common/notifications"
+	"github.com/cygy-solutions/ginamite/common/queue"
+	"github.com/cygy-solutions/ginamite/worker/internal/workertest"
 )
 
 func TestNewLogin(t *testing.T) {

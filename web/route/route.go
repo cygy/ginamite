@@ -3,8 +3,8 @@
 package route
 
 import (
-	"github.com/cygy/ginamite/web/api"
-	"github.com/cygy/ginamite/web/html"
+	"github.com/cygy-solutions/ginamite/web/api"
+	"github.com/cygy-solutions/ginamite/web/html"
 
 	"github.com/gin-gonic/gin"
 )

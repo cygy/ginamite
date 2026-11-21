@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cygy/ginamite/web/api"
+	"github.com/cygy-solutions/ginamite/web/api"
 )
 
 // NewClient returns a client of the API at host:port.

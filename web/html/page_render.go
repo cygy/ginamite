@@ -5,8 +5,8 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/cygy/ginamite/common/log"
-	"github.com/cygy/ginamite/common/response"
+	"github.com/cygy-solutions/ginamite/common/log"
+	"github.com/cygy-solutions/ginamite/common/response"
 
 	"github.com/gin-gonic/gin"
 )

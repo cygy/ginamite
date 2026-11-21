@@ -7,11 +7,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/cygy/ginamite/common/errors"
+	"github.com/cygy-solutions/ginamite/common/errors"
 )
 
 // logPackage is the import path of this package: its frames are never the caller of an error.
-const logPackage = "github.com/cygy/ginamite/common/log"
+const logPackage = "github.com/cygy-solutions/ginamite/common/log"
 
 // DatabaseError logs a database error with the collection it occurred on and its caller, see DatabaseOperationError.
 // A nil or "not found" error is not logged. Prefer DatabaseOperationError, which also logs the operation and the
@@ -79,7 +79,7 @@ func callerAttributes(skipReporter bool) []any {
 }
 
 // packageOf returns the import path of the package of a function name such as
-// "github.com/cygy/ginamite/common/log.DatabaseError" or "github.com/cygy/app/model.(*Score).Save".
+// "github.com/cygy-solutions/ginamite/common/log.DatabaseError" or "github.com/cygy/app/model.(*Score).Save".
 func packageOf(function string) string {
 	slash := strings.LastIndex(function, "/")
 	dot := strings.Index(function[slash+1:], ".")

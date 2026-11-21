@@ -2,9 +2,9 @@
 package user
 
 import (
-	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
-	"github.com/cygy/ginamite/api/context/shared"
-	"github.com/cygy/ginamite/common/authentication"
+	ctxAuthToken "github.com/cygy-solutions/ginamite/api/context/authtoken"
+	"github.com/cygy-solutions/ginamite/api/context/shared"
+	"github.com/cygy-solutions/ginamite/common/authentication"
 
 	"github.com/gin-gonic/gin"
 )

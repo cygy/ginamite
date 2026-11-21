@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cygy/ginamite/api/validator"
-	"github.com/cygy/ginamite/common/authentication"
+	"github.com/cygy-solutions/ginamite/api/validator"
+	"github.com/cygy-solutions/ginamite/common/authentication"
 
 	"github.com/gin-gonic/gin"
 )

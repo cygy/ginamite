@@ -5,7 +5,7 @@ package reporter
 import (
 	"context"
 
-	"github.com/cygy/ginamite/common/log"
+	"github.com/cygy-solutions/ginamite/common/log"
 )
 
 // Report reports the error of the operation Aggregate on the collection scores.

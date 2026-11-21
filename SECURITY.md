@@ -8,7 +8,7 @@ described in the notes of the release.
 ## Reporting a vulnerability
 
 Do not open a public issue. Report the vulnerability privately with GitHub:
-[Report a vulnerability](https://github.com/cygy/ginamite/security/advisories/new).
+[Report a vulnerability](https://github.com/cygy-solutions/ginamite/security/advisories/new).
 
 Describe the version, the configuration and the steps that reproduce it, and its impact. You get an answer within
 7 days. Once the fix is released, the advisory is published and credits you, unless you prefer otherwise.

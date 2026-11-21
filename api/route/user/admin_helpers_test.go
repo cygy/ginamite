@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"testing"
 
-	commonErrors "github.com/cygy/ginamite/common/errors"
+	commonErrors "github.com/cygy-solutions/ginamite/common/errors"
 
 	"github.com/gin-gonic/gin"
 )

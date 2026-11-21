@@ -9,9 +9,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cygy/ginamite/api/route"
-	"github.com/cygy/ginamite/api/route/account"
-	"github.com/cygy/ginamite/api/route/user"
+	"github.com/cygy-solutions/ginamite/api/route"
+	"github.com/cygy-solutions/ginamite/api/route/account"
+	"github.com/cygy-solutions/ginamite/api/route/user"
 
 	"github.com/gin-gonic/gin"
 )

@@ -4,13 +4,13 @@ package contact
 import (
 	"strings"
 
-	"github.com/cygy/ginamite/common/ctxkey"
+	"github.com/cygy-solutions/ginamite/common/ctxkey"
 
-	ctxLocale "github.com/cygy/ginamite/api/context/locale"
-	"github.com/cygy/ginamite/api/request"
-	"github.com/cygy/ginamite/api/response"
-	"github.com/cygy/ginamite/common"
-	"github.com/cygy/ginamite/common/localization"
+	ctxLocale "github.com/cygy-solutions/ginamite/api/context/locale"
+	"github.com/cygy-solutions/ginamite/api/request"
+	"github.com/cygy-solutions/ginamite/api/response"
+	"github.com/cygy-solutions/ginamite/common"
+	"github.com/cygy-solutions/ginamite/common/localization"
 	"github.com/gin-gonic/gin"
 )
 

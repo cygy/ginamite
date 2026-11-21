@@ -5,10 +5,10 @@ import (
 	"errors"
 	"testing"
 
-	commonErrors "github.com/cygy/ginamite/common/errors"
-	"github.com/cygy/ginamite/plugins/mongodb/model"
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/bson"
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/store/mock"
+	commonErrors "github.com/cygy-solutions/ginamite/common/errors"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/model"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/mongo/bson"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/mongo/store/mock"
 )
 
 func userDocument(id bson.ObjectID) bson.M {

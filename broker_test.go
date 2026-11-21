@@ -3,7 +3,7 @@ package ginamite
 import (
 	"testing"
 
-	"github.com/cygy/ginamite/common/broker"
+	"github.com/cygy-solutions/ginamite/common/broker"
 )
 
 // dedupBroker is a broker which ignores the messages delivered twice.

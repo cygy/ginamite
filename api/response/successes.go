@@ -3,7 +3,7 @@ package response
 import (
 	"net/http"
 
-	"github.com/cygy/ginamite/common/response"
+	"github.com/cygy-solutions/ginamite/common/response"
 
 	"github.com/gin-gonic/gin"
 )

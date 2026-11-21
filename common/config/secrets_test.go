@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cygy/ginamite/common/config/environment"
-	"github.com/cygy/ginamite/common/config/version"
+	"github.com/cygy-solutions/ginamite/common/config/environment"
+	"github.com/cygy-solutions/ginamite/common/config/version"
 )
 
 func TestConfiguration_Initialize_ExternalValues(t *testing.T) {

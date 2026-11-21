@@ -6,7 +6,7 @@ package broker
 import (
 	"errors"
 
-	"github.com/cygy/ginamite/common/random"
+	"github.com/cygy-solutions/ginamite/common/random"
 )
 
 // Producer sends a message to a topic.

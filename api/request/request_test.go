@@ -5,10 +5,10 @@ import (
 	"strings"
 	"testing"
 
-	ctxLocale "github.com/cygy/ginamite/api/context/locale"
-	"github.com/cygy/ginamite/api/internal/apitest"
-	"github.com/cygy/ginamite/common/config"
-	"github.com/cygy/ginamite/common/ctxkey"
+	ctxLocale "github.com/cygy-solutions/ginamite/api/context/locale"
+	"github.com/cygy-solutions/ginamite/api/internal/apitest"
+	"github.com/cygy-solutions/ginamite/common/config"
+	"github.com/cygy-solutions/ginamite/common/ctxkey"
 
 	"github.com/gin-gonic/gin"
 )

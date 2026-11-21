@@ -4,10 +4,10 @@ import (
 	"net/http"
 	"testing"
 
-	ctxLocale "github.com/cygy/ginamite/api/context/locale"
-	ctxUser "github.com/cygy/ginamite/api/context/user"
-	"github.com/cygy/ginamite/plugins/mongodb/model"
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/bson"
+	ctxLocale "github.com/cygy-solutions/ginamite/api/context/locale"
+	ctxUser "github.com/cygy-solutions/ginamite/api/context/user"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/model"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/mongo/bson"
 )
 
 func TestNewContext(t *testing.T) {

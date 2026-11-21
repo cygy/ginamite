@@ -1,9 +1,9 @@
 package account
 
 import (
-	"github.com/cygy/ginamite/common/ctxkey"
+	"github.com/cygy-solutions/ginamite/common/ctxkey"
 
-	"github.com/cygy/ginamite/common/queue"
+	"github.com/cygy-solutions/ginamite/common/queue"
 
 	"github.com/gin-gonic/gin"
 )

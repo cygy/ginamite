@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/cygy/ginamite/common/weburl"
+	"github.com/cygy-solutions/ginamite/common/weburl"
 )
 
 func TestPageCopy(t *testing.T) {

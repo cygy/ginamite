@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/cygy/ginamite/common"
+	"github.com/cygy-solutions/ginamite/common"
 )
 
 func TestUpdateSocialNetworks(t *testing.T) {

@@ -10,17 +10,17 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cygy/ginamite/common/ctxkey"
+	"github.com/cygy-solutions/ginamite/common/ctxkey"
 
-	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
-	ctxLocale "github.com/cygy/ginamite/api/context/locale"
-	ctxUser "github.com/cygy/ginamite/api/context/user"
-	"github.com/cygy/ginamite/api/image"
-	"github.com/cygy/ginamite/api/request"
-	"github.com/cygy/ginamite/api/response"
-	"github.com/cygy/ginamite/common/log"
-	"github.com/cygy/ginamite/plugins/mongodb/model"
-	pluginQueue "github.com/cygy/ginamite/plugins/mongodb/queue"
+	ctxAuthToken "github.com/cygy-solutions/ginamite/api/context/authtoken"
+	ctxLocale "github.com/cygy-solutions/ginamite/api/context/locale"
+	ctxUser "github.com/cygy-solutions/ginamite/api/context/user"
+	"github.com/cygy-solutions/ginamite/api/image"
+	"github.com/cygy-solutions/ginamite/api/request"
+	"github.com/cygy-solutions/ginamite/api/response"
+	"github.com/cygy-solutions/ginamite/common/log"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/model"
+	pluginQueue "github.com/cygy-solutions/ginamite/plugins/mongodb/queue"
 	"github.com/gin-gonic/gin"
 )
 

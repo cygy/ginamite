@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cygy/ginamite/common/config"
-	"github.com/cygy/ginamite/worker/internal/workertest"
+	"github.com/cygy-solutions/ginamite/common/config"
+	"github.com/cygy-solutions/ginamite/worker/internal/workertest"
 )
 
 func TestScheduler_Load(t *testing.T) {

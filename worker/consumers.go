@@ -5,13 +5,13 @@ import (
 	"errors"
 	"slices"
 
-	"github.com/cygy/ginamite/common/broker"
-	"github.com/cygy/ginamite/common/log"
-	"github.com/cygy/ginamite/common/notifications"
-	"github.com/cygy/ginamite/common/queue"
-	"github.com/cygy/ginamite/worker/internal/async/user"
-	"github.com/cygy/ginamite/worker/internal/notification"
-	"github.com/cygy/ginamite/worker/tasks/async/location"
+	"github.com/cygy-solutions/ginamite/common/broker"
+	"github.com/cygy-solutions/ginamite/common/log"
+	"github.com/cygy-solutions/ginamite/common/notifications"
+	"github.com/cygy-solutions/ginamite/common/queue"
+	"github.com/cygy-solutions/ginamite/worker/internal/async/user"
+	"github.com/cygy-solutions/ginamite/worker/internal/notification"
+	"github.com/cygy-solutions/ginamite/worker/tasks/async/location"
 )
 
 // errUndecodable is the error of a message which can not be decoded: it is dead-lettered without being tried again.

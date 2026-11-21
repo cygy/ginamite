@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cygy/ginamite/common/authentication"
-	commonErrors "github.com/cygy/ginamite/common/errors"
+	"github.com/cygy-solutions/ginamite/common/authentication"
+	commonErrors "github.com/cygy-solutions/ginamite/common/errors"
 )
 
 func TestForgotPassword(t *testing.T) {

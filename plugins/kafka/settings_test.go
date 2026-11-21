@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cygy/ginamite/common/config"
+	"github.com/cygy-solutions/ginamite/common/config"
 )
 
 // writeCertificate writes a self-signed certificate and its key in the directory, and returns their paths.

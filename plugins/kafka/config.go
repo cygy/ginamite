@@ -5,8 +5,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cygy/ginamite/common/log"
-	"github.com/cygy/ginamite/common/queue"
+	"github.com/cygy-solutions/ginamite/common/log"
+	"github.com/cygy-solutions/ginamite/common/queue"
 
 	"github.com/IBM/sarama"
 )

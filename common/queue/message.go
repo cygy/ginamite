@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/cygy/ginamite/common/log"
+	"github.com/cygy-solutions/ginamite/common/log"
 )
 
 // Message is a message exchanged through Kafka: a type and its payload.

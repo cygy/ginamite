@@ -6,11 +6,11 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/cygy/ginamite/common/ctxkey"
+	"github.com/cygy-solutions/ginamite/common/ctxkey"
 
-	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
-	ctxLocale "github.com/cygy/ginamite/api/context/locale"
-	"github.com/cygy/ginamite/api/internal/apitest"
+	ctxAuthToken "github.com/cygy-solutions/ginamite/api/context/authtoken"
+	ctxLocale "github.com/cygy-solutions/ginamite/api/context/locale"
+	"github.com/cygy-solutions/ginamite/api/internal/apitest"
 
 	"github.com/gin-gonic/gin"
 )

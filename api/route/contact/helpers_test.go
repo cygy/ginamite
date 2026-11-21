@@ -6,10 +6,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cygy/ginamite/common/ctxkey"
+	"github.com/cygy-solutions/ginamite/common/ctxkey"
 
-	ctxLocale "github.com/cygy/ginamite/api/context/locale"
-	"github.com/cygy/ginamite/api/internal/apitest"
+	ctxLocale "github.com/cygy-solutions/ginamite/api/context/locale"
+	"github.com/cygy-solutions/ginamite/api/internal/apitest"
 
 	"github.com/gin-gonic/gin"
 )

@@ -3,7 +3,7 @@ package route
 import (
 	"testing"
 
-	"github.com/cygy/ginamite/web/internal/pagetest"
+	"github.com/cygy-solutions/ginamite/web/internal/pagetest"
 )
 
 func TestRelativePath(t *testing.T) {

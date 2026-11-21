@@ -1,8 +1,8 @@
 package queue
 
 import (
-	"github.com/cygy/ginamite/common/broker"
-	"github.com/cygy/ginamite/common/log"
+	"github.com/cygy-solutions/ginamite/common/broker"
+	"github.com/cygy-solutions/ginamite/common/log"
 )
 
 // Keyed is implemented by the payloads which have a key: the messages of the same key are consumed in the order they

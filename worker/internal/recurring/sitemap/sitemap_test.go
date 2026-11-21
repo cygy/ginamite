@@ -8,9 +8,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cygy/ginamite/common/config"
-	"github.com/cygy/ginamite/common/weburl"
-	"github.com/cygy/ginamite/worker/internal/workertest"
+	"github.com/cygy-solutions/ginamite/common/config"
+	"github.com/cygy-solutions/ginamite/common/weburl"
+	"github.com/cygy-solutions/ginamite/worker/internal/workertest"
 )
 
 var (

@@ -4,14 +4,14 @@ package terms
 import (
 	"errors"
 
-	"github.com/cygy/ginamite/common/ctxkey"
+	"github.com/cygy-solutions/ginamite/common/ctxkey"
 
-	ctxLocale "github.com/cygy/ginamite/api/context/locale"
-	ctxUser "github.com/cygy/ginamite/api/context/user"
-	"github.com/cygy/ginamite/api/response"
-	"github.com/cygy/ginamite/api/route/terms"
-	termsError "github.com/cygy/ginamite/common/errors/terms"
-	r "github.com/cygy/ginamite/common/response"
+	ctxLocale "github.com/cygy-solutions/ginamite/api/context/locale"
+	ctxUser "github.com/cygy-solutions/ginamite/api/context/user"
+	"github.com/cygy-solutions/ginamite/api/response"
+	"github.com/cygy-solutions/ginamite/api/route/terms"
+	termsError "github.com/cygy-solutions/ginamite/common/errors/terms"
+	r "github.com/cygy-solutions/ginamite/common/response"
 
 	"github.com/gin-gonic/gin"
 )

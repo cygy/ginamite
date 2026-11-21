@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/cygy/ginamite/plugins/mongodb/model"
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/bson"
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/document"
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/store"
-	"github.com/cygy/ginamite/worker/tasks/async/location"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/model"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/mongo/bson"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/mongo/document"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/mongo/store"
+	"github.com/cygy-solutions/ginamite/worker/tasks/async/location"
 )
 
 // SaveIPAddressDetails saves the location of the IP address of an auth token, and updates the location of the token.

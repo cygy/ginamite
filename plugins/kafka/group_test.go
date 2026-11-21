@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/IBM/sarama"
-	"github.com/cygy/ginamite/common/broker"
+	"github.com/cygy-solutions/ginamite/common/broker"
 )
 
 // fakeSession records the messages marked as consumed.

@@ -10,12 +10,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cygy/ginamite"
-	"github.com/cygy/ginamite/common/broker"
-	"github.com/cygy/ginamite/common/config"
-	"github.com/cygy/ginamite/common/flags"
-	"github.com/cygy/ginamite/common/log"
-	"github.com/cygy/ginamite/plugins/kafka/internal/dlq"
+	"github.com/cygy-solutions/ginamite"
+	"github.com/cygy-solutions/ginamite/common/broker"
+	"github.com/cygy-solutions/ginamite/common/config"
+	"github.com/cygy-solutions/ginamite/common/flags"
+	"github.com/cygy-solutions/ginamite/common/log"
+	"github.com/cygy-solutions/ginamite/plugins/kafka/internal/dlq"
 
 	"github.com/IBM/sarama"
 )

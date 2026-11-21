@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cygy/ginamite/web/internal/webtest"
+	"github.com/cygy-solutions/ginamite/web/internal/webtest"
 
 	"github.com/gin-gonic/gin"
 )

@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cygy/ginamite/common"
-	"github.com/cygy/ginamite/common/authentication"
-	commonErrors "github.com/cygy/ginamite/common/errors"
-	"github.com/cygy/ginamite/common/notifications"
+	"github.com/cygy-solutions/ginamite/common"
+	"github.com/cygy-solutions/ginamite/common/authentication"
+	commonErrors "github.com/cygy-solutions/ginamite/common/errors"
+	"github.com/cygy-solutions/ginamite/common/notifications"
 
 	"github.com/gin-gonic/gin"
 )

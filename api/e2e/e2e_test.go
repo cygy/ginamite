@@ -9,10 +9,10 @@ import (
 	"strings"
 	"testing"
 
-	authErrors "github.com/cygy/ginamite/common/errors/auth"
-	localeErrors "github.com/cygy/ginamite/common/errors/locale"
-	requestErrors "github.com/cygy/ginamite/common/errors/request"
-	"github.com/cygy/ginamite/common/response"
+	authErrors "github.com/cygy-solutions/ginamite/common/errors/auth"
+	localeErrors "github.com/cygy-solutions/ginamite/common/errors/locale"
+	requestErrors "github.com/cygy-solutions/ginamite/common/errors/request"
+	"github.com/cygy-solutions/ginamite/common/response"
 )
 
 // recorder is a Reporter keeping the failures it receives.

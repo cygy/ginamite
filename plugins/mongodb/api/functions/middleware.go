@@ -1,7 +1,7 @@
 package functions
 
 import (
-	"github.com/cygy/ginamite/plugins/mongodb/model"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/model"
 
 	jwt "github.com/golang-jwt/jwt/v5"
 )

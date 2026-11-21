@@ -11,7 +11,7 @@ import (
 	"testing"
 	ttemplate "text/template"
 
-	"github.com/cygy/ginamite/common/broker"
+	"github.com/cygy-solutions/ginamite/common/broker"
 )
 
 func TestIsEmailAddressValidFunc_check(t *testing.T) {

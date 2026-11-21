@@ -1,7 +1,7 @@
 package response
 
 import (
-	"github.com/cygy/ginamite/common/response"
+	"github.com/cygy-solutions/ginamite/common/response"
 
 	"github.com/gin-gonic/gin"
 )

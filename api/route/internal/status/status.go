@@ -2,8 +2,8 @@
 package status
 
 import (
-	"github.com/cygy/ginamite/api/response"
-	r "github.com/cygy/ginamite/common/response"
+	"github.com/cygy-solutions/ginamite/api/response"
+	r "github.com/cygy-solutions/ginamite/common/response"
 
 	"github.com/gin-gonic/gin"
 )

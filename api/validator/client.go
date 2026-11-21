@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cygy/ginamite/common/log"
+	"github.com/cygy-solutions/ginamite/common/log"
 
 	resty "github.com/go-resty/resty/v2"
 )

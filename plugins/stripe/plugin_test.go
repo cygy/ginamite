@@ -6,12 +6,12 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/cygy/ginamite"
-	"github.com/cygy/ginamite/common/config"
-	"github.com/cygy/ginamite/common/config/environment"
-	"github.com/cygy/ginamite/common/config/version"
+	"github.com/cygy-solutions/ginamite"
+	"github.com/cygy-solutions/ginamite/common/config"
+	"github.com/cygy-solutions/ginamite/common/config/environment"
+	"github.com/cygy-solutions/ginamite/common/config/version"
 
-	"github.com/cygy/ginamite/api/route"
+	"github.com/cygy-solutions/ginamite/api/route"
 
 	"github.com/gin-gonic/gin"
 )

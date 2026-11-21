@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cygy/ginamite/common/broker"
+	"github.com/cygy-solutions/ginamite/common/broker"
 )
 
 func TestServer_startMetrics(t *testing.T) {

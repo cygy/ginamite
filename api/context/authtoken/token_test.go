@@ -3,7 +3,7 @@ package authtoken
 import (
 	"testing"
 
-	"github.com/cygy/ginamite/api/internal/apitest"
+	"github.com/cygy-solutions/ginamite/api/internal/apitest"
 
 	jwt "github.com/golang-jwt/jwt/v5"
 )

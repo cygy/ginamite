@@ -3,8 +3,8 @@ package recurring_test
 import (
 	"context"
 
-	"github.com/cygy/ginamite/common/config"
-	"github.com/cygy/ginamite/worker/tasks/recurring"
+	"github.com/cygy-solutions/ginamite/common/config"
+	"github.com/cygy-solutions/ginamite/worker/tasks/recurring"
 )
 
 // The tasks of the configuration run until the context is done; Wait waits for the running ones.

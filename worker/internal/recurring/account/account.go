@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/cygy/ginamite/common/log"
-	"github.com/cygy/ginamite/common/queue"
-	"github.com/cygy/ginamite/worker/tasks"
+	"github.com/cygy-solutions/ginamite/common/log"
+	"github.com/cygy-solutions/ginamite/common/queue"
+	"github.com/cygy-solutions/ginamite/worker/tasks"
 )
 
 // DeleteNeverUsed deletes the empty accounts which never logged in for intervalInDays days.

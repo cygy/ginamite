@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cygy/ginamite/common/config"
+	"github.com/cygy-solutions/ginamite/common/config"
 )
 
 func TestScheduledTask_StartIn(t *testing.T) {

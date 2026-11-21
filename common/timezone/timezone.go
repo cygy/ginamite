@@ -8,7 +8,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/cygy/ginamite/common/log"
+	"github.com/cygy-solutions/ginamite/common/log"
 )
 
 // Configuration holds the timezones, the countries and the links between them.

@@ -1,6 +1,6 @@
 package api
 
-import "github.com/cygy/ginamite/common/response"
+import "github.com/cygy-solutions/ginamite/common/response"
 
 // Result is the result of an API call.
 type Result struct {

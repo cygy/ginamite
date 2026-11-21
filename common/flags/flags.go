@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/cygy/ginamite/common/config/environment"
-	"github.com/cygy/ginamite/common/config/version"
+	"github.com/cygy-solutions/ginamite/common/config/environment"
+	"github.com/cygy-solutions/ginamite/common/config/version"
 )
 
 // Flags holds the command line arguments passed at launch.

@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/cygy/ginamite/common/authentication"
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/bson"
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/document"
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/store"
+	"github.com/cygy-solutions/ginamite/common/authentication"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/mongo/bson"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/mongo/document"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/mongo/store"
 
 	jwt "github.com/golang-jwt/jwt/v5"
 )

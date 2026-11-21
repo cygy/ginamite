@@ -3,9 +3,9 @@ package mail
 import (
 	"context"
 
-	"github.com/cygy/ginamite/common/broker"
-	"github.com/cygy/ginamite/common/queue"
-	"github.com/cygy/ginamite/common/weburl"
+	"github.com/cygy-solutions/ginamite/common/broker"
+	"github.com/cygy-solutions/ginamite/common/queue"
+	"github.com/cygy-solutions/ginamite/common/weburl"
 )
 
 // RegistrationWelcome sends an email to welcome the user after the registration.

@@ -7,9 +7,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/cygy/ginamite/common/log"
-	apiResponse "github.com/cygy/ginamite/common/response"
-	"github.com/cygy/ginamite/web/api"
+	"github.com/cygy-solutions/ginamite/common/log"
+	apiResponse "github.com/cygy-solutions/ginamite/common/response"
+	"github.com/cygy-solutions/ginamite/web/api"
 
 	"github.com/gin-gonic/gin"
 )

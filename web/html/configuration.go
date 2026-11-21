@@ -9,9 +9,9 @@ import (
 	"html/template"
 	"os"
 
-	"github.com/cygy/ginamite/common/config"
-	"github.com/cygy/ginamite/common/localization"
-	"github.com/cygy/ginamite/web/context"
+	"github.com/cygy-solutions/ginamite/common/config"
+	"github.com/cygy-solutions/ginamite/common/localization"
+	"github.com/cygy-solutions/ginamite/web/context"
 
 	"github.com/gin-gonic/gin"
 	yaml "go.yaml.in/yaml/v3"

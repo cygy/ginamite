@@ -7,11 +7,11 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/cygy/ginamite/common/config"
-	"github.com/cygy/ginamite/common/config/environment"
-	"github.com/cygy/ginamite/common/flags"
-	"github.com/cygy/ginamite/common/log"
-	"github.com/cygy/ginamite/plugins/kafka/internal/dlq"
+	"github.com/cygy-solutions/ginamite/common/config"
+	"github.com/cygy-solutions/ginamite/common/config/environment"
+	"github.com/cygy-solutions/ginamite/common/flags"
+	"github.com/cygy-solutions/ginamite/common/log"
+	"github.com/cygy-solutions/ginamite/plugins/kafka/internal/dlq"
 )
 
 // openDLQ connects to the topics of the dead letters; the tests replace it.

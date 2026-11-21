@@ -9,9 +9,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/cygy/ginamite"
-	"github.com/cygy/ginamite/web/html"
-	"github.com/cygy/ginamite/web/route"
+	"github.com/cygy-solutions/ginamite"
+	"github.com/cygy-solutions/ginamite/web/html"
+	"github.com/cygy-solutions/ginamite/web/route"
 
 	"github.com/gin-gonic/gin"
 )

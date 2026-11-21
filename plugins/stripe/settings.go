@@ -4,7 +4,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/cygy/ginamite/common/config"
+	"github.com/cygy-solutions/ginamite/common/config"
 )
 
 // Section is the name of the section of the configuration holding the settings, see Settings.

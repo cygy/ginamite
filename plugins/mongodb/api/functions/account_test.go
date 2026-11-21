@@ -7,11 +7,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cygy/ginamite/common/ctxkey"
-	"github.com/cygy/ginamite/plugins/mongodb/internal/plugintest"
-	"github.com/cygy/ginamite/plugins/mongodb/model"
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/bson"
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/store/mock"
+	"github.com/cygy-solutions/ginamite/common/ctxkey"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/internal/plugintest"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/model"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/mongo/bson"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/mongo/store/mock"
 )
 
 func TestGetOwnedAccountDetails(t *testing.T) {

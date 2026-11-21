@@ -5,7 +5,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/cygy/ginamite/common/metrics"
+	"github.com/cygy-solutions/ginamite/common/metrics"
 )
 
 // Collect writes the counters of the client, the number of messages waiting to be sent and the lag of each partition,

@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cygy/ginamite/common/notifications"
-	"github.com/cygy/ginamite/worker/tasks/async/location"
+	"github.com/cygy-solutions/ginamite/common/notifications"
+	"github.com/cygy-solutions/ginamite/worker/tasks/async/location"
 )
 
 // The fakes implement the storages with the function of the test. A method calls its function, which must be set.

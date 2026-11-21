@@ -8,7 +8,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/cygy/ginamite/common/random"
+	"github.com/cygy-solutions/ginamite/common/random"
 
 	"golang.org/x/crypto/argon2"
 )

@@ -3,7 +3,7 @@ package route
 import (
 	"strings"
 
-	"github.com/cygy/ginamite/web/html"
+	"github.com/cygy-solutions/ginamite/web/html"
 )
 
 // relativeRoutePath returns the path of the route key for the locale relative to the group of the locale, whether the

@@ -1,7 +1,7 @@
 package account
 
 import (
-	"github.com/cygy/ginamite/api/validator"
+	"github.com/cygy-solutions/ginamite/api/validator"
 
 	"github.com/gin-gonic/gin"
 )

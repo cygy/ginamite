@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cygy/ginamite/api/internal/apitest"
+	"github.com/cygy-solutions/ginamite/api/internal/apitest"
 
 	"github.com/gin-gonic/gin"
 )

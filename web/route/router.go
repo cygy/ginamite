@@ -3,15 +3,15 @@ package route
 import (
 	"net/http"
 
-	"github.com/cygy/ginamite/common/ctxkey"
+	"github.com/cygy-solutions/ginamite/common/ctxkey"
 
-	"github.com/cygy/ginamite/common/errors/auth"
-	apiResponse "github.com/cygy/ginamite/common/response"
-	"github.com/cygy/ginamite/web/api"
-	"github.com/cygy/ginamite/web/context"
-	"github.com/cygy/ginamite/web/html"
-	"github.com/cygy/ginamite/web/response"
-	"github.com/cygy/ginamite/web/route/internal/robots"
+	"github.com/cygy-solutions/ginamite/common/errors/auth"
+	apiResponse "github.com/cygy-solutions/ginamite/common/response"
+	"github.com/cygy-solutions/ginamite/web/api"
+	"github.com/cygy-solutions/ginamite/web/context"
+	"github.com/cygy-solutions/ginamite/web/html"
+	"github.com/cygy-solutions/ginamite/web/response"
+	"github.com/cygy-solutions/ginamite/web/route/internal/robots"
 
 	"github.com/gin-gonic/gin"
 )

@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/cygy/ginamite/api/internal/apitest"
-	commonErrors "github.com/cygy/ginamite/common/errors"
+	"github.com/cygy-solutions/ginamite/api/internal/apitest"
+	commonErrors "github.com/cygy-solutions/ginamite/common/errors"
 
 	"github.com/gin-gonic/gin"
 )

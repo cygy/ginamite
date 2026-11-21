@@ -8,14 +8,14 @@ import (
 	"os"
 	"slices"
 
-	"github.com/cygy/ginamite/common/config"
-	"github.com/cygy/ginamite/common/config/environment"
-	"github.com/cygy/ginamite/common/flags"
-	"github.com/cygy/ginamite/common/localization"
-	"github.com/cygy/ginamite/common/log"
-	"github.com/cygy/ginamite/common/timezone"
-	"github.com/cygy/ginamite/common/weburl"
-	"github.com/cygy/ginamite/internal/robots"
+	"github.com/cygy-solutions/ginamite/common/config"
+	"github.com/cygy-solutions/ginamite/common/config/environment"
+	"github.com/cygy-solutions/ginamite/common/flags"
+	"github.com/cygy-solutions/ginamite/common/localization"
+	"github.com/cygy-solutions/ginamite/common/log"
+	"github.com/cygy-solutions/ginamite/common/timezone"
+	"github.com/cygy-solutions/ginamite/common/weburl"
+	"github.com/cygy-solutions/ginamite/internal/robots"
 )
 
 // dedupSize is the number of messages the consumers remember to ignore the ones delivered twice.

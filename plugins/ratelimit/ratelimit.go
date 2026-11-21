@@ -6,9 +6,9 @@ package ratelimit
 import (
 	"fmt"
 
-	"github.com/cygy/ginamite"
-	"github.com/cygy/ginamite/api/request"
-	"github.com/cygy/ginamite/common/log"
+	"github.com/cygy-solutions/ginamite"
+	"github.com/cygy-solutions/ginamite/api/request"
+	"github.com/cygy-solutions/ginamite/common/log"
 )
 
 // Register sets newLimiter as the limiters of the API of the server, which keep their counters in the storage with the
