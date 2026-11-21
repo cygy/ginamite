@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.17.0
+
+### Changed
+
+- **Breaking:** the module moves from the `cygy` account to the `cygy-solutions` organization: its path is now
+  `github.com/cygy-solutions/ginamite`, instead of `github.com/cygy/ginamite`. Update the `require` of the `go.mod`
+  and the imports of the applications (`go get github.com/cygy-solutions/ginamite@v0.17.0`); the badges, the links
+  and the git URLs of the documentation follow (#26).
+
 ## v0.16.0
 
 ### Added
