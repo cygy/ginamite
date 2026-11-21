@@ -89,7 +89,7 @@ func TestDatabaseOperationError_NilContext(t *testing.T) {
 func TestPackageOf(t *testing.T) {
 	tests := map[string]string{
 		"github.com/cygy-solutions/ginamite/common/log.DatabaseError": "github.com/cygy-solutions/ginamite/common/log",
-		"github.com/cygy/app/model.(*Score).Save":           "github.com/cygy/app/model",
+		"github.com/cygy/app/model.(*Score).Save":                     "github.com/cygy/app/model",
 		"main.main": "main",
 		"main":      "main",
 	}
