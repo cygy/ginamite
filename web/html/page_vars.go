@@ -6,7 +6,7 @@ import (
 	"html/template"
 	"strings"
 
-	"github.com/cygy/ginamite/common/log"
+	"github.com/cygy-solutions/ginamite/common/log"
 )
 
 // SetVar defines a variable of the page.

@@ -9,17 +9,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cygy/ginamite"
-	"github.com/cygy/ginamite/api/rights"
-	"github.com/cygy/ginamite/api/route"
-	"github.com/cygy/ginamite/common/config"
-	apiFunctions "github.com/cygy/ginamite/plugins/mongodb/api/functions"
-	_ "github.com/cygy/ginamite/plugins/mongodb/internal/plugintest" // Initializes the logger and gin.
-	"github.com/cygy/ginamite/plugins/mongodb/model"
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/session"
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/store"
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/store/mock"
-	workerFunctions "github.com/cygy/ginamite/plugins/mongodb/worker/functions"
+	"github.com/cygy-solutions/ginamite"
+	"github.com/cygy-solutions/ginamite/api/rights"
+	"github.com/cygy-solutions/ginamite/api/route"
+	"github.com/cygy-solutions/ginamite/common/config"
+	apiFunctions "github.com/cygy-solutions/ginamite/plugins/mongodb/api/functions"
+	_ "github.com/cygy-solutions/ginamite/plugins/mongodb/internal/plugintest" // Initializes the logger and gin.
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/model"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/mongo/session"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/mongo/store"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/mongo/store/mock"
+	workerFunctions "github.com/cygy-solutions/ginamite/plugins/mongodb/worker/functions"
 
 	"github.com/gin-gonic/gin"
 )

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/cygy/ginamite/common/broker"
-	"github.com/cygy/ginamite/common/log"
+	"github.com/cygy-solutions/ginamite/common/broker"
+	"github.com/cygy-solutions/ginamite/common/log"
 
 	"github.com/IBM/sarama"
 )

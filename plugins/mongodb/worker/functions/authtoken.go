@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/cygy/ginamite/plugins/mongodb/model"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/model"
 )
 
 // DeleteExpired deletes the expired auth tokens and returns the number of tokens deleted.

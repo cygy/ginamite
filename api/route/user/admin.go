@@ -5,16 +5,16 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/cygy/ginamite/common/ctxkey"
+	"github.com/cygy-solutions/ginamite/common/ctxkey"
 
-	ctxLocale "github.com/cygy/ginamite/api/context/locale"
-	"github.com/cygy/ginamite/api/request"
-	"github.com/cygy/ginamite/api/response"
-	"github.com/cygy/ginamite/api/route/account"
-	"github.com/cygy/ginamite/common"
-	commonErrors "github.com/cygy/ginamite/common/errors"
-	"github.com/cygy/ginamite/common/localization"
-	"github.com/cygy/ginamite/common/queue"
+	ctxLocale "github.com/cygy-solutions/ginamite/api/context/locale"
+	"github.com/cygy-solutions/ginamite/api/request"
+	"github.com/cygy-solutions/ginamite/api/response"
+	"github.com/cygy-solutions/ginamite/api/route/account"
+	"github.com/cygy-solutions/ginamite/common"
+	commonErrors "github.com/cygy-solutions/ginamite/common/errors"
+	"github.com/cygy-solutions/ginamite/common/localization"
+	"github.com/cygy-solutions/ginamite/common/queue"
 
 	"github.com/gin-gonic/gin"
 )

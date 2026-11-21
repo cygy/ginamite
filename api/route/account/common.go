@@ -4,14 +4,14 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/cygy/ginamite/common/ctxkey"
+	"github.com/cygy-solutions/ginamite/common/ctxkey"
 
-	ctxLocale "github.com/cygy/ginamite/api/context/locale"
-	"github.com/cygy/ginamite/api/response"
-	"github.com/cygy/ginamite/api/validator"
-	"github.com/cygy/ginamite/common/authentication"
-	"github.com/cygy/ginamite/common/localization"
-	"github.com/cygy/ginamite/common/queue"
+	ctxLocale "github.com/cygy-solutions/ginamite/api/context/locale"
+	"github.com/cygy-solutions/ginamite/api/response"
+	"github.com/cygy-solutions/ginamite/api/validator"
+	"github.com/cygy-solutions/ginamite/common/authentication"
+	"github.com/cygy-solutions/ginamite/common/localization"
+	"github.com/cygy-solutions/ginamite/common/queue"
 
 	"github.com/gin-gonic/gin"
 )

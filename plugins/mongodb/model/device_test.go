@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/cygy/ginamite/common/authentication"
+	"github.com/cygy-solutions/ginamite/common/authentication"
 )
 
 func TestDevice_Conversion(t *testing.T) {

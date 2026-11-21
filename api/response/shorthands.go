@@ -3,16 +3,16 @@ package response
 import (
 	"strings"
 
-	"github.com/cygy/ginamite/common/ctxkey"
+	"github.com/cygy-solutions/ginamite/common/ctxkey"
 
-	"github.com/cygy/ginamite/common/errors"
-	"github.com/cygy/ginamite/common/errors/auth"
-	"github.com/cygy/ginamite/common/errors/database"
-	"github.com/cygy/ginamite/common/errors/file"
-	"github.com/cygy/ginamite/common/errors/locale"
-	"github.com/cygy/ginamite/common/errors/request"
-	"github.com/cygy/ginamite/common/localization"
-	"github.com/cygy/ginamite/common/response"
+	"github.com/cygy-solutions/ginamite/common/errors"
+	"github.com/cygy-solutions/ginamite/common/errors/auth"
+	"github.com/cygy-solutions/ginamite/common/errors/database"
+	"github.com/cygy-solutions/ginamite/common/errors/file"
+	"github.com/cygy-solutions/ginamite/common/errors/locale"
+	"github.com/cygy-solutions/ginamite/common/errors/request"
+	"github.com/cygy-solutions/ginamite/common/localization"
+	"github.com/cygy-solutions/ginamite/common/response"
 
 	humanize "github.com/dustin/go-humanize"
 	"github.com/gin-gonic/gin"

@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/cygy/ginamite/api/route"
+	"github.com/cygy-solutions/ginamite/api/route"
 )
 
 // The features of the API: the sets of default routes the application chooses with the setting api_features. A feature

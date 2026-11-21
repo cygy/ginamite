@@ -3,8 +3,8 @@ package response
 import (
 	"testing"
 
-	"github.com/cygy/ginamite/api/internal/apitest"
-	"github.com/cygy/ginamite/common/response"
+	"github.com/cygy-solutions/ginamite/api/internal/apitest"
+	"github.com/cygy-solutions/ginamite/common/response"
 )
 
 func TestAddRenewedAuthToken(t *testing.T) {

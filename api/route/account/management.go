@@ -1,13 +1,13 @@
 package account
 
 import (
-	"github.com/cygy/ginamite/common/ctxkey"
+	"github.com/cygy-solutions/ginamite/common/ctxkey"
 
-	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
-	ctxLocale "github.com/cygy/ginamite/api/context/locale"
-	ctxUser "github.com/cygy/ginamite/api/context/user"
-	"github.com/cygy/ginamite/api/request"
-	"github.com/cygy/ginamite/api/response"
+	ctxAuthToken "github.com/cygy-solutions/ginamite/api/context/authtoken"
+	ctxLocale "github.com/cygy-solutions/ginamite/api/context/locale"
+	ctxUser "github.com/cygy-solutions/ginamite/api/context/user"
+	"github.com/cygy-solutions/ginamite/api/request"
+	"github.com/cygy-solutions/ginamite/api/response"
 
 	"github.com/gin-gonic/gin"
 )

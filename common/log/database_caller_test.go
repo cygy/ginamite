@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cygy/ginamite/common/log"
-	"github.com/cygy/ginamite/common/log/internal/reporter"
-	"github.com/cygy/ginamite/common/log/logtest"
+	"github.com/cygy-solutions/ginamite/common/log"
+	"github.com/cygy-solutions/ginamite/common/log/internal/reporter"
+	"github.com/cygy-solutions/ginamite/common/log/logtest"
 )
 
 func TestDatabaseError_Caller(t *testing.T) {

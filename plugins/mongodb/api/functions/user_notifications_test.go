@@ -3,12 +3,12 @@ package functions
 import (
 	"testing"
 
-	commonErrors "github.com/cygy/ginamite/common/errors"
-	"github.com/cygy/ginamite/common/notifications"
-	"github.com/cygy/ginamite/plugins/mongodb/model"
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/bson"
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/store"
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/store/mock"
+	commonErrors "github.com/cygy-solutions/ginamite/common/errors"
+	"github.com/cygy-solutions/ginamite/common/notifications"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/model"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/mongo/bson"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/mongo/store"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/mongo/store/mock"
 )
 
 // newNotifications returns the storage of the notifications working on the database, with "en" as default locale.

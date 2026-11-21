@@ -1,5 +1,5 @@
 // Package location retrieves and saves the location of the IP addresses, from the geoip API
-// (https://github.com/cygy/geoip).
+// (https://github.com/cygy-solutions/geoip).
 package location
 
 import (
@@ -13,10 +13,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cygy/ginamite/common/broker"
-	"github.com/cygy/ginamite/common/config"
-	"github.com/cygy/ginamite/common/log"
-	"github.com/cygy/ginamite/common/queue"
+	"github.com/cygy-solutions/ginamite/common/broker"
+	"github.com/cygy-solutions/ginamite/common/config"
+	"github.com/cygy-solutions/ginamite/common/log"
+	"github.com/cygy-solutions/ginamite/common/queue"
 )
 
 const (

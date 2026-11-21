@@ -3,10 +3,10 @@ package context
 import (
 	"testing"
 
-	ctxShared "github.com/cygy/ginamite/api/context/shared"
-	"github.com/cygy/ginamite/plugins/mongodb/internal/plugintest"
-	"github.com/cygy/ginamite/plugins/mongodb/model"
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/bson"
+	ctxShared "github.com/cygy-solutions/ginamite/api/context/shared"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/internal/plugintest"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/model"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/mongo/bson"
 )
 
 func TestGetUser(t *testing.T) {

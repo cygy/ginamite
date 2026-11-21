@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/cygy/ginamite/common/weburl"
+	"github.com/cygy-solutions/ginamite/common/weburl"
 )
 
 const (

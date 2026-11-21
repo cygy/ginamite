@@ -1,7 +1,7 @@
 package model
 
 import (
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/bson"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/mongo/bson"
 )
 
 // AdminDisabledUser is the view of a DisabledUser exposed to the administrators.

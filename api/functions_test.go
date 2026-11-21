@@ -9,14 +9,14 @@ import (
 	"testing"
 	"time"
 
-	_ "github.com/cygy/ginamite/api/internal/apitest"
-	"github.com/cygy/ginamite/api/request"
-	"github.com/cygy/ginamite/api/route"
-	"github.com/cygy/ginamite/common/broker"
-	"github.com/cygy/ginamite/common/log"
-	"github.com/cygy/ginamite/common/queue"
+	_ "github.com/cygy-solutions/ginamite/api/internal/apitest"
+	"github.com/cygy-solutions/ginamite/api/request"
+	"github.com/cygy-solutions/ginamite/api/route"
+	"github.com/cygy-solutions/ginamite/common/broker"
+	"github.com/cygy-solutions/ginamite/common/log"
+	"github.com/cygy-solutions/ginamite/common/queue"
 
-	"github.com/cygy/ginamite/common/log/logtest"
+	"github.com/cygy-solutions/ginamite/common/log/logtest"
 	"github.com/gin-gonic/gin"
 )
 

@@ -4,9 +4,9 @@ package debug
 import (
 	"time"
 
-	"github.com/cygy/ginamite/api/response"
-	"github.com/cygy/ginamite/common/authentication"
-	"github.com/cygy/ginamite/common/ctxkey"
+	"github.com/cygy-solutions/ginamite/api/response"
+	"github.com/cygy-solutions/ginamite/common/authentication"
+	"github.com/cygy-solutions/ginamite/common/ctxkey"
 
 	"github.com/gin-gonic/gin"
 )

@@ -17,13 +17,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cygy/ginamite/common/config"
-	"github.com/cygy/ginamite/common/ctxkey"
-	"github.com/cygy/ginamite/common/localization"
-	"github.com/cygy/ginamite/common/log"
-	htmlTemplate "github.com/cygy/ginamite/common/template/html"
+	"github.com/cygy-solutions/ginamite/common/config"
+	"github.com/cygy-solutions/ginamite/common/ctxkey"
+	"github.com/cygy-solutions/ginamite/common/localization"
+	"github.com/cygy-solutions/ginamite/common/log"
+	htmlTemplate "github.com/cygy-solutions/ginamite/common/template/html"
 
-	"github.com/cygy/ginamite/common/log/logtest"
+	"github.com/cygy-solutions/ginamite/common/log/logtest"
 	"github.com/gin-gonic/gin"
 	jwt "github.com/golang-jwt/jwt/v5"
 )

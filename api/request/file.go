@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"strings"
 
-	ctxLocale "github.com/cygy/ginamite/api/context/locale"
-	"github.com/cygy/ginamite/api/response"
-	"github.com/cygy/ginamite/common/log"
+	ctxLocale "github.com/cygy-solutions/ginamite/api/context/locale"
+	"github.com/cygy-solutions/ginamite/api/response"
+	"github.com/cygy-solutions/ginamite/common/log"
 
 	"github.com/gin-gonic/gin"
 )

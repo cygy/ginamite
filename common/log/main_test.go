@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/cygy/ginamite/common/log/logtest"
+	"github.com/cygy-solutions/ginamite/common/log/logtest"
 )
 
 func TestMain(m *testing.M) {

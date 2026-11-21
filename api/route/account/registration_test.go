@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/cygy/ginamite/common/authentication"
+	"github.com/cygy-solutions/ginamite/common/authentication"
 )
 
 func TestRegisterWithPassword(t *testing.T) {

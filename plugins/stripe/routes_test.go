@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	ctxLocale "github.com/cygy/ginamite/api/context/locale"
-	"github.com/cygy/ginamite/common/weburl"
+	ctxLocale "github.com/cygy-solutions/ginamite/api/context/locale"
+	"github.com/cygy-solutions/ginamite/common/weburl"
 
 	"github.com/gin-gonic/gin"
 )

@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	commonErrors "github.com/cygy/ginamite/common/errors"
+	commonErrors "github.com/cygy-solutions/ginamite/common/errors"
 )
 
 func TestDatabaseError(t *testing.T) {
@@ -88,7 +88,7 @@ func TestDatabaseOperationError_NilContext(t *testing.T) {
 
 func TestPackageOf(t *testing.T) {
 	tests := map[string]string{
-		"github.com/cygy/ginamite/common/log.DatabaseError": "github.com/cygy/ginamite/common/log",
+		"github.com/cygy-solutions/ginamite/common/log.DatabaseError": "github.com/cygy-solutions/ginamite/common/log",
 		"github.com/cygy/app/model.(*Score).Save":           "github.com/cygy/app/model",
 		"main.main": "main",
 		"main":      "main",

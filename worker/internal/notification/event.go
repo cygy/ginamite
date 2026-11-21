@@ -5,9 +5,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/cygy/ginamite/common/log"
-	"github.com/cygy/ginamite/common/notifications"
-	"github.com/cygy/ginamite/common/queue"
+	"github.com/cygy-solutions/ginamite/common/log"
+	"github.com/cygy-solutions/ginamite/common/notifications"
+	"github.com/cygy-solutions/ginamite/common/queue"
 )
 
 // Handler returns the type of a message and its payload.

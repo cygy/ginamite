@@ -3,8 +3,8 @@ package ginamite
 import (
 	"context"
 
-	"github.com/cygy/ginamite/common/log"
-	"github.com/cygy/ginamite/common/metrics"
+	"github.com/cygy-solutions/ginamite/common/log"
+	"github.com/cygy-solutions/ginamite/common/metrics"
 )
 
 // startMetrics serves the Prometheus metrics on the address of the configuration, if any: the requests of the API and

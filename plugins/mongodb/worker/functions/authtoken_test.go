@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/cygy/ginamite/plugins/mongodb/model"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/model"
 
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )

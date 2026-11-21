@@ -4,9 +4,9 @@ package cookie
 import (
 	"net/http"
 
-	"github.com/cygy/ginamite/common/ctxkey"
-	"github.com/cygy/ginamite/web/context"
-	"github.com/cygy/ginamite/web/html"
+	"github.com/cygy-solutions/ginamite/common/ctxkey"
+	"github.com/cygy-solutions/ginamite/web/context"
+	"github.com/cygy-solutions/ginamite/web/html"
 
 	"github.com/gin-gonic/gin"
 )

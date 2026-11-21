@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"html/template"
 
-	"github.com/cygy/ginamite/common/broker"
-	"github.com/cygy/ginamite/common/localization"
-	"github.com/cygy/ginamite/common/queue"
-	"github.com/cygy/ginamite/common/weburl"
+	"github.com/cygy-solutions/ginamite/common/broker"
+	"github.com/cygy-solutions/ginamite/common/localization"
+	"github.com/cygy-solutions/ginamite/common/queue"
+	"github.com/cygy-solutions/ginamite/common/weburl"
 )
 
 // NewLogin sends an email to notify a user that a login occurs on their account.

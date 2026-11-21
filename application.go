@@ -1,6 +1,6 @@
 package ginamite
 
-import "github.com/cygy/ginamite/common/notifications"
+import "github.com/cygy-solutions/ginamite/common/notifications"
 
 // ApplicationConfiguration is the additional and optional configuration of the application.
 type ApplicationConfiguration struct {

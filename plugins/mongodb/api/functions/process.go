@@ -4,11 +4,11 @@ import (
 	"context"
 	"crypto/subtle"
 
-	"github.com/cygy/ginamite/common/errors"
-	"github.com/cygy/ginamite/common/log"
-	"github.com/cygy/ginamite/plugins/mongodb/model"
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/bson"
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/store"
+	"github.com/cygy-solutions/ginamite/common/errors"
+	"github.com/cygy-solutions/ginamite/common/log"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/model"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/mongo/bson"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/mongo/store"
 )
 
 // Processes are the functions of the processes bound to a user, such as the forgot password ones, working on a MongoDB

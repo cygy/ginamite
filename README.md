@@ -1,8 +1,8 @@
 # ginamite
 
-[![CI](https://github.com/cygy/ginamite/actions/workflows/ci.yml/badge.svg)](https://github.com/cygy/ginamite/actions/workflows/ci.yml)
-[![Go Reference](https://pkg.go.dev/badge/github.com/cygy/ginamite.svg)](https://pkg.go.dev/github.com/cygy/ginamite)
-[![Go Report Card](https://goreportcard.com/badge/github.com/cygy/ginamite)](https://goreportcard.com/report/github.com/cygy/ginamite)
+[![CI](https://github.com/cygy-solutions/ginamite/actions/workflows/ci.yml/badge.svg)](https://github.com/cygy-solutions/ginamite/actions/workflows/ci.yml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/cygy-solutions/ginamite.svg)](https://pkg.go.dev/github.com/cygy-solutions/ginamite)
+[![Go Report Card](https://goreportcard.com/badge/github.com/cygy-solutions/ginamite)](https://goreportcard.com/report/github.com/cygy-solutions/ginamite)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 A Go framework to build an application made of three servers, built on [Gin](https://github.com/gin-gonic/gin):
@@ -43,7 +43,7 @@ writes what is its own.
 ## Installation
 
 ```bash
-go get github.com/cygy/ginamite
+go get github.com/cygy-solutions/ginamite
 ```
 
 ## Quick start
@@ -86,9 +86,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/cygy/ginamite"
-	"github.com/cygy/ginamite/plugins/kafka"
-	"github.com/cygy/ginamite/plugins/mongodb"
+	"github.com/cygy-solutions/ginamite"
+	"github.com/cygy-solutions/ginamite/plugins/kafka"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb"
 )
 
 func main() {

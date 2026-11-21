@@ -12,9 +12,9 @@ package stripe
 import (
 	"fmt"
 
-	"github.com/cygy/ginamite"
-	"github.com/cygy/ginamite/api/route"
-	"github.com/cygy/ginamite/common/config"
+	"github.com/cygy-solutions/ginamite"
+	"github.com/cygy-solutions/ginamite/api/route"
+	"github.com/cygy-solutions/ginamite/common/config"
 
 	"github.com/gin-gonic/gin"
 	stripeapi "github.com/stripe/stripe-go/v87"

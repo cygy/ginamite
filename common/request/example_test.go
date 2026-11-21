@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"strings"
 
-	"github.com/cygy/ginamite/common/request"
+	"github.com/cygy-solutions/ginamite/common/request"
 
 	"github.com/gin-gonic/gin"
 )

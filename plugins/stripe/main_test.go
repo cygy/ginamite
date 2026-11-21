@@ -11,8 +11,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/cygy/ginamite/common/log"
-	"github.com/cygy/ginamite/common/log/logtest"
+	"github.com/cygy-solutions/ginamite/common/log"
+	"github.com/cygy-solutions/ginamite/common/log/logtest"
 
 	stripeapi "github.com/stripe/stripe-go/v87"
 )

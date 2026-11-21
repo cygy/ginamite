@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/cygy/ginamite/api/request"
-	commonErrors "github.com/cygy/ginamite/common/errors"
+	"github.com/cygy-solutions/ginamite/api/request"
+	commonErrors "github.com/cygy-solutions/ginamite/common/errors"
 )
 
 func TestGetAdminContacts(t *testing.T) {

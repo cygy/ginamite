@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cygy/ginamite/common/broker"
-	"github.com/cygy/ginamite/common/queue"
-	"github.com/cygy/ginamite/worker/internal/workertest"
+	"github.com/cygy-solutions/ginamite/common/broker"
+	"github.com/cygy-solutions/ginamite/common/queue"
+	"github.com/cygy-solutions/ginamite/worker/internal/workertest"
 )
 
 var tokens = map[string]time.Time{"token": time.Unix(1700000000, 0)}

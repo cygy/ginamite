@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"html/template"
 
-	"github.com/cygy/ginamite/common/broker"
-	"github.com/cygy/ginamite/common/localization"
-	"github.com/cygy/ginamite/common/queue"
+	"github.com/cygy-solutions/ginamite/common/broker"
+	"github.com/cygy-solutions/ginamite/common/localization"
+	"github.com/cygy-solutions/ginamite/common/queue"
 )
 
 // content describes an email built from the translations "email.<key>.*":

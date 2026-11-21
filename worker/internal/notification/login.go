@@ -3,9 +3,9 @@ package notification
 import (
 	"context"
 
-	"github.com/cygy/ginamite/common/broker"
-	"github.com/cygy/ginamite/common/notifications"
-	"github.com/cygy/ginamite/common/queue"
+	"github.com/cygy-solutions/ginamite/common/broker"
+	"github.com/cygy-solutions/ginamite/common/notifications"
+	"github.com/cygy-solutions/ginamite/common/queue"
 )
 
 // NewLogin decodes the payload of a login and notifies the user, with the queue, that a login occurs on their account.

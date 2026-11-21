@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cygy/ginamite/worker/internal/workertest"
+	"github.com/cygy-solutions/ginamite/worker/internal/workertest"
 )
 
 // readGzip returns the uncompressed content of a file.

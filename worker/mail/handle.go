@@ -3,7 +3,7 @@ package mail
 import (
 	"context"
 
-	"github.com/cygy/ginamite/common/queue"
+	"github.com/cygy-solutions/ginamite/common/queue"
 )
 
 // handlers returns the senders of the emails, by type of message.

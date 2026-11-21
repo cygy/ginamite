@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"testing"
 
-	commonErrors "github.com/cygy/ginamite/common/errors"
-	"github.com/cygy/ginamite/common/notifications"
+	commonErrors "github.com/cygy-solutions/ginamite/common/errors"
+	"github.com/cygy-solutions/ginamite/common/notifications"
 )
 
 func TestGetNotifications(t *testing.T) {

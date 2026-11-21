@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cygy/ginamite/common/broker"
-	"github.com/cygy/ginamite/common/config"
-	"github.com/cygy/ginamite/worker/internal/workertest"
+	"github.com/cygy-solutions/ginamite/common/broker"
+	"github.com/cygy-solutions/ginamite/common/config"
+	"github.com/cygy-solutions/ginamite/worker/internal/workertest"
 )
 
 // useAPI starts a server for the handler for the duration of the test, and returns the configuration of the API to it.

@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cygy/ginamite/common/log"
+	"github.com/cygy-solutions/ginamite/common/log"
 )
 
 // cache is a concurrency-safe set of tokens with their expiration date.

@@ -1,6 +1,6 @@
 package model
 
-import "github.com/cygy/ginamite/common/authentication"
+import "github.com/cygy-solutions/ginamite/common/authentication"
 
 // Device is the device used to sign in or to register.
 type Device struct {

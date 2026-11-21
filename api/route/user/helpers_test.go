@@ -7,18 +7,18 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cygy/ginamite/common/ctxkey"
-	"github.com/cygy/ginamite/common/notifications"
+	"github.com/cygy-solutions/ginamite/common/ctxkey"
+	"github.com/cygy-solutions/ginamite/common/notifications"
 
-	"github.com/cygy/ginamite/common/queue"
+	"github.com/cygy-solutions/ginamite/common/queue"
 
-	ctxLocale "github.com/cygy/ginamite/api/context/locale"
-	"github.com/cygy/ginamite/api/internal/apitest"
-	"github.com/cygy/ginamite/api/route/account"
-	"github.com/cygy/ginamite/common/authentication"
-	"github.com/cygy/ginamite/common/broker"
-	"github.com/cygy/ginamite/common/config"
-	"github.com/cygy/ginamite/common/timezone"
+	ctxLocale "github.com/cygy-solutions/ginamite/api/context/locale"
+	"github.com/cygy-solutions/ginamite/api/internal/apitest"
+	"github.com/cygy-solutions/ginamite/api/route/account"
+	"github.com/cygy-solutions/ginamite/common/authentication"
+	"github.com/cygy-solutions/ginamite/common/broker"
+	"github.com/cygy-solutions/ginamite/common/config"
+	"github.com/cygy-solutions/ginamite/common/timezone"
 
 	"github.com/gin-gonic/gin"
 )

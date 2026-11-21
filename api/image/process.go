@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/cygy/ginamite/common/log"
+	"github.com/cygy-solutions/ginamite/common/log"
 )
 
 // save decodes the image src, then saves each of its versions in directoryDest, scaled to fit in its size if fitIn is

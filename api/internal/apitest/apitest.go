@@ -11,10 +11,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/cygy/ginamite/common/ctxkey"
+	"github.com/cygy-solutions/ginamite/common/ctxkey"
 
-	"github.com/cygy/ginamite/common/localization"
-	"github.com/cygy/ginamite/common/log"
+	"github.com/cygy-solutions/ginamite/common/localization"
+	"github.com/cygy-solutions/ginamite/common/log"
 
 	"github.com/gin-gonic/gin"
 )

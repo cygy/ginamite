@@ -4,13 +4,13 @@ package response
 import (
 	"net/http"
 
-	"github.com/cygy/ginamite/common/ctxkey"
+	"github.com/cygy-solutions/ginamite/common/ctxkey"
 
-	"github.com/cygy/ginamite/common/localization"
-	"github.com/cygy/ginamite/common/log"
-	"github.com/cygy/ginamite/common/response"
-	"github.com/cygy/ginamite/web/context"
-	"github.com/cygy/ginamite/web/html"
+	"github.com/cygy-solutions/ginamite/common/localization"
+	"github.com/cygy-solutions/ginamite/common/log"
+	"github.com/cygy-solutions/ginamite/common/response"
+	"github.com/cygy-solutions/ginamite/web/context"
+	"github.com/cygy-solutions/ginamite/web/html"
 
 	"github.com/gin-gonic/gin"
 )

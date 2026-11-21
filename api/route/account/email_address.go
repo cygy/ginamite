@@ -3,16 +3,16 @@ package account
 import (
 	"strings"
 
-	"github.com/cygy/ginamite/common/ctxkey"
+	"github.com/cygy-solutions/ginamite/common/ctxkey"
 
-	ctxLocale "github.com/cygy/ginamite/api/context/locale"
-	ctxUser "github.com/cygy/ginamite/api/context/user"
-	"github.com/cygy/ginamite/api/request"
-	"github.com/cygy/ginamite/api/response"
-	"github.com/cygy/ginamite/common/authentication"
-	accountErrors "github.com/cygy/ginamite/common/errors/account"
-	"github.com/cygy/ginamite/common/queue"
-	res "github.com/cygy/ginamite/common/response"
+	ctxLocale "github.com/cygy-solutions/ginamite/api/context/locale"
+	ctxUser "github.com/cygy-solutions/ginamite/api/context/user"
+	"github.com/cygy-solutions/ginamite/api/request"
+	"github.com/cygy-solutions/ginamite/api/response"
+	"github.com/cygy-solutions/ginamite/common/authentication"
+	accountErrors "github.com/cygy-solutions/ginamite/common/errors/account"
+	"github.com/cygy-solutions/ginamite/common/queue"
+	res "github.com/cygy-solutions/ginamite/common/response"
 
 	"github.com/gin-gonic/gin"
 )

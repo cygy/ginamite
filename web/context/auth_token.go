@@ -3,8 +3,8 @@ package context
 import (
 	"time"
 
-	"github.com/cygy/ginamite/common/authentication"
-	"github.com/cygy/ginamite/common/log"
+	"github.com/cygy-solutions/ginamite/common/authentication"
+	"github.com/cygy-solutions/ginamite/common/log"
 
 	"github.com/gin-gonic/gin"
 	jwt "github.com/golang-jwt/jwt/v5"

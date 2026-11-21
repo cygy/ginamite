@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cygy/ginamite"
-	"github.com/cygy/ginamite/api/request"
-	"github.com/cygy/ginamite/common/log"
+	"github.com/cygy-solutions/ginamite"
+	"github.com/cygy-solutions/ginamite/api/request"
+	"github.com/cygy-solutions/ginamite/common/log"
 )
 
 func TestMain(m *testing.M) {

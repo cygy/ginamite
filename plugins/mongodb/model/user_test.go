@@ -6,12 +6,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cygy/ginamite/common/authentication"
-	"github.com/cygy/ginamite/common/config"
-	commonErrors "github.com/cygy/ginamite/common/errors"
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/bson"
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/document"
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/store/mock"
+	"github.com/cygy-solutions/ginamite/common/authentication"
+	"github.com/cygy-solutions/ginamite/common/config"
+	commonErrors "github.com/cygy-solutions/ginamite/common/errors"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/mongo/bson"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/mongo/document"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/mongo/store/mock"
 
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )

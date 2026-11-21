@@ -3,8 +3,8 @@ package functions
 import (
 	"testing"
 
-	"github.com/cygy/ginamite/plugins/mongodb/model"
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/bson"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/model"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/mongo/bson"
 
 	jwt "github.com/golang-jwt/jwt/v5"
 )

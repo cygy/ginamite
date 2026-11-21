@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 
-	"github.com/cygy/ginamite/common/log"
-	"github.com/cygy/ginamite/common/notifications"
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/bson"
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/store"
+	"github.com/cygy-solutions/ginamite/common/log"
+	"github.com/cygy-solutions/ginamite/common/notifications"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/mongo/bson"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/mongo/store"
 
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )

@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/cygy/ginamite/common/broker"
-	"github.com/cygy/ginamite/common/queue"
+	"github.com/cygy-solutions/ginamite/common/broker"
+	"github.com/cygy-solutions/ginamite/common/queue"
 )
 
 func TestHandle(t *testing.T) {

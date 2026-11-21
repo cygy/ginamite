@@ -1,6 +1,6 @@
 package model
 
-import "github.com/cygy/ginamite/api/rights"
+import "github.com/cygy-solutions/ginamite/api/rights"
 
 // Settings are the settings of the plugin, used by the model and by the functions of the API.
 type Settings struct {

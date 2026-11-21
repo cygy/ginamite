@@ -16,8 +16,8 @@ paid for **once per payment**, even when Stripe sends an event several times.
 
 ```go
 import (
-	"github.com/cygy/ginamite/plugins/stripe"
-	"github.com/cygy/ginamite/plugins/stripe/mongostore"
+	"github.com/cygy-solutions/ginamite/plugins/stripe"
+	"github.com/cygy-solutions/ginamite/plugins/stripe/mongostore"
 )
 
 payments := stripe.NewPlugin(mongostore.New(appDatabase.Database, ""), deliver)

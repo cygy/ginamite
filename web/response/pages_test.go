@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/cygy/ginamite/common/response"
-	"github.com/cygy/ginamite/web/internal/pagetest"
+	"github.com/cygy-solutions/ginamite/common/response"
+	"github.com/cygy-solutions/ginamite/web/internal/pagetest"
 
 	"github.com/gin-gonic/gin"
 )

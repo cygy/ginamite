@@ -2,8 +2,8 @@
 package context
 
 import (
-	ctxUser "github.com/cygy/ginamite/api/context/user"
-	"github.com/cygy/ginamite/plugins/mongodb/model"
+	ctxUser "github.com/cygy-solutions/ginamite/api/context/user"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/model"
 
 	"github.com/gin-gonic/gin"
 )

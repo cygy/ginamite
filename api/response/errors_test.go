@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cygy/ginamite/api/internal/apitest"
-	"github.com/cygy/ginamite/common/response"
+	"github.com/cygy-solutions/ginamite/api/internal/apitest"
+	"github.com/cygy-solutions/ginamite/common/response"
 
 	"github.com/gin-gonic/gin"
 )

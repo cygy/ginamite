@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"time"
 
-	errs "github.com/cygy/ginamite/common/errors"
-	"github.com/cygy/ginamite/common/notifications"
-	"github.com/cygy/ginamite/plugins/mongodb/model"
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/store"
+	errs "github.com/cygy-solutions/ginamite/common/errors"
+	"github.com/cygy-solutions/ginamite/common/notifications"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/model"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/mongo/store"
 
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )

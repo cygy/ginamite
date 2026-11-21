@@ -3,11 +3,11 @@ package authtoken
 import (
 	"errors"
 
-	ctxLocale "github.com/cygy/ginamite/api/context/locale"
-	ctxShared "github.com/cygy/ginamite/api/context/shared"
-	"github.com/cygy/ginamite/api/response"
-	"github.com/cygy/ginamite/common/authentication"
-	"github.com/cygy/ginamite/common/log"
+	ctxLocale "github.com/cygy-solutions/ginamite/api/context/locale"
+	ctxShared "github.com/cygy-solutions/ginamite/api/context/shared"
+	"github.com/cygy-solutions/ginamite/api/response"
+	"github.com/cygy-solutions/ginamite/common/authentication"
+	"github.com/cygy-solutions/ginamite/common/log"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"

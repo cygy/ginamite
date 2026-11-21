@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/cygy/ginamite/api/validator"
-	"github.com/cygy/ginamite/common/authentication"
-	commonErrors "github.com/cygy/ginamite/common/errors"
+	"github.com/cygy-solutions/ginamite/api/validator"
+	"github.com/cygy-solutions/ginamite/common/authentication"
+	commonErrors "github.com/cygy-solutions/ginamite/common/errors"
 
 	"github.com/gin-gonic/gin"
 )

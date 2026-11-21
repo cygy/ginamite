@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"testing"
 
-	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
-	"github.com/cygy/ginamite/api/context/shared"
-	"github.com/cygy/ginamite/api/internal/apitest"
+	ctxAuthToken "github.com/cygy-solutions/ginamite/api/context/authtoken"
+	"github.com/cygy-solutions/ginamite/api/context/shared"
+	"github.com/cygy-solutions/ginamite/api/internal/apitest"
 
 	"github.com/gin-gonic/gin"
 )

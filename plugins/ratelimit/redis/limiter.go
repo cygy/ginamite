@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/cygy/ginamite/api/request"
+	"github.com/cygy-solutions/ginamite/api/request"
 
 	goredis "github.com/redis/go-redis/v9"
 )

@@ -3,13 +3,13 @@ package response
 import (
 	"net/http"
 
-	authErrors "github.com/cygy/ginamite/common/errors/auth"
-	termsErrors "github.com/cygy/ginamite/common/errors/terms"
-	"github.com/cygy/ginamite/common/response"
-	"github.com/cygy/ginamite/web/api"
-	"github.com/cygy/ginamite/web/context"
-	"github.com/cygy/ginamite/web/cookie"
-	"github.com/cygy/ginamite/web/html"
+	authErrors "github.com/cygy-solutions/ginamite/common/errors/auth"
+	termsErrors "github.com/cygy-solutions/ginamite/common/errors/terms"
+	"github.com/cygy-solutions/ginamite/common/response"
+	"github.com/cygy-solutions/ginamite/web/api"
+	"github.com/cygy-solutions/ginamite/web/context"
+	"github.com/cygy-solutions/ginamite/web/cookie"
+	"github.com/cygy-solutions/ginamite/web/html"
 
 	"github.com/gin-gonic/gin"
 )

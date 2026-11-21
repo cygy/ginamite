@@ -28,7 +28,7 @@ before `Run`, and give the settings of its subsection in `api_rate_limiter`:
 
 ```go
 server := ginamite.NewServer()
-server.AddPlugin(redis.NewPlugin()) // github.com/cygy/ginamite/plugins/ratelimit/redis
+server.AddPlugin(redis.NewPlugin()) // github.com/cygy-solutions/ginamite/plugins/ratelimit/redis
 ```
 
 ```yaml
@@ -45,7 +45,7 @@ api_rate_limiter:
 ```
 
 ```go
-server.AddPlugin(mongodb.NewPlugin()) // github.com/cygy/ginamite/plugins/ratelimit/mongodb
+server.AddPlugin(mongodb.NewPlugin()) // github.com/cygy-solutions/ginamite/plugins/ratelimit/mongodb
 ```
 
 ```yaml

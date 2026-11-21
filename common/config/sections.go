@@ -166,7 +166,7 @@ type SocialMediaConfiguration struct {
 	Twitter  string
 }
 
-// GeoIPConfiguration holds the settings of the geoip API (https://github.com/cygy/geoip), which locates the IP
+// GeoIPConfiguration holds the settings of the geoip API (https://github.com/cygy-solutions/geoip), which locates the IP
 // addresses of the auth tokens. The location is optional: with an empty host, the IP addresses are not located.
 type GeoIPConfiguration struct {
 	// Host is the base URL of the API, such as http://geoip:8080.

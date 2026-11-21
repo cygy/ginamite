@@ -4,10 +4,10 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/cygy/ginamite/common/ctxkey"
+	"github.com/cygy-solutions/ginamite/common/ctxkey"
 
-	"github.com/cygy/ginamite/api/internal/apitest"
-	"github.com/cygy/ginamite/common/request"
+	"github.com/cygy-solutions/ginamite/api/internal/apitest"
+	"github.com/cygy-solutions/ginamite/common/request"
 
 	"github.com/gin-gonic/gin"
 )

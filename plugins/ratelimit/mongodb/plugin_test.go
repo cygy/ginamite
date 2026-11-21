@@ -7,10 +7,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cygy/ginamite"
-	"github.com/cygy/ginamite/common/config"
-	"github.com/cygy/ginamite/common/log"
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/store/mock"
+	"github.com/cygy-solutions/ginamite"
+	"github.com/cygy-solutions/ginamite/common/config"
+	"github.com/cygy-solutions/ginamite/common/log"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/mongo/store/mock"
 
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"

@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cygy/ginamite/web/internal/webtest"
+	"github.com/cygy-solutions/ginamite/web/internal/webtest"
 )
 
 func TestPage_InitializeData(t *testing.T) {

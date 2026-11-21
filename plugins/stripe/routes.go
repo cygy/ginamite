@@ -1,11 +1,11 @@
 package stripe
 
 import (
-	ctxLocale "github.com/cygy/ginamite/api/context/locale"
-	ctxUser "github.com/cygy/ginamite/api/context/user"
-	"github.com/cygy/ginamite/api/response"
-	"github.com/cygy/ginamite/common/log"
-	"github.com/cygy/ginamite/common/weburl"
+	ctxLocale "github.com/cygy-solutions/ginamite/api/context/locale"
+	ctxUser "github.com/cygy-solutions/ginamite/api/context/user"
+	"github.com/cygy-solutions/ginamite/api/response"
+	"github.com/cygy-solutions/ginamite/common/log"
+	"github.com/cygy-solutions/ginamite/common/weburl"
 
 	"github.com/gin-gonic/gin"
 )

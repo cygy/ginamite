@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cygy/ginamite/worker/internal/workertest"
+	"github.com/cygy-solutions/ginamite/worker/internal/workertest"
 )
 
 func TestDeleteExpired(t *testing.T) {

@@ -5,7 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/cygy/ginamite/web/route"
+	"github.com/cygy-solutions/ginamite/web/route"
 
 	"github.com/gin-gonic/gin"
 )

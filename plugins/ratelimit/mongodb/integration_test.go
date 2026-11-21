@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cygy/ginamite"
+	"github.com/cygy-solutions/ginamite"
 
 	"github.com/google/uuid"
 )

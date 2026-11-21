@@ -2,8 +2,8 @@
 package route
 
 import (
-	"github.com/cygy/ginamite/api/rights"
-	"github.com/cygy/ginamite/common/notifications"
+	"github.com/cygy-solutions/ginamite/api/rights"
+	"github.com/cygy-solutions/ginamite/common/notifications"
 
 	"github.com/gin-gonic/gin"
 )

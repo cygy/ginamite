@@ -3,7 +3,7 @@ package functions
 import (
 	"context"
 
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/store"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/mongo/store"
 )
 
 // DefaultDocumentsHook is a function of the application run on the default documents when the worker starts, for an

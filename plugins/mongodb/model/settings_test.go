@@ -4,7 +4,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/cygy/ginamite/api/rights"
+	"github.com/cygy-solutions/ginamite/api/rights"
 )
 
 func TestDefaultSettings(t *testing.T) {

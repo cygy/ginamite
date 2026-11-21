@@ -13,9 +13,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cygy/ginamite/common/config"
-	"github.com/cygy/ginamite/common/flags"
-	"github.com/cygy/ginamite/common/log"
+	"github.com/cygy-solutions/ginamite/common/config"
+	"github.com/cygy-solutions/ginamite/common/flags"
+	"github.com/cygy-solutions/ginamite/common/log"
 )
 
 func TestServer_ConnectPlugins(t *testing.T) {

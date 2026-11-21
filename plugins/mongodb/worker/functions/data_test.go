@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/store"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/mongo/store"
 )
 
 func TestDefaultDocumentsWrappers(t *testing.T) {

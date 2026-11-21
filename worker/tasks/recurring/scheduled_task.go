@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cygy/ginamite/common/config"
+	"github.com/cygy-solutions/ginamite/common/config"
 )
 
 // defaultStartIn is the delay before the first run of a task without a valid start time.

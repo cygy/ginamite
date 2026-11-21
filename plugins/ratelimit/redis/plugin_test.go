@@ -8,9 +8,9 @@ import (
 	"testing"
 
 	"github.com/alicebob/miniredis/v2"
-	"github.com/cygy/ginamite"
-	"github.com/cygy/ginamite/common/config"
-	"github.com/cygy/ginamite/common/log"
+	"github.com/cygy-solutions/ginamite"
+	"github.com/cygy-solutions/ginamite/common/config"
+	"github.com/cygy-solutions/ginamite/common/log"
 )
 
 func TestMain(m *testing.M) {

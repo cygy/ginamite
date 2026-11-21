@@ -10,15 +10,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cygy/ginamite/common/ctxkey"
+	"github.com/cygy-solutions/ginamite/common/ctxkey"
 
-	tokencache "github.com/cygy/ginamite/api/cache/authtoken"
-	ctxLocale "github.com/cygy/ginamite/api/context/locale"
-	"github.com/cygy/ginamite/api/internal/apitest"
+	tokencache "github.com/cygy-solutions/ginamite/api/cache/authtoken"
+	ctxLocale "github.com/cygy-solutions/ginamite/api/context/locale"
+	"github.com/cygy-solutions/ginamite/api/internal/apitest"
 
-	"github.com/cygy/ginamite/common/errors/auth"
-	"github.com/cygy/ginamite/common/log"
-	"github.com/cygy/ginamite/common/log/logtest"
+	"github.com/cygy-solutions/ginamite/common/errors/auth"
+	"github.com/cygy-solutions/ginamite/common/log"
+	"github.com/cygy-solutions/ginamite/common/log/logtest"
 	"github.com/gin-gonic/gin"
 	jwt "github.com/golang-jwt/jwt/v5"
 )

@@ -14,21 +14,21 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cygy/ginamite/common/ctxkey"
-	"github.com/cygy/ginamite/common/notifications"
+	"github.com/cygy-solutions/ginamite/common/ctxkey"
+	"github.com/cygy-solutions/ginamite/common/notifications"
 
-	"github.com/cygy/ginamite/common/timezone"
+	"github.com/cygy-solutions/ginamite/common/timezone"
 
-	"github.com/cygy/ginamite/common/authentication"
-	"github.com/cygy/ginamite/common/config"
+	"github.com/cygy-solutions/ginamite/common/authentication"
+	"github.com/cygy-solutions/ginamite/common/config"
 
-	ctxAuthToken "github.com/cygy/ginamite/api/context/authtoken"
-	ctxLocale "github.com/cygy/ginamite/api/context/locale"
-	"github.com/cygy/ginamite/common/broker"
-	"github.com/cygy/ginamite/common/localization"
-	"github.com/cygy/ginamite/common/log"
-	"github.com/cygy/ginamite/common/queue"
-	"github.com/cygy/ginamite/plugins/mongodb/model"
+	ctxAuthToken "github.com/cygy-solutions/ginamite/api/context/authtoken"
+	ctxLocale "github.com/cygy-solutions/ginamite/api/context/locale"
+	"github.com/cygy-solutions/ginamite/common/broker"
+	"github.com/cygy-solutions/ginamite/common/localization"
+	"github.com/cygy-solutions/ginamite/common/log"
+	"github.com/cygy-solutions/ginamite/common/queue"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/model"
 
 	"github.com/gin-gonic/gin"
 	jwt "github.com/golang-jwt/jwt/v5"

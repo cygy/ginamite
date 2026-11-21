@@ -3,7 +3,7 @@ package mail
 import (
 	"testing"
 
-	"github.com/cygy/ginamite/common/weburl"
+	"github.com/cygy-solutions/ginamite/common/weburl"
 )
 
 func TestPasswordNotifications(t *testing.T) {

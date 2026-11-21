@@ -3,8 +3,8 @@ package functions
 import (
 	"context"
 
-	"github.com/cygy/ginamite/plugins/mongodb/model"
-	"github.com/cygy/ginamite/plugins/mongodb/mongo/store"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/model"
+	"github.com/cygy-solutions/ginamite/plugins/mongodb/mongo/store"
 )
 
 // Contacts stores the contacts in a database. It is a contact.Storage. Create it with NewContacts.

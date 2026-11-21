@@ -3,7 +3,7 @@ package mail
 import (
 	"context"
 
-	"github.com/cygy/ginamite/common/weburl"
+	"github.com/cygy-solutions/ginamite/common/weburl"
 )
 
 var (

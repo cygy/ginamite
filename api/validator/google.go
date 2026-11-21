@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/cygy/ginamite/common/authentication"
+	"github.com/cygy-solutions/ginamite/common/authentication"
 	resty "github.com/go-resty/resty/v2"
 )
 

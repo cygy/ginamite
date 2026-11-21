@@ -5,15 +5,15 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/cygy/ginamite/common/ctxkey"
+	"github.com/cygy-solutions/ginamite/common/ctxkey"
 
-	ctxLocale "github.com/cygy/ginamite/api/context/locale"
-	"github.com/cygy/ginamite/api/response"
-	"github.com/cygy/ginamite/common/authentication"
-	registrationError "github.com/cygy/ginamite/common/errors/registration"
-	"github.com/cygy/ginamite/common/localization"
+	ctxLocale "github.com/cygy-solutions/ginamite/api/context/locale"
+	"github.com/cygy-solutions/ginamite/api/response"
+	"github.com/cygy-solutions/ginamite/common/authentication"
+	registrationError "github.com/cygy-solutions/ginamite/common/errors/registration"
+	"github.com/cygy-solutions/ginamite/common/localization"
 
-	res "github.com/cygy/ginamite/common/response"
+	res "github.com/cygy-solutions/ginamite/common/response"
 	"github.com/gin-gonic/gin"
 )
 

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cygy/ginamite/common/localization"
+	"github.com/cygy-solutions/ginamite/common/localization"
 )
 
 func TestMailer_message(t *testing.T) {

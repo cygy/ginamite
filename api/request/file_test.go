@@ -9,9 +9,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	ctxLocale "github.com/cygy/ginamite/api/context/locale"
-	"github.com/cygy/ginamite/api/internal/apitest"
-	commonRequest "github.com/cygy/ginamite/common/request"
+	ctxLocale "github.com/cygy-solutions/ginamite/api/context/locale"
+	"github.com/cygy-solutions/ginamite/api/internal/apitest"
+	commonRequest "github.com/cygy-solutions/ginamite/common/request"
 
 	"github.com/gin-gonic/gin"
 )

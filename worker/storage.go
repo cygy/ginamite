@@ -4,10 +4,10 @@ import (
 	"context"
 	"time"
 
-	"github.com/cygy/ginamite/common/notifications"
-	"github.com/cygy/ginamite/worker/mail"
-	"github.com/cygy/ginamite/worker/tasks/async/location"
-	"github.com/cygy/ginamite/worker/tasks/recurring"
+	"github.com/cygy-solutions/ginamite/common/notifications"
+	"github.com/cygy-solutions/ginamite/worker/mail"
+	"github.com/cygy-solutions/ginamite/worker/tasks/async/location"
+	"github.com/cygy-solutions/ginamite/worker/tasks/recurring"
 )
 
 // Storage is the storage of the application used by a worker, by feature: a database plugin implements the interfaces.

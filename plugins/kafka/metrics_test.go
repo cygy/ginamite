@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cygy/ginamite/common/metrics"
+	"github.com/cygy-solutions/ginamite/common/metrics"
 )
 
 func TestClient_Collect(t *testing.T) {

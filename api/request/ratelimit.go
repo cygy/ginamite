@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cygy/ginamite/api/response"
-	"github.com/cygy/ginamite/common/config"
+	"github.com/cygy-solutions/ginamite/api/response"
+	"github.com/cygy-solutions/ginamite/common/config"
 
 	"github.com/gin-gonic/gin"
 )

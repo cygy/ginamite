@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/cygy/ginamite/common/log"
+	"github.com/cygy-solutions/ginamite/common/log"
 
 	"github.com/IBM/sarama"
 )

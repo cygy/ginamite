@@ -1,4 +1,4 @@
-module github.com/cygy/ginamite
+module github.com/cygy-solutions/ginamite
 
 go 1.26.10
 
