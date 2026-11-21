@@ -59,7 +59,7 @@ A pull request is merged once `make check` passes, as the CI runs it.
 
 ## Pull requests
 
-- One subject per pull request, rebased on `master`.
+- One subject per pull request, rebased on `main`.
 - Commit messages: a short subject in the imperative ("Limit the size of the request bodies"), then why the change is
   made.
 - Describe the incompatible changes in the pull request: they are listed in the notes of the next release.
